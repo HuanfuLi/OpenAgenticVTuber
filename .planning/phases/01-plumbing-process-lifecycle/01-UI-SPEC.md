@@ -1,7 +1,7 @@
 ---
 phase: 1
 slug: plumbing-process-lifecycle
-status: draft
+status: approved
 revision: 2
 revised_at: 2026-05-06
 shadcn_initialized: false
@@ -133,7 +133,7 @@ User-selectable accent (one active at a time):
 | **Sunrise** | `oklch(0.72 0.12 55)` | `#D89A60` (dusty orange) | |
 | **Ember** | `oklch(0.62 0.13 25)` | `#B5746A` (muted brick red) | |
 
-**`--primary-foreground` for light:** `oklch(0.98 0.012 80)` (same as `--background` cream) — used for text-on-accent (e.g. CTA labels). Verified ≥ 4.5:1 on the lightest accent (Blush at L=0.72) by tightening to a deeper warm-cream on hover where needed. **Executor:** if axe flags any combination, deepen `--primary-foreground` to `oklch(0.20 0.018 70)` near-black for that variant; do NOT raise accent chroma above 0.13.
+**`--primary-foreground` for light:** `oklch(0.22 0.018 70)` ≈ `#322B25` (soft near-black, identical to `--foreground`) — used for text-on-accent (e.g. CTA labels on Blush / Sunrise / Ember). Cream foreground would fail WCAG 4.5:1 on accents at L=0.72; near-black is the correct contrast tier. **Executor:** confirm axe-core passes ≥ 4.5:1 against all three light accents at the end of plan `01-02`; if any variant fails, deepen `--primary-foreground` further (e.g. `oklch(0.18 0.018 70)`) — do NOT raise accent chroma above 0.13.
 
 ### Dark theme (2 BG options × 2 accent options = 4 combinations)
 
@@ -307,11 +307,13 @@ Apply by setting `document.documentElement.className = resolveThemeClass(prefs)`
 All foreground-on-background pairs MUST meet WCAG 2.1 AA across **every** theme variant:
 - Body text on background: contrast ≥ 4.5:1 (verify all 7 variants)
 - Body text on `--muted` (input fields): contrast ≥ 4.5:1
-- `--primary-foreground` text on `--primary` (CTAs): contrast ≥ 4.5:1 (Light variants are tightest — Blush/Sunrise at L=0.72 with cream foreground; if axe flags, swap to near-black `--primary-foreground`)
+- `--primary-foreground` text on `--primary` (CTAs): contrast ≥ 4.5:1 (Light variants use near-black `oklch(0.22 0.018 70)` foreground for adequate contrast against L=0.72 Blush/Sunrise; Dark variants use near-black `oklch(0.18 0.030 250)` since Sky and Pewter both sit at L≥0.75)
 - `--foreground` text on Status-Red / Status-Amber surfaces (banners): contrast ≥ 4.5:1
 - Disabled / `--muted-foreground` on `--background`: contrast ≥ 3:1 (relaxed for non-essential text per WCAG 1.4.3 "incidental")
 
 Executor: run `axe-core` against every theme variant at the end of plan `01-02`. Variants to test: `theme-blush`, `theme-sunrise`, `theme-ember`, `theme-midnight-sky`, `theme-midnight-pewter`, `theme-onyx-sky`, `theme-onyx-pewter`. Any failure → adjust `--primary-foreground` or status-color tier; do NOT raise accent chroma.
+
+**Mandatory Ember/Status-Red side-by-side check (do not skip):** Ember accent `oklch(0.62 0.13 25)` and light-mode `--destructive` `oklch(0.52 0.13 30)` differ by only 5° hue and share chroma 0.13 — they are perceptually close. As part of plan `01-02` sign-off, render a test page with the Ember theme active that shows: (a) a primary CTA button (Ember accent) and (b) a destructive error banner (Status-Red) and (c) a `[Reset everything]` button (Status-Red) within the same viewport. Confirm by visual inspection that the destructive surfaces remain unambiguously distinguishable from the accent. If they are confusable, the spec authorizes deepening Status-Red to `oklch(0.45 0.13 30)` for the Ember theme variant only — do NOT shift the accent or raise chroma. This check is mandatory; the executor must check it off in plan `01-02` verification before plan close.
 
 ---
 
