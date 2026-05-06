@@ -10,11 +10,11 @@ The walking-skeleton scope validates the layered architecture (Electron + Python
 
 ### Plumbing & Process Lifecycle
 
-- [ ] **PLUMB-01**: Electron shell (windowed mode only) wraps a React + Vite + TypeScript renderer with TS-end-to-end shell config; npm package manager (not pnpm — pnpm conflicts with electron-builder asar packaging)
-- [ ] **PLUMB-02**: Electron main spawns a Python sidecar (FastAPI + uvicorn) under a uv-managed venv with eager-start at boot, parent-PID watchdog so the sidecar exits when Electron crashes, and graceful-shutdown handshake on normal close
+- [x] **PLUMB-01**: Electron shell (windowed mode only) wraps a React + Vite + TypeScript renderer with TS-end-to-end shell config; npm package manager (not pnpm — pnpm conflicts with electron-builder asar packaging)
+- [x] **PLUMB-02**: Electron main spawns a Python sidecar (FastAPI + uvicorn) under a uv-managed venv with eager-start at boot, parent-PID watchdog so the sidecar exits when Electron crashes, and graceful-shutdown handshake on normal close
 - [ ] **PLUMB-03**: Sidecar exposes a localhost-only WebSocket endpoint whose message envelope shape matches Open-LLM-VTuber's protocol so OLVT plumbing fixes can copy back; port-allocation strategy is decided at phase-1 planning (`port:0` ephemeral OR fixed-port + handshake)
 - [ ] **PLUMB-04**: First-launch flow shows a mandatory LLM setup screen (provider URL/key + test-connection round-trip); the screen blocks the app until a successful test completes; LM Studio default at `http://localhost:1234/v1` is pre-filled
-- [ ] **PLUMB-05**: pyvts is vendored into the sidecar from day one (`sidecar/vendor/pyvts/`), since upstream is unmaintained since 2024-09-10; in-tree patches applied as needed without forking the project
+- [x] **PLUMB-05**: pyvts is vendored into the sidecar from day one (`sidecar/vendor/pyvts/`), since upstream is unmaintained since 2024-09-10; in-tree patches applied as needed without forking the project
 
 ### LLM Conversation Pipeline
 
@@ -169,11 +169,11 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLUMB-01 | Phase 1 | Pending |
-| PLUMB-02 | Phase 1 | Pending |
+| PLUMB-01 | Phase 1 | Complete |
+| PLUMB-02 | Phase 1 | Complete |
 | PLUMB-03 | Phase 1 | Pending |
 | PLUMB-04 | Phase 1 | Pending |
-| PLUMB-05 | Phase 1 | Pending |
+| PLUMB-05 | Phase 1 | Complete |
 | LLM-01 | Phase 2 | Pending |
 | LLM-02 | Phase 2 | Pending |
 | LLM-03 | Phase 2 | Pending |

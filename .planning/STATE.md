@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-05-06T19:04:12.554Z"
-last_activity: 2026-05-06 — ROADMAP.md created from research synthesis
+status: Ready to execute
+stopped_at: Completed 01-01-PLAN.md (scaffold + sidecar + chrome shell)
+last_updated: "2026-05-06T22:35:10.551Z"
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -21,16 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon — skeleton lays foundation, doesn't deliver it yet)
-**Current focus:** Phase 1 — Plumbing & Process Lifecycle
+**Current focus:** Phase 01 — plumbing-process-lifecycle
 
 ## Current Position
 
-Phase: 1 of 5 (Plumbing & Process Lifecycle)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-05-06 — ROADMAP.md created from research synthesis
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 01 (plumbing-process-lifecycle) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -56,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01 P01 | 75min | 3 tasks | 64 files |
 
 ## Accumulated Context
 
@@ -67,6 +62,9 @@ Recent decisions affecting current work:
 - Pre-Phase-1: 5-phase sequential build order (per ARCHITECTURE.md §8) — coarse granularity from config.json
 - Pre-Phase-1: Body-sway as research/strategy-pattern, not OLVT port (R-OPEN-1) — investigation IS the deliverable per AVT-06
 - Pre-Phase-1: Sidecar→VTS direct via pyvts; renderer never sees `param-frame` traffic (avoids 60 Hz IPC cascade)
+- [Phase 01]: Skip shadcn/Tailwind install per DELTA — port prototype's hand-rolled CSS (840 lines, 7 OKLCH theme classes) + 17 inline SVG icons verbatim into apps/renderer/src
+- [Phase 01]: pyvts vendor strategy: install as regular wheel + sys.path shim in sidecar/__init__.py (Hatch editable mode does not produce usable .pth for flat package layout); pyvts.__file__ resolves to sidecar/vendor/pyvts/__init__.py at runtime
+- [Phase 01]: BYO-socket port:0 pattern locked: bind 127.0.0.1:0 → getsockname → print [READY] line with flush=True BEFORE server.serve(sockets=[sock]) (avoids port:0 race)
 
 ### Pending Todos
 
@@ -89,6 +87,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-06T19:04:12.550Z
-Stopped at: Phase 1 UI-SPEC approved
-Resume file: .planning/phases/01-plumbing-process-lifecycle/01-UI-SPEC.md
+Last session: 2026-05-06T22:35:10.546Z
+Stopped at: Completed 01-01-PLAN.md (scaffold + sidecar + chrome shell)
+Resume file: None

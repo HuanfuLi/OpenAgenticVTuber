@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: TBD
 
 Plans:
-- [ ] 01-01-PLAN.md — Electron shell + sidecar lifecycle + chrome shell (PLUMB-01, PLUMB-02, PLUMB-05)
+- [x] 01-01-PLAN.md — Electron shell + sidecar lifecycle + chrome shell (PLUMB-01, PLUMB-02, PLUMB-05)
 - [ ] 01-02-PLAN.md — OLVT-shape WS envelope + echo round-trip + LLM setup gate (PLUMB-03, PLUMB-04)
 
 **Open questions to resolve at plan-time:**
