@@ -36,6 +36,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             pass
 
 
-# /admin router added by Task 3 (LLM setup test). Wire-up:
-# from ..llm.setup_test import router as admin_router
-# app.include_router(admin_router)
+# /admin router for LLM setup test (Task 3 / PLUMB-04).
+from ..llm.setup_test import router as admin_router  # noqa: E402
+
+app.include_router(admin_router)
