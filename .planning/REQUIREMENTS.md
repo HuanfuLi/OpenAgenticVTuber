@@ -165,41 +165,44 @@ Explicitly excluded from v1 entirely. Not in v2, not in any future milestone of 
 
 ## Traceability
 
-Empty initially. Populated by the roadmapper during ROADMAP.md creation, then maintained as phases complete.
+Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained as phases complete.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLUMB-01 | TBD | Pending |
-| PLUMB-02 | TBD | Pending |
-| PLUMB-03 | TBD | Pending |
-| PLUMB-04 | TBD | Pending |
-| PLUMB-05 | TBD | Pending |
-| LLM-01 | TBD | Pending |
-| LLM-02 | TBD | Pending |
-| LLM-03 | TBD | Pending |
-| LLM-04 | TBD | Pending |
-| TTS-01 | TBD | Pending |
-| TTS-02 | TBD | Pending |
-| TTS-03 | TBD | Pending |
-| TTS-04 | TBD | Pending |
-| AVT-01 | TBD | Pending |
-| AVT-02 | TBD | Pending |
-| AVT-03 | TBD | Pending |
-| AVT-04 | TBD | Pending |
-| AVT-05 | TBD | Pending |
-| AVT-06 | TBD | Pending |
-| AVT-07 | TBD | Pending |
-| AVT-08 | TBD | Pending |
-| AVT-09 | TBD | Pending |
-| AVT-10 | TBD | Pending |
-| SC-01 | TBD | Pending |
-| SC-02 | TBD | Pending |
+| PLUMB-01 | Phase 1 | Pending |
+| PLUMB-02 | Phase 1 | Pending |
+| PLUMB-03 | Phase 1 | Pending |
+| PLUMB-04 | Phase 1 | Pending |
+| PLUMB-05 | Phase 1 | Pending |
+| LLM-01 | Phase 2 | Pending |
+| LLM-02 | Phase 2 | Pending |
+| LLM-03 | Phase 2 | Pending |
+| LLM-04 | Phase 2 | Pending |
+| TTS-01 | Phase 3 | Pending |
+| TTS-02 | Phase 3 | Pending |
+| TTS-03 | Phase 3 | Pending |
+| TTS-04 | Phase 3 | Pending |
+| AVT-01 | Phase 4 | Pending |
+| AVT-02 | Phase 4 | Pending |
+| AVT-03 | Phase 4 | Pending |
+| AVT-04 | Phase 4 | Pending |
+| AVT-05 | Phase 4 | Pending |
+| AVT-06 | Phase 4 | Pending |
+| AVT-07 | Phase 4 | Pending |
+| AVT-08 | Phase 4 | Pending |
+| AVT-09 | Phase 4 | Pending |
+| AVT-10 | Phase 4 | Pending |
+| SC-01 | Phase 5 | Pending |
+| SC-02 | Phase 5 | Pending |
+
+**Cross-phase note**: PLUMB-05 (pyvts vendoring) is logically Phase 1 plumbing but is *consumed* by Phase 4 (compositor's single-writer wrapper around the vendored pyvts). It is mapped to Phase 1 only — Phase 4 builds on Phase 1's deliverable.
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0 (roadmapper will populate)
-- Unmapped: 25 ⚠️ (expected — pre-roadmap)
+- Mapped to phases: 25 ✓
+- Unmapped: 0
+- Distribution: Phase 1 = 5, Phase 2 = 4, Phase 3 = 4, Phase 4 = 10, Phase 5 = 2
 
 ---
 *Requirements defined: 2026-05-06*
-*Last updated: 2026-05-06 after initial definition*
+*Last updated: 2026-05-06 — traceability populated by roadmapper (5-phase walking-skeleton structure)*
