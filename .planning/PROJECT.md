@@ -27,6 +27,9 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 - [ ] piper TTS only; lipsync via our-RMS path driving `ParamMouthOpenY`
 - [ ] Minimal action compositor running at 60 Hz with three drivers — idle baseline (Perlin drift + blink scheduler), speech driver (TTS RMS → head sway; body-sway is an unsolved problem on VTS rigs and may end up head-only in the skeleton — see Risks), intent overlay (smooth fade-in/out on `[joy]`/`[shy]` etc.)
 - [ ] Renderer binding: `ParamFrame` stream → pyvts `InjectParameterDataRequest` (60 Hz) against one VTS avatar; one `DiscreteEvent` test (e.g. prop) maps to a hotkey
+- [ ] Renderer-aware ParamID resolver (~30 LOC) — VTS path writes input-layer names (`ParamAngleX`) and lets VTS internal routing handle smoothing; non-VTS branch is a stub that errors helpfully. Keeps the compositor portable to a post-MVP Pixi attempt without rewrite.
+- [ ] Speech-driver body-sway investigation: try multiple approaches on VTS rigs (smoke-pass for non-orphan downstream body params; `.exp3.json` body-pose modulation by RMS; custom physics chain via `<model>.vtube.json`; head-only with breathing/micro-shoulder alternative). Skeleton ships either with visible body sway OR with head-only motion + a written rationale documenting what was tried.
+- [ ] Ship a stub `teto_overrides.yaml` (or .json) checked into the repo even though import + smoke-pass tooling is deferred — establishes the per-avatar override file schema (orphan params list, physics-chain proxies, sign inversions) so the import-pipeline milestone inherits it for free.
 - [ ] Companion-mode chat: single thread, in-memory only (cleared on relaunch); cursor-in-canvas eye/head tracking on the avatar
 - [ ] LLM emits `[joy]` → expression smoothly blends in over ~300ms and decays after the sentence ends — **not a hotkey pop** (success criterion §14)
 - [ ] WebSocket protocol shape matches OLVT's so plumbing fixes can copy back
@@ -99,6 +102,9 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 | 60 Hz `ParamFrame` stream as primary control surface (§5.2, §11) | Hotkeys produce pops; continuous param injection produces Neuro-sama-style fluidity | — Pending |
 | Three-layer separation: LLM tags → compositor → renderer (§11) | Renderer swappable (VTS/pixi/Cubism) without touching prompts; learned drivers swap inside compositor without touching contracts | — Pending |
 | Walking skeleton uses one hardcoded avatar (Teto, dev-only) | Avatar import pipeline + multi-avatar are deferred milestones; skeleton tests the layered architecture, not identity | — Pending |
+| Renderer-aware ParamID resolver in v1 (~30 LOC stub for non-VTS branch) | Pay tiny cost now; preserves optionality for post-MVP Pixi attempt and future mobile renderer without later compositor rewrite | — Pending |
+| Body-sway-during-TTS approached as research, not port (investigate+report success criterion) | OLVT IN-twin trick did not work; skeleton needs to either solve it on VTS or document fallback to head-only — not silently inherit a broken assumption | — Pending |
+| Skeleton ships `teto_overrides.yaml` stub with empty orphan list | Establishes per-avatar override schema (orphan params, physics-chain proxies, sign inversions) so import-pipeline milestone doesn't have to invent it | — Pending |
 | Per-avatar bucket + thread-tagged chunks for episodic memory (§13.120) | Cross-thread continuity preserved; retrieval bias 70/30 keeps current thread dominant | — Pending |
 | Per-template permission grant + visible badge for scheduled goals (§13.121) | Per-session re-grant defeats unattended scheduling; per-template grants are the minimum viable backdoor with explicit user awareness | — Pending |
 | Skill systems separate, non-overlapping in v1 (§13.122) | Two domains (CLI vs screen-control) have different permission models; bridge layer deferred to v1.5 | — Pending |
