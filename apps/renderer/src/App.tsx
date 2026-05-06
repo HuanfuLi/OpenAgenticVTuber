@@ -1,26 +1,21 @@
-// Phase 1 plan 01-01 Task 1 root component — minimal placeholder so the
-// scaffold is verifiable. Task 3 of this plan replaces this with the full
-// ThemeProvider + AppStoreProvider + AppShell composition.
+/* Phase 1 plan 01-01 root component. Mounts the chrome shell. The setup-screen
+ * gating (LLM setup before AppShell) is wired in plan 01-02; for 01-01 the
+ * AppShell is the root and assumes the user is past setup.
+ */
+import { AppShell } from './chrome/AppShell'
+import { ThemeProvider } from './state/theme-provider'
+import { AppStoreProvider } from './state/app-store'
+import { DevPanel } from './dev/DevPanel'
 
 export default function App() {
   return (
-    <div className="app-window">
-      <div
-        style={{
-          padding: 24,
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8
-        }}
-      >
-        <h1 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>AgenticLLMVTuber</h1>
-        <p className="muted" style={{ margin: 0 }}>
-          Skeleton scaffold — chrome shell lands in Task 3.
-        </p>
-      </div>
-    </div>
+    <ThemeProvider>
+      <AppStoreProvider>
+        <div className="app-window">
+          <AppShell />
+        </div>
+        {import.meta.env.DEV && <DevPanel />}
+      </AppStoreProvider>
+    </ThemeProvider>
   )
 }
