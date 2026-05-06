@@ -409,6 +409,79 @@ The contract guarantee: any of these three rendering backends can be
 swapped in without touching the compositor, the LLM prompts, or the
 conversation pipeline.
 
+### 5.3.1 VTS rig architecture realities (lessons from OLVT Phase 4)
+
+VTube-Studio-built rigs use a **two-layer parameter architecture** that
+is not visible from a model's parameter list alone. Cubism-standard
+naming compliance is necessary but not sufficient for a renderer to
+drive the rig correctly.
+
+**Two layers:**
+- **Input layer** (`ParamAngleX`, `ParamMouthOpenY`, …) — face-tracker
+  write targets. Generally NOT bound to deformers in VTS rigs.
+- **IN twins** (`ParamAngleXIN`, `ParamMouthOpenYIN`, …) — actual
+  deformer inputs. VTS populates these by running the rig's
+  `<model>.vtube.json` routing config (smoothing curves, ranges, dead
+  zones, dampening).
+
+When VTS is the renderer this is invisible — VTS does the routing
+internally. When the renderer is *anything else* (pixi-live2d-display,
+live2d-py, raw Cubism Native), writing to the input layer goes nowhere
+because the deformer chain is waiting for the IN twins, populated by
+routing the renderer never ran.
+
+**Three failure modes (encountered while bringing up the OLVT Phase 4
+Teto rig):**
+
+1. **Routing-naive writes.** Writing a Cubism-standard input param like
+   `ParamAngleX` is a silent no-op on a VTS rig in any non-VTS
+   renderer. Two recovery options:
+   - **Routing emulation**: read `<model>.vtube.json` and forward
+     inputs through the configured curves to their `*IN` twins (OLVT's
+     "Option A" patch on `lappmodel.ts`,
+     `frontend-src/patches/lappmodel-vtube-routing.patch`).
+   - **Direct IN-twin writes**: skip routing and write to
+     `ParamAngleXIN` etc. directly, accepting loss of VTS-configured
+     smoothing/curves.
+2. **Orphan parameters.** A ParamID that resolves cleanly (and is even
+   Cubism-standard) can still be deformer-orphaned: defined in the rig
+   but bound to nothing. Direct writes silently no-op. SDK
+   introspection (`GetParameterIds` etc.) cannot detect this — only
+   inspecting the deformer/physics graph or empirically writing and
+   visually verifying motion will. OLVT's initial TTS body-bob via
+   `ParamBodyAngleX` was an orphan-param miss.
+3. **Physics-chain shortcuts.** Sometimes the cleanest way to drive a
+   region is via a related upstream param that the rig's physics chain
+   forwards downstream. OLVT's TTS body sway is implemented as
+   additive injection on `ParamAngleXIN` / `ParamAngleZIN` — the rig's
+   physics evaluate then forwards those values to body deformers for
+   free. Direct writes to body params were no-ops because they were
+   orphaned.
+
+**Renderer-binding implications (per backend):**
+- **VTS via pyvts (v1)**: all of this is handled by VTS internally.
+  `InjectParameterDataRequest` to `ParamAngleX` "just works." This is
+  a primary reason VTS is the v1 renderer.
+- **pixi-live2d-display (v1.5)**: requires routing emulation carried
+  over from OLVT. Without it, all VTS-built rigs render dead.
+- **live2d-py / Cubism Native (v2+)**: routing emulation has to be
+  ported to Python. No standard library does this; we'd carry the
+  logic ourselves. Alternative is direct IN-twin writes with no
+  smoothing.
+
+**Onboarding heuristic for a new rig (any non-VTS renderer):**
+1. Check for `<model>.vtube.json` in the bundle. If present, it's a
+   VTS rig — assume the two-layer architecture and run routing
+   emulation.
+2. On first activation, run a smoke pass: write each common-set
+   logical param to a non-zero value and visually verify motion.
+   Orphan params identified here go in the per-avatar override file
+   either as `null` (compositor skips them) or routed via a
+   physics-chain proxy param.
+3. Persist findings (orphan list, physics-chain proxies, sign
+   inversions) into the per-avatar override file so subsequent loads
+   skip the smoke pass.
+
 ### 5.4 Memory subsystem
 Hybrid (see §8):
 - **Per-avatar profile** (filesystem-edited markdown/yaml/json with
@@ -1121,6 +1194,14 @@ parameters outside the common set (e.g., Teto's `ParamBHandIN`,
 `ParamSVMCON`). Default drivers handle the common motion vocabulary;
 advanced users tune rig-specific behavior.
 
+**Important:** the logical-name → ParamID resolution is more involved
+than a flat name table because of the VTS two-layer architecture
+described in §5.3.1. For VTS-built rigs the resolver targets the IN
+twin (`ParamAngleXIN`) rather than the input layer (`ParamAngleX`), and
+the per-avatar override file additionally records orphan params and
+physics-chain proxy substitutions discovered during the import smoke
+pass.
+
 ### Avatar import pipeline
 Two formats accepted (per round 2 Q2):
 - **VTS .zip bundles** (exported from VTube Studio)
@@ -1673,6 +1754,23 @@ in chat after sentence appears so user knows audio is coming.
   intent overlay). Swappable; rule-based v1, learned v2.
 - **Renderer binding** — backend-specific consumer of `ParamFrame` /
   `DiscreteEvent`. VTS via pyvts, pixi-live2d-display, or Cubism Web SDK.
+- **IN twin** — in a VTS-built rig, the deformer-bound counterpart of a
+  Cubism input parameter (`ParamAngleXIN` for `ParamAngleX`). The IN
+  twin is what VTS populates by running `<model>.vtube.json` routing.
+  Non-VTS renderers must either emulate the routing or write IN twins
+  directly. See §5.3.1.
+- **Orphan parameter** — a ParamID that exists on a model but is bound
+  to no deformer in the rig. Writes silently no-op. Detected only by
+  smoke-test or rig-graph inspection. See §5.3.1.
+- **Routing emulation** — code that reads `<model>.vtube.json` and
+  forwards face-tracker-style inputs through the rig's configured
+  curves to the IN twins. Required for any non-VTS renderer to drive
+  VTS-built rigs. OLVT ships an "Option A" patch implementing this for
+  pixi-live2d-display.
+- **vtube.json** — VTube Studio's per-model routing config: input
+  params, target IN twins, smoothing curves, ranges, dead zones. The
+  contract between face-tracker-style writes and deformer-bound IN
+  twins.
 - **intentMap** — per-avatar mapping from semantic tag (`[wave]`) to
   `ActionIntent` shape (with duration, blend curve, etc.). Successor to
   OLVT Phase 4's `actionMap`.
