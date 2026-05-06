@@ -25,7 +25,7 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 - [ ] Mandatory LLM setup screen on first launch — block until provider URL/key tested; LiteLLM connected to LM Studio (default) on localhost:1234
 - [ ] OLVT-style conversation pipeline ported: sentence_divider → actions_extractor → tts_filter → TTS queue, with sentence-buffered playback (parallel synth, ordered delivery)
 - [ ] piper TTS only; lipsync via our-RMS path driving `ParamMouthOpenY`
-- [ ] Minimal action compositor running at 60 Hz with three drivers — idle baseline (Perlin drift + blink scheduler), speech driver (TTS RMS → head/body sway), intent overlay (smooth fade-in/out on `[joy]`/`[shy]` etc.)
+- [ ] Minimal action compositor running at 60 Hz with three drivers — idle baseline (Perlin drift + blink scheduler), speech driver (TTS RMS → head sway; body-sway is an unsolved problem on VTS rigs and may end up head-only in the skeleton — see Risks), intent overlay (smooth fade-in/out on `[joy]`/`[shy]` etc.)
 - [ ] Renderer binding: `ParamFrame` stream → pyvts `InjectParameterDataRequest` (60 Hz) against one VTS avatar; one `DiscreteEvent` test (e.g. prop) maps to a hotkey
 - [ ] Companion-mode chat: single thread, in-memory only (cleared on relaunch); cursor-in-canvas eye/head tracking on the avatar
 - [ ] LLM emits `[joy]` → expression smoothly blends in over ~300ms and decays after the sentence ends — **not a hotkey pop** (success criterion §14)
@@ -40,7 +40,6 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 - **Multi-thread chat per avatar** — single in-memory thread for skeleton
 - **Multi-avatar switching + import pipeline** — single hardcoded avatar (Teto, dev-only) for skeleton
 - **Pet mode (form-factor toggle and click-through)** — windowed mode only for skeleton
-- **pixi-live2d-display fallback (v1.5)** — VTS-only path
 - **Audio-to-params learned drivers (v1.5)** — rule-based DSP only
 - **Voice input (PTT, VAD, faster-whisper)** — text input only for skeleton
 - **Image input (paste/drag/picker)** — text only
@@ -59,6 +58,7 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 - Cloud-hosted memory sync
 - Voice cloning UI (users supply their own GPT-SoVITS model)
 - Plugin/extension marketplace
+- **pixi-live2d-display as a v1 renderer** — Pixi is *post-MVP exploratory only*, attempted after the project is otherwise fully working as a mobile-portability hedge (since VTube Studio likely can't run on a future mobile companion). May be abandoned if it doesn't pan out. The whole MVP renderer path is VTS+pyvts.
 - Agent best-effort rollback for irreversible actions
 - Goal template parameterization (`{account}`, `{date}` placeholders)
 - Wake word activation (raw VAD only when voice ships)
@@ -82,6 +82,11 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 - **Default avatar (shipping)**: Live2D Inc. sample model (Hiyori/Mark/Wanderer) — Teto is dev-only and not redistributable (§13.123).
 - **Walking-skeleton timeline**: ~2 weeks single engineer (§14 estimate); not a hard deadline but the scope must collapse to fit the §14 success criteria.
 
+## Risks
+
+- **R-OPEN-1: Body-sway-during-TTS is unsolved on VTS rigs.** OLVT Phase 4 attempted the IN-twin physics-chain-shortcut pattern (§5.3.1) and it did **not** produce visible body sway — the design doc documents the *attempt*, not a confirmed solution. Direct writes to body params (`ParamBodyAngleX`) were no-ops because those params are orphans in the Teto rig. Skeleton planning must treat body sway as research, not port-from-OLVT. Mitigation paths to investigate: smoke-pass to find non-orphan downstream body params; modulating `.exp3.json` body-pose primitives by RMS; custom physics-chain authoring via `<model>.vtube.json`; or accepting head-only sway and finding alternative liveliness signals (breathing, micro-shoulder).
+- **R-OPEN-2: VTS-only renderer locks out a future mobile companion.** Mitigation is post-MVP exploration of pixi-live2d-display once the project is otherwise working. If Pixi doesn't pan out, mobile becomes a renderer-research project before it can ship. Acceptable for v1 since mobile is out of scope by design (§10).
+
 ## Key Decisions
 
 <!-- Foundational decisions resolved in PROJECT_DESIGN.md §13 (112 rows). Logging only the decisions that most affect this milestone's planning. Future decisions append below. -->
@@ -90,7 +95,7 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 |----------|-----------|---------|
 | Electron over Tauri (§13.1) | TS-end-to-end for a TS-fluent team; ~150 MB bundle/RAM gap is invisible to the target user (VTS already runs alongside) | — Pending |
 | Python sidecar over Node (§13.8) | OLVT pipeline is Python; preserves WebSocket-protocol-shape reuse so OLVT fixes can copy back | — Pending |
-| VTS+pyvts as primary renderer; pixi fallback v1.5 (§13.2) | VTS handles deformer math, physics, lipsync — zero Cubism SDK in our repo for v1 | — Pending |
+| VTS+pyvts as the *whole-MVP* renderer; pixi parked post-MVP exploratory (supersedes §13.2 v1.5 framing) | VTS handles deformer math, physics, lipsync. Body-sway-during-TTS is unsolved on VTS — solving it on VTS first beats absorbing it into a renderer-portability goal. Pixi remains relevant only as a future mobile-portability hedge. | — Pending |
 | 60 Hz `ParamFrame` stream as primary control surface (§5.2, §11) | Hotkeys produce pops; continuous param injection produces Neuro-sama-style fluidity | — Pending |
 | Three-layer separation: LLM tags → compositor → renderer (§11) | Renderer swappable (VTS/pixi/Cubism) without touching prompts; learned drivers swap inside compositor without touching contracts | — Pending |
 | Walking skeleton uses one hardcoded avatar (Teto, dev-only) | Avatar import pipeline + multi-avatar are deferred milestones; skeleton tests the layered architecture, not identity | — Pending |
