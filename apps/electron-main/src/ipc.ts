@@ -5,10 +5,17 @@
 import { ipcMain, type BrowserWindow } from 'electron'
 import { getReadyUrl, onReady, onCrash, onLog } from './sidecar'
 import { store } from './window-store'
+import { loadConfig, saveConfig, clearConfig, type StoredConfig } from './safe-storage'
 
 export function registerIpc(window: BrowserWindow): () => void {
+  // Existing from 01-01:
   ipcMain.handle('sidecar:getReadyUrl', () => getReadyUrl())
   ipcMain.handle('window:getState', () => store.get('window'))
+
+  // New for 01-02 (safeStorage credential gate, PLUMB-04 / D-07 / D-09):
+  ipcMain.handle('config:load', () => loadConfig())
+  ipcMain.handle('config:save', (_e, cfg: StoredConfig) => saveConfig(cfg))
+  ipcMain.handle('config:clear', () => clearConfig())
 
   const offReady = onReady((url) => {
     if (!window.isDestroyed()) window.webContents.send('sidecar:ready', url)
@@ -26,5 +33,8 @@ export function registerIpc(window: BrowserWindow): () => void {
     offLog()
     ipcMain.removeHandler('sidecar:getReadyUrl')
     ipcMain.removeHandler('window:getState')
+    ipcMain.removeHandler('config:load')
+    ipcMain.removeHandler('config:save')
+    ipcMain.removeHandler('config:clear')
   }
 }

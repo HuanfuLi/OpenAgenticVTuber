@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, safeStorage, shell } from 'electron'
 import { join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { store } from './window-store'
@@ -69,6 +69,13 @@ function createWindow(): BrowserWindow {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.agenticllmvtuber.app')
+
+  // safeStorage.isEncryptionAvailable() returns false on Linux without a keyring.
+  // Per CONTEXT.md D-07 we accept plaintext fallback ("Linux without a keyring drops
+  // to plaintext (acceptable per OS-isolation stance)").
+  if (process.platform === 'linux' && !safeStorage.isEncryptionAvailable()) {
+    safeStorage.setUsePlainTextEncryption(true)
+  }
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

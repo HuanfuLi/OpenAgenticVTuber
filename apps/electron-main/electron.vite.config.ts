@@ -30,7 +30,8 @@ export default defineConfig({
     resolve: {
       alias: {
         '@': resolve(__dirname, '../renderer/src'),
-        '@contracts': resolve(__dirname, '../../packages/contracts/ts')
+        '@contracts': resolve(__dirname, '../../packages/contracts/ts'),
+        '@preload-types': resolve(__dirname, 'preload/index.ts')
       }
     },
     build: {

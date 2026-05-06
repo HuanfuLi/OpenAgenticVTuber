@@ -2,6 +2,7 @@
 // Renderer never has direct access to ipcRenderer or Node — every channel
 // is whitelisted here.
 import { contextBridge, ipcRenderer } from 'electron'
+import type { StoredConfig } from '../src/safe-storage'
 
 type Unsubscribe = () => void
 
@@ -28,9 +29,16 @@ const api = {
   },
   // Window state
   getWindowState: (): Promise<{ width: number; height: number; x?: number; y?: number }> =>
-    ipcRenderer.invoke('window:getState')
+    ipcRenderer.invoke('window:getState'),
+
+  // SafeStorage credential gate (01-02 / PLUMB-04 / D-07 / D-09)
+  getStoredConfig: (): Promise<StoredConfig | null> => ipcRenderer.invoke('config:load'),
+  saveStoredConfig: (cfg: StoredConfig): Promise<void> =>
+    ipcRenderer.invoke('config:save', cfg),
+  clearStoredConfig: (): Promise<void> => ipcRenderer.invoke('config:clear')
 }
 
 contextBridge.exposeInMainWorld('api', api)
 
 export type RendererApi = typeof api
+export type { StoredConfig, ProviderConfig, Provider } from '../src/safe-storage'

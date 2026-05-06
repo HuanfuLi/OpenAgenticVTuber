@@ -217,10 +217,53 @@ function AppearanceSection() {
 }
 
 // -------- §1 Connection --------------------------------------------------
+// 01-02: read the real persisted config via window.api.getStoredConfig()
+// (DPAPI on Windows). Falls back to llmConfig from the legacy app-store on
+// the loading frame. The prototype's "lmstudio" id maps to safeStorage's
+// "lm_studio" Provider type.
 function ConnectionSection() {
   const C = COPY.SETTINGS
   const { llmConfig } = useStore()
   const [retesting, setRetesting] = useState(false)
+  const [storedCfg, setStoredCfg] = useState<{
+    provider: string
+    endpointUrl: string
+    modelName: string
+  } | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.api) return
+    let cancelled = false
+    window.api
+      .getStoredConfig()
+      .then((cfg) => {
+        if (cancelled) return
+        if (cfg && cfg.hasCompletedSetup) {
+          setStoredCfg({
+            provider: cfg.provider.provider,
+            endpointUrl: cfg.provider.endpointUrl,
+            modelName: cfg.provider.modelName
+          })
+        }
+      })
+      .catch(() => {
+        /* leave storedCfg null; render mock fallback */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const providerId = storedCfg?.provider ?? llmConfig.provider
+  const endpoint = storedCfg?.endpointUrl ?? llmConfig.endpoint
+  const model = storedCfg?.modelName ?? llmConfig.model
+  const providerLabel =
+    providerId === 'lm_studio' || providerId === 'lmstudio'
+      ? 'LM Studio'
+      : providerId === 'custom_openai'
+        ? 'Custom OpenAI-compat'
+        : providerId
+
   const onRetest = async (): Promise<void> => {
     setRetesting(true)
     mockStatus.set({ llm: 'amber', llmDetail: 'reconnecting…' })
@@ -233,17 +276,15 @@ function ConnectionSection() {
       <h2>{C.CONN_HEADER}</h2>
       <div className="kv-row">
         <span className="k">Provider</span>
-        <span className="v">
-          {llmConfig.provider === 'lmstudio' ? 'LM Studio' : llmConfig.provider}
-        </span>
+        <span className="v">{providerLabel}</span>
       </div>
       <div className="kv-row">
         <span className="k">Endpoint</span>
-        <span className="v">{llmConfig.endpoint}</span>
+        <span className="v">{endpoint}</span>
       </div>
       <div className="kv-row">
         <span className="k">Model</span>
-        <span className="v">{llmConfig.model || 'auto-detect'}</span>
+        <span className="v">{model || 'auto-detect'}</span>
       </div>
       <div className="row mt-2" style={{ display: 'flex', gap: 8 }}>
         <button className="btn btn-secondary" onClick={onRetest} disabled={retesting}>
