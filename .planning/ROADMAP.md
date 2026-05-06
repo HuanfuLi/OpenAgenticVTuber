@@ -33,8 +33,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: TBD
 
 Plans:
-- [ ] 01-01: TBD — Electron shell + sidecar lifecycle (PLUMB-01, PLUMB-02, PLUMB-05)
-- [ ] 01-02: TBD — WS protocol envelope + LLM setup gate (PLUMB-03, PLUMB-04)
+- [ ] 01-01-PLAN.md — Electron shell + sidecar lifecycle + chrome shell (PLUMB-01, PLUMB-02, PLUMB-05)
+- [ ] 01-02-PLAN.md — OLVT-shape WS envelope + echo round-trip + LLM setup gate (PLUMB-03, PLUMB-04)
 
 **Open questions to resolve at plan-time:**
 - **pyvts vendoring acceptability** (PLUMB-05): vendor from day one (recommended — upstream unmaintained since 2024-09-10) vs. wait-and-see. Default: vendor.
