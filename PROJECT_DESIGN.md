@@ -1,7 +1,7 @@
 # PROJECT_DESIGN.md
 
 **Status:** Brainstorm / pre-implementation
-**Last updated:** 2026-05-05
+**Last updated:** 2026-05-06
 **Working title:** TBD (placeholder: *Companion-Agent*)
 **Origin:** Successor concept inspired by Open-LLM-VTuber's Vivid Actions phase.
 
@@ -89,8 +89,9 @@ or in the system tray; missed runs are reported on next launch.
 User keeps several labeled threads with the same avatar (sidebar pattern,
 ChatGPT-style) — e.g., "work-stuff", "RP", "language-practice". Each
 thread is its own conversation with its own scrollback; they share the
-avatar's identity. *Whether they share or isolate episodic memory is
-listed as open in §13.120.*
+avatar's identity. Episodic memory is shared at the avatar level: each
+chunk is tagged with `thread_id` so retrieval can bias toward the
+active thread without losing cross-thread continuity (per §13.120).
 
 ### UC-8 (deferred)
 Mobile companion is deferred to a separate future project. See §10.
@@ -256,7 +257,7 @@ Out of scope — separate future project. See §10.
 │   │     ├ Profile loader (md/yaml/json,        │
 │   │     │     filesystem watch + hot-reload)   │
 │   │     ├ Episodic RAG: Chroma per             │
-│   │     │     (avatar, thread*) (* see §13.120) │
+│   │     │     per avatar (thread-tagged chunks) │
 │   │     ├ Shared user-facts bucket             │
 │   │     ├ FTS5 chat search index               │
 │   │     └ Memory deletion ops                  │
@@ -414,8 +415,9 @@ Hybrid (see §8):
   hot-reload on save): `personality.md`, `background.md`, `voice.yaml`,
   `quirks.md`, `actionMap.json`, `intentMap.json`, `entrance.yaml`,
   `hitZones.json`, `model.yaml` (per-avatar LLM params).
-- **Per-avatar episodic store**: Chroma collection per `(avatar_id,
-  thread_id)` (thread-vs-avatar boundary is open — see §13.120).
+- **Per-avatar episodic store**: Chroma collection per `avatar_id`;
+  each chunk tagged with `thread_id` so retrieval can bias toward the
+  active thread while still surfacing cross-thread context (§13.120).
   **Per-turn-pair chunks** (each user+assistant pair is one chunk).
 - **Shared user-facts bucket**: small Chroma collection readable by every
   avatar, write-on-explicit-promotion only. Stores durable facts like
@@ -526,8 +528,8 @@ vision capability (most LM Studio defaults are text-only).
 templates and either re-run one-click or schedule them (cron-style).
 The scheduler runs in the Electron main process backed by the system
 tray — scheduled goals fire only while the app is running or in tray.
-Missed runs are reported on next launch (see §13.121 for what "missed"
-means in detail).
+Missed runs are reported on next launch and the user is prompted
+whether to run the missed goal immediately (§13.121).
 
 **Audit logger:** every act-step (click, type, file write, web call,
 CLI delegation) is logged with `(timestamp, kind, target, outcome,
@@ -570,7 +572,7 @@ progressing / blocked?" Cache by screenshot perceptual hash to avoid
 re-asking on identical frames.
 
 ### 5.9 Skills loader
-**Two skill systems** (see §13.122 for coexistence open question):
+**Two skill systems** (separate, non-overlapping in v1 — §13.122):
 - **CLI skills** are inherited from `claude-code` transparently —
   whatever skills the user has installed for claude-code work when the
   CLISubAgent delegates to it.
@@ -858,8 +860,8 @@ because embedding similarity chose differently. Profile content is small
 (tens of KB) — fits in the prompt trivially.
 
 ### Layer 2 — Per-avatar episodic memory (RAG)
-- Chroma collection per `(avatar_id, thread_id)` (thread vs avatar
-  boundary is open per §13.120).
+- Chroma collection per `avatar_id`; chunks tagged with `thread_id`
+  for retrieval bias (§13.120).
 - Each chunk: turn pair (user + assistant) + auto-generated summary.
 - Retrieved by similarity each turn (top-k=5 or so).
 - Written by the **session-end summarizer** or on explicit "remember
@@ -956,11 +958,15 @@ ways to invoke:
 
 Scheduler runs in the Python sidecar; the Electron main keeps the
 sidecar alive while in system tray. Scheduled goals fire **only while
-the app is running or in tray**. Missed-run handling is open (§13.121).
+the app is running or in tray**. If the scheduled time falls while the app is closed, the
+missed run is queued and the user is prompted on next launch whether
+to run it now (§13.121).
 
 Scheduled goals must have permissions pre-granted in the template
-itself. Since per-session permissions reset on app close, scheduling
-needs an exception — see §13.121 for the permission-stickiness question.
+itself. Since per-session permissions reset on app close, templates
+support a **per-template permission grant** ("for THIS template,
+screen-control is always on"), surfaced prominently in settings with a
+badge so the elevated grant is visible (§13.121).
 
 ### Audit log
 Every act-step writes an `AuditEvent` to a per-goal SQLite table.
@@ -1009,8 +1015,10 @@ and proposes one. User confirms/edits; on confirm the inferred manifest
 is written to disk. Schema-tolerant import that never silently runs
 unknown code.
 
-**Coexistence with claude-code's skills**: see §13.122 — open question
-about whether they share a permission boundary or have separate ones.
+**Coexistence with claude-code's skills**: separate, non-overlapping
+in v1 — CLI skills only fire under CLISubAgent; in-app skills only fire
+under ScreenControlSubAgent. Bridge layer deferred to v1.5 if real
+cross-domain skills emerge (§13.122).
 
 ---
 
@@ -1204,12 +1212,12 @@ slider in settings with live preview meter.
 
 ---
 
-## 13. Open Decisions
+## 13. Decisions Log
 
-Most v1 decisions have been resolved through 28 rounds of brainstorming
-(~108 decisions; Q&A log preserved in conversation history; results
-folded into the sections above). This section keeps the **few
-remaining open items** and the **major resolved items** for traceability.
+All v1 design decisions are resolved as of round 29 (123 numbered
+decisions across 28 brainstorming rounds; Q&A log preserved in
+conversation history; results folded into the sections above). This
+section is the single-source-of-truth index for traceability.
 
 ### 13.1 — 13.40: Resolved decisions
 
@@ -1368,87 +1376,71 @@ Summary table; section text above is the source of truth.
 | 13.117 | Prompt caching | **On by default for Anthropic** |
 | 13.118 | Token cap | **Per-avatar configurable, provider-aware default** |
 | 13.119 | Voice model import | **External SoVITS service; we are a client** |
+| 13.120 | Thread × memory boundary | **Per-avatar bucket; thread-tagged chunks; retrieval bias 70/30 same/cross-thread** |
+| 13.121 | Scheduled-goal perms + missed runs | **Per-template permission grant (visible badge); prompt-on-next-launch for missed runs** |
+| 13.122 | Skill-system coexistence | **Separate, non-overlapping in v1; bridge layer deferred to v1.5** |
+| 13.123 | Default avatar source | **Live2D Inc. sample model (Hiyori/Mark/Wanderer); Teto stays dev-only** |
 
-### 13.120 (OPEN) Multi-thread × episodic memory boundary
-With multiple labeled chat threads per avatar (round 18 Q1), what's the
-RAG bucket boundary?
+### 13.120 Multi-thread × episodic memory boundary
+With multiple labeled chat threads per avatar (round 18 Q1), the
+episodic-memory bucket is **per-avatar with thread-tagged chunks**:
+one Chroma collection per `avatar_id`, every chunk carries a
+`thread_id` field, and the retriever can up-weight chunks from the
+current thread without losing cross-thread continuity. This preserves
+"you mentioned in another chat that…" while still keeping the active
+thread on top of the result list.
 
-- **Per-thread bucket** (each thread has its own episodic memory):
-  threads stay isolated; switching from "work-stuff" to "RP" doesn't
-  bleed context. Cleaner; loses cross-thread continuity ("you mentioned
-  in another chat that...").
-- **Per-avatar bucket** (all threads share the avatar's memory):
-  avatar always remembers everything; threads are just chat-display
-  partitioning. Continuity preserved; risk of weirdness when RP
-  context surfaces in a serious thread.
-- **Hybrid** (per-avatar bucket with thread-tagged chunks): single
-  collection but retrieval can be biased toward current thread.
-  Most flexible; more retrieval logic.
+Implementation notes:
+- Default retrieval mix: 70% same-thread similarity, 30% cross-thread
+  similarity (tunable in advanced settings).
+- "Forget this thread" UI deletes chunks where `thread_id == X` from
+  the avatar's collection, leaving other threads intact.
+- Shared user-facts bucket is unaffected (always cross-thread).
 
-**Lean**: hybrid (per-avatar bucket, thread-tagged chunks). Decide
-before implementing the multi-thread UI.
+### 13.121 Scheduled goal permissions + missed-run handling
+Two coupled answers:
 
-### 13.121 (OPEN) Scheduled goal permissions + missed-run handling
-Two coupled questions:
+**Permission stickiness for scheduled goals**: per-template grant. A
+saved goal template can carry its own permission strip (file/web/
+screen) that persists across sessions independently of the per-session
+default. UI surfaces this prominently — settings page lists every
+template with elevated permissions, and each scheduled-goal entry in
+the agent panel shows a badge whenever it has standing permissions.
+This is a deliberate, visible exception to the per-session security
+model rather than a hidden backdoor.
 
-**Permission stickiness for scheduled goals.** Per-session permissions
-(decided in 13.6) reset on app close. A scheduled "Genshin daily" at
-7am can't fire if the user hasn't enabled screen-control that morning.
-Options:
-- Per-template permission grant ("for THIS template, screen-control is
-  always on"). Strong but creates a backdoor around the per-session
-  default.
-- App must be started by the user before scheduled time, with
-  permissions enabled. Safest; partially defeats unattended automation.
-- Notification at scheduled time asking "Genshin daily is scheduled
-  now — enable screen-control?" User one-click to fire. Compromise.
+**Missed-run handling**: prompt on next launch. If a scheduled time
+arrives while the app is closed, the run is logged as missed and the
+user is shown a notification at next launch ("missed Genshin daily at
+7am — run now?") with run-now / skip / disable-template options. No
+silent skips; no surprise auto-fire.
 
-**Missed-run handling.** Scheduled goals fire only while app is open
-or in tray (round 18 Q2). What if the time arrives while the app is
-closed?
-- Silently skip; report "missed run at 7am" on next launch.
-- Auto-fire on next launch even if late.
-- Prompt user on next launch: "missed Genshin daily — run now?"
+### 13.122 Skill-system coexistence
+The two skill systems (claude-code CLI skills, in-app screen-control
+skills) are **separate and non-overlapping for v1**:
+- CLI skills only fire under CLISubAgent (delegated to `claude-code`
+  via subprocess).
+- In-app screen-control skills only fire under ScreenControlSubAgent
+  (loaded by our backend).
 
-**Lean**: Per-template permission grant + prompt-user-on-next-launch
-for missed runs. Both subject to confirmation before implementation.
+Each system keeps its own permission model. A capability that needs
+both file-read and screen-control (e.g., "fill out my expense report")
+is currently authored as two skills, one per system.
 
-### 13.122 (OPEN) Skill-system coexistence
-Two skill systems were greenlit (round 13 Q1):
-- claude-code's skills (CLI sub-agent inherits transparently)
-- in-app screen-control skills (described in §5.9 / §9)
+A **bridge layer** — in-app skills calling `claude-code` as a sub-tool
+via a wrapper — is deferred to v1.5 if and when real cross-domain
+skills emerge in practice.
 
-How do they interact?
+### 13.123 Default avatar source
+Ship the **Live2D Inc. sample model** (Hiyori / Mark / Wanderer) as
+the default avatar in release builds. Kasane Teto remains
+development-only and is never bundled into shipped artifacts.
 
-- **Separate, non-overlapping**: CLI skills only fire under CLISubAgent;
-  in-app skills only fire under ScreenControlSubAgent. Clean boundary;
-  no coordination needed. User has to install some skills twice if a
-  capability spans both (e.g., a "fill out my expense report" skill
-  needs both file-read and screen-control).
-- **Unified registry**: in-app skill loader scans claude-code's skill
-  dirs too; tools register into a single namespace. Most powerful; most
-  engineering; permission models differ between the two systems.
-- **Bridge layer**: in-app skills can call claude-code as a sub-tool via
-  a wrapper. CLI skills can't see in-app skills. Asymmetric; matches
-  reality (CLI doesn't know about us, but we know about CLI).
-
-**Lean**: separate, non-overlapping for v1. Bridge layer for v1.5 if
-real cross-domain skills emerge.
-
-### 13.123 (OPEN) Default avatar source
-Round 2 Q1 clarified that:
-- Kasane Teto is for **development only**, not redistributable.
-- Shipping default needs to be CC-permissive or properly licensed.
-
-Open: which specific model do we ship?
-- License Live2D Inc.'s sample model (Hiyori, Mark, Wanderer) — clean
-  legal status; recognizable but not ours.
-- Commission an original model — distinctive; cost + time.
-- Use a community-released CC-BY model — varies in quality; license
-  audit needed.
-
-**Lean**: pursue commissioning an original; ship a sample model placeholder
-in development builds in the meantime.
+Trade-off: not ours, slightly weakens product identity, but the legal
+status is clean, the asset is high-quality, and zero commission cost
+or schedule risk. If/when commissioning a distinctive original avatar
+becomes worthwhile, it can be added as an additional bundled default
+without removing the Live2D sample.
 
 ---
 
@@ -1582,16 +1574,21 @@ Mitigation: clear UI explanation listing supported configs (LM Studio
 + a vision model, Anthropic, OpenAI vision, Gemini), link to setup
 docs, allow companion mode unaffected.
 
-### R-12: Multi-thread + memory boundary ambiguity (§13.120 open)
-Until thread-vs-avatar memory boundary is decided, behavior is unclear
-in edge cases. Mitigation: lock down §13.120 before implementing the
-multi-thread UI.
+### R-12: Multi-thread retrieval-mix tuning (§13.120 resolved)
+Per-avatar bucket with thread-tagged chunks (§13.120) introduces a
+retrieval-mix knob (default 70/30 same-thread/cross-thread). Bad
+weights surface RP context in serious threads or vice versa.
+Mitigation: ship the default; expose the slider in advanced settings;
+log retrieval traces in debug mode; gate noisy cross-thread chunks
+with a similarity floor.
 
-### R-13: Scheduled-goal permission backdoor (§13.121 open)
-Per-template permission grants (the leaning resolution to §13.121)
-weaken the per-session security model. Mitigation: surface scheduled-
-goal permissions prominently in settings; visible badge whenever a
-scheduled goal has elevated permissions saved.
+### R-13: Scheduled-goal permission backdoor (§13.121 resolved)
+Per-template permission grants (§13.121) weaken the per-session
+security model by design. Mitigation: surface scheduled-goal
+permissions prominently in settings (dedicated "Templates with
+standing permissions" list); visible badge in the agent panel whenever
+a template has elevated permissions saved; require re-confirmation if
+a template's permission strip is widened post-creation.
 
 ### R-14: Hybrid retrieval tuning
 Vector + BM25 RRF gives good recall in theory but the merge weights
@@ -1707,8 +1704,8 @@ in chat after sentence appears so user knows audio is coming.
 - **Shared user-facts bucket** — single Chroma collection readable by
   every avatar, holding durable user identity facts.
 - **Per-avatar episodic memory** — Chroma collection scoped to an
-  avatar (or avatar+thread, see §13.120) for relationship-specific
-  conversation history.
+  avatar, with chunks tagged by `thread_id` for retrieval bias toward
+  the active thread (§13.120).
 - **Click-through (avatar window)** — Electron-controlled mode that
   routes mouse events through the avatar's transparent window so the
   agent's clicks reach the application underneath. Active only during
