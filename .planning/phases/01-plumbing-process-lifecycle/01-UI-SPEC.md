@@ -1,10 +1,11 @@
 ---
 phase: 1
 slug: plumbing-process-lifecycle
-status: draft
+status: approved
 shadcn_initialized: false
 preset: deferred-to-executor
 created: 2026-05-06
+reviewed_at: 2026-05-06
 ---
 
 # Phase 1 — UI Design Contract
@@ -203,7 +204,7 @@ The rule: **chrome is calm, errors are direct, empty states are brief and forwar
 | **Status popover row labels** | `LLM`, `VTS`, `Sidecar` | Three-letter or three-word fixed |
 | **Status popover `[ Re-test connection ]`** | `Re-test connection` | Hyphen is preserved (matches USERFLOW.md G) |
 | **Logs drawer collapsed strip** | `Logs ▾` (chevron-down character or lucide `ChevronUp`/`ChevronDown` icon) | Click to expand |
-| **Logs drawer expanded actions** | `[ Clear ]` and `[ Open log folder ]` | Right-aligned in drawer header |
+| **Logs drawer expanded actions** | `[ Clear logs ]` and `[ Open log folder ]` | Right-aligned in drawer header (verb+noun for consistency with all other CTAs) |
 
 ### Settings IA placeholder copy (sections 2-14)
 
