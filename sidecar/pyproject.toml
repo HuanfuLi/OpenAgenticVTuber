@@ -12,10 +12,12 @@ dependencies = [
     "psutil>=7.0",
     "litellm==1.83.14",
     "pyvts==0.3.3",
+    "contracts",
 ]
 
 [tool.uv.sources]
 pyvts = { path = "vendor/pyvts" }
+contracts = { path = "../packages/contracts/py", editable = true }
 
 [tool.uv]
 dev-dependencies = [

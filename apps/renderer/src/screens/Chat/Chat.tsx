@@ -1,22 +1,31 @@
-/* SPEC §Chat — empty-state branching, banner stack, input row.
+/* SPEC §Chat -- empty-state branching, banner stack, input row.
  *
- * Ported from prototype src/shell.jsx ChatView (lines 245–359).
- * Plan 01-01: uses mockEcho for round-trip (DEV-only). Plan 01-02 will swap
- * `await mockEcho(text, 200)` for the real WS client send/await.
+ * Ported from prototype src/shell.jsx ChatView (lines 245-359).
+ * Plan 01-02: mockEcho swapped for real WS round-trip via @/ws/client + @/ws/store.
+ *  - User input: append local user bubble + send({type: 'text-input', text}).
+ *  - Assistant reply: handled in @/ws/store subscribe() -> pushBubble on display-text.
+ *  - Banners stay wired to mockBanners (per DELTA: real connection state binding
+ *    is layered later when the LLM connection-status manager lands; the WS
+ *    open/close flag controls the input row's `disabled` instead).
  */
 import { useEffect, useRef, useState } from 'react'
 import { Send } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
-import { mockEcho, mockBanners, SCRIPTED_CONVO } from '@/dev/__mocks__/mock-backend'
+import { mockBanners, SCRIPTED_CONVO } from '@/dev/__mocks__/mock-backend'
+import { send } from '@/ws/client'
+import { appendUserMessage, useChatBubbles, useWSConnected } from '@/ws/store'
 
 export function Chat() {
   const { status, banners, chatMessages, setChatMessages } = useStore()
+  const wsBubbles = useChatBubbles()
+  const wsOpen = useWSConnected()
   const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
-  // Inject scripted convo via window event from dev panel.
+  // Inject scripted convo via window event from dev panel (DEV-only).
+  // The scripted convo writes to the local app-store's chatMessages slice so
+  // it doesn't fight the WS bubble stream.
   useEffect(() => {
     const onInject = (): void =>
       setChatMessages(
@@ -26,30 +35,47 @@ export function Chat() {
     return () => window.removeEventListener('chat:inject', onInject)
   }, [setChatMessages])
 
+  // Combine the (DEV-injected) scripted convo with the live WS bubble stream.
+  // Live messages append after any scripted ones, in order.
+  const merged = [
+    ...chatMessages.map((m) => ({
+      id: String(m.id),
+      role: m.role,
+      text: m.text
+    })),
+    ...wsBubbles
+  ]
+
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [chatMessages.length, sending])
+  }, [merged.length])
 
-  const onSend = async (): Promise<void> => {
+  const onSend = (): void => {
     const text = input.trim()
-    if (!text || sending) return
+    if (!text) return
     if (banners.llm) return // disabled by banner
     setInput('')
-    setSending(true)
-    const userMsg = { id: Date.now(), role: 'user' as const, text }
-    setChatMessages((m) => [...m, userMsg])
-    const reply = await mockEcho(text, 200)
-    setChatMessages((m) => [...m, { id: Date.now() + 1, role: 'assistant' as const, text: reply }])
-    setSending(false)
+    appendUserMessage(text)
+    // OLVT-shape envelope per packages/contracts/ts/ws-message.ts.
+    const ok = send({ type: 'text-input', text })
+    if (!ok) {
+      // WS not ready — no-op for skeleton (the local-echo bubble is still added).
+      // 01-02 doesn't ship send-failure UX; that's UX-10 in v2.
+    }
   }
 
-  const empty = chatMessages.length === 0
+  const empty = merged.length === 0
   const vtsReady = status.vts === 'green'
-  const inputDisabled = banners.llm
+  const inputDisabled = banners.llm || !wsOpen
 
   return (
     <div className="view">
-      <div className="chat-scroll" ref={scrollRef}>
+      <div
+        className="chat-scroll"
+        ref={scrollRef}
+        role="log"
+        aria-live="polite"
+      >
         {empty ? (
           vtsReady ? (
             <div className="empty-state">
@@ -70,11 +96,16 @@ export function Chat() {
             </div>
           )
         ) : (
-          chatMessages.map((m) => {
-            const ts = new Date(m.id).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit'
-            })
+          merged.map((m) => {
+            // numeric ids come from prototype scripted convo; UUID strings come
+            // from WS bubbles. Both are stable for the lifetime of the bubble.
+            const numericTs = Number(m.id)
+            const ts = !Number.isNaN(numericTs)
+              ? new Date(numericTs).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             return (
               <div key={m.id} className={`bubble ${m.role}`}>
                 <div className="meta">
@@ -85,15 +116,6 @@ export function Chat() {
               </div>
             )
           })
-        )}
-        {sending && (
-          <div className="bubble assistant">
-            <div className="meta">
-              <span className="semibold">Teto</span>
-              <span>…</span>
-            </div>
-            <div className="body muted">…</div>
-          </div>
         )}
       </div>
 
@@ -150,11 +172,12 @@ export function Chat() {
             }
           }}
           disabled={inputDisabled}
+          aria-label="Chat input"
         />
         <button
           className="send"
           onClick={onSend}
-          disabled={!input.trim() || sending || inputDisabled}
+          disabled={!input.trim() || inputDisabled}
           aria-label="Send"
         >
           <Send size={16} />
