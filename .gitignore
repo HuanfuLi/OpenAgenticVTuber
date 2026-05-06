@@ -14,9 +14,16 @@ Desktop.ini
 node_modules/
 dist/
 out/
+.vite/
 *.log
 .env
 .env.local
+.env.*
+!.env.example
+
+# Electron build outputs
+apps/electron-main/out/
+apps/renderer/out/
 
 # Python sidecar
 __pycache__/
@@ -28,6 +35,13 @@ venv/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+sidecar/.venv/
+sidecar/__pycache__/
+sidecar/**/__pycache__/
+sidecar/.pytest_cache/
+
+# uv lockfile is committed intentionally — these patterns intentionally
+# do NOT match sidecar/uv.lock. (See sidecar/uv.lock kept under VCS.)
 
 # Build artifacts
 build/
@@ -42,7 +56,3 @@ user-data/
 cache/
 chat_history/
 audit_logs/
-
-# Local secrets
-.env.*
-!.env.example

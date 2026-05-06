@@ -1,0 +1,21 @@
+{
+  "name": "agentic-llm-vtuber",
+  "version": "0.1.0-skeleton",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm --workspace apps/electron-main run dev",
+    "build": "npm --workspace apps/electron-main run build",
+    "build:win": "npm --workspace apps/electron-main run build:win",
+    "lint": "npm --workspace apps/electron-main run lint && npm --workspace apps/renderer run typecheck",
+    "format": "npm --workspace apps/electron-main run format",
+    "typecheck:renderer": "npm --workspace apps/renderer run typecheck"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  }
+}
