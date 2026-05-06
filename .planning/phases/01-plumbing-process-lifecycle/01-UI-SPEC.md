@@ -47,32 +47,33 @@ Then install the component blocks listed in **Registry Safety** below. **The sha
 
 ## Spacing Scale
 
-Declared values (multiples of 4, compact 8-point system tuned for a 400×700 window):
+Declared values from the standard 8-point set `{4, 8, 16, 24, 32, 48, 64}`, tuned for a 400×700 window. **12px is deliberately excluded** from the scale to prevent sub-grid misalignment; the standard set skips it. All spacing in the doc uses one of the six tokens below or one of the chrome exceptions.
 
 | Token | Value | Tailwind class | Usage |
 |-------|-------|---------------|-------|
 | `xs` | 4px | `space-1`, `gap-1`, `p-1` | Icon-to-label gap, inline tag padding, badge inner padding |
-| `sm` | 8px | `space-2`, `gap-2`, `p-2` | Compact element spacing, button inner padding (vertical), portal-card inner row gap |
-| `md` | 12px | `space-3`, `gap-3`, `p-3` | Default chat-bubble padding, popover inner padding, input inner padding |
-| `lg` | 16px | `space-4`, `gap-4`, `p-4` | Default vertical rhythm between message blocks, settings row vertical gap, cards |
-| `xl` | 24px | `space-6`, `gap-6`, `p-6` | Section gaps in Settings page, setup-screen form-section gaps |
-| `2xl` | 32px | `space-8`, `gap-8`, `p-8` | Setup screen outer padding, empty-state vertical breathing room |
-| `3xl` | 48px | `space-12`, `gap-12`, `p-12` | Page-level vertical spacing on Settings (between major section groups) |
+| `sm` | 8px | `space-2`, `gap-2`, `p-2` | Compact element spacing (button inner padding vertical, portal-card inner row gap), **chat-bubble padding, popover inner padding, input inner padding** (compact density per project stance) |
+| `md` | 16px | `space-4`, `gap-4`, `p-4` | Default vertical rhythm between message blocks, settings row vertical gap, cards |
+| `lg` | 24px | `space-6`, `gap-6`, `p-6` | Section gaps in Settings page, setup-screen form-section gaps |
+| `xl` | 32px | `space-8`, `gap-8`, `p-8` | Setup screen outer padding, empty-state vertical breathing room |
+| `2xl` | 48px | `space-12`, `gap-12`, `p-12` | Page-level vertical spacing on Settings (between major section groups) |
 
-**Exceptions:**
-- **Top bar height: 36px** (not on the spacing scale — chrome is sized to fit `Hexagon` 16px icon + 8px vertical padding + room for the `Agent ⏵` toggle pill at 28px height). Original USERFLOW.md said "~32px"; UI researcher locks 36px because 32px clips lucide icons at 16px with any padding margin.
-- **Bottom rail height: 56px** (not on the spacing scale — three tap targets each ≥48px tall for touch ergonomics; 4px top/bottom padding gives a 56px rail. Original USERFLOW.md said "~48px"; UI researcher locks 56px because true touch-target minimum from WCAG 2.5.5 / Material is 48px, and the rail's 8px chrome padding pushes total to 56px.)
-- **Window minimum width: 320px** (icon-only mode for bottom-rail tabs; below this, labels render but truncate. The USERFLOW.md "~280px soft floor" is treated as a *soft* hint; 320px is the hard `minWidth` enforced by `BrowserWindow`.)
-- **Window minimum height: 480px** (preserves: 36px top bar + 56px bottom rail + ~150px setup form essentials + 16px outer padding × 2. Below this, the LLM Setup screen scrolls within its outer container.)
-- **Logs drawer collapsed strip height: 32px** (single-line `Logs ▾`, smaller than top bar by design — drawer is secondary chrome.)
-- **Status popover width: 280px** (fixed; fits "qwen2.5-7b" model names without truncation, anchored top-right under `⬢`.)
-- **Slide-in History panel width: 80% of window width, capped at 360px** (so on a stretched-wide window the panel stays a panel, not a half-screen split.)
+**Chrome exceptions (justified structural sizes — not scale members):**
+- **Top bar height: 36px** — sized to fit `Hexagon` 16px icon + 8px vertical padding + room for the `Agent ⏵` toggle pill at 28px height. Original USERFLOW.md said "~32px"; UI researcher locks 36px because 32px clips lucide icons at 16px with any padding margin.
+- **Bottom rail height: 56px** — three tap targets each ≥48px tall for touch ergonomics; 4px top/bottom padding gives a 56px rail. Original USERFLOW.md said "~48px"; UI researcher locks 56px because true touch-target minimum from WCAG 2.5.5 / Material is 48px, and the rail's 8px chrome padding pushes total to 56px.
+- **Window minimum width: 320px** — icon-only mode for bottom-rail tabs; below this, labels render but truncate. The USERFLOW.md "~280px soft floor" is treated as a *soft* hint; 320px is the hard `minWidth` enforced by `BrowserWindow`.
+- **Window minimum height: 480px** — preserves: 36px top bar + 56px bottom rail + ~150px setup form essentials + 16px outer padding × 2. Below this, the LLM Setup screen scrolls within its outer container.
+- **Logs drawer collapsed strip height: 32px** — single-line `Logs ▾`, smaller than top bar by design — drawer is secondary chrome.
+- **Status popover width: 280px** — fixed; fits "qwen2.5-7b" model names without truncation, anchored top-right under `⬢`.
+- **Slide-in History panel width: 80% of window width, capped at 360px** — so on a stretched-wide window the panel stays a panel, not a half-screen split.
 
 ---
 
 ## Typography
 
 Three sizes, two weights — chat density tuned for a 400px-wide window. All sizes given in `rem` for Tailwind compatibility (root = 16px).
+
+**Two weights only — 400 regular + 600 semibold.** No third weight is declared anywhere in the contract. Inline emphasis (including error-state emphasis) is achieved through *color* (`--destructive` red) and *glyph* (`⚠`), not through weight. The 600 semibold provides sufficient contrast against 400 regular for any in-line emphasis need.
 
 | Role | Size | Weight | Line Height | Tailwind | Usage |
 |------|------|--------|-------------|----------|-------|
@@ -84,7 +85,7 @@ Three sizes, two weights — chat density tuned for a 400px-wide window. All siz
 
 **Why three sizes only:** A 400px window cannot afford a four-tier hierarchy without crowding. Headings at 18px are visibly larger than body 14px (1.29× ratio — comfortably above the 1.2 minimum for legible hierarchy); 12px meta is small but acceptable at desktop viewing distance. No display tier — the LLM Setup screen's "Connect a language model" heading is 18px, not 24px+, because 400px width clips longer-line headings.
 
-**Weights:** Two only — 400 regular + 600 semibold. Bold (700) is reserved for **error-state inline emphasis** ("⚠ LLM unreachable") and is otherwise unused; treat bold as a third weight for *exception copy only*, not a third tier.
+**Error-state inline emphasis (executor reference):** Error copy such as `⚠ LLM unreachable — connection refused at {host}:{port}` renders as **400 regular body text** in `--destructive` (status-red) color, prefixed with the `⚠` glyph. The color + glyph combination — not weight — carries the emphasis. Do NOT introduce a 700 bold weight or any other third weight to the project.
 
 ---
 
@@ -105,7 +106,7 @@ Three sizes, two weights — chat density tuned for a 400px-wide window. All siz
 | **Accent (10%)** — `--primary` | `oklch(0.72 0.18 285)` | `#8a7af0` (lavender-violet) | **Reserved for: primary CTA buttons (`Test connection`, `Continue →`, `Approve ▶`, `Re-test connection`); active bottom-rail tab indicator (filled icon + label color); `Agent ⏵` toggle ON state; sticky agent pill background; focus ring on inputs.** That is the complete list. |
 | **Status — Green** | `oklch(0.72 0.16 155)` | `#4ec97c` | `⬢` "all connected" + `●` indicators in status popover for healthy LLM/VTS/Sidecar |
 | **Status — Amber** | `oklch(0.78 0.16 75)` | `#e8b94e` | `⬢` "any degraded" + amber banners ("VTube Studio disconnected — avatar motion paused") |
-| **Status — Red / Destructive** | `oklch(0.62 0.22 25)` | `#dd5050` | `⬢` "any error" + error banners + `[Reset all state]` button text + `⚠` warning glyphs in error chat slots + `[Stop]` button on running agent cards |
+| **Status — Red / Destructive** | `oklch(0.62 0.22 25)` | `#dd5050` | `⬢` "any error" + error banners + `[Reset all state]` button text + `⚠` warning glyphs in error chat slots + inline error-emphasis text + `[Stop]` button on running agent cards |
 
 ### Light Mode (supported, not default)
 
@@ -175,7 +176,7 @@ The rule: **chrome is calm, errors are direct, empty states are brief and forwar
 | **Primary CTA (test)** | `Test connection` | Verb + noun |
 | **Primary CTA (proceed, post-test-success)** | `Continue →` | Right-arrow glyph; disabled until test passes |
 | **Test-log success final line** | `Connection looks good. You can continue.` | Conversational; matches app voice |
-| **Test-log retry button** | `Test again` | Not "Retry" — "Test again" reads less alarming after a success |
+| **Test-log retry button** | `Test connection again` | Verb-noun-adverb — self-contained when announced by a screen reader (preferred over the bare verb "Test again") |
 | **Test-log failure (LM Studio not running)** | `LM Studio doesn't seem to be running.` then numbered steps from USERFLOW.md A.2. | Verbatim from USERFLOW.md |
 | **Test-log failure (no model loaded)** | `No model is loaded in LM Studio.` then guidance from USERFLOW.md A.2. | Verbatim from USERFLOW.md |
 | **Disabled-provider tooltip** | `Hosted-provider support lands in v2. Use the Custom OpenAI-compatible option for now if you need a hosted endpoint.` | Verbatim from USERFLOW.md A.4 |
@@ -240,12 +241,14 @@ All error state copy follows: **{problem in user-words} — {what they can do}**
 | Sidecar repeat crash (banner) | `Sidecar has crashed twice. Click Restart sidecar or check the log folder for details.` followed by `[ Restart sidecar ]   [ Open log folder ]` |
 | TTS unavailable | `TTS unavailable — replies will be text-only. [More info]` |
 | Connection refused (setup screen, LM Studio) | `Connection refused at 127.0.0.1:1234` then numbered steps (USERFLOW.md A.2 verbatim) |
-| Connection refused (setup screen, custom endpoint) | `Couldn't reach {endpoint}. Check the URL and your network, then Test again.` |
-| HTTP 401/403 (setup screen) | `Authentication failed (HTTP {status}). Check the API key, then Test again.` |
+| Connection refused (setup screen, custom endpoint) | `Couldn't reach {endpoint}. Check the URL and your network, then Test connection again.` |
+| HTTP 401/403 (setup screen) | `Authentication failed (HTTP {status}). Check the API key, then Test connection again.` |
 | HTTP 404 / model not found (setup screen) | `Model "{model}" not found at this endpoint. Try blank for auto-detect, or pick from the model list.` |
 | HTTP 5xx (setup screen) | `The endpoint returned an error (HTTP {status}). The full response is shown above; copy it if you need to file a bug.` |
-| LiteLLM timeout (setup screen, >120s) | `The request timed out after 120 seconds. The model may still be loading — wait a moment and Test again.` |
-| Generic test-completion failure (catch-all) | `Test failed. The error is shown above. Fix the issue and Test again.` (then verbatim LiteLLM error string in mono) |
+| LiteLLM timeout (setup screen, >120s) | `The request timed out after 120 seconds. The model may still be loading — wait a moment and Test connection again.` |
+| Generic test-completion failure (catch-all) | `Test failed. The error is shown above. Fix the issue and Test connection again.` (then verbatim LiteLLM error string in mono) |
+
+**Note on inline emphasis:** Error copy renders in `--destructive` (status-red) at the standard 400-regular body weight. The `⚠` glyph carries additional emphasis where present. No bold/700 weight is applied — the color + glyph combination is the visual contract for "this is wrong."
 
 ### Destructive confirmations
 
@@ -268,7 +271,7 @@ shadcn primitives consumed by Phase 1 (use `npx shadcn@latest add {name}`):
 
 | Component | Surface | Notes |
 |-----------|---------|-------|
-| `button` | All CTAs, all icon buttons, all toggle-state buttons | Variants used: `default` (primary), `secondary` (Re-test, Change provider, Test again), `ghost` (icon-only top-bar buttons, `Open log folder`, hamburger), `destructive` (Reset everything inside AlertDialog), `link` (Open VTube Studio docs ↗). |
+| `button` | All CTAs, all icon buttons, all toggle-state buttons | Variants used: `default` (primary), `secondary` (Re-test, Change provider, Test connection again), `ghost` (icon-only top-bar buttons, `Open log folder`, hamburger), `destructive` (Reset everything inside AlertDialog), `link` (Open VTube Studio docs ↗). |
 | `input` | Endpoint URL, Model, API key fields; chat input field; Settings text-field rows | |
 | `select` | Provider dropdown on setup screen; placeholder for future Settings selects | |
 | `tooltip` | Disabled-provider hover ("Hosted-provider support lands in v2"); Agent toggle disabled tooltip; status icon hover summary | |
@@ -309,8 +312,8 @@ The state machine has **no reverse path** in skeleton. Re-test happens via the s
 ### Setup screen blocking behavior (D-09, PLUMB-04)
 
 - `Continue →` button is **disabled** until a successful test completes (state: `idle | testing | success | error`)
-- Successful test → `Continue →` enables; `Test again` link appears below
-- Failed test → log panel shows verbose error; `Continue →` stays disabled; user must Test again
+- Successful test → `Continue →` enables; `Test connection again` link appears below
+- Failed test → log panel shows verbose error; `Continue →` stays disabled; user must Test connection again
 - Closing the window during setup → `app.quit()` (no partial config persisted; safeStorage write only on `Continue →` click)
 
 ### Bottom-rail tab switching (USERFLOW.md F)
@@ -372,8 +375,10 @@ The state machine has **no reverse path** in skeleton. Re-test happens via the s
 
 - All interactive elements have visible focus rings (2px accent outline, 2px offset)
 - All icons paired with text label OR `aria-label`
-- Bottom-rail tabs have `role="tab"` and `aria-selected`
-- Status icon `⬢` has `aria-label` reflecting current state ("Status: all connected" / "Status: VTube Studio degraded" / "Status: LLM error")
+- **Hamburger `☰` button:** `aria-label="Open conversation history"` (explicit, since the icon-only button has no visible text label). Disabled state on Agent / Settings views uses `aria-hidden="true"` since the icon is not rendered.
+- **Status icon `⬢`:** `aria-label` reflects current state — `"Status: all connected"` / `"Status: VTube Studio degraded"` / `"Status: LLM error"` (worst-of-three component included so the label is meaningful before the popover opens).
+- **Agent toggle `Agent ⏵`:** `aria-pressed="true|false"` reflecting ON / OFF state. In skeleton, `aria-disabled="true"` with the disabled tooltip copy as the announcement.
+- Bottom-rail tabs have `role="tab"` and `aria-selected`; the rail itself is `role="tablist"`.
 - AlertDialog uses `role="alertdialog"` with focus trap (shadcn handles)
 - Chat messages have `role="log"` with `aria-live="polite"` so screen readers announce new content without interrupting
 - Logs drawer content is `role="log"` `aria-live="off"` (it's chrome-secondary, not user-facing alerts)
