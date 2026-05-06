@@ -59,6 +59,29 @@ User chose to defer these to research/planner judgment with documented defaults:
 - **Monorepo layout:** Default per research/SUMMARY.md is `apps/electron-main/` + `apps/renderer/` + `sidecar/` + `packages/contracts/`. Phase 1 will create all four directories; `packages/contracts/` ships hand-written Pydantic + hand-mirrored TS in skeleton (codegen replaces the hand-written TS in Phase 5 per SC-02).
 - **WS envelope shape:** OLVT-mirror per PLUMB-03. Planner: read OLVT's `_route_message()` and freeze the exact envelope contract (`{type, payload, requestId?, timestamp?}` or whatever OLVT uses) into `packages/contracts/ws_message.py` + the matching hand-mirrored TS. The echo message becomes the first concrete `WSMessage` subtype that exercises the envelope end-to-end.
 
+### Chrome IA & User Flow (added post-discussion 2026-05-06)
+
+User locked the v1-target chrome architecture during a follow-up brainstorm. Skeleton **builds the chrome shell + placeholders** (Path 1) so v1 surfaces drop into pre-existing slots without rewrites. Full reference: `01-USERFLOW.md` — UI researcher MUST read it.
+
+- **D-11: Layout — single chat-only window; VTS runs separately.** Our app is one window, chat-only (option #3 from layout discussion). VTube Studio runs in its own process the user manages. **Cursor-in-canvas tracking (AVT-10) is implemented as OS-level cursor + VTS window bounds detection — no transparent overlay window.** From the user's perspective, two visible windows exist: our app + VTS.
+- **D-12: Window dimensions — 400×700 default, resizable, any aspect ratio, bottom rail always visible.** Minimum width TBD by UI researcher (~280px soft floor before icon labels become illegible).
+- **D-13: Chrome — top bar + bottom rail.** Top bar (~32px): `☰` hamburger (Chat-view only) + `Agent ⏵` toggle + `⬢` status icon. Bottom rail (~48px): `⌂ Chat` / `⏷ Agent` / `⚙ Settings` — three equal-width tap targets, icon + small label, always visible.
+- **D-14: Status icon format C — single composite `⬢` icon, worst-of-three color, click expands popover.** Popover lists LLM / VTS / Sidecar with details + `[Re-test connection]` button. Skeleton has no `[Change provider]`; that lands in v1.
+- **D-15: History slide-in — covers chat ~80% width, dimmed strip dismisses.** Triggered by `☰`. ChatGPT-mobile pattern. Skeleton renders panel with placeholder copy (no real threads — single in-memory thread per LLM-04).
+- **D-16: Logs drawer — entirely hidden when off.** No heading, no chevron when disabled. Toggle in Settings → Diagnostics. When enabled, `▾` chevron strip appears above bottom rail; click expands height-resizable drawer; state persists across launches.
+- **D-17: Agent — toggle in top bar (session enable) + tab in bottom rail (manage goals/audits/saved templates).** Two affordances are intentional. Toggle is per-session, resets to OFF on app close. Bottom-rail Agent tab is the surface for goal management.
+- **D-18: Agent in-chat reporting — portal-card pattern, à la Claude-Code tool-call display.** When chat-detected agent intent fires:
+  - **OFF state** → upsell card with `[Turn on Agent ▶]`
+  - **ON state** → goal-proposed card auto-filed by router, with `[Approve ▶] [Modify] [Cancel]`. **`[Modify]` is inline-expand within the card, not a modal.**
+  - **Running state** → live-updating card with step counter, screenshot thumbnail, elapsed timer, `[Pause] [Stop] [Open ↗]` controls
+  - **Sticky pill** anchors at bottom of chat surface (above input) when scrolled past; tap → jumps back to portal card
+  - **Verification gate** → `[Done ✓] [Keep going]` confirmation before declaring DONE
+  - **Terminal state** → persistent summary card with `[View report ↗]` link to Agent page
+- **D-19: One active agent session at a time.** New goal queues or replaces (TBD by agent-runtime milestone). Concurrency excluded.
+- **D-20: Manual goal entry — `[+ New goal]` button at top of Sessions list in Agent page.** Not in chat; not in Settings.
+- **D-21: Settings — single long scroll, sectioned, 16 sections.** Anchor pills at top for quick jump. Full IA enumerated in `01-USERFLOW.md` §10. Skeleton renders all 16 section headers with placeholder copy; only **§1 Connection / Models**, **§15 Diagnostics** (Show log toggle + Open log folder + Reset state), and **§16 About** are functional.
+- **D-22: Skeleton scope — Path 1 (chrome shell + placeholders).** All non-functional surfaces render as branded placeholder copy ("Coming in milestone-N. {what'll land}") rather than being absent. This costs ~1 phase of UI work but locks IA so v2/v3 milestones drop into existing slots without chrome rewrites. Chrome work belongs primarily to Phase 1 (PLUMB-01 Electron shell scope), with chat-content functionality landing in Phases 2–4.
+
 ### Folded Todos
 
 None — todo cross-reference returned 0 matches.
@@ -79,6 +102,7 @@ None — todo cross-reference returned 0 matches.
 
 ### Phase contract
 
+- `.planning/phases/01-plumbing-process-lifecycle/01-USERFLOW.md` — **MANDATORY READ for UI researcher and planner.** Comprehensive v1-target user flow with chrome IA, all 13 flows (cold launch through closing), 16-section Settings IA, agent portal-card lifecycle, error states, and the skeleton cut-list (which flow lands in which phase).
 - `.planning/ROADMAP.md` Phase 1 section (lines 23–43) — phase goal, success criteria, plans (01-01 + 01-02), and the three "Open questions to resolve at plan-time" that this CONTEXT.md resolves.
 - `.planning/ROADMAP.md` Phase 4 cross-phase note (line 103) — confirms Phase 1's PLUMB-05 deliverable scope is *vendor checkout + import only*, NOT the single-writer wrapper.
 
