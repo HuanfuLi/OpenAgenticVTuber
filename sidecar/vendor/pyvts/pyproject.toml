@@ -1,0 +1,29 @@
+[project]
+name = "pyvts"
+version = "0.3.3"
+description = "A python library for interacting with the VTube Studio API (vendored snapshot — see PROVENANCE.md)"
+requires-python = ">=3.8"
+dependencies = [
+    "websockets>=10.4",
+    "aiofiles>=23.1.0",
+    "opencv-python>=4.4.0",
+]
+license = { file = "LICENSE" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# vendor/pyvts/ IS the `pyvts` Python package (its __init__.py + sources live
+# directly inside this dir). Hatch's `sources` mapping rewrites paths in the
+# wheel so the contents of "" land under "pyvts/" — i.e. the wheel ships a
+# real pyvts/ package that is importable as `pyvts` after install.
+[tool.hatch.build.targets.wheel]
+sources = { "" = "pyvts" }
+include = [
+    "/__init__.py",
+    "/vts.py",
+    "/vts_request.py",
+    "/config.py",
+    "/error.py",
+]

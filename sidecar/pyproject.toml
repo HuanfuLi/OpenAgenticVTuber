@@ -1,0 +1,39 @@
+[project]
+name = "sidecar"
+version = "0.1.0"
+description = "AgenticLLMVTuber Python sidecar — FastAPI + uvicorn + pyvts"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi==0.136.1",
+    "uvicorn==0.46.0",
+    "websockets>=14,<15",
+    "pydantic>=2.5",
+    "httpx>=0.28",
+    "psutil>=7.0",
+    "litellm==1.83.14",
+    "pyvts==0.3.3",
+]
+
+[tool.uv.sources]
+pyvts = { path = "vendor/pyvts" }
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sidecar"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

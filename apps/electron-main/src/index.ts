@@ -2,6 +2,8 @@ import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { store } from './window-store'
+import { spawnSidecar, shutdownSidecar } from './sidecar'
+import { registerIpc } from './ipc'
 
 // Augment Electron's App with a quitting flag so multiple before-quit handlers cooperate.
 declare module 'electron' {
@@ -12,6 +14,7 @@ declare module 'electron' {
 app.isQuitting = false
 
 let mainWindow: BrowserWindow | null = null
+let cleanupIpc: (() => void) | null = null
 
 function createWindow(): BrowserWindow {
   const saved = store.get('window')
@@ -72,12 +75,22 @@ app.whenReady().then(() => {
   })
 
   mainWindow = createWindow()
+  cleanupIpc = registerIpc(mainWindow)
 
-  // TODO(Task 2): registerIpc(mainWindow); spawnSidecar(); shutdownSidecar() in before-quit.
+  // Spawn sidecar AFTER createWindow + registerIpc so any sidecar:ready event
+  // has a window to dispatch to. Pitfall 12: never spawn at module top-level.
+  spawnSidecar().catch((err) => {
+    console.error('[main] sidecar spawn failed:', err)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('sidecar:crash', { code: -1, willRespawn: false })
+    }
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createWindow()
+      cleanupIpc?.()
+      cleanupIpc = registerIpc(mainWindow)
     }
   })
 })
@@ -88,6 +101,17 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.on('before-quit', () => {
-  app.isQuitting = true
+app.on('before-quit', async (e) => {
+  if (!app.isQuitting) {
+    app.isQuitting = true
+    e.preventDefault()
+    cleanupIpc?.()
+    cleanupIpc = null
+    try {
+      await shutdownSidecar()
+    } catch (err) {
+      console.error('[main] sidecar shutdown error:', err)
+    }
+    app.quit()
+  }
 })
