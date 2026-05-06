@@ -131,6 +131,25 @@ User locked the v1-target chrome architecture during a follow-up brainstorm. Ske
   - Overlays: `bg-background/60` backdrop, optional `backdrop-blur-sm` (no heavier blur).
   - Borders: `border-border/60` typical; `border-border` only on inputs at rest.
 
+### UI prototype shipped (added 2026-05-06)
+
+- **D-24: Port the project-root UI prototype directly; skip the shadcn install.** Claude Design delivered a complete UI prototype to `<repo-root>/index.html` + `<repo-root>/src/` on 2026-05-06 — vanilla HTML + React 18 UMD + Babel/standalone + hand-rolled CSS + inline SVG icons. It is the **executable visual contract** for every Phase 1 surface (chrome shell, LLM setup, echo chat, all 16 settings sections, dev panel) and implements D-11 through D-23 verbatim, including the 7-theme system from D-23.
+
+  **Implications for plans 01-01 and 01-02:**
+  - 01-01 Task 1 Step 1.6 (shadcn + Tailwind v4 install) is **REVISED** — skip the shadcn install entirely; port `<repo-root>/src/index.css` verbatim into `apps/renderer/src/index.css`. Drop `tailwindcss`, `@tailwindcss/postcss`, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`, `components.json`, `tailwind.config.ts`, `postcss.config.js` from the renderer install / files list.
+  - 01-01 Task 3 (chrome shell) is **REVISED** — port `<repo-root>/src/shell.jsx` components verbatim (one component per file under `apps/renderer/src/chrome/`). Replace `window.ICONS`/`window.COPY`/`window.useStore` registry pattern with ESM imports.
+  - 01-02 Task 1 (echo chat) is **REVISED** — port the `ChatView` component from `<repo-root>/src/shell.jsx` lines 245–359; replace `await mockEcho(text, 200)` with the real WS round-trip.
+  - 01-02 Task 2 (LLM setup screen) is **REVISED** — port `<repo-root>/src/views/LLMSetup.jsx` with one bug-fix: replace the stale 3-option `<select>` (lines 45–54) with the 5-option list driven by `COPY.LLM_SETUP.PROVIDERS`. Wire `mockSafeStorage.set` to real `window.api.setStoredValue` IPC calls.
+  - 01-02 Task 3 (`/admin/llm-test` SSE + TestLog) is **PARTIALLY REVISED** — backend stays as planned; the `<TestLog>` frontend is the JSX inline in `LLMSetup.jsx` lines 82–89. The `mockTestConnection` async-generator contract in `<repo-root>/src/lib/mock.js` lines 35–86 is the **wire format** for the SSE stream; sidecar must emit `{ kind: 'info'|'error'|'muted'|'ok'|'ok-bold', text: string }` lines.
+
+  **Inline SVGs (no `lucide-react`):** the prototype's `<repo-root>/src/lib/icons.jsx` ships 17 hand-rolled inline-SVG icons. Port verbatim. Do NOT install `lucide-react` — the inline approach is intentional (offline-friendly per UI-SPEC's local-first stance).
+
+  **DevPanel preserved:** `<repo-root>/src/dev/DevPanel.jsx` + `<repo-root>/src/lib/mock.js` get ported into `apps/renderer/src/dev/` with `import.meta.env.DEV` gating so production builds tree-shake them.
+
+  **Full port-mapping reference:** see `01-PROTOTYPE-DELTA.md` for file-by-file mappings, conversion rules, and the LLMSetup `<select>` bug fix. **When 01-PROTOTYPE-DELTA.md and 01-UI-SPEC.md / 01-01-PLAN.md / 01-02-PLAN.md disagree, the DELTA wins.** The plans were verified before the prototype shipped; the delta is additive and supersedes wherever it contradicts.
+
+  *Why direct-port over shadcn:* The prototype lands the entire chrome + setup + settings surface in ~840 lines of CSS + 17 inline SVGs + 11 component files — smaller and more complete than the equivalent shadcn-installed boilerplate. The prototype is also already verified visually; rewriting it through shadcn would add risk for no rendering-fidelity gain. UI-SPEC originally suggested shadcn; the prototype demonstrates the lighter approach is sufficient and the user has accepted it by shipping the prototype.
+
 ### Folded Todos
 
 None — todo cross-reference returned 0 matches.
@@ -151,6 +170,8 @@ None — todo cross-reference returned 0 matches.
 
 ### Phase contract
 
+- `.planning/phases/01-plumbing-process-lifecycle/01-PROTOTYPE-DELTA.md` — **MANDATORY READ for the executor (and re-running plan-checker).** Authoritative port-mapping for the project-root UI prototype delivered 2026-05-06. Supersedes `01-UI-SPEC.md` and the relevant `01-01-PLAN.md` / `01-02-PLAN.md` task `<action>` blocks wherever they conflict. Captures the LLMSetup `<select>` bug-fix and the shadcn-install removal.
+- **`<repo-root>/index.html`, `<repo-root>/src/App.jsx`, `<repo-root>/src/shell.jsx`, `<repo-root>/src/views/LLMSetup.jsx`, `<repo-root>/src/views/SettingsView.jsx`, `<repo-root>/src/dev/DevPanel.jsx`, `<repo-root>/src/lib/{copy,icons,mock,store}.{js,jsx}`, `<repo-root>/src/index.css`** — UI prototype source files; the executable visual contract for every Phase 1 renderer surface. **PORT, do not rebuild.** See 01-PROTOTYPE-DELTA.md for file-by-file mappings.
 - `.planning/phases/01-plumbing-process-lifecycle/01-USERFLOW.md` — **MANDATORY READ for UI researcher and planner.** Comprehensive v1-target user flow with chrome IA, all 13 flows (cold launch through closing), 16-section Settings IA, agent portal-card lifecycle, error states, and the skeleton cut-list (which flow lands in which phase).
 - `.planning/ROADMAP.md` Phase 1 section (lines 23–43) — phase goal, success criteria, plans (01-01 + 01-02), and the three "Open questions to resolve at plan-time" that this CONTEXT.md resolves.
 - `.planning/ROADMAP.md` Phase 4 cross-phase note (line 103) — confirms Phase 1's PLUMB-05 deliverable scope is *vendor checkout + import only*, NOT the single-writer wrapper.
