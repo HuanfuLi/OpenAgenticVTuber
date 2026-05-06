@@ -80,7 +80,56 @@ User locked the v1-target chrome architecture during a follow-up brainstorm. Ske
 - **D-19: One active agent session at a time.** New goal queues or replaces (TBD by agent-runtime milestone). Concurrency excluded.
 - **D-20: Manual goal entry — `[+ New goal]` button at top of Sessions list in Agent page.** Not in chat; not in Settings.
 - **D-21: Settings — single long scroll, sectioned, 16 sections.** Anchor pills at top for quick jump. Full IA enumerated in `01-USERFLOW.md` §10. Skeleton renders all 16 section headers with placeholder copy; only **§1 Connection / Models**, **§15 Diagnostics** (Show log toggle + Open log folder + Reset state), and **§16 About** are functional.
-- **D-22: Skeleton scope — Path 1 (chrome shell + placeholders).** All non-functional surfaces render as branded placeholder copy ("Coming in milestone-N. {what'll land}") rather than being absent. This costs ~1 phase of UI work but locks IA so v2/v3 milestones drop into existing slots without chrome rewrites. Chrome work belongs primarily to Phase 1 (PLUMB-01 Electron shell scope), with chat-content functionality landing in Phases 2–4.
+- **D-22: Skeleton scope — Path 1 (chrome shell + placeholders).** All non-functional surfaces render as branded placeholder copy ("Coming in milestone-N. {what'll land}") rather than being absent. This costs ~1 phase of UI work but locks IA so v2/v3 milestones drop into existing slots without chrome rewrites. Chrome work belongs primarily to Phase 1 (PLUMB-01 Electron shell scope), with chat-content functionality landing in Phases 2–4. **Amendment 2026-05-06**: Settings §14 Appearance moves from placeholder → functional in skeleton (one section reclassified) to support D-23's user-selectable theme system. Skeleton-functional Settings sections are therefore: §1 Connection / Models, §14 Appearance, §15 Diagnostics (partial), §16 About.
+
+- **D-23: Theme system — warm/flat aesthetic, low-saturation, user-selectable in Settings §14.** Replaces the single lavender-violet `--primary` from the initial UI-SPEC.
+
+  **Light theme (one warm-cream BG, three accent options):**
+  - `--background` = `oklch(0.98 0.012 80)` (≈ `#FBF7F2`, warm cream)
+  - `--card` / `--muted` = `oklch(0.95 0.018 80)` (≈ `#F1ECE3`)
+  - `--foreground` = `oklch(0.22 0.018 70)` (≈ `#322B25`, soft near-black)
+  - `--border` = `oklch(0.88 0.015 80)` (≈ `#DCD4C7`)
+  - **Accent — user-pick:**
+    - **Blush** *(default)* `oklch(0.72 0.10 15)` ≈ `#D89690` (soft warm pink)
+    - **Sunrise** `oklch(0.72 0.12 55)` ≈ `#D89A60` (dusty orange)
+    - **Ember** `oklch(0.62 0.13 25)` ≈ `#B5746A` (muted brick red)
+
+  **Dark theme (user-pick BG and accent independently):**
+  - `--background` BG options:
+    - **Midnight** *(default)* `oklch(0.20 0.035 250)` ≈ `#1A1F2C` (deep blue)
+    - **Onyx** `oklch(0.17 0.005 270)` ≈ `#18181C` (near-black)
+  - `--card` / `--muted` lifts BG by ~5% lightness with same chroma
+  - `--foreground` = `oklch(0.92 0.015 250)` ≈ `#E0E2EA` (near-white)
+  - **Accent — user-pick:**
+    - **Sky** *(default)* `oklch(0.78 0.08 240)` ≈ `#A5B8D2` (soft light blue)
+    - **Pewter** `oklch(0.75 0.005 270)` ≈ `#B5B5B9` (neutral grey)
+
+  **Settings → Appearance UI (radio groups):**
+  - Mode: ◯ Match system *(default)* / ◯ Light / ◯ Dark
+  - Light accent: ◯ Blush *(default)* / ◯ Sunrise / ◯ Ember
+  - Dark background: ◯ Midnight *(default)* / ◯ Onyx
+  - Dark accent: ◯ Sky *(default)* / ◯ Pewter
+  - Live preview region showing current selection
+
+  **Stored in safeStorage:**
+  ```ts
+  { mode: "auto" | "light" | "dark",
+    lightAccent: "blush" | "sunrise" | "ember",
+    darkBg: "midnight" | "onyx",
+    darkAccent: "sky" | "pewter" }
+  ```
+
+  **Tailwind v4 implementation:** declare named theme classes in the `@theme` block (`theme-blush`, `theme-sunrise`, `theme-ember` for light; `theme-midnight-sky`, `theme-midnight-pewter`, `theme-onyx-sky`, `theme-onyx-pewter` for dark). Resolve the active class on `<html>` from the safeStorage selection + `prefers-color-scheme` when mode = auto.
+
+  **60/30/10 ratio still holds**, just with different colors filling each slot. Accent reserved-for list (6 affordances) unchanged. Chroma cap: `0.13` for accents, `0.04` for backgrounds — nothing above.
+
+  **Flat aesthetic guardrails (Material You / Claude-app reference):**
+  - Shadows: **no `shadow-md`/`lg`/`xl`/`2xl` anywhere**. `shadow-sm` only on popovers/sheets/drawers that need depth.
+  - Radius: `rounded-2xl` (16px) for cards/sheets, `rounded-xl` (12px) for buttons/inputs, `rounded-full` for pills/toggles. Larger than shadcn default.
+  - Surface separation by background-color shift, not shadow.
+  - Transitions: 200ms ease, no spring/bounce. Theme-switch fade: 250ms.
+  - Overlays: `bg-background/60` backdrop, optional `backdrop-blur-sm` (no heavier blur).
+  - Borders: `border-border/60` typical; `border-border` only on inputs at rest.
 
 ### Folded Todos
 
