@@ -18,12 +18,15 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 - [x] Python sidecar (FastAPI + uvicorn) runs from venv with eager start + watchdog from Electron main; PyInstaller packaging deferred to a later milestone — *Validated in Phase 1 (PLUMB-02); orphan-process recovery confirmed live on Windows*
 - [x] Mandatory LLM setup screen on first launch — block until provider URL/key tested; LiteLLM connected to LM Studio (default) on localhost:1234 — *Validated in Phase 1 (PLUMB-04); real 1-token completion confirmed live against LM Studio*
 - [x] WebSocket protocol shape matches OLVT's so plumbing fixes can copy back — *Validated in Phase 1 (PLUMB-03); echo round-trip confirmed live*
+- [x] LiteLLM streaming gateway with provider-specific reasoning-disable (no parser-strip, no out-of-band capture) — *Validated in Phase 2 (LLM-01); 4 provider branches verified by unit tests; live `<think>` suppression confirmed against compliant reasoning model*
+- [x] OLVT 4-decorator chain ported (sentence_divider → actions_extractor → display_processor → tts_filter); LLM emits `[tag]` → ActionIntent extracted, bracket stripped from chat, INTENT log line fires; adversarial split-bracket robustness — *Validated in Phase 2 (LLM-02); split-bracket SC #3 BLOCKER closed programmatically; live verified against real Teto rig vocabulary (Blush, Cry, Star Eye, …)*
+- [x] Append-only `_memory` + forward-only `_head_idx` orchestrator; in-memory single thread cleared on relaunch — *Validated in Phase 2 (LLM-04); KV-cache discipline grep returns 0 violations; fresh-thread invariant verified at runtime introspection*
 
 ### Active
 
 <!-- Walking-skeleton scope only (per PROJECT_DESIGN.md §14). Subsequent milestones layer memory, agent, scheduler, skills, multi-thread, pet mode, multi-avatar on top. -->
 
-- [ ] OLVT-style conversation pipeline ported: sentence_divider → actions_extractor → tts_filter → TTS queue, with sentence-buffered playback (parallel synth, ordered delivery)
+- [ ] TTS queue with sentence-buffered playback (parallel synth, ordered delivery) — *Phase 2 ported sentence_divider/actions_extractor/tts_filter; Phase 3 lands the queue + piper integration*
 - [ ] piper TTS only; lipsync via our-RMS path driving `ParamMouthOpenY`
 - [ ] Minimal action compositor running at 60 Hz with three drivers — idle baseline (Perlin drift + blink scheduler), speech driver (TTS RMS → head sway; body-sway is an unsolved problem on VTS rigs and may end up head-only in the skeleton — see Risks), intent overlay (smooth fade-in/out on `[joy]`/`[shy]` etc.)
 - [ ] Renderer binding: `ParamFrame` stream → pyvts `InjectParameterDataRequest` (60 Hz) against one VTS avatar; one `DiscreteEvent` test (e.g. prop) maps to a hotkey
@@ -126,4 +129,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-07 after Phase 1 complete*
+*Last updated: 2026-05-07 after Phase 2 complete*
