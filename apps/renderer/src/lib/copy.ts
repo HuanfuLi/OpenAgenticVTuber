@@ -64,6 +64,7 @@ export const COPY = {
     // Phase 2 (plan 02-03) -- streaming-chat affordances. Single-char ellipsis
     // (U+2026) per UI-SPEC §Typography (italic --muted-foreground).
     THINKING: 'Thinking…',
+    SPEAKING: 'Teto is still speaking…',
     STREAM_ERROR: "The model couldn't finish that reply. Try again.",
     CONTEXT_OVERFLOW:
       "Conversation got too long and won't fit in the model anymore. Close the app to start fresh."

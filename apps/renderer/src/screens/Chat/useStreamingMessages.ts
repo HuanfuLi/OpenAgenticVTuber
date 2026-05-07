@@ -41,13 +41,15 @@ interface StreamingState {
   forceNewMessage: boolean
   inputDisabled: boolean
   banner: BannerState | null
+  isSpeaking: boolean
 }
 
 let state: StreamingState = {
   messages: [],
   forceNewMessage: false,
   inputDisabled: false,
-  banner: null
+  banner: null,
+  isSpeaking: false
 }
 
 const subs = new Set<(s: StreamingState) => void>()
@@ -160,6 +162,10 @@ export function setInputDisabled(disabled: boolean): void {
   setState({ inputDisabled: disabled })
 }
 
+export function setSpeaking(speaking: boolean): void {
+  setState({ isSpeaking: speaking })
+}
+
 export function setBanner(kind: BannerKind | null): void {
   if (kind === null) {
     setState({ banner: null })
@@ -175,7 +181,8 @@ export function resetStreaming(): void {
     messages: [],
     forceNewMessage: false,
     inputDisabled: false,
-    banner: null
+    banner: null,
+    isSpeaking: false
   }
   notify()
 }
@@ -220,6 +227,19 @@ export function useInputDisabled(): boolean {
     }
   }, [])
   return d
+}
+
+export function useSpeaking(): boolean {
+  const [speaking, setSpeakingState] = useState(state.isSpeaking)
+  useEffect(() => {
+    const cb = (s: StreamingState): void => setSpeakingState(s.isSpeaking)
+    subs.add(cb)
+    setSpeakingState(state.isSpeaking)
+    return () => {
+      subs.delete(cb)
+    }
+  }, [])
+  return speaking
 }
 
 /** Test-only inspector. */

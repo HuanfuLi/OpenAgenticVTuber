@@ -26,7 +26,8 @@ import {
   appendAssistantSentence,
   setForceNewMessage,
   setInputDisabled,
-  setBanner
+  setBanner,
+  setSpeaking
 } from '@/screens/Chat/useStreamingMessages'
 
 // -- log channel: sidecar log envelopes flow through here to AppShell --------
@@ -47,8 +48,10 @@ subscribe((msg: WSMessage) => {
     if (msg.text === 'conversation-chain-start') {
       setThinking(true)
       setInputDisabled(true)
+      setSpeaking(false)
     } else if (msg.text === 'conversation-chain-end') {
       setInputDisabled(false)
+      setSpeaking(false)
     }
     return
   }
@@ -60,6 +63,7 @@ subscribe((msg: WSMessage) => {
   }
   if (isAudioPayload(msg)) {
     appendAssistantSentence(msg.display_text.text, msg.sentence_id)
+    setSpeaking(true)
     return
   }
   if (isForceNewMessage(msg)) {
@@ -73,6 +77,7 @@ subscribe((msg: WSMessage) => {
     setBanner(kind)
     // Re-enable input so the user can retry.
     setInputDisabled(false)
+    setSpeaking(false)
     return
   }
   if (isLog(msg)) {

@@ -17,7 +17,8 @@ import { appendUserMessage, useWSConnected } from '@/ws/store'
 import {
   useStreamingMessages,
   useStreamingBanner,
-  useInputDisabled
+  useInputDisabled,
+  useSpeaking
 } from './useStreamingMessages'
 
 export function Chat() {
@@ -25,6 +26,7 @@ export function Chat() {
   const messages = useStreamingMessages()
   const streamBanner = useStreamingBanner()
   const turnInFlight = useInputDisabled()
+  const isSpeaking = useSpeaking()
   const wsOpen = useWSConnected()
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -219,6 +221,22 @@ export function Chat() {
           <Send size={16} />
         </button>
       </div>
+      {isSpeaking && (
+        <div
+          className="speaking-label"
+          role="status"
+          aria-live="polite"
+          data-testid="speaking-label"
+          style={{
+            padding: '6px 12px',
+            fontSize: 12,
+            color: 'var(--muted-foreground)',
+            fontStyle: 'italic'
+          }}
+        >
+          {COPY.CHAT.SPEAKING}
+        </div>
+      )}
     </div>
   )
 }
