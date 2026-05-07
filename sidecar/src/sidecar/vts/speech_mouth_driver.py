@@ -16,7 +16,10 @@ class SpeechMouthDriver:
         writer: ParameterWriter,
         now: Callable[[], float],
         tick_seconds: float = 1 / 60,
-        mouth_param_id: str = "ParamMouthOpenY",
+        # VTS InjectParameterDataRequest uses VTube Studio input parameter IDs,
+        # not raw Live2D model parameter IDs. VTS maps MouthOpen to the model's
+        # mouth-open Live2D parameter, typically ParamMouthOpenY.
+        mouth_param_id: str = "MouthOpen",
     ) -> None:
         self._writer = writer
         self._now = now

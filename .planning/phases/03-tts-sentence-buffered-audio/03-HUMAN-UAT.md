@@ -3,15 +3,15 @@ status: partial
 phase: 03-tts-sentence-buffered-audio
 source: [03-VERIFICATION.md]
 started: 2026-05-07T08:24:52Z
-updated: 2026-05-07T21:32:49Z
+updated: 2026-05-07T21:47:43Z
 ---
 
 ## Current Test
 
-number: 1
-name: Multi-Sentence Audible Playback
+number: 3
+name: Clean Audio Start and Live Mouth Motion
 expected: |
-  Three sentences are spoken in order, and sentence 1 begins playing while sentence 2 is still synthesizing.
+  The first sentence starts without click/pop, and the avatar mouth opens and closes in sync with speech instead of remaining stuck.
 awaiting: user response
 status: fix implemented; awaiting re-test
 
@@ -19,7 +19,7 @@ status: fix implemented; awaiting re-test
 
 ### 1. Multi-Sentence Audible Playback
 expected: Three sentences are spoken in order, and sentence 1 begins playing while sentence 2 is still synthesizing.
-result: issue
+result: pass
 reported: "There is no sound at all. In settings the TTS is placeholder showing coming in milestone 3? Fully blocked now."
 severity: blocker
 diagnosis: |
@@ -29,25 +29,32 @@ fix: |
 
 ### 2. Warmup Latency Check
 expected: After a fresh launch, first-audio onset on the first reply is materially similar to later replies because Piper warmup already ran before ready.
-result: [pending]
+result: pass
 
 ### 3. Clean Audio Start and Live Mouth Motion
 expected: The first sentence starts without click/pop, and the avatar mouth opens and closes in sync with speech instead of remaining stuck.
-result: [pending]
+result: issue
+reported: "Connected, but lip sync not working. I can see VTS received requests, but no mouth actions at all. VTS is just doing default idle actions."
+severity: major
+diagnosis: |
+  VTS connection/auth worked and VTS received InjectParameterDataRequest messages, but the mouth driver injected the Live2D model parameter id ParamMouthOpenY. VTube Studio's InjectParameterDataRequest expects VTS input parameter ids; live InputParameterList probing showed MouthOpen is the correct injectable mouth parameter.
+fix: |
+  SpeechMouthDriver now injects MouthOpen. VTS maps that input parameter to the model mouth-open Live2D parameter, typically ParamMouthOpenY. Tests now assert MouthOpen request ids.
 
 ## Summary
 
 total: 3
-passed: 0
+passed: 2
 issues: 1
-pending: 2
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
+Resolved:
 - truth: "Three sentences are spoken in order, and sentence 1 begins playing while sentence 2 is still synthesizing."
-  status: failed
+  status: fixed
   reason: "User reported: There is no sound at all. In settings the TTS is placeholder showing coming in milestone 3? Fully blocked now."
   severity: blocker
   test: 1
@@ -63,3 +70,16 @@ blocked: 0
     - ".planning/phases/03-tts-sentence-buffered-audio/03-DEBUG-sound-blocker.md"
   missing: []
   debug_session: ".planning/phases/03-tts-sentence-buffered-audio/03-DEBUG-sound-blocker.md"
+
+- truth: "The first sentence starts without click/pop, and the avatar mouth opens and closes in sync with speech instead of remaining stuck."
+  status: failed
+  reason: "User reported: Connected, but lip sync not working. VTS received requests, but no mouth actions at all."
+  severity: major
+  test: 3
+  root_cause: "Injected Live2D model parameter id ParamMouthOpenY instead of VTube Studio input parameter id MouthOpen."
+  artifacts:
+    - "sidecar/src/sidecar/vts/speech_mouth_driver.py"
+    - "sidecar/src/sidecar/vts/parameter_writer.py"
+    - "sidecar/tests/test_speech_mouth_driver.py"
+  missing: []
+  debug_session: ""

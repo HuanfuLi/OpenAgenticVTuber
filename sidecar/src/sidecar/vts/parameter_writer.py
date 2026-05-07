@@ -1,4 +1,4 @@
-"""VTube Studio parameter writer seam used by the Phase 3 mouth driver."""
+"""VTube Studio input-parameter writer seam used by the Phase 3 mouth driver."""
 
 from __future__ import annotations
 

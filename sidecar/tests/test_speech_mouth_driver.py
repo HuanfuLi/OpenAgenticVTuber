@@ -46,7 +46,7 @@ class _FakeClock:
 
 
 @pytest.mark.asyncio
-async def test_drive_envelope_writes_parammouthopeny_and_closes():
+async def test_drive_envelope_writes_mouthopen_and_closes():
     writer = _FakeWriter()
     clock = _FakeClock([0.0, 0.02, 0.04, 0.06])
     driver = SpeechMouthDriver(writer=writer, now=clock, tick_seconds=0.0)
@@ -61,7 +61,7 @@ async def test_drive_envelope_writes_parammouthopeny_and_closes():
     )
 
     assert len(writer.writes) >= 4
-    assert all(write["param_id"] == "ParamMouthOpenY" for write in writer.writes)
+    assert all(write["param_id"] == "MouthOpen" for write in writer.writes)
     assert writer.writes[-1]["value"] == 0.0
     assert [write["value"] for write in writer.writes[:-1]][:3] == [0.0, 0.5, 1.0]
 
@@ -82,7 +82,7 @@ async def test_drive_envelope_empty_volumes_only_closes():
 
     assert writer.writes == [
         {
-            "param_id": "ParamMouthOpenY",
+            "param_id": "MouthOpen",
             "value": 0.0,
             "weight": 1.0,
             "mode": "set",
@@ -109,7 +109,7 @@ async def test_drive_envelope_interpolates_half_step():
         )
     )
 
-    assert writer.writes[0]["param_id"] == "ParamMouthOpenY"
+    assert writer.writes[0]["param_id"] == "MouthOpen"
     assert writer.writes[0]["value"] == pytest.approx(0.6)
     assert writer.writes[-1]["value"] == 0.0
 
@@ -118,7 +118,7 @@ def test_pyvts_writer_builds_inject_parameter_request():
     writer = PyVTSParameterWriter()
 
     request = writer._client.vts_request.requestSetParameterValue(
-        parameter="ParamMouthOpenY",
+        parameter="MouthOpen",
         value=0.75,
         weight=1.0,
         mode="set",
@@ -126,7 +126,7 @@ def test_pyvts_writer_builds_inject_parameter_request():
     )
 
     assert request["messageType"] == "InjectParameterDataRequest"
-    assert request["data"]["parameterValues"][0]["id"] == "ParamMouthOpenY"
+    assert request["data"]["parameterValues"][0]["id"] == "MouthOpen"
 
 
 @pytest.mark.asyncio
@@ -153,5 +153,5 @@ async def test_consume_forever_processes_queue_item():
     with pytest.raises(asyncio.CancelledError):
         await task
 
-    assert writer.writes[-1]["param_id"] == "ParamMouthOpenY"
+    assert writer.writes[-1]["param_id"] == "MouthOpen"
     assert writer.writes[-1]["value"] == 0.0
