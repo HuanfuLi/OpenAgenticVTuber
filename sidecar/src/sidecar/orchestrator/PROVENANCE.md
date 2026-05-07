@@ -21,6 +21,7 @@ D-01 pattern).
 | sidecar/src/sidecar/orchestrator/transformers.py | src/open_llm_vtuber/agent/transformers.py | 227 -> ~260 | sentence_divider/display_processor/tts_filter VERBATIM (only imports adjusted); actions_extractor adapted to AvatarCapabilities + List[ActionIntent] (CONTEXT D-13, D-20; RESEARCH Example 4 _extract_intents bracket-walker) |
 | sidecar/src/sidecar/orchestrator/prompt_loader.py | prompts/prompt_loader.py | ~75 -> ~13 | Skeleton uses only load_util(); dropped load_persona, dropped chardet fallback |
 | sidecar/src/sidecar/orchestrator/prompts/live2d_expression_prompt.txt | prompts/utils/live2d_expression_prompt.txt | ~26 lines | Verbatim copy -- preserves [<insert_action_keys>] placeholder |
+| sidecar/src/sidecar/orchestrator/orchestrator.py | src/open_llm_vtuber/conversations/single_conversation.py + src/open_llm_vtuber/conversations/conversation_utils.py | ~190 -> ~240 | Phase 3 adaptation: `TTSTaskManager.speak(...)` per sentence, pending-input FIFO `_turn_loop`, and `wait_for_all_audio_complete()` before `force-new-message` + `chain-end` so sidecar-side playback drains before the UI re-enables input (D-09, D-14). |
 
 Upstream commit SHA: `12d42d7c329a3f9ad3e39b5ca5e2c603bae277a7` (verified 2026-05-07)
 

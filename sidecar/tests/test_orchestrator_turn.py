@@ -1,8 +1,11 @@
-"""Orchestrator end-to-end tests -- D-15..D-19, D-23, KV-cache discipline,
-OLVT-canonical envelope sequence, ContextWindowExceededError retry-once.
+"""Orchestrator end-to-end tests -- D-09, D-14, D-15..D-19, D-23,
+KV-cache discipline, OLVT-canonical envelope sequence,
+ContextWindowExceededError retry-once.
 """
 import inspect
 import re
+import asyncio
+from types import SimpleNamespace
 from typing import AsyncIterator
 
 import pytest
@@ -10,6 +13,7 @@ from litellm.exceptions import ContextWindowExceededError
 
 from sidecar.avatar.capabilities import AvatarCapabilities, Expression, Hotkey
 from sidecar.orchestrator.orchestrator import Orchestrator
+from sidecar.orchestrator.output_types import DisplayText, SentenceOutput
 from sidecar.orchestrator.tts_preprocessor import TTSPreprocessorConfig
 
 # Shared fakes live in conftest.py (per Blocker 3 -- no cross-test imports).
@@ -29,6 +33,46 @@ def _build_orch(gateway, persona="You are Teto.") -> Orchestrator:
         capabilities=_caps(),
         persona_text=persona,
         tts_preprocessor_config=TTSPreprocessorConfig(),
+    )
+
+
+class _FakeTTSManager:
+    def __init__(self) -> None:
+        self.speak_calls: list[dict] = []
+        self.wait_calls = 0
+        self.wait_started = asyncio.Event()
+        self.release_wait = asyncio.Event()
+
+    async def speak(self, tts_text, display_text, actions, sentence_id, ws) -> None:
+        self.speak_calls.append(
+            {
+                "tts_text": tts_text,
+                "display_text": display_text,
+                "actions": actions,
+                "sentence_id": sentence_id,
+            }
+        )
+
+    async def wait_for_all_audio_complete(self) -> None:
+        self.wait_calls += 1
+        self.wait_started.set()
+        await self.release_wait.wait()
+
+
+async def _fake_sentence_stream(*sentences: str) -> AsyncIterator[SentenceOutput]:
+    for text in sentences:
+        yield SentenceOutput(display_text=DisplayText(text=text), tts_text=text, actions=[])
+
+
+def _build_phase3_orch(tts_manager: _FakeTTSManager | None = None) -> Orchestrator:
+    return Orchestrator(
+        gateway=_FakeGateway(chunks=[]),
+        capabilities=_caps(),
+        persona_text="You are Teto.",
+        tts_preprocessor_config=TTSPreprocessorConfig(),
+        tts_manager=tts_manager,
+        compositor_speech_queue=asyncio.Queue(),
+        pending_inputs=asyncio.Queue(),
     )
 
 
@@ -281,12 +325,11 @@ async def test_handle_text_input_no_orchestrator_emits_config_error():
 
 
 @pytest.mark.asyncio
-async def test_handle_text_input_drives_orchestrator_turn_when_configured():
-    """app.state.orchestrator=Orchestrator -> text-input drives a real turn."""
+async def test_handle_text_input_queues_turn_when_configured():
+    """app.state.orchestrator=Orchestrator -> text-input queues the turn."""
     from sidecar.ws.handlers import handle_text_input
 
-    gw = _FakeGateway(chunks=["Hello world."])
-    orch = _build_orch(gw)
+    orch = _build_phase3_orch()
 
     class _FakeApp:
         def __init__(self, orchestrator):
@@ -310,13 +353,9 @@ async def test_handle_text_input_drives_orchestrator_turn_when_configured():
 
     ws = _FakeWS(orch)
     await handle_text_input(ws, {"type": "text-input", "text": "hi"})
-    types = [w.get("type") for w in ws.writes]
-    assert "control" in types
-    assert "audio" in types
-    assert types[0] == "control"
-    assert ws.writes[0]["text"] == "conversation-chain-start"
-    assert types[-1] == "control"
-    assert ws.writes[-1]["text"] == "conversation-chain-end"
+    assert ws.writes == []
+    assert orch._active_ws is ws
+    assert await orch.pending_inputs.get() == "hi"
 
 
 @pytest.mark.asyncio
@@ -341,6 +380,117 @@ async def test_handle_text_input_empty_text_returns_silently():
     ws = _FakeWS()
     await handle_text_input(ws, {"type": "text-input", "text": "   "})
     assert ws.writes == []
+
+
+@pytest.mark.asyncio
+async def test_turn_waits_for_audio_complete_before_chain_end(monkeypatch):
+    tts_manager = _FakeTTSManager()
+    orch = _build_phase3_orch(tts_manager)
+    ws = _WSRecorder()
+
+    async def fake_run_pipeline(_send_window):
+        async for item in _fake_sentence_stream("One.", "Two."):
+            yield item
+
+    monkeypatch.setattr(orch, "_run_pipeline", fake_run_pipeline)
+
+    turn_task = asyncio.create_task(orch.turn("hi", ws))
+    await asyncio.wait_for(tts_manager.wait_started.wait(), timeout=1)
+
+    assert ws.writes[0] == {"type": "control", "text": "conversation-chain-start"}
+    assert ws.writes[1] == {"type": "full-text", "text": "Thinking..."}
+    assert [call["sentence_id"] for call in tts_manager.speak_calls] == [1, 2]
+    assert {"type": "force-new-message"} not in ws.writes
+    assert {"type": "control", "text": "conversation-chain-end"} not in ws.writes
+
+    tts_manager.release_wait.set()
+    await turn_task
+    assert ws.writes[-2] == {"type": "force-new-message"}
+    assert ws.writes[-1] == {"type": "control", "text": "conversation-chain-end"}
+
+
+@pytest.mark.asyncio
+async def test_turn_loop_processes_pending_inputs_serially(monkeypatch):
+    tts_manager = _FakeTTSManager()
+    orch = _build_phase3_orch(tts_manager)
+    started: list[str] = []
+    finished: list[str] = []
+    release_first = asyncio.Event()
+    release_second = asyncio.Event()
+
+    async def fake_turn(user_text: str, _ws) -> None:
+        started.append(user_text)
+        if user_text == "first":
+            await release_first.wait()
+        else:
+            await release_second.wait()
+        finished.append(user_text)
+
+    monkeypatch.setattr(orch, "turn", fake_turn)
+    orch.set_active_ws(SimpleNamespace())
+
+    loop_task = asyncio.create_task(orch._turn_loop())
+    await orch.pending_inputs.put("first")
+    await orch.pending_inputs.put("second")
+    await asyncio.sleep(0)
+
+    assert started == ["first"]
+    assert finished == []
+
+    release_first.set()
+    await asyncio.sleep(0)
+    assert started == ["first", "second"]
+    assert finished == ["first"]
+
+    release_second.set()
+    await asyncio.sleep(0)
+    assert finished == ["first", "second"]
+
+    loop_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await loop_task
+
+
+@pytest.mark.asyncio
+async def test_handle_text_input_enqueues_pending_inputs_instead_of_awaiting_turn():
+    from sidecar.ws.handlers import handle_text_input
+
+    class _TurnSentinel:
+        async def turn(self, *_args, **_kwargs):
+            raise AssertionError("handle_text_input must not await orchestrator.turn directly")
+
+    class _FakeApp:
+        def __init__(self):
+            class _State:
+                pass
+
+            def _set_active_ws(_ws):
+                return None
+
+            self._state = _State()
+            self._state.orchestrator = SimpleNamespace(
+                pending_inputs=asyncio.Queue(),
+                turn=_TurnSentinel().turn,
+                set_active_ws=_set_active_ws,
+            )
+
+        @property
+        def state(self):
+            return self._state
+
+    class _FakeWS:
+        def __init__(self):
+            self.app = _FakeApp()
+            self.writes: list[dict] = []
+
+        async def send_json(self, d: dict):
+            self.writes.append(d)
+
+    ws = _FakeWS()
+    await handle_text_input(ws, {"type": "text-input", "text": "hello"})
+
+    assert ws.writes == []
+    assert await ws.app.state.orchestrator.pending_inputs.get() == "hello"
 
 
 # ---------- _load_provider_config_from_env / _warmup_ping unit tests ---------

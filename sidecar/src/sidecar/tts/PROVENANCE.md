@@ -12,6 +12,12 @@
   - Upstream: `OpenLLM_Vtuber/src/open_llm_vtuber/tts/piper_tts.py` at `12d42d7`
   - Note: the actual gateway owner/lifecycle port lands in Task 2.
 
+- `tts_manager.py` port → `tts_manager.py`
+  - Upstream: `OpenLLM_Vtuber/src/open_llm_vtuber/conversations/tts_manager.py` at `12d42d7`
+  - Adaptation: sender-task ordering stays OLVT-style, but the sidecar sender publishes `SpeechEnvelopePayload`, sends the audio WS envelope, and then writes PCM to the long-lived `sounddevice.OutputStream`.
+  - Adaptation: `wait_for_all_audio_complete()` adds payload-queue drain and `stream.latency + 0.020` sleep so sidecar-side playback drains before `chain-end` (D-14).
+  - Adaptation: logging uses `[TTS-SYNTH-START]`, `[TTS-SYNTH-END]`, `[TTS-WRITE-START]`, `[TTS-WRITE-END]`, and `[TTS-DRAIN-END]` markers for SC #2 proof.
+
 ## Deviations Log
 
 - D-01: sidecar-side playback owns audio output; the renderer does not play Web Audio in the skeleton.

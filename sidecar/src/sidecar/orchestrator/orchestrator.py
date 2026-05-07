@@ -19,15 +19,17 @@ KV-cache discipline (Warning A precision):
 Source: see RESEARCH.md Example 2; PROVENANCE.md attributes the OLVT shape.
 """
 from itertools import count
+import asyncio
 from typing import AsyncIterator
 
 from fastapi import WebSocket
 from litellm.exceptions import ContextWindowExceededError
 from loguru import logger
 
-from contracts import AudioPayloadMessage, DisplayTextField
+from contracts import AudioPayloadMessage, DisplayTextField, SpeechEnvelopePayload
 from sidecar.avatar.capabilities import AvatarCapabilities
 from sidecar.llm.gateway import LLMGateway
+from sidecar.tts.tts_manager import TTSTaskManager
 from sidecar.ws.emit import (
     emit_audio_payload,
     emit_chain_end,
@@ -78,6 +80,9 @@ class Orchestrator:
         capabilities: AvatarCapabilities,
         persona_text: str,
         tts_preprocessor_config: TTSPreprocessorConfig | None = None,
+        tts_manager: TTSTaskManager | None = None,
+        compositor_speech_queue: asyncio.Queue[SpeechEnvelopePayload] | None = None,
+        pending_inputs: asyncio.Queue[str] | None = None,
     ):
         self._gateway = gateway
         self._capabilities = capabilities
@@ -88,9 +93,16 @@ class Orchestrator:
         self._head_idx: int = 0                 # FORWARD-ONLY -- D-19
         self._tts_pp = tts_preprocessor_config or TTSPreprocessorConfig()
         self._sentence_counter = count(1)       # sentence_id starts at 1
+        self._tts_manager = tts_manager
+        self.compositor_speech_queue = (
+            compositor_speech_queue or asyncio.Queue()
+        )
+        self.pending_inputs = pending_inputs or asyncio.Queue()
+        self._active_ws: WebSocket | None = None
 
     async def turn(self, user_text: str, ws: WebSocket) -> None:
         """One turn -- emit OLVT-canonical sequence + thread state mutation."""
+        self._active_ws = ws
         await emit_chain_start(ws)
         await emit_full_text(ws, "Thinking...")  # OLVT conversation_utils.py:143
 
@@ -138,7 +150,9 @@ class Orchestrator:
             {"role": "assistant", "content": assistant_text_accum}
         )
 
-        # Turn seal -- D-04.
+        if self._tts_manager is not None:
+            await self._tts_manager.wait_for_all_audio_complete()
+
         await emit_force_new_message(ws)
         await emit_chain_end(ws)
 
@@ -148,27 +162,35 @@ class Orchestrator:
         sentence_output: SentenceOutput,
         sentence_id: int,
     ) -> None:
-        """Emit one audio envelope (audio=null in Phase 2 stub) + log lines."""
-        payload = AudioPayloadMessage(
-            audio=None,                         # Phase 2 stub -- D-23
-            volumes=[],                         # Phase 3 fills
-            slice_length=20,                    # OLVT default
-            display_text=DisplayTextField(
-                text=sentence_output.display_text.text,
-                name=sentence_output.display_text.name or "Teto",
-                avatar=sentence_output.display_text.avatar or "teto",
-            ),
-            actions=sentence_output.actions,    # list[ActionIntent]
-            sentence_id=sentence_id,
-            forwarded=False,
+        """Emit one sentence via TTSTaskManager, or the Phase 2 stub path."""
+        display_text = DisplayTextField(
+            text=sentence_output.display_text.text,
+            name=sentence_output.display_text.name or "Teto",
+            avatar=sentence_output.display_text.avatar or "teto",
         )
-        await emit_audio_payload(ws, payload)
-
-        # Stub-TTS log line -- D-23, surfaces in Logs drawer.
-        logger.info(
-            f'[STUB-TTS] sentence_id={sentence_id} '
-            f'text="{sentence_output.tts_text}"'
-        )
+        if self._tts_manager is not None:
+            await self._tts_manager.speak(
+                tts_text=sentence_output.tts_text,
+                display_text=display_text,
+                actions=sentence_output.actions,
+                sentence_id=sentence_id,
+                ws=ws,
+            )
+        else:
+            payload = AudioPayloadMessage(
+                audio=None,
+                volumes=[],
+                slice_length=20,
+                display_text=display_text,
+                actions=sentence_output.actions,
+                sentence_id=sentence_id,
+                forwarded=False,
+            )
+            await emit_audio_payload(ws, payload)
+            logger.info(
+                f'[STUB-TTS] sentence_id={sentence_id} '
+                f'text="{sentence_output.tts_text}"'
+            )
 
         # ActionIntent log lines -- D-14, surfaces in Logs drawer.
         for intent in sentence_output.actions:
@@ -199,6 +221,24 @@ class Orchestrator:
                 yield delta
 
         return chat_with_memory()
+
+    def set_active_ws(self, ws: WebSocket) -> None:
+        self._active_ws = ws
+
+    async def _turn_loop(self) -> None:
+        while True:
+            user_text = await self.pending_inputs.get()
+            try:
+                if self._active_ws is None:
+                    logger.warning("Dropping pending input because no active websocket is bound.")
+                    continue
+                await self.turn(user_text, self._active_ws)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Pending-input turn loop failed for queued text input.")
+            finally:
+                self.pending_inputs.task_done()
 
     def _compute_send_window(self) -> list[dict]:
         """Token-budget pruning at 75% (D-15). Forward-only _head_idx (D-19).
