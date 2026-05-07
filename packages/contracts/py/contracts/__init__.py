@@ -2,6 +2,8 @@
 from .action_intent import ActionIntent
 from .speech_envelope import SpeechEnvelopePayload
 from .audio_payload import AudioPayloadMessage, DisplayTextField
+from .discrete_event import DiscreteEvent
+from .param_frame import ParamFrame, ParamMode
 from .ws_message import (
     TextInputMessage,
     DisplayTextMessage,
@@ -19,6 +21,9 @@ __all__ = [
     "SpeechEnvelopePayload",
     "AudioPayloadMessage",
     "DisplayTextField",
+    "DiscreteEvent",
+    "ParamFrame",
+    "ParamMode",
     "TextInputMessage",
     "DisplayTextMessage",
     "ShutdownMessage",

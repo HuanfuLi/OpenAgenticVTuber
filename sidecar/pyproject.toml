@@ -18,6 +18,9 @@ dependencies = [
     "pysbd==0.3.4",
     "pyyaml>=6.0",
     "sounddevice==0.5.5",
+    "pywin32==311 ; sys_platform == 'win32'",
+    "opensimplex==0.4.5.1",
+    "numpy>=1.26",
     "contracts",
 ]
 
