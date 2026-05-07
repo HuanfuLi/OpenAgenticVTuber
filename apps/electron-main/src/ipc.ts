@@ -3,7 +3,7 @@
 // that unregisters all listeners (called when the window is destroyed).
 
 import { ipcMain, type BrowserWindow } from 'electron'
-import { getReadyUrl, onReady, onCrash, onLog } from './sidecar'
+import { getReadyUrl, onReady, onCrash, onLog, restartSidecar } from './sidecar'
 import { store } from './window-store'
 import { loadConfig, saveConfig, clearConfig, type StoredConfig } from './safe-storage'
 
@@ -14,7 +14,18 @@ export function registerIpc(window: BrowserWindow): () => void {
 
   // New for 01-02 (safeStorage credential gate, PLUMB-04 / D-07 / D-09):
   ipcMain.handle('config:load', () => loadConfig())
-  ipcMain.handle('config:save', (_e, cfg: StoredConfig) => saveConfig(cfg))
+  ipcMain.handle('config:save', async (_e, cfg: StoredConfig) => {
+    saveConfig(cfg)
+    try {
+      await restartSidecar()
+    } catch (err) {
+      console.error('[main] sidecar restart after config save failed:', err)
+      if (!window.isDestroyed()) {
+        window.webContents.send('sidecar:crash', { code: -1, willRespawn: false })
+      }
+      throw err
+    }
+  })
   ipcMain.handle('config:clear', () => clearConfig())
 
   const offReady = onReady((url) => {

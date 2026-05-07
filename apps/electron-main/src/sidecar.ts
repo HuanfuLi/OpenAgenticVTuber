@@ -28,13 +28,15 @@ interface SidecarSupervisorState {
   crashTimestamps: number[]
   readyUrl: string | null
   respawnDisabled: boolean
+  intentionalShutdown: boolean
 }
 
 const state: SidecarSupervisorState = {
   handle: null,
   crashTimestamps: [],
   readyUrl: null,
-  respawnDisabled: false
+  respawnDisabled: false,
+  intentionalShutdown: false
 }
 
 const subscribers = {
@@ -145,6 +147,10 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
       clearTimeout(timer)
       state.handle = null
       state.readyUrl = null
+      if (state.intentionalShutdown) {
+        state.intentionalShutdown = false
+        return
+      }
       if (!resolved) {
         reject(new Error(`Sidecar exited (code=${code}) before emitting [READY]`))
         return
@@ -200,8 +206,7 @@ export function onLog(cb: (line: string) => void): () => void {
 export async function shutdownSidecar(softTimeoutMs = 5_000): Promise<void> {
   const handle = state.handle
   if (!handle) return
-  // Plan 01-02 will replace this with a WS shutdown handshake. For 01-01 we
-  // hard-kill — there's no WS connection yet to send `{type: "shutdown"}` over.
+  state.intentionalShutdown = true
   handle.child.kill()
   await new Promise<void>((res) => {
     const t = setTimeout(() => res(), softTimeoutMs)
@@ -210,4 +215,16 @@ export async function shutdownSidecar(softTimeoutMs = 5_000): Promise<void> {
       res()
     })
   })
+  if (state.handle === handle) {
+    state.handle = null
+    state.readyUrl = null
+    state.intentionalShutdown = false
+  }
+}
+
+export async function restartSidecar(): Promise<SidecarHandle> {
+  await shutdownSidecar()
+  state.crashTimestamps = []
+  state.respawnDisabled = false
+  return spawnSidecar()
 }

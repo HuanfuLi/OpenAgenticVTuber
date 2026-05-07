@@ -6,9 +6,11 @@ import { spawnSidecar, shutdownSidecar } from './sidecar'
 import { registerIpc } from './ipc'
 
 // Augment Electron's App with a quitting flag so multiple before-quit handlers cooperate.
-declare module 'electron' {
-  interface App {
-    isQuitting: boolean
+declare global {
+  namespace Electron {
+    interface App {
+      isQuitting: boolean
+    }
   }
 }
 app.isQuitting = false

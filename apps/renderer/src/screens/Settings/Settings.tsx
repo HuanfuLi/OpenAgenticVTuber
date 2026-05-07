@@ -1,6 +1,6 @@
 /* SPEC §Settings IA — single long scroll, 16 sections, anchor pills.
- * Functional: §1 Connection, §14 Appearance, §15 Diagnostics (partial), §16 About.
- * Placeholders: §2-§13 with "Coming in milestone-N. {body}" copy.
+ * Functional: §1 Connection, §5 TTS, §14 Appearance, §15 Diagnostics (partial), §16 About.
+ * Placeholders: unfinished sections with "Coming in milestone-N. {body}" copy.
  *
  * Ported from prototype src/views/SettingsView.jsx (2026-05-06).
  */
@@ -365,6 +365,33 @@ function DiagnosticsSection({ onResetClick }: { onResetClick: () => void }) {
   )
 }
 
+// -------- §5 TTS / Voice out ---------------------------------------------
+function TTSSection() {
+  const C = COPY.SETTINGS
+  return (
+    <section className="section" id="sec-tts">
+      <h2>{C.TTS_HEADER}</h2>
+      <div className="kv-row">
+        <span className="k">{C.TTS_ENGINE}</span>
+        <span className="v">{C.TTS_ENGINE_VAL}</span>
+      </div>
+      <div className="kv-row">
+        <span className="k">{C.TTS_VOICE}</span>
+        <span className="v">{C.TTS_VOICE_VAL}</span>
+      </div>
+      <div className="kv-row">
+        <span className="k">{C.TTS_OUTPUT}</span>
+        <span className="v">{C.TTS_OUTPUT_VAL}</span>
+      </div>
+      <div className="kv-row" style={{ alignItems: 'flex-start' }}>
+        <span className="k">{C.TTS_LIPSYNC}</span>
+        <span className="v">{C.TTS_LIPSYNC_VAL}</span>
+      </div>
+      <div className="tx-sm muted mt-2">{C.TTS_HELP}</div>
+    </section>
+  )
+}
+
 // -------- §16 About ------------------------------------------------------
 function AboutSection() {
   const C = COPY.SETTINGS
@@ -459,6 +486,7 @@ export function Settings() {
     { id: 'sec-connection', label: 'Connection' },
     { id: 'sec-2', label: 'Avatars' },
     { id: 'sec-4', label: 'VTube Studio' },
+    { id: 'sec-tts', label: 'TTS' },
     { id: 'sec-appearance', label: 'Appearance' },
     { id: 'sec-diagnostics', label: 'Diagnostics' },
     { id: 'sec-about', label: 'About' }
@@ -506,7 +534,7 @@ export function Settings() {
 
         <ConnectionSection />
 
-        {C.PLACEHOLDERS.map((p) => (
+        {C.PLACEHOLDERS.filter((p) => p.num < 5).map((p) => (
           <PlaceholderSection
             key={p.num}
             num={p.num}
@@ -516,6 +544,16 @@ export function Settings() {
           />
         ))}
 
+        <TTSSection />
+        {C.PLACEHOLDERS.filter((p) => p.num > 5).map((p) => (
+          <PlaceholderSection
+            key={p.num}
+            num={p.num}
+            title={p.title}
+            milestone={p.milestone}
+            body={p.body}
+          />
+        ))}
         <AppearanceSection />
         <DiagnosticsSection onResetClick={() => setResetOpen(true)} />
         <AboutSection />
