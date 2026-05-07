@@ -64,3 +64,16 @@ async def handle_control(ws: WebSocket, msg: dict) -> None:
             log.info("[WS-CONTROL] requested body-sway strategy swap: %r", name)
         else:
             log.warning("[WS-CONTROL] compositor not in app.state")
+        return
+    if text.startswith("fire-discrete-event:"):
+        hotkey_name = text[len("fire-discrete-event:") :]
+        dispatcher = getattr(ws.app.state, "discrete_dispatcher", None)
+        overrides = getattr(ws.app.state, "teto_overrides", None)
+        if dispatcher is None or overrides is None:
+            log.warning("[WS-CONTROL] discrete_dispatcher or teto_overrides not in app.state")
+            return
+        try:
+            await dispatcher.fire_by_name(hotkey_name, overrides)
+            log.info("[WS-CONTROL] discrete event fired: %r", hotkey_name)
+        except ValueError as exc:
+            log.warning("[WS-CONTROL] fire-discrete-event refused: %s", exc)

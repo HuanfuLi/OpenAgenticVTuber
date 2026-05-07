@@ -16,6 +16,7 @@ from loguru import logger as loguru_logger
 from sidecar.avatar.capabilities import load_capabilities
 from sidecar.avatar.overrides import load_overrides
 from sidecar.compositor import Compositor
+from sidecar.compositor.cursor_driver import CursorDriver
 from sidecar.compositor.idle_driver import IdleDriver
 from sidecar.compositor.intent_driver import IntentDriver
 from sidecar.compositor.speech_driver import SpeechDriver
@@ -24,6 +25,7 @@ from sidecar.orchestrator.orchestrator import Orchestrator
 from sidecar.tts import TTSGateway, TTSTaskManager
 from sidecar.vts import LoggingParameterWriter, PyVTSParameterWriter, SpeechMouthDriver
 from sidecar.vts.handshake import connect_and_authenticate
+from sidecar.vts.discrete_dispatcher import DiscreteDispatcher
 from sidecar.vts.pyvts_writer import PyvtsSafeWriter
 
 from .handlers import handle_control, handle_shutdown, handle_text_input  # noqa: F401 -- side-effect: registers @on(...)
@@ -203,6 +205,8 @@ async def lifespan(app: FastAPI):
             )
             idle_drv = IdleDriver(seed=42, breath_writeable=breath_writeable)
             speech_drv = SpeechDriver(compositor_speech_queue, overrides, teto_dir)
+            cursor_drv = CursorDriver()
+            discrete_dispatcher = DiscreteDispatcher(writer)
             intent_drv = IntentDriver(
                 intent_queue=compositor_intent_queue,
                 sentence_complete_queue=compositor_sentence_complete_queue,
@@ -215,7 +219,7 @@ async def lifespan(app: FastAPI):
                 idle_driver=idle_drv,
                 speech_driver=speech_drv,
                 intent_driver=intent_drv,
-                cursor_driver=None,
+                cursor_driver=cursor_drv,
             )
             compositor_task = asyncio.create_task(compositor.run())
             app.state.compositor = compositor
@@ -223,6 +227,7 @@ async def lifespan(app: FastAPI):
             app.state.handshake_task = handshake_task
             app.state.compositor_task = compositor_task
             app.state.teto_overrides = overrides
+            app.state.discrete_dispatcher = discrete_dispatcher
             app.state.mouth_driver_task = mouth_task
             app.state.turn_loop_task = turn_loop_task
             app.state.mouth_writer = mouth_writer
