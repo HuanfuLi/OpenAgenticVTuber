@@ -60,7 +60,13 @@ export const COPY = {
     EMPTY_READY_BODY: 'Type below to start a conversation.',
     EMPTY_READY_FOOTER:
       'Closing the app clears this conversation — persistence comes in a later milestone.',
-    INPUT_PLACEHOLDER: 'Type a message...'
+    INPUT_PLACEHOLDER: 'Type a message...',
+    // Phase 2 (plan 02-03) -- streaming-chat affordances. Single-char ellipsis
+    // (U+2026) per UI-SPEC §Typography (italic --muted-foreground).
+    THINKING: 'Thinking…',
+    STREAM_ERROR: "The model couldn't finish that reply. Try again.",
+    CONTEXT_OVERFLOW:
+      "Conversation got too long and won't fit in the model anymore. Close the app to start fresh."
   },
   HISTORY: {
     HEADER: 'History',
@@ -170,6 +176,10 @@ export const COPY = {
   LOGS: {
     COLLAPSED: 'Logs',
     CLEAR: 'Clear logs',
-    OPEN_FOLDER: 'Open log folder'
+    OPEN_FOLDER: 'Open log folder',
+    // Phase 2 (plan 02-03) -- structured intent log prefix; styled green in
+    // the LogsDrawer per UI-SPEC IP-4. 8-char prefix matches [READY]/[ERROR]
+    // width-class for visual scan symmetry.
+    INTENT_PREFIX: '[INTENT]'
   }
 } as const

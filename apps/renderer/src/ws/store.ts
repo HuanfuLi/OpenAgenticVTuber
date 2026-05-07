@@ -1,54 +1,111 @@
-// Renderer-side observable: turn incoming WS messages into chat bubbles.
+// Renderer-side WS dispatcher (Phase 2 plan 02-03).
 //
-// Plan 01-02: only display-text messages produce assistant bubbles. The
-// existing app-store keeps its own chatMessages slice for the prototype-ported
-// ChatView. We bridge to it by exposing appendUserMessage / appendAssistantMessage
-// helpers that the Chat surface calls directly. This avoids forking the store.
+// Routes the seven Phase 2 envelope variants plus the Phase 1 display-text
+// passthrough into the streaming-chat reducer (useStreamingMessages.ts) and a
+// log sink that AppShell subscribes to for the LogsDrawer.
+//
+// Phase 2 collapses chat state into useStreamingMessages -- the legacy
+// pushBubble/useChatBubbles module-state from Phase 1 plan 01-02 is superseded.
+// Chat.tsx now reads from useStreamingMessages exclusively.
 
 import { useEffect, useState } from 'react'
 import { subscribe, subscribeState } from './client'
-import type { WSMessage, DisplayTextMessage } from '@contracts/ws-message'
+import {
+  isAudioPayload,
+  isControl,
+  isFullText,
+  isForceNewMessage,
+  isError,
+  isLog,
+  isDisplayText
+} from '@contracts/ws-message'
+import type { WSMessage } from '@contracts/ws-message'
+import {
+  appendUserMessage as _appendUserMessage,
+  setThinking,
+  appendAssistantSentence,
+  setForceNewMessage,
+  setInputDisabled,
+  setBanner
+} from '@/screens/Chat/useStreamingMessages'
 
-export interface ChatBubble {
-  id: string
-  role: 'user' | 'assistant'
-  text: string
-}
+// -- log channel: sidecar log envelopes flow through here to AppShell --------
 
-let bubbles: ChatBubble[] = []
-const bubbleSubs = new Set<(b: ChatBubble[]) => void>()
-
-function pushBubble(b: ChatBubble): void {
-  bubbles = [...bubbles, b]
-  for (const cb of bubbleSubs) cb(bubbles)
-}
-
-// Convert incoming display-text WS messages into assistant bubbles.
-subscribe((msg: WSMessage) => {
-  if (msg.type === 'display-text') {
-    const dt = msg as DisplayTextMessage
-    pushBubble({ id: crypto.randomUUID(), role: 'assistant', text: dt.text })
+type LogSink = (line: string) => void
+const logSinks = new Set<LogSink>()
+export function subscribeWSLog(cb: LogSink): () => void {
+  logSinks.add(cb)
+  return () => {
+    logSinks.delete(cb)
   }
+}
+
+// -- WS dispatcher -----------------------------------------------------------
+
+subscribe((msg: WSMessage) => {
+  if (isControl(msg)) {
+    if (msg.text === 'conversation-chain-start') {
+      setThinking(true)
+      setInputDisabled(true)
+    } else if (msg.text === 'conversation-chain-end') {
+      setInputDisabled(false)
+    }
+    return
+  }
+  if (isFullText(msg)) {
+    // Sidecar already created the assistant bubble via chain-start ->
+    // setThinking. The full-text envelope carries "Thinking..." which matches
+    // the placeholder we already render. No-op (UI-SPEC IP-6).
+    return
+  }
+  if (isAudioPayload(msg)) {
+    appendAssistantSentence(msg.display_text.text, msg.sentence_id)
+    return
+  }
+  if (isForceNewMessage(msg)) {
+    setForceNewMessage()
+    return
+  }
+  if (isError(msg)) {
+    const kind = msg.message.startsWith('Conversation got too long')
+      ? 'CONTEXT_OVERFLOW'
+      : 'STREAM_ERROR'
+    setBanner(kind)
+    // Re-enable input so the user can retry.
+    setInputDisabled(false)
+    return
+  }
+  if (isLog(msg)) {
+    for (const cb of logSinks) cb(msg.message)
+    return
+  }
+  if (isDisplayText(msg)) {
+    // Phase 1 fallback path -- non-TTS surfaces (errors, system messages,
+    // full-text echo). Treat as a single-sentence assistant message so the
+    // legacy echo flow still produces a visible bubble.
+    appendAssistantSentence(msg.text, 0)
+    return
+  }
+  // Unknown envelope types silently dropped (matches OLVT _route_message).
 })
 
+// -- re-exports preserved from Phase 1 ---------------------------------------
+
+/**
+ * Append a user message to the streaming chat reducer. Phase 1 callers used
+ * this to push a local user bubble immediately on Enter.
+ */
 export function appendUserMessage(text: string): void {
-  pushBubble({ id: crypto.randomUUID(), role: 'user', text })
+  _appendUserMessage(text)
 }
 
-export function useChatBubbles(): ChatBubble[] {
-  const [b, setB] = useState(bubbles)
-  useEffect(() => {
-    const cb = (next: ChatBubble[]) => setB(next)
-    bubbleSubs.add(cb)
-    return () => {
-      bubbleSubs.delete(cb)
-    }
-  }, [])
-  return b
-}
-
+/** Phase 1 connection-state hook -- still consumed by Chat.tsx. */
 export function useWSConnected(): boolean {
   const [open, setOpen] = useState(false)
   useEffect(() => subscribeState(setOpen), [])
   return open
 }
+
+// Phase 2 BREAKING CHANGE from plan 01-02: useChatBubbles is removed. Chat.tsx
+// now reads from useStreamingMessages directly. Surfacing the Phase 1 hook
+// would only delay the inevitable migration.

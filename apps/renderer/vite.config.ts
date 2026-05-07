@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -21,5 +22,12 @@ export default defineConfig({
   build: {
     outDir: 'out',
     emptyOutDir: true
+  },
+  // Phase 2 plan 02-03: vitest config for renderer reducer + DOM tests.
+  test: {
+    environment: 'jsdom',
+    globals: false,
+    include: ['tests/**/*.test.{ts,tsx}'],
+    setupFiles: ['./tests/setup.ts']
   }
 })
