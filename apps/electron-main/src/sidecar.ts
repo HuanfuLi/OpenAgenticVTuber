@@ -60,9 +60,20 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
   const sidecarRoot = resolveSidecarRoot()
   const child = spawn('uv', ['run', 'python', '-m', 'sidecar'], {
     cwd: sidecarRoot,
-    // PYTHONUNBUFFERED=1 is critical — without this, Python may line-buffer
-    // stdout in pipe mode and the READY-line parser hangs indefinitely.
-    env: { ...process.env, PYTHONUNBUFFERED: '1' },
+    env: {
+      ...process.env,
+      // PYTHONUNBUFFERED=1 is critical — without this, Python may line-buffer
+      // stdout in pipe mode and the READY-line parser hangs indefinitely.
+      PYTHONUNBUFFERED: '1',
+      // Watchdog parent PID. With shell:true on Windows the spawn chain is
+      // electron.exe -> cmd.exe -> uv.exe -> python.exe, so Python's getppid()
+      // returns uv's PID — uv stays alive as long as python does, making
+      // pid_exists() useless for orphan detection. Pass Electron's actual PID
+      // explicitly; the watchdog will prefer it over getppid(). Killing
+      // Electron via Task Manager then wakes the watchdog within one poll
+      // (≤2s), Python os._exit(0)s, uv exits with it, cmd.exe drains.
+      AGENTICLLMVTUBER_PARENT_PID: String(process.pid)
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
     // shell=true on Windows so PATHEXT lookup finds uv.cmd.
     shell: process.platform === 'win32'

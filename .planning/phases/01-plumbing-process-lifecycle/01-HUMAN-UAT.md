@@ -20,7 +20,9 @@ fix: Change line 33 from `'../preload/index.js'` to `'../preload/index.mjs'`.
 
 ### 2. Force-quit Electron via Task Manager and immediately relaunch
 expected: Sidecar process terminates within ~2s of Electron death (watchdog poll cycle); next launch picks a new ephemeral port and starts cleanly
-result: [pending]
+result: FAILED — every npm run dev start spawned a new python.exe; killing Electron via Task Manager left python.exe alive
+diagnosis: Two-bug Windows watchdog failure. (Bug A) `apps/electron-main/src/sidecar.ts` spawns with `shell: true`, producing the chain `electron.exe -> cmd.exe -> uv.exe -> python.exe`. `sidecar/src/sidecar/main.py` called `os.getppid()` to find Electron, but that returns uv.exe's PID — uv stays alive as long as python does, so the watchdog's `psutil.pid_exists()` always returned True. (Bug B) Windows does not auto-kill orphan processes outside of a Job Object, so the cmd.exe and uv.exe descendants of a Task-Manager-killed Electron just keep waiting on python forever. Why pytest passed: `test_sidecar_boots_and_emits_ready_line` spawns the sidecar directly from a Python subprocess (no Electron, no shell, 1-level chain), so getppid() coincidentally returned the right PID — the Windows-specific 4-level chain was never tested.
+fix: Pass Electron's PID via env var `AGENTICLLMVTUBER_PARENT_PID` from sidecar.ts; main.py prefers the env var over getppid() with the latter as fallback (preserves pytest's direct-spawn path). Once Python detects Electron's PID is gone (≤2s poll), `os._exit(0)` cascades: python dies → uv exits (its child died) → cmd.exe drains (its child died). Whole chain unwinds in one poll. Manual cleanup before re-test: open Task Manager, search for `python.exe` rows owned by your user, end them — the orphans accumulated from prior bad runs.
 
 ### 3. Real LM Studio /admin/llm-test 1-token completion succeeds end-to-end
 expected: With LM Studio running on localhost:1234 with a model loaded, [Test connection] streams success lines and SUCCESS_SENTINEL "Connection looks good. You can continue." enables [Continue]; [Continue] persists safeStorage blob and unblocks the chrome shell

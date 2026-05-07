@@ -16,7 +16,13 @@ from .ws.server import app
 
 def main() -> None:
     """Entry point — bind ephemeral socket, print READY, run uvicorn."""
-    parent_pid = os.getppid()
+    # On Windows the Electron supervisor spawns through cmd.exe -> uv -> python,
+    # so getppid() returns uv's PID — useless for orphan detection (uv stays
+    # alive as long as python does). When Electron is the parent it sets
+    # AGENTICLLMVTUBER_PARENT_PID to its own PID; we prefer that. Direct subprocess
+    # spawns (e.g. pytest) don't set the env var and the getppid() fallback works.
+    env_parent = os.environ.get("AGENTICLLMVTUBER_PARENT_PID")
+    parent_pid = int(env_parent) if env_parent and env_parent.isdigit() else os.getppid()
 
     # CRITICAL: bind our own socket so we can read the chosen port BEFORE serving.
     # uvicorn does not expose its bound socket cleanly otherwise (FastAPI #14783).
