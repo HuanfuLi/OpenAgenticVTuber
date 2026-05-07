@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 02-01-PLAN.md (LLMGateway + contracts + AvatarCapabilities)
-last_updated: "2026-05-07T02:52:31.374Z"
+stopped_at: Completed 02-02-PLAN.md (Orchestrator + OLVT decorator chain + lifespan wiring)
+last_updated: "2026-05-07T03:11:42.680Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 ## Current Position
 
 Phase: 02 (conversation-pipeline) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Plan: 2 of 3
 | Phase 01 P01 | 75min | 3 tasks | 64 files |
 | Phase 01 P02 | 50min | 3 tasks | 17 files |
 | Phase 02 P01 | 35min | 3 tasks | 19 files |
+| Phase 02 P02 | 14min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Phase-2 sentence_id field is a documented skeleton-side extension over OLVT (Discrepancy 4); required for [STUB-TTS] sentence trace per UI-SPEC IP-5
 - [Phase 02]: Q1 (extra_body passthrough) smoke result: SKIP — LM Studio not running during execution; PROVENANCE.md documents operator re-run path before Phase 5 verification
 - [Phase 02]: AvatarCapabilities loader fails loud (Pydantic ValidationError) on schema drift — boot must abort rather than run with empty tag vocabulary
+- [Phase 02]: [Phase 02]: Orchestrator KV-cache discipline enforced via inspect.getsource grep test (forbids _memory.pop|__delitem__|insert|remove|clear|del|slice-rebind); failed user messages REMAIN in _memory (Warning A precision)
+- [Phase 02]: [Phase 02]: Display-side bracket-strip in display_processor (Rule-2 deviation from OLVT) so SC #3 BLOCKER test passes -- canonical envelope delivers bracket-free text to all consumers; OLVT leaves stripping to renderer
+- [Phase 02]: [Phase 02]: Sidecar config loaded from AGENTICLLMVTUBER_LLM_CONFIG_JSON env var (electron-main writes decrypted blob into sidecar env); DPAPI-encrypted blob remains source of truth -- env-var write from electron-main is a follow-up integration task
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-07T02:52:31.369Z
-Stopped at: Completed 02-01-PLAN.md (LLMGateway + contracts + AvatarCapabilities)
+Last session: 2026-05-07T03:11:42.675Z
+Stopped at: Completed 02-02-PLAN.md (Orchestrator + OLVT decorator chain + lifespan wiring)
 Resume file: None
