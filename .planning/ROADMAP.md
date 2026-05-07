@@ -93,7 +93,7 @@ Plans:
 Plans:
 - [x] 04-00-PLAN.md — Teto smoke-pass entry gate: TetoOverrides Pydantic loader + sidecar/scripts/teto_smoke_pass.py CLI + populated avatars/teto/teto_overrides.yaml (AVT-06, AVT-07) [Wave 1]
 - [x] 04-01-PLAN.md — VTS infrastructure: PyvtsSafeWriter (issue #51 mitigation) + ParamID resolver + DiscreteDispatcher + VTS handshake + DPI awareness + ParamFrame/DiscreteEvent contracts (AVT-04, AVT-05, AVT-09, AVT-02 partial) [Wave 1]
-- [ ] 04-02-PLAN.md — Compositor core: 60Hz deadline scheduler + idle/intent/speech drivers + body-sway strategy registry (head_only/proxy_param/exp3_modulation) + dev-panel hot-switch + sentence-end signal (AVT-01, AVT-02, AVT-03, AVT-06 foundation, AVT-08) [Wave 2]
+- [x] 04-02-PLAN.md — Compositor core: 60Hz deadline scheduler + idle/intent/speech drivers + body-sway strategy registry (head_only/proxy_param/exp3_modulation) + dev-panel hot-switch + sentence-end signal (AVT-01, AVT-02, AVT-03, AVT-06 foundation, AVT-08) [Wave 2]
 - [ ] 04-03-PLAN.md — Cursor tracker (Win32-poll → ParamAngle deflection with 80px dead-zone + cubic ease-back) + DiscreteEvent demo target lock (Star Eye [7]) + sidecar lifespan integration (AVT-09 demo, AVT-10) [Wave 3 — depends on 04-02 ws/server.py edits]
 - [ ] 04-04-PLAN.md — Body-sway investigation execution + per-strategy evidence (operator-driven A/B via dev-panel hot-switch, RESEARCH §Open-Q2 closure, ship-default locked in teto_overrides.yaml) (AVT-06 execution) [Wave 3 — operator-driven, runs in parallel with 04-03]
 
@@ -115,11 +115,11 @@ Plans:
   3. The "Looks Done But Isn't" checklist from PITFALLS.md is run end-to-end with results recorded — adversarial `[joy]` token boundary test, DeepSeek-R1 reasoning smoke test, VTS auth-reprompt test, port-collision test, OLVT protocol-shape parity diff against OLVT's `_route_message()`
   4. The body-sway investigation report (committed under `.planning/skeleton-verification.md` or linked from it) documents which speech-driver strategies were tried, what was observed on Teto, and the rationale for the shipping default
   5. `avatars/teto/teto_overrides.yaml` is committed with the schema established (orphan-params list, physics-chain proxy slots, sign-inversion slots) and Teto-specific values populated from the Phase 4 smoke-pass
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: TBD — Contracts codegen pipeline + TS-mirror replacement (SC-02). **30-minute spike**: choose between `datamodel-code-generator`, `pydantic2ts`, hand-rolled (Pydantic → `model_json_schema()` → `json-schema-to-typescript`). Recommended: hand-rolled JSON Schema intermediate.
-- [ ] 05-02: TBD — Run §14 verification + write skeleton-verification.md + body-sway investigation report (SC-01)
+- [ ] 05-01-PLAN.md — Hand-rolled Pydantic -> JSON Schema -> TS codegen pipeline replacing six packages/contracts/ts/*.ts files (SC-02)
+- [ ] 05-02-PLAN.md — skeleton-verification.md (six §14 SCs + five PITFALLS e2e + body-sway report) + scripts/verify-skeleton.sh + README Quickstart Demo + fresh-clone validation (SC-01)
 
 **Open questions to resolve at plan-time:**
 - **Codegen tool choice** (SC-02): `datamodel-code-generator` (wrong direction — JSON Schema → Pydantic, not the reverse) vs. `pydantic2ts` vs. hand-rolled (Pydantic `model_json_schema()` → `json-schema-to-typescript` chain). Default: hand-rolled per ARCHITECTURE.md §4.

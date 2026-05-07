@@ -32,14 +32,14 @@ The walking-skeleton scope validates the layered architecture (Electron + Python
 
 ### Action Compositor & VTS Bridge
 
-- [ ] **AVT-01**: 60 Hz action compositor merges three drivers (idle baseline, speech driver, intent overlay) into a single `ParamFrame` stream sent **sidecar-direct to VTS via pyvts** — NOT through the Electron renderer (which only forwards UI events like cursor-in-canvas back to the sidecar)
-- [ ] **AVT-02**: Idle baseline driver runs continuously even when no other driver is active, writing rest-state values at least every second to comply with the VTS lower-bound rate limit; if no parameter is re-sent within 1s, VTS reverts that parameter to the face tracker
-- [ ] **AVT-03**: Speech driver writes additive (`mode:"add"`) updates so it does not conflict with VTS's internal face tracker on machines where a webcam is active; intent overlay uses `mode:"set"` only with an explicit `weight` fade for smooth blends
+- [x] **AVT-01**: 60 Hz action compositor merges three drivers (idle baseline, speech driver, intent overlay) into a single `ParamFrame` stream sent **sidecar-direct to VTS via pyvts** — NOT through the Electron renderer (which only forwards UI events like cursor-in-canvas back to the sidecar)
+- [x] **AVT-02**: Idle baseline driver runs continuously even when no other driver is active, writing rest-state values at least every second to comply with the VTS lower-bound rate limit; if no parameter is re-sent within 1s, VTS reverts that parameter to the face tracker
+- [x] **AVT-03**: Speech driver writes additive (`mode:"add"`) updates so it does not conflict with VTS's internal face tracker on machines where a webcam is active; intent overlay uses `mode:"set"` only with an explicit `weight` fade for smooth blends
 - [x] **AVT-04**: pyvts is wrapped behind a single-writer asyncio task (one coroutine owns the WebSocket) so concurrent producers don't trigger pyvts open issue #51 (`recv()` race during concurrent `asyncio.gather`)
 - [x] **AVT-05**: Renderer-aware ParamID resolver (~30 LOC) chooses the param-name strategy by renderer: VTS path writes input-layer names (`ParamAngleX`) and lets VTS internal routing handle smoothing; non-VTS branch is a `NotImplementedError` stub
 - [x] **AVT-06**: Speech-driver body-sway investigation runs at least two strategy-pattern implementations against the dev Teto rig (candidates: smoke-pass discovery of non-orphan downstream body params; `.exp3.json` body-pose modulation by RMS; custom physics chain via `<model>.vtube.json`); skeleton ships either visible body sway OR head-only motion (with breathing/micro-shoulder alternative) plus a committed written rationale documenting what was tried — investigation IS the deliverable, not a port-from-OLVT
 - [x] **AVT-07**: Skeleton ships a stub `teto_overrides.yaml` (or `.json`) checked into the repo even though import + smoke-pass tooling is deferred — empty orphan-params list, physics-chain proxy slots, sign-inversion slots — establishing the per-avatar override file schema for the future avatar-import milestone
-- [ ] **AVT-08**: LLM emits `[joy]` → expression smoothly blends in over ~300ms and decays after the sentence ends — **not a hotkey pop**. This is §14 success criterion #2 and the skeleton's headline differentiator demo.
+- [x] **AVT-08**: LLM emits `[joy]` → expression smoothly blends in over ~300ms and decays after the sentence ends — **not a hotkey pop**. This is §14 success criterion #2 and the skeleton's headline differentiator demo.
 - [x] **AVT-09**: One `DiscreteEvent` (e.g., prop visibility toggle) maps to a VTS hotkey via the discrete-event path, demonstrating the rare-discrete-trigger contract alongside the dominant continuous-param contract
 - [ ] **AVT-10**: Cursor-in-canvas (React transparent overlay div over the VTS window) emits `ActionIntent(kind="reaction", ...)` events to the sidecar; compositor produces visible avatar eye/head tracking on the cursor
 
@@ -182,14 +182,14 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | TTS-02 | Phase 3 | Complete |
 | TTS-03 | Phase 3 | Pending |
 | TTS-04 | Phase 3 | Pending |
-| AVT-01 | Phase 4 | Pending |
-| AVT-02 | Phase 4 | Pending |
-| AVT-03 | Phase 4 | Pending |
+| AVT-01 | Phase 4 | Complete |
+| AVT-02 | Phase 4 | Complete |
+| AVT-03 | Phase 4 | Complete |
 | AVT-04 | Phase 4 | Complete |
 | AVT-05 | Phase 4 | Complete |
 | AVT-06 | Phase 4 | Complete |
 | AVT-07 | Phase 4 | Complete |
-| AVT-08 | Phase 4 | Pending |
+| AVT-08 | Phase 4 | Complete |
 | AVT-09 | Phase 4 | Complete |
 | AVT-10 | Phase 4 | Pending |
 | SC-01 | Phase 5 | Pending |
