@@ -49,7 +49,7 @@ Plans:
   1. With LM Studio running, typing "tell me a 3-sentence story" produces three sentences appearing sequentially in the chat panel
   2. An LLM reply containing `[joy]` strips the tag from chat display AND logs an extracted `ActionIntent(kind="expression", name="joy", ...)` in the sidecar log panel
   3. An adversarial test fixture that splits `[joy]` across token deltas (`[`, `jo`, `y]`) still extracts cleanly via buffer-then-extract — no bracket character ever leaks to chat or stub-TTS output
-  4. Switching LM Studio to a DeepSeek-R1 distill: `<think>...</think>` content is captured to a side channel and never appears in the main chat stream or in extracted `ActionIntent`s
+  4. With a compliant reasoning model configured (latest DeepSeek-R1 distill that honors `enable_thinking:false`, or Qwen3-Reasoning), no `<think>...</think>` content appears in the main chat stream or in extracted `ActionIntent`s — verified by inspecting chat output during a multi-sentence reply. Non-compliant models leak `<think>` to chat as a visible bug; the user's signal to switch models. (Per CONTEXT.md D-10: API-level reasoning-disable, no parser-strip safety net, no side channel.)
   5. Closing and relaunching the app starts a fresh empty in-memory thread (no persistence, no FTS5)
 **Plans**: TBD
 
