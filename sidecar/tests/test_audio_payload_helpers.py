@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from io import BytesIO
 import wave
 from pathlib import Path
 
@@ -117,7 +118,9 @@ def test_synthesize_and_prepare_payload_real_voice():
     assert sample_rate == voice.config.sample_rate
     assert msg.audio is not None
     decoded = base64.b64decode(msg.audio)
-    with wave.open(Path("NUL"), "wb"):
-        pass
+    with wave.open(BytesIO(decoded), "rb") as wf:
+        assert wf.getframerate() == sample_rate
+        assert wf.getnchannels() == 1
+        assert wf.getsampwidth() == 2
     assert decoded[:4] == b"RIFF"
     assert len(msg.volumes) > 0
