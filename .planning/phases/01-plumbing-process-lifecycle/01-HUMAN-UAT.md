@@ -24,7 +24,9 @@ result: [pending]
 
 ### 3. Real LM Studio /admin/llm-test 1-token completion succeeds end-to-end
 expected: With LM Studio running on localhost:1234 with a model loaded, [Test connection] streams success lines and SUCCESS_SENTINEL "Connection looks good. You can continue." enables [Continue]; [Continue] persists safeStorage blob and unblocks the chrome shell
-result: [pending]
+result: FAILED (initial) — TestLog showed `✕ Test failed: Failed to fetch` for both blank-model (auto-detect) and explicit-model paths
+diagnosis: Renderer CSP `default-src 'self'` blocks cross-origin fetches. The renderer is served from `http://localhost:5173` in dev (or `file://` in production); the sidecar binds to `http://127.0.0.1:<ephemeral-port>`. These are different origins, so the renderer→sidecar fetch was blocked by the browser before leaving the renderer. The same CSP would have blocked the eventual WebSocket connection to `ws://127.0.0.1:<port>/ws` once Test #4 was attempted. Independent verification: `curl http://localhost:1234/v1/models` returned 10+ models in 220ms — LM Studio itself is healthy.
+fix: Expand CSP in `apps/renderer/index.html` to add `connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*;` — keeps the production-safe `default-src 'self'` baseline; the `connect-src` allow-list is scoped to the local loopback only (covers any sidecar ephemeral port and both schemes).
 
 ### 4. Type 'hello' in the chat input and observe 'echo: hello' as an assistant bubble
 expected: User bubble with 'hello' renders immediately; assistant bubble with 'echo: hello' follows after WS round-trip (~10-50ms)
