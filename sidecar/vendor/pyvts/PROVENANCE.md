@@ -26,3 +26,19 @@ When a patch is applied, append an entry below:
 **Diff summary:** copy of `git diff --stat` for the change
 **Upstream issue/PR (if any):** https://github.com/Genteki/pyvts/issues/NN
 **Tests added:** path/to/test (if applicable)
+
+### 2026-05-07 - phase-4-safe-writer-wrapper
+
+**Author:** Codex
+**Files touched:** sidecar/vendor/pyvts/PROVENANCE.md
+**Reason:** Documented the Phase 4 issue-#51 mitigation decision without modifying vendored pyvts code.
+**Diff summary:** 1 file changed, provenance entry added for wrapper-not-patch decision
+**Upstream issue/PR (if any):** https://github.com/Genteki/pyvts/issues/51
+**Tests added:** sidecar/tests/vts/test_pyvts_writer.py
+
+We intentionally kept `sidecar/vendor/pyvts/vts.py` unchanged. Phase 4 routes
+all concurrent compositor and discrete-event traffic through
+`sidecar/src/sidecar/vts/pyvts_writer.py`, where `PyvtsSafeWriter` owns the
+only `websocket.recv()` loop and dispatches responses by `requestID`. This
+contains the concurrency fix to project code, minimizes vendor drift, and keeps
+future upstream replacement or local fork decisions straightforward.

@@ -1,6 +1,15 @@
-"""Minimal VTS parameter-writing seam for Phase 3 mouth driving."""
+"""VTS seams for both Phase 3 mouth driving and Phase 4 compositor traffic."""
 
-from .parameter_writer import LoggingParameterWriter, PyVTSParameterWriter
+from .handshake import connect_and_authenticate
+from .parameter_writer import LoggingParameterWriter, ParameterWriter, PyVTSParameterWriter
+from .pyvts_writer import PyvtsSafeWriter
 from .speech_mouth_driver import SpeechMouthDriver
 
-__all__ = ["LoggingParameterWriter", "PyVTSParameterWriter", "SpeechMouthDriver"]
+__all__ = [
+    "connect_and_authenticate",
+    "LoggingParameterWriter",
+    "ParameterWriter",
+    "PyvtsSafeWriter",
+    "PyVTSParameterWriter",
+    "SpeechMouthDriver",
+]
