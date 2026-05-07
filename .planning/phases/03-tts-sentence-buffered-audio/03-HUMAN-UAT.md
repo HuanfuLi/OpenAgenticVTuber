@@ -1,19 +1,14 @@
 ---
-status: partial
+status: complete
 phase: 03-tts-sentence-buffered-audio
 source: [03-VERIFICATION.md]
 started: 2026-05-07T08:24:52Z
-updated: 2026-05-07T21:47:43Z
+updated: 2026-05-07T21:50:35Z
 ---
 
 ## Current Test
 
-number: 3
-name: Clean Audio Start and Live Mouth Motion
-expected: |
-  The first sentence starts without click/pop, and the avatar mouth opens and closes in sync with speech instead of remaining stuck.
-awaiting: user response
-status: fix implemented; awaiting re-test
+[testing complete]
 
 ## Tests
 
@@ -33,7 +28,7 @@ result: pass
 
 ### 3. Clean Audio Start and Live Mouth Motion
 expected: The first sentence starts without click/pop, and the avatar mouth opens and closes in sync with speech instead of remaining stuck.
-result: issue
+result: pass
 reported: "Connected, but lip sync not working. I can see VTS received requests, but no mouth actions at all. VTS is just doing default idle actions."
 severity: major
 diagnosis: |
@@ -44,8 +39,8 @@ fix: |
 ## Summary
 
 total: 3
-passed: 2
-issues: 1
+passed: 3
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
@@ -72,7 +67,7 @@ Resolved:
   debug_session: ".planning/phases/03-tts-sentence-buffered-audio/03-DEBUG-sound-blocker.md"
 
 - truth: "The first sentence starts without click/pop, and the avatar mouth opens and closes in sync with speech instead of remaining stuck."
-  status: failed
+  status: fixed
   reason: "User reported: Connected, but lip sync not working. VTS received requests, but no mouth actions at all."
   severity: major
   test: 3
