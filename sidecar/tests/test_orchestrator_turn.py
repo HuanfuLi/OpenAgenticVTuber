@@ -247,3 +247,159 @@ async def test_intent_log_line_emitted():
         and "strength=1.0" in r
         for r in records
     ), records
+
+
+# ---------------------------------------------------------------------------
+# Task 3: Lifespan + WS dispatch tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_handle_text_input_no_orchestrator_emits_config_error():
+    """app.state.orchestrator=None -> text-input replies with config error."""
+    from sidecar.ws.handlers import handle_text_input
+
+    class _FakeApp:
+        class _State:
+            orchestrator = None
+
+        state = _State()
+
+    class _FakeWS:
+        def __init__(self):
+            self.app = _FakeApp()
+            self.writes: list[dict] = []
+
+        async def send_json(self, d: dict):
+            self.writes.append(d)
+
+    ws = _FakeWS()
+    await handle_text_input(ws, {"type": "text-input", "text": "hi"})
+    assert len(ws.writes) == 1
+    assert ws.writes[0]["type"] == "error"
+    assert "Sidecar started without LLM configuration" in ws.writes[0]["message"]
+
+
+@pytest.mark.asyncio
+async def test_handle_text_input_drives_orchestrator_turn_when_configured():
+    """app.state.orchestrator=Orchestrator -> text-input drives a real turn."""
+    from sidecar.ws.handlers import handle_text_input
+
+    gw = _FakeGateway(chunks=["Hello world."])
+    orch = _build_orch(gw)
+
+    class _FakeApp:
+        def __init__(self, orchestrator):
+            class _State:
+                pass
+
+            self._state = _State()
+            self._state.orchestrator = orchestrator
+
+        @property
+        def state(self):
+            return self._state
+
+    class _FakeWS:
+        def __init__(self, orchestrator):
+            self.app = _FakeApp(orchestrator)
+            self.writes: list[dict] = []
+
+        async def send_json(self, d: dict):
+            self.writes.append(d)
+
+    ws = _FakeWS(orch)
+    await handle_text_input(ws, {"type": "text-input", "text": "hi"})
+    types = [w.get("type") for w in ws.writes]
+    assert "control" in types
+    assert "audio" in types
+    assert types[0] == "control"
+    assert ws.writes[0]["text"] == "conversation-chain-start"
+    assert types[-1] == "control"
+    assert ws.writes[-1]["text"] == "conversation-chain-end"
+
+
+@pytest.mark.asyncio
+async def test_handle_text_input_empty_text_returns_silently():
+    """Empty/whitespace-only text-input is silently dropped (no envelope)."""
+    from sidecar.ws.handlers import handle_text_input
+
+    class _FakeApp:
+        class _State:
+            orchestrator = None
+
+        state = _State()
+
+    class _FakeWS:
+        def __init__(self):
+            self.app = _FakeApp()
+            self.writes: list[dict] = []
+
+        async def send_json(self, d: dict):
+            self.writes.append(d)
+
+    ws = _FakeWS()
+    await handle_text_input(ws, {"type": "text-input", "text": "   "})
+    assert ws.writes == []
+
+
+# ---------- _load_provider_config_from_env / _warmup_ping unit tests ---------
+
+
+def test_load_provider_config_from_env_present(monkeypatch):
+    import json as _json
+
+    from sidecar.ws.server import _load_provider_config_from_env
+
+    monkeypatch.setenv(
+        "AGENTICLLMVTUBER_LLM_CONFIG_JSON",
+        _json.dumps(
+            {
+                "provider": "lm_studio",
+                "endpoint": "http://localhost:1234/v1",
+                "apiKey": "",
+                "model": "qwen2.5-7b-instruct",
+            }
+        ),
+    )
+    cfg = _load_provider_config_from_env()
+    assert cfg is not None
+    assert cfg.provider == "lm_studio"
+    assert cfg.endpoint == "http://localhost:1234/v1"
+    assert cfg.model == "qwen2.5-7b-instruct"
+
+
+def test_load_provider_config_from_env_absent(monkeypatch):
+    from sidecar.ws.server import _load_provider_config_from_env
+
+    monkeypatch.delenv("AGENTICLLMVTUBER_LLM_CONFIG_JSON", raising=False)
+    assert _load_provider_config_from_env() is None
+
+
+def test_load_provider_config_from_env_malformed(monkeypatch):
+    from sidecar.ws.server import _load_provider_config_from_env
+
+    monkeypatch.setenv("AGENTICLLMVTUBER_LLM_CONFIG_JSON", "{not json")
+    assert _load_provider_config_from_env() is None
+
+
+@pytest.mark.asyncio
+async def test_warmup_ping_calls_gateway_once(fake_gateway):
+    """Pitfall 5 -- warmup fires exactly one stream() call before WS opens."""
+    from sidecar.ws.server import _warmup_ping
+
+    gw = fake_gateway(chunks=["x"])
+    await _warmup_ping(gw)
+    assert gw._call == 1
+    # Warmup messages should be a minimal user message -- never the system prompt.
+    assert gw.calls_received_messages[0] == [{"role": "user", "content": "hi"}]
+
+
+@pytest.mark.asyncio
+async def test_warmup_ping_does_not_raise_on_gateway_error(fake_gateway):
+    """Warmup failures are caught -- first turn will retry naturally."""
+    from sidecar.ws.server import _warmup_ping
+
+    gw = fake_gateway(raise_first=RuntimeError("boom"))
+    # Must NOT raise -- warmup is best-effort.
+    await _warmup_ping(gw)

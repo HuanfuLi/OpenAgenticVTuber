@@ -1,4 +1,10 @@
-"""Phase 1 PLUMB-03: WS envelope round-trip works."""
+"""Phase 1 PLUMB-03: WS envelope round-trip works.
+
+Phase 2 supersedes the echo body with Orchestrator.turn -- these tests are
+preserved as `@pytest.mark.skip` to keep the historical envelope-shape
+intent visible. See `test_handle_text_input_drives_orchestrator_turn_when_configured`
+in `test_orchestrator_turn.py` (Task 3) for the replacement coverage.
+"""
 
 import asyncio
 import json
@@ -42,6 +48,11 @@ async def _spawn_and_wait_ready(timeout: float = 15.0):
     return proc, port
 
 
+@pytest.mark.skip(
+    reason="Phase 2 replaces echo with Orchestrator.turn -- see "
+    "test_handle_text_input_drives_orchestrator_turn_when_configured "
+    "in test_orchestrator_turn.py."
+)
 @pytest.mark.asyncio
 async def test_text_input_echoes():
     proc, port = await _spawn_and_wait_ready()
@@ -60,6 +71,9 @@ async def test_text_input_echoes():
 
 @pytest.mark.asyncio
 async def test_unknown_type_silently_dropped():
+    """Phase 2: still asserts unknown-type dispatcher is silent. Sends a
+    text-input with no LLM config so the reply is the config-error envelope
+    (Phase 2 replacement for the echo path)."""
     proc, port = await _spawn_and_wait_ready()
     try:
         async with websockets.connect(f"ws://127.0.0.1:{port}/ws") as ws:
@@ -67,7 +81,10 @@ async def test_unknown_type_silently_dropped():
             # Send a valid one after -- if the unknown one closed the conn, this fails
             await ws.send(json.dumps({"type": "text-input", "text": "still alive"}))
             reply = json.loads(await asyncio.wait_for(ws.recv(), timeout=5.0))
-            assert reply == {"type": "display-text", "text": "echo: still alive"}
+            # Without env var, app.state.orchestrator is None and we get an
+            # error envelope (Phase 2 replacement for the echo).
+            assert reply["type"] == "error"
+            assert "Sidecar started without LLM configuration" in reply["message"]
     finally:
         proc.terminate()
         try:
@@ -80,6 +97,9 @@ async def test_unknown_type_silently_dropped():
 async def test_envelope_with_extra_fields_passes_through():
     """OLVT envelope is `flat fields with required type`, NOT a wrapped {type,payload}.
     Extra fields (e.g., future history_uid) must not break dispatch.
+
+    Phase 2: text-input with no LLM config still receives the config-error
+    envelope (replaces Phase 1's display-text echo).
     """
     proc, port = await _spawn_and_wait_ready()
     try:
@@ -90,7 +110,8 @@ async def test_envelope_with_extra_fields_passes_through():
                 "history_uid": "future-field",  # Phase 2+ field; Phase 1 dispatcher must ignore
             }))
             reply = json.loads(await asyncio.wait_for(ws.recv(), timeout=5.0))
-            assert reply == {"type": "display-text", "text": "echo: hi"}
+            assert reply["type"] == "error"
+            assert "Sidecar started without LLM configuration" in reply["message"]
     finally:
         proc.terminate()
         try:

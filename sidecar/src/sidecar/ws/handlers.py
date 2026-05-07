@@ -1,10 +1,10 @@
-"""Phase 1 echo handler. Phase 2 will add real LLM-orchestrated handlers."""
+"""Phase 2 WS handlers -- text-input drives Orchestrator.turn (echo body removed)."""
 
 import logging
 
 from fastapi import WebSocket
 
-from contracts.ws_message import DisplayTextMessage
+from contracts import ErrorMessage
 
 from .protocol import on
 
@@ -13,10 +13,27 @@ log = logging.getLogger(__name__)
 
 @on("text-input")
 async def handle_text_input(ws: WebSocket, msg: dict) -> None:
-    text = msg.get("text", "")
-    reply = DisplayTextMessage(text=f"echo: {text}")
-    # Pydantic v2: model_dump() -> dict. send_json() handles serialization.
-    await ws.send_json(reply.model_dump())
+    """Phase 2: drive orchestrator.turn instead of echoing.
+
+    On `app.state.orchestrator is None` (sidecar started without LLM config),
+    reply with a clear ErrorMessage envelope instead of crashing -- the
+    renderer's banner copy can guide the user back to the LLM Setup screen.
+    """
+    text = msg.get("text", "").strip()
+    if not text:
+        return
+    orchestrator = getattr(ws.app.state, "orchestrator", None)
+    if orchestrator is None:
+        await ws.send_json(
+            ErrorMessage(
+                message=(
+                    "Sidecar started without LLM configuration. "
+                    "Restart from the LLM Setup screen."
+                )
+            ).model_dump()
+        )
+        return
+    await orchestrator.turn(text, ws)
 
 
 @on("shutdown")
