@@ -73,7 +73,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — TTSGateway (PiperVoice + warmup synth-and-discard + sounddevice OutputStream) + numpy chunk-RMS helper + synthesize_and_prepare_payload + SpeechEnvelopePayload contracts (Py + TS) + Phase 3 deps + Git LFS init + en_US-amy-medium voice bundle (TTS-01, TTS-03, TTS-04)
+- [x] 03-01-PLAN.md — TTSGateway (PiperVoice + warmup synth-and-discard + sounddevice OutputStream) + numpy chunk-RMS helper + synthesize_and_prepare_payload + SpeechEnvelopePayload contracts (Py + TS) + Phase 3 deps + Git LFS init + en_US-amy-medium voice bundle (TTS-01, TTS-03, TTS-04)
 - [ ] 03-02-PLAN.md — TTSTaskManager OLVT port (locked sender-task order: queue.put → ws.send → stream.write per D-11) + Orchestrator integration (compositor_speech_queue + pending_inputs FIFO + chain-end-after-drain per D-14) + sidecar lifespan TTSGateway pre-[READY] wiring + renderer "Teto is still speaking…" UX affordance (TTS-02)
 
 ### Phase 4: Action Compositor + VTS Bridge + Body-Sway Investigation
