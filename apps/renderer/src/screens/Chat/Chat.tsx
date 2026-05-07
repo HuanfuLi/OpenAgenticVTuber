@@ -1,12 +1,11 @@
 /* SPEC §Chat -- empty-state branching, banner stack, input row.
  *
  * Ported from prototype src/shell.jsx ChatView (lines 245-359).
- * Plan 01-02: mockEcho swapped for real WS round-trip via @/ws/client + @/ws/store.
- *  - User input: append local user bubble + send({type: 'text-input', text}).
- *  - Assistant reply: handled in @/ws/store subscribe() -> pushBubble on display-text.
- *  - Banners stay wired to mockBanners (per DELTA: real connection state binding
- *    is layered later when the LLM connection-status manager lands; the WS
- *    open/close flag controls the input row's `disabled` instead).
+ * Phase 1 plan 01-02: mockEcho swapped for real WS round-trip.
+ * Phase 2 plan 02-03: chat state collapses to useStreamingMessages -- one
+ * growing assistant bubble per turn (UI-SPEC IP-1); banner above input row
+ * for STREAM_ERROR / CONTEXT_OVERFLOW; sticky-scroll with 40px slack (IP-2);
+ * input disabled while turn is in flight (IP-3).
  */
 import { useEffect, useRef, useState } from 'react'
 import { Send } from '@/lib/icons'
@@ -14,11 +13,18 @@ import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
 import { mockBanners, SCRIPTED_CONVO } from '@/dev/__mocks__/mock-backend'
 import { send } from '@/ws/client'
-import { appendUserMessage, useChatBubbles, useWSConnected } from '@/ws/store'
+import { appendUserMessage, useWSConnected } from '@/ws/store'
+import {
+  useStreamingMessages,
+  useStreamingBanner,
+  useInputDisabled
+} from './useStreamingMessages'
 
 export function Chat() {
   const { status, banners, chatMessages, setChatMessages } = useStore()
-  const wsBubbles = useChatBubbles()
+  const messages = useStreamingMessages()
+  const streamBanner = useStreamingBanner()
+  const turnInFlight = useInputDisabled()
   const wsOpen = useWSConnected()
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -35,38 +41,52 @@ export function Chat() {
     return () => window.removeEventListener('chat:inject', onInject)
   }, [setChatMessages])
 
-  // Combine the (DEV-injected) scripted convo with the live WS bubble stream.
-  // Live messages append after any scripted ones, in order.
+  // Combine the (DEV-injected) scripted convo with the streaming chat reducer.
+  // Live messages always render after any scripted ones, in order.
   const merged = [
     ...chatMessages.map((m) => ({
       id: String(m.id),
       role: m.role,
-      text: m.text
+      text: m.text,
+      isThinking: false
     })),
-    ...wsBubbles
+    ...messages.map((m) => ({
+      id: m.id,
+      role: m.role,
+      text: m.text,
+      isThinking: m.isThinking ?? false
+    }))
   ]
 
+  // UI-SPEC IP-2 sticky-scroll: respect user scroll-up by 40px. Recompute when
+  // a new bubble appears OR an existing bubble's text grew (sentence merged
+  // into Thinking placeholder or appended to a streaming bubble).
+  const textKey = merged.map((m) => m.text).join('|')
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [merged.length])
+    const el = scrollRef.current
+    if (!el) return
+    const isAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 40
+    if (isAtBottom) {
+      el.scrollTop = el.scrollHeight
+    }
+  }, [merged.length, textKey])
 
   const onSend = (): void => {
     const text = input.trim()
     if (!text) return
-    if (banners.llm) return // disabled by banner
+    if (banners.llm || turnInFlight) return // disabled by banner or turn-in-flight
     setInput('')
     appendUserMessage(text)
     // OLVT-shape envelope per packages/contracts/ts/ws-message.ts.
     const ok = send({ type: 'text-input', text })
     if (!ok) {
-      // WS not ready — no-op for skeleton (the local-echo bubble is still added).
-      // 01-02 doesn't ship send-failure UX; that's UX-10 in v2.
+      // WS not ready -- no-op for skeleton (the local-echo bubble is still added).
     }
   }
 
   const empty = merged.length === 0
   const vtsReady = status.vts === 'green'
-  const inputDisabled = banners.llm || !wsOpen
+  const inputDisabled = turnInFlight || banners.llm || !wsOpen
 
   return (
     <div className="view">
@@ -98,7 +118,7 @@ export function Chat() {
         ) : (
           merged.map((m) => {
             // numeric ids come from prototype scripted convo; UUID strings come
-            // from WS bubbles. Both are stable for the lifetime of the bubble.
+            // from the streaming reducer. Both are stable for the bubble's life.
             const numericTs = Number(m.id)
             const ts = !Number.isNaN(numericTs)
               ? new Date(numericTs).toLocaleTimeString([], {
@@ -112,14 +132,30 @@ export function Chat() {
                   <span className="semibold">{m.role === 'user' ? 'You' : 'Teto'}</span>
                   <span>{ts}</span>
                 </div>
-                <div className="body">{m.text}</div>
+                <div className="body">
+                  {m.isThinking ? (
+                    <span style={{ fontStyle: 'italic', color: 'var(--muted-foreground)' }}>
+                      {m.text}
+                    </span>
+                  ) : (
+                    m.text
+                  )}
+                </div>
               </div>
             )
           })
         )}
       </div>
 
-      {/* Banners (above input row) */}
+      {/* Phase 2 streaming-error banners -- STREAM_ERROR / CONTEXT_OVERFLOW. */}
+      {streamBanner && (
+        <div className="banner" role="alert" data-banner-kind={streamBanner.kind}>
+          <span aria-hidden="true">⚠ </span>
+          {streamBanner.text}
+        </div>
+      )}
+
+      {/* Phase 1 banners -- driven by app-store.banners (mock for skeleton). */}
       {banners.llm && (
         <div className="banner">
           ⚠ {COPY.ERRORS.LLM_UNREACHABLE_BANNER}

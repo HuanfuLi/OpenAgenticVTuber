@@ -106,11 +106,25 @@ export function LogsDrawer({ logLines }: LogsDrawerProps) {
         </div>
       </div>
       <div className="body">
-        {logLines.map((line, i) => (
-          <div key={i} className="line">
-            {line}
-          </div>
-        ))}
+        {logLines.map((line, i) => {
+          // UI-SPEC IP-4 (plan 02-03): lines starting with [INTENT] get the
+          // prefix span styled --success so SC #2 verification can scan the
+          // drawer at a glance. [STUB-TTS], [INFO], [READY], [ERROR], etc.
+          // stay in default --foreground (IP-5).
+          if (line.startsWith('[INTENT]')) {
+            return (
+              <div key={i} className="line">
+                <span style={{ color: 'var(--success)' }}>[INTENT]</span>
+                <span>{line.slice('[INTENT]'.length)}</span>
+              </div>
+            )
+          }
+          return (
+            <div key={i} className="line">
+              {line}
+            </div>
+          )
+        })}
       </div>
     </div>
   )

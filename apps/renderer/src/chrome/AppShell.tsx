@@ -14,6 +14,7 @@ import { Chat } from '@/screens/Chat/Chat'
 import { Agent } from '@/screens/Agent/Agent'
 import { Settings } from '@/screens/Settings/Settings'
 import { ToastStack } from './ToastStack'
+import { subscribeWSLog } from '@/ws/store'
 
 const LOGS_CAP = 200
 
@@ -28,19 +29,30 @@ export function AppShell() {
     return () => window.removeEventListener('logs:clear', onClear)
   }, [])
 
-  // Subscribe to real sidecar stdout/stderr lines via the contextBridge
-  // when the drawer is enabled. The subscription is cancelled when disabled
-  // so we don't accumulate lines in the background.
+  // Subscribe to two log sources when the drawer is enabled:
+  //   1. Sidecar stdout/stderr lines via contextBridge (Phase 1).
+  //   2. WS log envelopes from the orchestrator (Phase 2 plan 02-03 -- carries
+  //      [INTENT] / [STUB-TTS] structured lines emitted via loguru).
+  // Both subscriptions are cancelled when disabled so we don't accumulate
+  // lines in the background.
   useEffect(() => {
     if (!logsDrawer.enabled) {
       setLogLines([])
       return
     }
-    if (typeof window === 'undefined' || !window.api) return
-    const off = window.api.onSidecarLog((line: string) =>
+    const append = (line: string): void =>
       setLogLines((cur) => [...cur, line].slice(-LOGS_CAP))
-    )
-    return off
+    // Source 2: WS log envelopes (always wired -- standalone-test friendly).
+    const offWS = subscribeWSLog(append)
+    // Source 1: sidecar stdout (Electron only).
+    if (typeof window === 'undefined' || !window.api) {
+      return offWS
+    }
+    const offSidecar = window.api.onSidecarLog(append)
+    return () => {
+      offSidecar()
+      offWS()
+    }
   }, [logsDrawer.enabled])
 
   return (
