@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Phase 03 plans complete — ready for verification
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-05-07T05:26:14.747Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-05-07T06:58:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 7
+  total_plans: 8
   completed_plans: 7
 ---
 
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 ## Current Position
 
 Phase: 03 (tts-sentence-buffered-audio) — EXECUTING
-Plan: 2 of 2
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Plan: 2 of 2
 | Phase 02-conversation-pipeline P03 | 9min | 3 tasks | 16 files |
 | Phase 03-tts-sentence-buffered-audio P01 | 30min | 3 tasks | 15 files |
 | Phase 03 P02 | 25min | 3 tasks | 12 files |
+| Phase 03 P03 | 35min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,7 @@ Recent decisions affecting current work:
 - [Phase 03]: Delayed force-new-message together with chain-end until post-drain so chat sealing and input re-enable stay aligned with audible completion.
 - [Phase 03]: Bound pending-input processing to a single active websocket on enqueue, matching the skeleton's single-renderer assumption.
 - [Phase 03]: Kept the Phase 4 speech-driver handoff queue-based and surfaced debug [SPEECH-ENV] logs from the no-op drain task for verification.
+- [Phase 03]: TTS-04 gap closure supersedes D-04 narrowly: SpeechEnvelopePayload now drives ParamMouthOpenY via a minimal mouth-driver seam; broader Phase 4 compositor/body-sway/expression/cursor scope remains deferred.
 
 ### Pending Todos
 

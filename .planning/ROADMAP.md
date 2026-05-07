@@ -75,7 +75,7 @@ Plans:
 Plans:
 - [x] 03-01-PLAN.md — TTSGateway (PiperVoice + warmup synth-and-discard + sounddevice OutputStream) + numpy chunk-RMS helper + synthesize_and_prepare_payload + SpeechEnvelopePayload contracts (Py + TS) + Phase 3 deps + Git LFS init + en_US-amy-medium voice bundle (TTS-01, TTS-03, TTS-04)
 - [x] 03-02-PLAN.md — TTSTaskManager OLVT port (locked sender-task order: queue.put → ws.send → stream.write per D-11) + Orchestrator integration (compositor_speech_queue + pending_inputs FIFO + chain-end-after-drain per D-14) + sidecar lifespan TTSGateway pre-[READY] wiring + renderer "Teto is still speaking…" UX affordance (TTS-02)
-- [ ] 03-03-PLAN.md — Gap closure: minimal `SpeechEnvelopePayload` mouth driver + vendored-pyvts `ParamMouthOpenY` writer seam + server queue-consumer wiring (TTS-04)
+- [x] 03-03-PLAN.md — Gap closure: minimal `SpeechEnvelopePayload` mouth driver + vendored-pyvts `ParamMouthOpenY` writer seam + server queue-consumer wiring (TTS-04)
 
 ### Phase 4: Action Compositor + VTS Bridge + Body-Sway Investigation
 **Goal**: The §14 deliverable. Teto (running in VTube Studio) idles with visible micro-motion, speaks with synced lipsync, blends `[joy]` smoothly over ~300ms, sways its head (and body, if a strategy wins) through utterances with no flat moments, and tracks the cursor over the canvas. One discrete-event prop hotkey demonstrates the rare-trigger contract alongside the dominant 60 Hz parameter stream. **The body-sway investigation IS the deliverable** — ship visible body sway OR head-only with a committed written rationale.
@@ -132,7 +132,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Plumbing & Process Lifecycle | 2/2 | Complete | 2026-05-07 |
 | 2. Conversation Pipeline | 0/3 | Not started | - |
-| 3. TTS & Sentence-Buffered Audio | 2/2 | Ready for verification | - |
+| 3. TTS & Sentence-Buffered Audio | 3/3 | Ready for verification | - |
 | 4. Action Compositor + VTS Bridge + Body-Sway Investigation | 0/4 | Not started | - |
 | 5. Polish, Contracts Codegen, §14 Verification | 0/2 | Not started | - |
 
