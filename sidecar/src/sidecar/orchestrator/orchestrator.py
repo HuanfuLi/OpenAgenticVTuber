@@ -26,7 +26,7 @@ from fastapi import WebSocket
 from litellm.exceptions import ContextWindowExceededError
 from loguru import logger
 
-from contracts import AudioPayloadMessage, DisplayTextField, SpeechEnvelopePayload
+from contracts import ActionIntent, AudioPayloadMessage, DisplayTextField, SpeechEnvelopePayload
 from sidecar.avatar.capabilities import AvatarCapabilities
 from sidecar.llm.gateway import LLMGateway
 from sidecar.tts.tts_manager import TTSTaskManager
@@ -82,6 +82,8 @@ class Orchestrator:
         tts_preprocessor_config: TTSPreprocessorConfig | None = None,
         tts_manager: TTSTaskManager | None = None,
         compositor_speech_queue: asyncio.Queue[SpeechEnvelopePayload] | None = None,
+        compositor_intent_queue: asyncio.Queue[ActionIntent] | None = None,
+        compositor_sentence_complete_queue: asyncio.Queue[int] | None = None,
         pending_inputs: asyncio.Queue[str] | None = None,
     ):
         self._gateway = gateway
@@ -96,6 +98,12 @@ class Orchestrator:
         self._tts_manager = tts_manager
         self.compositor_speech_queue = (
             compositor_speech_queue or asyncio.Queue()
+        )
+        self.compositor_intent_queue = (
+            compositor_intent_queue or asyncio.Queue()
+        )
+        self.compositor_sentence_complete_queue = (
+            compositor_sentence_complete_queue or asyncio.Queue()
         )
         self.pending_inputs = pending_inputs or asyncio.Queue()
         self._active_ws: WebSocket | None = None
@@ -194,6 +202,7 @@ class Orchestrator:
 
         # ActionIntent log lines -- D-14, surfaces in Logs drawer.
         for intent in sentence_output.actions:
+            await self.compositor_intent_queue.put(intent)
             logger.info(
                 f"[INTENT] kind={intent.kind} name={intent.name} "
                 f"strength={intent.strength} avatar={intent.avatar_id}"

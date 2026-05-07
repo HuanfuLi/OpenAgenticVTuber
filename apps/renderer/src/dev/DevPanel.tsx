@@ -8,6 +8,7 @@ import { useStore } from '@/state/app-store'
 import { useTheme, type ThemePrefs } from '@/state/theme-provider'
 import { mockStatus, mockBanners, mockToasts, type StatusValue } from './__mocks__/mock-backend'
 import { COPY } from '@/lib/copy'
+import { send } from '@/ws/client'
 
 interface ThemeChoice {
   name: string
@@ -26,6 +27,7 @@ const THEMES: ThemeChoice[] = [
 
 export function DevPanel() {
   const [open, setOpen] = useState(false)
+  const [bodySwayStrategy, setBodySwayStrategy] = useState('head_only')
   const {
     status,
     banners,
@@ -75,6 +77,11 @@ export function DevPanel() {
     const id = Math.random().toString(36).slice(2)
     mockToasts.push({ id, text })
     setTimeout(() => mockToasts.remove(id), 4000)
+  }
+
+  const setBodySway = (name: string): void => {
+    setBodySwayStrategy(name)
+    send({ type: 'control', text: `set-body-sway-strategy:${name}` })
   }
 
   if (!open) {
@@ -157,6 +164,25 @@ export function DevPanel() {
         >
           Toggle thread list ({showThreadList ? 'v2 mock' : 'empty'})
         </button>
+      </div>
+
+      <h4>{COPY['dev.bodySway.title']}</h4>
+      <div className="dev-grid">
+        {[
+          ['head_only', COPY['dev.bodySway.headOnly']],
+          ['proxy_param', COPY['dev.bodySway.proxyParam']],
+          ['exp3_modulation', COPY['dev.bodySway.exp3Modulation']]
+        ].map(([value, label]) => (
+          <label key={value} className="row" style={{ gap: 6 }}>
+            <input
+              type="radio"
+              name="body-sway-strategy"
+              checked={bodySwayStrategy === value}
+              onChange={() => setBodySway(value)}
+            />
+            <span>{label}</span>
+          </label>
+        ))}
       </div>
 
       <h4>Theme cycler</h4>

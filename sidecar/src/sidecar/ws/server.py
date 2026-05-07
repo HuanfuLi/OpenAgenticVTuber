@@ -14,12 +14,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger as loguru_logger
 
 from sidecar.avatar.capabilities import load_capabilities
+from sidecar.avatar.overrides import load_overrides
+from sidecar.compositor import Compositor
+from sidecar.compositor.idle_driver import IdleDriver
+from sidecar.compositor.intent_driver import IntentDriver
+from sidecar.compositor.speech_driver import SpeechDriver
 from sidecar.llm.gateway import LLMGateway, ProviderConfig
 from sidecar.orchestrator.orchestrator import Orchestrator
 from sidecar.tts import TTSGateway, TTSTaskManager
 from sidecar.vts import LoggingParameterWriter, PyVTSParameterWriter, SpeechMouthDriver
+from sidecar.vts.handshake import connect_and_authenticate
+from sidecar.vts.pyvts_writer import PyvtsSafeWriter
 
-from .handlers import handle_shutdown, handle_text_input  # noqa: F401 -- side-effect: registers @on(...)
+from .handlers import handle_control, handle_shutdown, handle_text_input  # noqa: F401 -- side-effect: registers @on(...)
 from .protocol import route
 
 log = logging.getLogger(__name__)
@@ -113,6 +120,9 @@ async def lifespan(app: FastAPI):
     """Build Orchestrator at startup; tear down (no-op for now) at shutdown."""
     mouth_task: asyncio.Task | None = None
     turn_loop_task: asyncio.Task | None = None
+    compositor_task: asyncio.Task | None = None
+    handshake_task: asyncio.Task | None = None
+    writer: PyvtsSafeWriter | None = None
     tts_gateway: TTSGateway | None = None
     mouth_writer = None
     app.state.startup_error_message = None
@@ -154,12 +164,16 @@ async def lifespan(app: FastAPI):
             gateway = LLMGateway(provider_cfg)
             await _warmup_ping(gateway)
 
+            overrides = load_overrides(teto_dir)
             compositor_speech_queue: asyncio.Queue = asyncio.Queue()
+            compositor_intent_queue: asyncio.Queue = asyncio.Queue()
+            compositor_sentence_complete_queue: asyncio.Queue = asyncio.Queue()
             pending_inputs: asyncio.Queue[str] = asyncio.Queue()
             tts_manager = TTSTaskManager(
                 stream=tts_gateway.stream,
                 voice=tts_gateway.voice,
                 compositor_speech_queue=compositor_speech_queue,
+                compositor_sentence_complete_queue=compositor_sentence_complete_queue,
             )
             app.state.orchestrator = Orchestrator(
                 gateway=gateway,
@@ -167,6 +181,8 @@ async def lifespan(app: FastAPI):
                 persona_text=persona,
                 tts_manager=tts_manager,
                 compositor_speech_queue=compositor_speech_queue,
+                compositor_intent_queue=compositor_intent_queue,
+                compositor_sentence_complete_queue=compositor_sentence_complete_queue,
                 pending_inputs=pending_inputs,
             )
             app.state.tts_gateway = tts_gateway
@@ -179,6 +195,34 @@ async def lifespan(app: FastAPI):
                 mouth_driver.consume_forever(compositor_speech_queue)
             )
             turn_loop_task = asyncio.create_task(app.state.orchestrator._turn_loop())
+
+            writer = PyvtsSafeWriter()
+            handshake_task = asyncio.create_task(connect_and_authenticate(writer))
+            breath_writeable = any(
+                p.name == "Auto Breath" and p.visible for p in overrides.param_probes
+            )
+            idle_drv = IdleDriver(seed=42, breath_writeable=breath_writeable)
+            speech_drv = SpeechDriver(compositor_speech_queue, overrides, teto_dir)
+            intent_drv = IntentDriver(
+                intent_queue=compositor_intent_queue,
+                sentence_complete_queue=compositor_sentence_complete_queue,
+                writer=writer,
+                capabilities=capabilities,
+                overrides=overrides,
+            )
+            compositor = Compositor(
+                writer=writer,
+                idle_driver=idle_drv,
+                speech_driver=speech_drv,
+                intent_driver=intent_drv,
+                cursor_driver=None,
+            )
+            compositor_task = asyncio.create_task(compositor.run())
+            app.state.compositor = compositor
+            app.state.writer = writer
+            app.state.handshake_task = handshake_task
+            app.state.compositor_task = compositor_task
+            app.state.teto_overrides = overrides
             app.state.mouth_driver_task = mouth_task
             app.state.turn_loop_task = turn_loop_task
             app.state.mouth_writer = mouth_writer
@@ -207,6 +251,21 @@ async def lifespan(app: FastAPI):
             await mouth_task
         except asyncio.CancelledError:
             pass
+    if compositor_task is not None:
+        await app.state.compositor.stop()
+        compositor_task.cancel()
+        try:
+            await compositor_task
+        except asyncio.CancelledError:
+            pass
+    if handshake_task is not None:
+        handshake_task.cancel()
+        try:
+            await handshake_task
+        except asyncio.CancelledError:
+            pass
+    if writer is not None:
+        await writer.close()
     if mouth_writer is not None:
         await mouth_writer.close()
     if tts_gateway is not None:

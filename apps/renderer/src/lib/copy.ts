@@ -2,6 +2,10 @@
 // Ported verbatim from prototype src/lib/copy.js (2026-05-06). Typed `as const`.
 
 export const COPY = {
+  'dev.bodySway.title': 'Body-sway strategy',
+  'dev.bodySway.headOnly': 'head_only (fallback)',
+  'dev.bodySway.proxyParam': 'proxy_param (Lean Forward)',
+  'dev.bodySway.exp3Modulation': 'exp3_modulation (.exp3.json)',
   APP: {
     TITLE: 'AgenticLLMVTuber'
   },

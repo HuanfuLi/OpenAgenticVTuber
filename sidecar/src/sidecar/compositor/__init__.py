@@ -1,6 +1,17 @@
-"""Compositor package -- Phase 4 seeds the resolver and ParamFrame surface."""
+"""Compositor package."""
 
+from .compositor import Compositor, IntentTickDriver, TickDriver
+from .easing import ease_out_cubic
 from .param_frame import ParamFrame, ParamMode
 from .param_id_resolver import RendererName, resolve_param_id
 
-__all__ = ["ParamFrame", "ParamMode", "RendererName", "resolve_param_id"]
+__all__ = [
+    "Compositor",
+    "IntentTickDriver",
+    "TickDriver",
+    "ease_out_cubic",
+    "ParamFrame",
+    "ParamMode",
+    "RendererName",
+    "resolve_param_id",
+]

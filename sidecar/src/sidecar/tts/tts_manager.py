@@ -33,11 +33,13 @@ class TTSTaskManager:
         self,
         stream: Any,
         compositor_speech_queue: asyncio.Queue[SpeechEnvelopePayload],
+        compositor_sentence_complete_queue: asyncio.Queue[int] | None = None,
         voice: Any | None = None,
     ) -> None:
         self._stream = stream
         self._voice = voice
         self.compositor_speech_queue = compositor_speech_queue
+        self.compositor_sentence_complete_queue = compositor_sentence_complete_queue
         self.task_list: list[asyncio.Task[None]] = []
         self._payload_queue: asyncio.Queue[_QueuedPayload] = asyncio.Queue()
         self._sender_task: asyncio.Task[None] | None = None
@@ -205,6 +207,10 @@ class TTSTaskManager:
                         )
                         self._last_write_finished_at = time.perf_counter()
                         self._last_sentence_id = next_payload.sentence_id
+                        if self.compositor_sentence_complete_queue is not None:
+                            await self.compositor_sentence_complete_queue.put(
+                                next_payload.sentence_id
+                            )
                         logger.info(
                             f"[TTS-WRITE-END] sentence_id={next_payload.sentence_id} "
                             f"write_ms={(self._last_write_finished_at - write_start) * 1000:.2f} "

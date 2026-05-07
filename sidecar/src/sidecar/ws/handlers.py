@@ -44,3 +44,23 @@ async def handle_shutdown(ws: WebSocket, msg: dict) -> None:
     # is the Electron-initiated path. Both converge on uvicorn drain.
     log.info("Received shutdown WS message; sidecar will exit shortly.")
     # Phase 1: no-op ack. Phase 4 will add pyvts close before allowing drain.
+
+
+@on("control")
+async def handle_control(ws: WebSocket, msg: dict) -> None:
+    """Phase 4 control-channel dispatcher."""
+
+    text = msg.get("text", "")
+    if text.startswith("set-body-sway-strategy:"):
+        name = text[len("set-body-sway-strategy:") :]
+        from sidecar.compositor.body_sway import STRATEGY_NAMES
+
+        if name not in STRATEGY_NAMES:
+            log.warning("[WS-CONTROL] unknown body-sway strategy: %r", name)
+            return
+        compositor = getattr(ws.app.state, "compositor", None)
+        if compositor is not None:
+            compositor.request_strategy_swap(name)
+            log.info("[WS-CONTROL] requested body-sway strategy swap: %r", name)
+        else:
+            log.warning("[WS-CONTROL] compositor not in app.state")
