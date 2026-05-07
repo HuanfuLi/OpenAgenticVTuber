@@ -1,0 +1,1 @@
+"""Sidecar operator scripts."""

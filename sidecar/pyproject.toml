@@ -21,6 +21,9 @@ dependencies = [
     "contracts",
 ]
 
+[project.scripts]
+teto-smoke-pass = "scripts.teto_smoke_pass:main_sync"
+
 [tool.uv.sources]
 pyvts = { path = "vendor/pyvts" }
 contracts = { path = "../packages/contracts/py", editable = true }

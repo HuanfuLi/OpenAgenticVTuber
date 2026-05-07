@@ -1,0 +1,102 @@
+orphan_params: []
+physics_chain_proxies: {}
+sign_inversions: []
+body_sway_strategy: head_only
+proxy_body_param: null
+exp3_body_pose: null
+param_probes: []
+discovered_hotkeys:
+- hotkey_id: cafeda105c574052a6f09fac80c00fff
+  name: 【SV】Microphone[1]
+  type: ToggleExpression
+  file: 【SV】Mic.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: b4f00fa7bd28476fa82c7c2c4387c987
+  name: 【SV＆Utau】Baguette[2]
+  type: ToggleExpression
+  file: 【SV】Baguette.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: a84778ab290f4090831ed1af4db174c5
+  name: Dark Face [3]
+  type: ToggleExpression
+  file: Dark Face.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: 6736f0a7c5ca488d9027d5e88c77acdc
+  name: Dark Eye [4]
+  type: ToggleExpression
+  file: Dark Eye.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: c0549ee2d7f249db8aee00c4d7e7194a
+  name: Blush [5]
+  type: ToggleExpression
+  file: Blush.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: bcb87ffe5dd84a43bee6000c2d8ffa5b
+  name: Heart Eye [6]
+  type: ToggleExpression
+  file: Love.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: ebd026ebc2f64dd0835ded46b7170166
+  name: Star Eye [7]
+  type: ToggleExpression
+  file: Star Eye.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: 45a61cb1427148b1b0a75b01dbf89cdc
+  name: Squint Eye [8]
+  type: ToggleExpression
+  file: Exp eye.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: 7f7964031e3343e2b358b83021617600
+  name: SV/UTAU Alt [9]
+  type: ToggleExpression
+  file: SV Utau ALT.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: aa9b99a2886b4820bfea94421f986f66
+  name: 【Utau】Headphone [0]
+  type: ToggleExpression
+  file: 【Utau】Mic.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: d26a5e96a4ec417fa4b5b83b95b25841
+  name: 【Chibi】[Q]
+  type: ToggleExpression
+  file: chibi.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: 9e55efcfb583413981c5cadec484e5a1
+  name: Cry [W]
+  type: ToggleExpression
+  file: Cry.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: 6e43e77a8dfe4b9f8416cf8f99299e01
+  name: Dizzy Eye [E]
+  type: ToggleExpression
+  file: Dizzy.exp3.json
+  is_meta: false
+  llm_emittable: true
+- hotkey_id: 29f2ed6a53074b6ab86c40b4260ab2d1
+  name: Remove All Toggles
+  type: RemoveAllExpressions
+  file: ''
+  is_meta: true
+  llm_emittable: false
+- hotkey_id: 550fe382f2a54c928a16603014dba5e6
+  name: Remove Water Mark
+  type: ToggleExpression
+  file: Remove Water Mark.exp3.json
+  is_meta: true
+  llm_emittable: false
+notes:
+  smoke_pass_status: deferred - operator to re-run when VTS available
+  hotkey_source: Live2D/重音テト/重音テト.vtube.json
+  discrete_event_demo_target: Star Eye [7]
