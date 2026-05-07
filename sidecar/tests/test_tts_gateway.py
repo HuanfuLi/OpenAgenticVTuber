@@ -10,7 +10,7 @@ from sidecar.tts.tts_gateway import TTSGateway
 
 
 def _model_path() -> Path:
-    return Path("sidecar/models/piper/en_US-amy-medium.onnx")
+    return Path(__file__).resolve().parents[1] / "models" / "piper" / "en_US-amy-medium.onnx"
 
 
 def _is_lfs_pointer(path: Path) -> bool:

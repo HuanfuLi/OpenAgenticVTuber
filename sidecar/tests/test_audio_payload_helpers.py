@@ -16,6 +16,8 @@ from sidecar.tts.audio_payload_helpers import (
     synthesize_and_prepare_payload,
 )
 
+_MODEL_PATH = Path(__file__).resolve().parents[1] / "models" / "piper" / "en_US-amy-medium.onnx"
+
 
 def _display_text() -> DisplayTextField:
     return DisplayTextField(text="Hello", name="Teto", avatar="teto")
@@ -101,7 +103,7 @@ def test_silent_payload_fast_path():
 
 def test_synthesize_and_prepare_payload_real_voice():
     piper = pytest.importorskip("piper")
-    model_path = Path("sidecar/models/piper/en_US-amy-medium.onnx")
+    model_path = _MODEL_PATH
     if not model_path.exists():
         pytest.skip("piper voice not present")
 
