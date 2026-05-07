@@ -94,7 +94,7 @@ Plans:
 - [x] 04-00-PLAN.md — Teto smoke-pass entry gate: TetoOverrides Pydantic loader + sidecar/scripts/teto_smoke_pass.py CLI + populated avatars/teto/teto_overrides.yaml (AVT-06, AVT-07) [Wave 1]
 - [x] 04-01-PLAN.md — VTS infrastructure: PyvtsSafeWriter (issue #51 mitigation) + ParamID resolver + DiscreteDispatcher + VTS handshake + DPI awareness + ParamFrame/DiscreteEvent contracts (AVT-04, AVT-05, AVT-09, AVT-02 partial) [Wave 1]
 - [x] 04-02-PLAN.md — Compositor core: 60Hz deadline scheduler + idle/intent/speech drivers + body-sway strategy registry (head_only/proxy_param/exp3_modulation) + dev-panel hot-switch + sentence-end signal (AVT-01, AVT-02, AVT-03, AVT-06 foundation, AVT-08) [Wave 2]
-- [ ] 04-03-PLAN.md — Cursor tracker (Win32-poll → ParamAngle deflection with 80px dead-zone + cubic ease-back) + DiscreteEvent demo target lock (Star Eye [7]) + sidecar lifespan integration (AVT-09 demo, AVT-10) [Wave 3 — depends on 04-02 ws/server.py edits]
+- [x] 04-03-PLAN.md — Cursor tracker (Win32-poll → ParamAngle deflection with 80px dead-zone + cubic ease-back) + DiscreteEvent demo target lock (Star Eye [7]) + sidecar lifespan integration (AVT-09 demo, AVT-10) [Wave 3 — depends on 04-02 ws/server.py edits]
 - [ ] 04-04-PLAN.md — Body-sway investigation execution + per-strategy evidence (operator-driven A/B via dev-panel hot-switch, RESEARCH §Open-Q2 closure, ship-default locked in teto_overrides.yaml) (AVT-06 execution) [Wave 3 — operator-driven, runs in parallel with 04-03]
 
 **UI hint**: yes  <!-- Cursor tracker is a transparent React overlay; the avatar canvas region's UX is part of this phase -->

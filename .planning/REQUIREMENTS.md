@@ -41,7 +41,7 @@ The walking-skeleton scope validates the layered architecture (Electron + Python
 - [x] **AVT-07**: Skeleton ships a stub `teto_overrides.yaml` (or `.json`) checked into the repo even though import + smoke-pass tooling is deferred — empty orphan-params list, physics-chain proxy slots, sign-inversion slots — establishing the per-avatar override file schema for the future avatar-import milestone
 - [x] **AVT-08**: LLM emits `[joy]` → expression smoothly blends in over ~300ms and decays after the sentence ends — **not a hotkey pop**. This is §14 success criterion #2 and the skeleton's headline differentiator demo.
 - [x] **AVT-09**: One `DiscreteEvent` (e.g., prop visibility toggle) maps to a VTS hotkey via the discrete-event path, demonstrating the rare-discrete-trigger contract alongside the dominant continuous-param contract
-- [ ] **AVT-10**: Cursor-in-canvas (React transparent overlay div over the VTS window) emits `ActionIntent(kind="reaction", ...)` events to the sidecar; compositor produces visible avatar eye/head tracking on the cursor
+- [x] **AVT-10**: Cursor-in-canvas (React transparent overlay div over the VTS window) emits `ActionIntent(kind="reaction", ...)` events to the sidecar; compositor produces visible avatar eye/head tracking on the cursor
 
 ### Skeleton Verification & Contracts
 
@@ -191,7 +191,7 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | AVT-07 | Phase 4 | Complete |
 | AVT-08 | Phase 4 | Complete |
 | AVT-09 | Phase 4 | Complete |
-| AVT-10 | Phase 4 | Pending |
+| AVT-10 | Phase 4 | Complete |
 | SC-01 | Phase 5 | Pending |
 | SC-02 | Phase 5 | Pending |
 
