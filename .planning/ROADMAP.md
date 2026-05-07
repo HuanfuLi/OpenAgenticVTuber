@@ -54,8 +54,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 02-01: TBD — LiteLLM gateway + LM Studio warmup + 120s timeout (LLM-01)
-- [ ] 02-02: TBD — OLVT decorator chain + buffer-then-extract + think-strip (LLM-02, LLM-03, LLM-04)
+- [ ] 02-01-PLAN.md — LiteLLM streaming gateway + AvatarCapabilities loader + WSMessage/AudioPayload/ActionIntent contracts + Wave-0 reasoning-disable smoke (LLM-01)
+- [ ] 02-02-PLAN.md — OLVT 4-decorator chain port + Orchestrator (append-only memory, KV-cache discipline) + WS handler wiring + boot warmup ping (LLM-02, LLM-03, LLM-04)
+- [ ] 02-03-PLAN.md — useStreamingMessages renderer reducer + WS dispatcher routing + LogsDrawer [INTENT] coloring + 4 new copy keys + ROADMAP SC#4 amendment (LLM-02, LLM-03)
 
 **UI hint**: yes  <!-- Chat panel + sentence-streamed display + setup-screen interactions -->
 
@@ -129,7 +130,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Plumbing & Process Lifecycle | 2/2 | Complete | 2026-05-07 |
-| 2. Conversation Pipeline | 0/2 | Not started | - |
+| 2. Conversation Pipeline | 0/3 | Not started | - |
 | 3. TTS & Sentence-Buffered Audio | 0/2 | Not started | - |
 | 4. Action Compositor + VTS Bridge + Body-Sway Investigation | 0/4 | Not started | - |
 | 5. Polish, Contracts Codegen, §14 Verification | 0/2 | Not started | - |
