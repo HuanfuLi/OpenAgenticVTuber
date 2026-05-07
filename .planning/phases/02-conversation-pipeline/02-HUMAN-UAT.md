@@ -1,14 +1,14 @@
 ---
-status: partial
+status: resolved
 phase: 02-conversation-pipeline
 source: [02-VERIFICATION.md]
 started: 2026-05-06T23:35:00Z
-updated: 2026-05-07T00:08:00Z
+updated: 2026-05-07T00:12:00Z
 ---
 
 ## Current Test
 
-Test 4 (re-verify with real Teto names installed)
+[all tests passed]
 
 ## Tests
 
@@ -26,14 +26,14 @@ result: passed (operator confirmed live, 2026-05-07)
 
 ### 4. SC #2 with the actual Teto rig — operator action on avatar.yaml + re-verify [INTENT] log against real names
 expected: avatar.yaml contains the Teto rig's real expression names (sourced from VTS Settings → Expressions panel) and a live conversation triggers an `[INTENT]` log line whose name matches one of the rig's actual expressions (e.g., `[INTENT] kind=expression name=Blush ...`).
-result: operator action complete in commit ffff011 (Blush, chibi, Cry, Dark Eye, Dark Face, Dizzy, Exp eye, Love, Star Eye, Sweat, 【SV】Baguette, 【SV】Mic, 【Utau】Mic, SV Utau ALT — Remove Water Mark excluded). Awaiting live re-verification.
+result: passed (operator confirmed live, 2026-05-07; commit ffff011 installed Blush, chibi, Cry, Dark Eye, Dark Face, Dizzy, Exp eye, Love, Star Eye, Sweat, 【SV】Baguette, 【SV】Mic, 【Utau】Mic, SV Utau ALT — Remove Water Mark excluded as meta).
 
 ## Summary
 
 total: 4
-passed: 3
+passed: 4
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
