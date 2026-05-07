@@ -17,6 +17,7 @@ from sidecar.avatar.capabilities import load_capabilities
 from sidecar.llm.gateway import LLMGateway, ProviderConfig
 from sidecar.orchestrator.orchestrator import Orchestrator
 from sidecar.tts import TTSGateway, TTSTaskManager
+from sidecar.vts import LoggingParameterWriter, PyVTSParameterWriter, SpeechMouthDriver
 
 from .handlers import handle_shutdown, handle_text_input  # noqa: F401 -- side-effect: registers @on(...)
 from .protocol import route
@@ -87,25 +88,33 @@ async def _warmup_ping(gateway: LLMGateway) -> None:
         )
 
 
-async def _drain_speech_queue_until_phase4(queue: asyncio.Queue) -> None:
-    while True:
-        envelope = await queue.get()
-        try:
-            loguru_logger.debug(
-                f"[SPEECH-ENV] sentence_id={envelope.sentence_id} "
-                f"started_at={envelope.started_at:.3f} "
-                f"volumes_n={len(envelope.volumes)}"
-            )
-        finally:
-            queue.task_done()
+def _playback_now(stream) -> float:
+    return float(stream.time) + float(stream.latency)
+
+
+async def _build_mouth_writer(capabilities):
+    param_ids = {p.id for p in capabilities.parameters}
+    if "ParamMouthOpenY" not in param_ids:
+        loguru_logger.warning("[VTS-MOUTH] degraded missing ParamMouthOpenY")
+        return LoggingParameterWriter()
+
+    writer = PyVTSParameterWriter()
+    try:
+        await writer.connect_and_authenticate()
+        return writer
+    except Exception:
+        loguru_logger.exception("[VTS-MOUTH] degraded")
+        await writer.close()
+        return LoggingParameterWriter()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Build Orchestrator at startup; tear down (no-op for now) at shutdown."""
-    drain_task: asyncio.Task | None = None
+    mouth_task: asyncio.Task | None = None
     turn_loop_task: asyncio.Task | None = None
     tts_gateway: TTSGateway | None = None
+    mouth_writer = None
     app.state.startup_error_message = None
 
     provider_cfg = _load_provider_config_from_env()
@@ -120,8 +129,9 @@ async def lifespan(app: FastAPI):
         )
         app.state.orchestrator = None
         app.state.tts_gateway = None
-        app.state.drain_task = None
+        app.state.mouth_driver_task = None
         app.state.turn_loop_task = None
+        app.state.mouth_writer = None
         app.state.startup_error_message = (
             "Sidecar started without LLM configuration. "
             "Restart from the LLM Setup screen."
@@ -160,19 +170,26 @@ async def lifespan(app: FastAPI):
                 pending_inputs=pending_inputs,
             )
             app.state.tts_gateway = tts_gateway
-            drain_task = asyncio.create_task(
-                _drain_speech_queue_until_phase4(compositor_speech_queue)
+            mouth_writer = await _build_mouth_writer(capabilities)
+            mouth_driver = SpeechMouthDriver(
+                writer=mouth_writer,
+                now=lambda: _playback_now(tts_gateway.stream),
+            )
+            mouth_task = asyncio.create_task(
+                mouth_driver.consume_forever(compositor_speech_queue)
             )
             turn_loop_task = asyncio.create_task(app.state.orchestrator._turn_loop())
-            app.state.drain_task = drain_task
+            app.state.mouth_driver_task = mouth_task
             app.state.turn_loop_task = turn_loop_task
+            app.state.mouth_writer = mouth_writer
             loguru_logger.info("[READY] orchestrator + TTS initialized.")
         except Exception:
             loguru_logger.exception("Orchestrator construction failed.")
             app.state.orchestrator = None
             app.state.tts_gateway = None
-            app.state.drain_task = None
+            app.state.mouth_driver_task = None
             app.state.turn_loop_task = None
+            app.state.mouth_writer = None
             app.state.startup_error_message = (
                 "TTS failed to initialize. Check the Piper model and audio output, then restart."
             )
@@ -184,12 +201,14 @@ async def lifespan(app: FastAPI):
             await turn_loop_task
         except asyncio.CancelledError:
             pass
-    if drain_task is not None:
-        drain_task.cancel()
+    if mouth_task is not None:
+        mouth_task.cancel()
         try:
-            await drain_task
+            await mouth_task
         except asyncio.CancelledError:
             pass
+    if mouth_writer is not None:
+        await mouth_writer.close()
     if tts_gateway is not None:
         tts_gateway.shutdown()
 

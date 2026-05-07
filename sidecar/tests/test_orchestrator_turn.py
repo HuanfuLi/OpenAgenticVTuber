@@ -11,7 +11,7 @@ from typing import AsyncIterator
 import pytest
 from litellm.exceptions import ContextWindowExceededError
 
-from sidecar.avatar.capabilities import AvatarCapabilities, Expression, Hotkey
+from sidecar.avatar.capabilities import AvatarCapabilities, Expression, Hotkey, Parameter
 from sidecar.orchestrator.orchestrator import Orchestrator
 from sidecar.orchestrator.output_types import DisplayText, SentenceOutput
 from sidecar.orchestrator.tts_preprocessor import TTSPreprocessorConfig
@@ -553,3 +553,62 @@ async def test_warmup_ping_does_not_raise_on_gateway_error(fake_gateway):
     gw = fake_gateway(raise_first=RuntimeError("boom"))
     # Must NOT raise -- warmup is best-effort.
     await _warmup_ping(gw)
+
+
+def test_server_replaces_phase4_noop_speech_drain_with_mouth_driver():
+    from sidecar.ws import server
+
+    src = inspect.getsource(server)
+    assert "_drain_speech_queue_until_phase4" not in src
+    assert "SpeechMouthDriver" in src
+    assert "PyVTSParameterWriter" in src
+    assert "consume_forever" in src
+
+
+def test_playback_now_uses_stream_time_plus_latency():
+    from sidecar.ws.server import _playback_now
+
+    stream = SimpleNamespace(time=12.5, latency=0.125)
+    assert _playback_now(stream) == pytest.approx(12.625)
+
+
+@pytest.mark.asyncio
+async def test_build_mouth_writer_degrades_when_param_missing(monkeypatch):
+    from sidecar.vts import LoggingParameterWriter
+    from sidecar.ws import server
+
+    class _ShouldNotConnect:
+        def __init__(self):
+            raise AssertionError("VTS writer must not be constructed without ParamMouthOpenY")
+
+    monkeypatch.setattr(server, "PyVTSParameterWriter", _ShouldNotConnect)
+    caps = AvatarCapabilities(expressions=[Expression(name="joy", file="joy.exp3.json")])
+
+    writer = await server._build_mouth_writer(caps)
+
+    assert isinstance(writer, LoggingParameterWriter)
+
+
+@pytest.mark.asyncio
+async def test_build_mouth_writer_degrades_when_vts_auth_fails(monkeypatch):
+    from sidecar.vts import LoggingParameterWriter
+    from sidecar.ws import server
+
+    class _FailingWriter:
+        closed = False
+
+        async def connect_and_authenticate(self):
+            raise RuntimeError("auth failed")
+
+        async def close(self):
+            self.closed = True
+
+    monkeypatch.setattr(server, "PyVTSParameterWriter", _FailingWriter)
+    caps = AvatarCapabilities(
+        expressions=[Expression(name="joy", file="joy.exp3.json")],
+        parameters=[Parameter(id="ParamMouthOpenY")],
+    )
+
+    writer = await server._build_mouth_writer(caps)
+
+    assert isinstance(writer, LoggingParameterWriter)
