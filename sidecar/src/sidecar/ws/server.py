@@ -5,6 +5,7 @@ Phase 2 extension: lifespan startup builds Orchestrator + warmup ping (Pitfall 5
 import json
 import logging
 import os
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from loguru import logger as loguru_logger
 from sidecar.avatar.capabilities import load_capabilities
 from sidecar.llm.gateway import LLMGateway, ProviderConfig
 from sidecar.orchestrator.orchestrator import Orchestrator
+from sidecar.tts import TTSGateway, TTSTaskManager
 
 from .handlers import handle_shutdown, handle_text_input  # noqa: F401 -- side-effect: registers @on(...)
 from .protocol import route
@@ -85,9 +87,27 @@ async def _warmup_ping(gateway: LLMGateway) -> None:
         )
 
 
+async def _drain_speech_queue_until_phase4(queue: asyncio.Queue) -> None:
+    while True:
+        envelope = await queue.get()
+        try:
+            loguru_logger.debug(
+                f"[SPEECH-ENV] sentence_id={envelope.sentence_id} "
+                f"started_at={envelope.started_at:.3f} "
+                f"volumes_n={len(envelope.volumes)}"
+            )
+        finally:
+            queue.task_done()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Build Orchestrator at startup; tear down (no-op for now) at shutdown."""
+    drain_task: asyncio.Task | None = None
+    turn_loop_task: asyncio.Task | None = None
+    tts_gateway: TTSGateway | None = None
+    app.state.startup_error_message = None
+
     provider_cfg = _load_provider_config_from_env()
     avatars = _avatars_root()
     teto_dir = avatars / "teto"
@@ -99,24 +119,79 @@ async def lifespan(app: FastAPI):
             f"text-input will reply with config error."
         )
         app.state.orchestrator = None
+        app.state.tts_gateway = None
+        app.state.drain_task = None
+        app.state.turn_loop_task = None
+        app.state.startup_error_message = (
+            "Sidecar started without LLM configuration. "
+            "Restart from the LLM Setup screen."
+        )
     else:
         try:
             capabilities = load_capabilities(teto_dir)
             persona = (teto_dir / "personality.md").read_text(encoding="utf-8")
+            voice_model = capabilities.voice.model if capabilities.voice else "en_US-amy-medium"
+            model_path = (
+                Path(__file__).resolve().parents[4]
+                / "sidecar"
+                / "models"
+                / "piper"
+                / f"{voice_model}.onnx"
+            )
+            tts_gateway = TTSGateway(model_path)
+            tts_gateway.boot()
+
             gateway = LLMGateway(provider_cfg)
-            # Pitfall 5: warmup ping before app.state.orchestrator is set.
             await _warmup_ping(gateway)
+
+            compositor_speech_queue: asyncio.Queue = asyncio.Queue()
+            pending_inputs: asyncio.Queue[str] = asyncio.Queue()
+            tts_manager = TTSTaskManager(
+                stream=tts_gateway.stream,
+                voice=tts_gateway.voice,
+                compositor_speech_queue=compositor_speech_queue,
+            )
             app.state.orchestrator = Orchestrator(
                 gateway=gateway,
                 capabilities=capabilities,
                 persona_text=persona,
+                tts_manager=tts_manager,
+                compositor_speech_queue=compositor_speech_queue,
+                pending_inputs=pending_inputs,
             )
-            loguru_logger.info("[READY] orchestrator initialized.")
+            app.state.tts_gateway = tts_gateway
+            drain_task = asyncio.create_task(
+                _drain_speech_queue_until_phase4(compositor_speech_queue)
+            )
+            turn_loop_task = asyncio.create_task(app.state.orchestrator._turn_loop())
+            app.state.drain_task = drain_task
+            app.state.turn_loop_task = turn_loop_task
+            loguru_logger.info("[READY] orchestrator + TTS initialized.")
         except Exception:
             loguru_logger.exception("Orchestrator construction failed.")
             app.state.orchestrator = None
+            app.state.tts_gateway = None
+            app.state.drain_task = None
+            app.state.turn_loop_task = None
+            app.state.startup_error_message = (
+                "TTS failed to initialize. Check the Piper model and audio output, then restart."
+            )
+    loguru_logger.info("[READY] sidecar startup complete.")
     yield
-    # Shutdown -- no-op in Phase 2.
+    if turn_loop_task is not None:
+        turn_loop_task.cancel()
+        try:
+            await turn_loop_task
+        except asyncio.CancelledError:
+            pass
+    if drain_task is not None:
+        drain_task.cancel()
+        try:
+            await drain_task
+        except asyncio.CancelledError:
+            pass
+    if tts_gateway is not None:
+        tts_gateway.shutdown()
 
 
 app = FastAPI(

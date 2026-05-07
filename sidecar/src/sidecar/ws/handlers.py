@@ -1,4 +1,4 @@
-"""Phase 2 WS handlers -- text-input drives Orchestrator.turn (echo body removed)."""
+"""WS handlers for sidecar message routing."""
 
 import logging
 
@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 @on("text-input")
 async def handle_text_input(ws: WebSocket, msg: dict) -> None:
-    """Phase 2: drive orchestrator.turn instead of echoing.
+    """Phase 3: enqueue text input for the pending-turn loop.
 
     On `app.state.orchestrator is None` (sidecar started without LLM config),
     reply with a clear ErrorMessage envelope instead of crashing -- the
@@ -27,13 +27,14 @@ async def handle_text_input(ws: WebSocket, msg: dict) -> None:
         await ws.send_json(
             ErrorMessage(
                 message=(
-                    "Sidecar started without LLM configuration. "
-                    "Restart from the LLM Setup screen."
-                )
+                    getattr(ws.app.state, "startup_error_message", None)
+                    or "Sidecar started without LLM configuration. Restart from the LLM Setup screen."
+                ),
             ).model_dump()
         )
         return
-    await orchestrator.turn(text, ws)
+    orchestrator.set_active_ws(ws)
+    await orchestrator.pending_inputs.put(text)
 
 
 @on("shutdown")
