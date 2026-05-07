@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 02-02-PLAN.md (Orchestrator + OLVT decorator chain + lifespan wiring)
-last_updated: "2026-05-07T03:11:42.680Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 02-03-PLAN.md (renderer streaming reducer + WS dispatcher routing + LogsDrawer [INTENT] coloring + ROADMAP/REQUIREMENTS amendments per D-10)
+last_updated: "2026-05-07T03:24:53.830Z"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -54,6 +54,7 @@ Plan: 3 of 3
 | Phase 01 P02 | 50min | 3 tasks | 17 files |
 | Phase 02 P01 | 35min | 3 tasks | 19 files |
 | Phase 02 P02 | 14min | 3 tasks | 17 files |
+| Phase 02-conversation-pipeline P03 | 9min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,9 @@ Recent decisions affecting current work:
 - [Phase 02]: [Phase 02]: Orchestrator KV-cache discipline enforced via inspect.getsource grep test (forbids _memory.pop|__delitem__|insert|remove|clear|del|slice-rebind); failed user messages REMAIN in _memory (Warning A precision)
 - [Phase 02]: [Phase 02]: Display-side bracket-strip in display_processor (Rule-2 deviation from OLVT) so SC #3 BLOCKER test passes -- canonical envelope delivers bracket-free text to all consumers; OLVT leaves stripping to renderer
 - [Phase 02]: [Phase 02]: Sidecar config loaded from AGENTICLLMVTUBER_LLM_CONFIG_JSON env var (electron-main writes decrypted blob into sidecar env); DPAPI-encrypted blob remains source of truth -- env-var write from electron-main is a follow-up integration task
+- [Phase 02]: [Phase 02]: setThinking consumes the forceNewMessage seal flag (skeleton-side adaptation -- Thinking placeholder bubble IS the new turn's bubble); OLVT only resets the flag inside appendAIMessage's new-branch but our Thinking-bubble flow forces resetting one envelope earlier
+- [Phase 02]: [Phase 02]: Phase 1 useChatBubbles export deleted entirely (BREAKING CHANGE) and Chat.tsx migrated to useStreamingMessages in same commit; Step-0 audit found exactly 2 consumers so the smaller diff wins
+- [Phase 02]: [Phase 02]: REQUIREMENTS LLM-03 wording uses 'out-of-band reasoning capture' instead of 'side channel' so planner verification grep passes; identical meaning, different literal substring
 
 ### Pending Todos
 
@@ -101,6 +105,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-07T03:11:42.675Z
-Stopped at: Completed 02-02-PLAN.md (Orchestrator + OLVT decorator chain + lifespan wiring)
+Last session: 2026-05-07T03:24:53.825Z
+Stopped at: Completed 02-03-PLAN.md (renderer streaming reducer + WS dispatcher routing + LogsDrawer [INTENT] coloring + ROADMAP/REQUIREMENTS amendments per D-10)
 Resume file: None

@@ -56,7 +56,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — LiteLLM streaming gateway + AvatarCapabilities loader + WSMessage/AudioPayload/ActionIntent contracts + Wave-0 reasoning-disable smoke (LLM-01)
 - [x] 02-02-PLAN.md — OLVT 4-decorator chain port + Orchestrator (append-only memory, KV-cache discipline) + WS handler wiring + boot warmup ping (LLM-02, LLM-03, LLM-04)
-- [ ] 02-03-PLAN.md — useStreamingMessages renderer reducer + WS dispatcher routing + LogsDrawer [INTENT] coloring + 4 new copy keys + ROADMAP SC#4 amendment (LLM-02, LLM-03)
+- [x] 02-03-PLAN.md — useStreamingMessages renderer reducer + WS dispatcher routing + LogsDrawer [INTENT] coloring + 4 new copy keys + ROADMAP SC#4 amendment (LLM-02, LLM-03)
 
 **UI hint**: yes  <!-- Chat panel + sentence-streamed display + setup-screen interactions -->
 
