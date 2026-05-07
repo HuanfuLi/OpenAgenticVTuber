@@ -14,15 +14,15 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Electron shell (windowed mode only) wraps a React+Vite renderer with TS-end-to-end shell config — *Validated in Phase 1: Plumbing & Process Lifecycle (PLUMB-01)*
+- [x] Python sidecar (FastAPI + uvicorn) runs from venv with eager start + watchdog from Electron main; PyInstaller packaging deferred to a later milestone — *Validated in Phase 1 (PLUMB-02); orphan-process recovery confirmed live on Windows*
+- [x] Mandatory LLM setup screen on first launch — block until provider URL/key tested; LiteLLM connected to LM Studio (default) on localhost:1234 — *Validated in Phase 1 (PLUMB-04); real 1-token completion confirmed live against LM Studio*
+- [x] WebSocket protocol shape matches OLVT's so plumbing fixes can copy back — *Validated in Phase 1 (PLUMB-03); echo round-trip confirmed live*
 
 ### Active
 
 <!-- Walking-skeleton scope only (per PROJECT_DESIGN.md §14). Subsequent milestones layer memory, agent, scheduler, skills, multi-thread, pet mode, multi-avatar on top. -->
 
-- [ ] Electron shell (windowed mode only) wraps a React+Vite renderer with TS-end-to-end shell config
-- [ ] Python sidecar (FastAPI + uvicorn) runs from venv with eager start + watchdog from Electron main; PyInstaller packaging deferred to a later milestone
-- [ ] Mandatory LLM setup screen on first launch — block until provider URL/key tested; LiteLLM connected to LM Studio (default) on localhost:1234
 - [ ] OLVT-style conversation pipeline ported: sentence_divider → actions_extractor → tts_filter → TTS queue, with sentence-buffered playback (parallel synth, ordered delivery)
 - [ ] piper TTS only; lipsync via our-RMS path driving `ParamMouthOpenY`
 - [ ] Minimal action compositor running at 60 Hz with three drivers — idle baseline (Perlin drift + blink scheduler), speech driver (TTS RMS → head sway; body-sway is an unsolved problem on VTS rigs and may end up head-only in the skeleton — see Risks), intent overlay (smooth fade-in/out on `[joy]`/`[shy]` etc.)
@@ -32,8 +32,6 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 - [ ] Ship a stub `teto_overrides.yaml` (or .json) checked into the repo even though import + smoke-pass tooling is deferred — establishes the per-avatar override file schema (orphan params list, physics-chain proxies, sign inversions) so the import-pipeline milestone inherits it for free.
 - [ ] Companion-mode chat: single thread, in-memory only (cleared on relaunch); cursor-in-canvas eye/head tracking on the avatar
 - [ ] LLM emits `[joy]` → expression smoothly blends in over ~300ms and decays after the sentence ends — **not a hotkey pop** (success criterion §14)
-- [ ] WebSocket protocol shape matches OLVT's so plumbing fixes can copy back
-
 ### Out of Scope (this milestone — deferred to later v1 milestones)
 
 - **Agent mode and goal-loop** — entire §9; deferred to dedicated agent-runtime milestone
@@ -128,4 +126,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-06 after initialization*
+*Last updated: 2026-05-07 after Phase 1 complete*

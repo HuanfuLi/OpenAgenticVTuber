@@ -12,7 +12,7 @@ Five sequential phases that build the AgenticLLMVTuber walking skeleton end-to-e
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Plumbing & Process Lifecycle** - Electron + sidecar + WS round-trip + LLM setup screen, no AI yet
+- [x] **Phase 1: Plumbing & Process Lifecycle** - Electron + sidecar + WS round-trip + LLM setup screen, no AI yet (2026-05-07)
 - [ ] **Phase 2: Conversation Pipeline** - Real LLM replies streamed sentence-by-sentence with `[joy]` extracted, no audio
 - [ ] **Phase 3: TTS & Sentence-Buffered Audio** - Avatar replies are spoken with our-RMS feature tap exposed
 - [ ] **Phase 4: Action Compositor + VTS Bridge + Body-Sway Investigation** - 60 Hz blended drivers; Teto moves; smooth `[joy]` blend; cursor tracking
@@ -128,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Plumbing & Process Lifecycle | 0/2 | Not started | - |
+| 1. Plumbing & Process Lifecycle | 2/2 | Complete | 2026-05-07 |
 | 2. Conversation Pipeline | 0/2 | Not started | - |
 | 3. TTS & Sentence-Buffered Audio | 0/2 | Not started | - |
 | 4. Action Compositor + VTS Bridge + Body-Sway Investigation | 0/4 | Not started | - |
