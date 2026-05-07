@@ -18,7 +18,7 @@ The walking-skeleton scope validates the layered architecture (Electron + Python
 
 ### LLM Conversation Pipeline
 
-- [ ] **LLM-01**: LiteLLM is the single LLM client; the setup screen supports two providers in the skeleton — LM Studio default and a custom OpenAI-compatible endpoint; LiteLLM timeout is set to ≥120s to absorb LM Studio cold-start lazy model loading
+- [x] **LLM-01**: LiteLLM is the single LLM client; the setup screen supports two providers in the skeleton — LM Studio default and a custom OpenAI-compatible endpoint; LiteLLM timeout is set to ≥120s to absorb LM Studio cold-start lazy model loading
 - [ ] **LLM-02**: Conversation orchestrator runs the OLVT-style decorator chain (sentence_divider via pysbd → actions_extractor with buffer-then-extract on **completed** sentences only → tts_filter → TTS queue) — never extract `[tag]` markers from streaming token deltas; BPE splits like `[`, `jo`, `y]` are common
 - [ ] **LLM-03**: LLM-gateway boundary strips `<think>` reasoning blocks from any provider that emits them (DeepSeek-R1 distills, o1-style traces) before the orchestrator sees the content; reasoning is captured to a side channel for future UI surfacing but not displayed in the skeleton
 - [ ] **LLM-04**: Conversation runs on a single in-memory thread that clears on relaunch — no persistence, no FTS5, no thread sidebar in the skeleton
@@ -174,7 +174,7 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | PLUMB-03 | Phase 1 | Complete |
 | PLUMB-04 | Phase 1 | Complete |
 | PLUMB-05 | Phase 1 | Complete |
-| LLM-01 | Phase 2 | Pending |
+| LLM-01 | Phase 2 | Complete |
 | LLM-02 | Phase 2 | Pending |
 | LLM-03 | Phase 2 | Pending |
 | LLM-04 | Phase 2 | Pending |

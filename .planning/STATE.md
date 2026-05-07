@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Executing Phase 02
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-05-07T02:22:37.940Z"
+status: Ready to execute
+stopped_at: Completed 02-01-PLAN.md (LLMGateway + contracts + AvatarCapabilities)
+last_updated: "2026-05-07T02:52:31.374Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 ## Current Position
 
 Phase: 02 (conversation-pipeline) — EXECUTING
-Plan: 1 of 3
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Plan: 1 of 3
 *Updated after each plan completion*
 | Phase 01 P01 | 75min | 3 tasks | 64 files |
 | Phase 01 P02 | 50min | 3 tasks | 17 files |
+| Phase 02 P01 | 35min | 3 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,11 @@ Recent decisions affecting current work:
 - [Phase 01]: PLUMB-03 closed: OLVT-shape WS envelope (TextInput/DisplayText/Shutdown) with discriminated-union Pydantic source-of-truth + hand-written TS mirror; sidecar /ws echo handler; renderer WS client with reconnect-with-fixed-backoff
 - [Phase 01]: PLUMB-04 closed: mandatory LLM setup screen blocking app entry until real LiteLLM 1-token completion succeeds; safeStorage DPAPI persistence; 5-option provider dropdown with disabled-tooltip per CONTEXT.md D-06
 - [Phase 01]: packages/contracts layout: nested 'contracts/' subdir under py/, hatch packages=['contracts']. Avoids the same Hatch-flat-layout issue 01-01 hit with pyvts; this time we restructured the package instead of using a sys.path shim, since the contracts repo is greenfield
+- [Phase 02]: Adopted OLVT-canonical envelope names verbatim (type='audio' not 'audio-payload', `audio` field not `audio_b64`); locked in 02-CONTEXT-AMENDMENT.md amending D-02
+- [Phase 02]: Diverged Actions shape from OLVT (per CONTEXT D-12): list[ActionIntent] (kind/name/strength/duration_ms/avatar_id) instead of OLVT's Actions{expressions,pictures,sounds}
+- [Phase 02]: Phase-2 sentence_id field is a documented skeleton-side extension over OLVT (Discrepancy 4); required for [STUB-TTS] sentence trace per UI-SPEC IP-5
+- [Phase 02]: Q1 (extra_body passthrough) smoke result: SKIP — LM Studio not running during execution; PROVENANCE.md documents operator re-run path before Phase 5 verification
+- [Phase 02]: AvatarCapabilities loader fails loud (Pydantic ValidationError) on schema drift — boot must abort rather than run with empty tag vocabulary
 
 ### Pending Todos
 
@@ -91,6 +97,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-07T00:25:39.056Z
-Stopped at: Phase 2 UI-SPEC approved
-Resume file: .planning/phases/02-conversation-pipeline/02-UI-SPEC.md
+Last session: 2026-05-07T02:52:31.369Z
+Stopped at: Completed 02-01-PLAN.md (LLMGateway + contracts + AvatarCapabilities)
+Resume file: None
