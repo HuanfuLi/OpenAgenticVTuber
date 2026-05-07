@@ -11,11 +11,18 @@ D-01 pattern).
 - License: MIT
 - Verified date: 2026-05-06 (research) / <fill at 02-02 commit time>
 
-## Files (filled by 02-02)
+## Files (Wave 2 ports)
 
 | Skeleton path | OLVT path | LOC | Adaptations |
 |---------------|-----------|-----|-------------|
-| (filled in 02-02) | | | |
+| sidecar/src/sidecar/orchestrator/output_types.py | src/open_llm_vtuber/agent/output_types.py | 78 -> ~45 | Dropped Actions and AudioOutput; SentenceOutput.actions: List[ActionIntent] (Discrepancy 5) |
+| sidecar/src/sidecar/orchestrator/sentence_divider.py | src/open_llm_vtuber/utils/sentence_divider.py | 608 -> 609 | Verbatim port; provenance docstring header only (no OLVT-internal imports were used by SentenceDivider) |
+| sidecar/src/sidecar/orchestrator/tts_preprocessor.py | src/open_llm_vtuber/utils/tts_preprocessor.py | 196 -> ~165 | Verbatim port + inlined TTSPreprocessorConfig dataclass (OLVT pulled from config_manager.py); removed TranslateInterface dep + translator branch (no translation in skeleton) |
+| sidecar/src/sidecar/orchestrator/transformers.py | src/open_llm_vtuber/agent/transformers.py | 227 -> ~260 | sentence_divider/display_processor/tts_filter VERBATIM (only imports adjusted); actions_extractor adapted to AvatarCapabilities + List[ActionIntent] (CONTEXT D-13, D-20; RESEARCH Example 4 _extract_intents bracket-walker) |
+| sidecar/src/sidecar/orchestrator/prompt_loader.py | prompts/prompt_loader.py | ~75 -> ~13 | Skeleton uses only load_util(); dropped load_persona, dropped chardet fallback |
+| sidecar/src/sidecar/orchestrator/prompts/live2d_expression_prompt.txt | prompts/utils/live2d_expression_prompt.txt | ~26 lines | Verbatim copy -- preserves [<insert_action_keys>] placeholder |
+
+Upstream commit SHA: `12d42d7c329a3f9ad3e39b5ca5e2c603bae277a7` (verified 2026-05-07)
 
 ## Q1 (LiteLLM extra_body passthrough) smoke result
 
