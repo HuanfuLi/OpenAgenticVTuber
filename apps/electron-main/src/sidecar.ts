@@ -10,6 +10,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { app } from 'electron'
 import * as path from 'node:path'
+import { loadConfig, type StoredConfig } from './safe-storage'
 
 const READY_RE = /^\[READY\] (ws:\/\/127\.0\.0\.1:(\d+)\/ws)$/
 const READY_TIMEOUT_MS = 10_000
@@ -42,6 +43,23 @@ const subscribers = {
   log: new Set<(line: string) => void>()
 }
 
+// Bridge: Phase 1 stores LLM config in DPAPI-encrypted safeStorage; Phase 2's
+// Python sidecar can't decrypt that blob, so we hand it the decrypted JSON via
+// AGENTICLLMVTUBER_LLM_CONFIG_JSON in the spawn env (one-shot, never written to
+// disk). Returns undefined when setup hasn't been completed — sidecar then
+// boots with `orchestrator=None` and the renderer's setup gate keeps the user
+// out of the chat screen.
+export function buildSidecarConfigEnv(stored: StoredConfig | null): string | undefined {
+  if (!stored || !stored.hasCompletedSetup) return undefined
+  const p = stored.provider
+  return JSON.stringify({
+    provider: p.provider,
+    endpoint: p.endpointUrl,
+    apiKey: p.apiKey,
+    model: p.modelName
+  })
+}
+
 function resolveSidecarRoot(): string {
   // Dev layout (running via electron-vite dev): app.getAppPath() resolves to
   //   <repo>/apps/electron-main
@@ -58,6 +76,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
   }
 
   const sidecarRoot = resolveSidecarRoot()
+  const llmConfigJson = buildSidecarConfigEnv(loadConfig())
   const child = spawn('uv', ['run', 'python', '-m', 'sidecar'], {
     cwd: sidecarRoot,
     env: {
@@ -72,7 +91,11 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
       // explicitly; the watchdog will prefer it over getppid(). Killing
       // Electron via Task Manager then wakes the watchdog within one poll
       // (≤2s), Python os._exit(0)s, uv exits with it, cmd.exe drains.
-      AGENTICLLMVTUBER_PARENT_PID: String(process.pid)
+      AGENTICLLMVTUBER_PARENT_PID: String(process.pid),
+      // One-shot LLM config handoff (see buildSidecarConfigEnv above). Omitted
+      // when setup is incomplete; sidecar then idles with config-error replies
+      // and the renderer setup gate keeps the user out of /chat.
+      ...(llmConfigJson ? { AGENTICLLMVTUBER_LLM_CONFIG_JSON: llmConfigJson } : {})
     },
     stdio: ['ignore', 'pipe', 'pipe'],
     // shell=true on Windows so PATHEXT lookup finds uv.cmd.
