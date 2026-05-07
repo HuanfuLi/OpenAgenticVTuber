@@ -5,8 +5,9 @@ import base64
 import re
 import wave
 from io import BytesIO
-from types import SimpleNamespace
+from typing import Any
 
+import numpy as np
 import pytest
 from loguru import logger
 
@@ -18,10 +19,10 @@ class _FakeStream:
     def __init__(self, latency: float = 0.125, stream_time: float = 10.0) -> None:
         self.latency = latency
         self.time = stream_time
-        self.writes: list[bytes] = []
+        self.writes: list[Any] = []
 
-    def write(self, pcm_bytes: bytes) -> None:
-        self.writes.append(pcm_bytes)
+    def write(self, pcm: Any) -> None:
+        self.writes.append(pcm)
 
 
 class _FakeWS:
@@ -167,9 +168,9 @@ async def test_sender_uses_locked_order_for_non_silent_payload(monkeypatch):
         observed.append("ws-send")
         ws.writes.append(payload)
 
-    async def fake_executor(_executor, func, pcm_bytes):
+    async def fake_executor(_executor, func, pcm):
         observed.append("write")
-        func(pcm_bytes)
+        func(pcm)
 
     speech_queue.put = fake_put  # type: ignore[method-assign]
     ws.send_json = fake_send_json  # type: ignore[method-assign]
@@ -201,6 +202,10 @@ async def test_sender_uses_locked_order_for_non_silent_payload(monkeypatch):
     assert envelope is not None
     assert envelope.sentence_id == 1
     assert envelope.started_at == pytest.approx(50.2)
+    assert len(stream.writes) == 1
+    assert isinstance(stream.writes[0], np.ndarray)
+    assert stream.writes[0].dtype == np.dtype("int16")
+    assert stream.writes[0].tolist() == [1, 2]
 
 
 @pytest.mark.asyncio

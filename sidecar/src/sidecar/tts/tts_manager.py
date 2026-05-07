@@ -6,6 +6,7 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
 from fastapi import WebSocket
 from loguru import logger
 
@@ -179,6 +180,7 @@ class TTSTaskManager:
                     payload = next_payload.payload
 
                     if payload.audio is not None and next_payload.pcm_bytes:
+                        pcm_int16 = np.frombuffer(next_payload.pcm_bytes, dtype=np.int16)
                         started_at = float(self._stream.time) + float(self._stream.latency)
                         logger.info(
                             f"[TTS-WRITE-START] sentence_id={next_payload.sentence_id} "
@@ -199,7 +201,7 @@ class TTSTaskManager:
                         xrun = await loop.run_in_executor(
                             None,
                             self._stream.write,
-                            next_payload.pcm_bytes,
+                            pcm_int16,
                         )
                         self._last_write_finished_at = time.perf_counter()
                         self._last_sentence_id = next_payload.sentence_id
