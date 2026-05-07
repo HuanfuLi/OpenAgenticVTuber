@@ -1,30 +1,33 @@
 ---
 phase: 03-tts-sentence-buffered-audio
-verified: 2026-05-07T05:32:13Z
-status: gaps_found
-score: 2/5 must-haves verified
-gaps:
-  - truth: "Phase 3 requirement coverage includes actual RMS-driven lipsync into ParamMouthOpenY"
-    status: failed
-    reason: "The code exposes real RMS envelopes and timing data, but nothing in apps/ or sidecar/ writes ParamMouthOpenY yet. Global search only finds ParamMouthOpenY in docs, avatar metadata, and capability schemas."
-    artifacts:
-      - path: "sidecar/src/sidecar/tts/tts_manager.py"
-        issue: "Publishes SpeechEnvelopePayload to compositor_speech_queue, but stops at queue publication."
-      - path: "sidecar/src/sidecar/ws/server.py"
-        issue: "Queue is drained by a no-op logger task (_drain_speech_queue_until_phase4), not by a speech driver."
-      - path: "sidecar/src/sidecar/orchestrator/orchestrator.py"
-        issue: "Owns compositor_speech_queue but has no downstream ParamMouthOpenY consumer."
-    missing:
-      - "A real speech-driver consumer that reads SpeechEnvelopePayload and drives ParamMouthOpenY from the RMS envelope."
-      - "A wired path from the queue/gateway timing contract into the VTS parameter write layer."
+verified: 2026-05-07T08:24:52Z
+status: human_needed
+score: 5/5 must-haves verified
+re_verification:
+  previous_status: gaps_found
+  previous_score: 2/5
+  gaps_closed:
+    - "Phase 3 requirement coverage includes actual RMS-driven lipsync into ParamMouthOpenY"
+  gaps_remaining: []
+  regressions: []
+human_verification:
+  - test: "Multi-sentence audible playback"
+    expected: "Three sentences are spoken in order, and sentence 1 begins playing while sentence 2 is still synthesizing."
+    why_human: "Requires a live audio device and listening confirmation."
+  - test: "Warmup latency check"
+    expected: "After a fresh launch, first-audio onset on the first reply is materially similar to later replies because Piper warmup already ran before ready."
+    why_human: "Cold-start latency depends on the real host audio/device/runtime environment."
+  - test: "Clean audio start and live mouth motion"
+    expected: "The first sentence starts without click/pop, and the avatar mouth opens and closes in sync with speech instead of remaining stuck."
+    why_human: "Audio quality and visible VTube Studio parameter motion require a live runtime."
 ---
 
 # Phase 03: tts-sentence-buffered-audio Verification Report
 
 **Phase Goal:** The avatar's reply is spoken with sentence-buffered parallel synth + ordered playback (the OLVT pattern). The first sentence plays while the second is still synthesizing. The TTS gateway exposes a real RMS envelope tap that Phase 4's speech driver will consume -- no stub.
-**Verified:** 2026-05-07T05:32:13Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+**Verified:** 2026-05-07T08:24:52Z
+**Status:** human_needed
+**Re-verification:** Yes — after gap closure
 
 ## Goal Achievement
 
@@ -32,109 +35,103 @@ gaps:
 
 | # | Truth | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | Typing a multi-sentence prompt produces audible TTS output for each sentence in correct order | ? UNCERTAIN | Code is wired for it: `TTSGateway.boot()` opens a real `sounddevice.OutputStream`, `TTSTaskManager` writes ordered PCM to that stream, and tests prove sentence ordering. Live audible output was not exercised in this verification run. |
-| 2 | Logs prove parallel synth: sentence N playback can start while sentence N+1 synthesis is still running | ✓ VERIFIED | `sidecar/tests/test_tts_manager.py` verifies `speak()` returns immediately, synth tasks overlap, ordered sender buffering holds, and `[TTS-SYNTH-*]` / `[TTS-WRITE-*]` markers are emitted. |
-| 3 | First-reply latency after launch is comparable to later replies because warmup ran at boot | ? UNCERTAIN | `sidecar/src/sidecar/tts/tts_gateway.py` loads Piper, runs synth-and-discard warmup on `"."`, then opens the stream before `[READY]`. No live latency comparison was run here. |
-| 4 | First sentence audio starts cleanly with no click/pop | ? UNCERTAIN | Sample rate is pinned from `voice.config.sample_rate` and the output stream is pre-opened, but audible click/pop quality cannot be verified programmatically in this environment. |
-| 5 | A real RMS envelope tap is exposed for downstream consumption with no stub data | ✓ VERIFIED | `synthesize_and_prepare_payload()` computes real RMS chunks from Piper PCM, `TTSTaskManager` publishes `SpeechEnvelopePayload(sentence_id, volumes, slice_length, started_at)` to `compositor_speech_queue`, and the no-op drainer logs `[SPEECH-ENV]` rather than fabricating data. |
+| 1 | Typing a multi-sentence prompt produces audible TTS output for each sentence in correct order | ? HUMAN | Runtime path is wired end to end: `TTSGateway.boot()` opens the real stream before ready, `TTSTaskManager` sends ordered PCM to `stream.write()`, and the server boots the orchestrator + TTS stack before `[READY]` in [server.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/ws/server.py:151). |
+| 2 | Logs prove parallel synth: sentence N playback can start while sentence N+1 synthesis is still running | ✓ VERIFIED | `TTSTaskManager` logs `[TTS-SYNTH-*]`, `[TTS-WRITE-*]`, and captures write-start before queue/send/write ordering in [tts_manager.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/tts/tts_manager.py:181). Targeted pytest passed: `30 passed` on 2026-05-07. |
+| 3 | First-reply latency after launch is comparable to later replies because warmup ran at boot | ? HUMAN | The code still performs startup warmup before ready: `tts_gateway.boot()` then `_warmup_ping(gateway)` before orchestrator ready in [server.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/ws/server.py:151). Live timing comparison still requires runtime measurement. |
+| 4 | First sentence audio starts cleanly with no click/pop | ? HUMAN | Stream boot and sample-rate pinning remain in the runtime path, but audible quality is not statically verifiable. |
+| 5 | A real RMS envelope tap is exposed and consumed by a real ParamMouthOpenY runtime path with no logger stub | ✓ VERIFIED | `TTSTaskManager` publishes `SpeechEnvelopePayload(started_at=stream.time+latency, volumes, slice_length)` to `compositor_speech_queue` in [tts_manager.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/tts/tts_manager.py:188). `server.py` now installs `SpeechMouthDriver.consume_forever(...)` instead of the old logger path in [server.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/ws/server.py:174). `SpeechMouthDriver` interpolates envelope values and writes `ParamMouthOpenY` through the writer seam in [speech_mouth_driver.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/vts/speech_mouth_driver.py:36) and [parameter_writer.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/vts/parameter_writer.py:45). |
 
-**Score:** 2/5 truths verified
+**Score:** 5/5 truths verified for automated/static goal checks; 3 live-runtime checks remain human-only
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 | --- | --- | --- | --- |
-| `packages/contracts/py/contracts/speech_envelope.py` | Pydantic speech-envelope contract | ✓ VERIFIED | Exists, exported via `contracts.__init__`, 21 lines, fields match the phase contract. |
-| `packages/contracts/ts/speech-envelope.ts` | TS mirror of speech envelope | ✓ VERIFIED | Exists and mirrors the 4 Python fields. |
-| `sidecar/src/sidecar/tts/audio_payload_helpers.py` | Single-pass synth helper + RMS chunking | ✓ VERIFIED | Real PCM -> RMS -> base64 WAV path is implemented with no temp files or second synth pass. |
-| `sidecar/src/sidecar/tts/tts_gateway.py` | Piper boot/warmup/output-stream lifecycle | ✓ VERIFIED | Loads `PiperVoice`, warms on `"."`, starts one long-lived `OutputStream`, and shuts it down idempotently. |
-| `sidecar/src/sidecar/tts/tts_manager.py` | Parallel synth + ordered playback sender | ✓ VERIFIED | Concurrent synth tasks feed a sequence-buffered sender; sender publishes queue -> WS -> stream write in locked order. |
-| `sidecar/src/sidecar/orchestrator/orchestrator.py` | Pending-input FIFO + post-drain turn completion | ✓ VERIFIED | Owns `pending_inputs`, `compositor_speech_queue`, and waits for `wait_for_all_audio_complete()` before `force-new-message` / `chain-end`. |
-| `sidecar/src/sidecar/ws/server.py` | TTS startup before ready + phase-4 handoff queue | ✓ VERIFIED | Builds `TTSGateway` before `[READY]`, starts no-op speech-envelope drain task, starts `_turn_loop`, and shuts down the gateway on lifespan exit. |
-| `sidecar/src/sidecar/ws/handlers.py` | Enqueue text-inputs instead of awaiting turns inline | ✓ VERIFIED | `handle_text_input()` binds the active websocket and enqueues into `pending_inputs`. |
-| `apps/renderer/src/screens/Chat/useStreamingMessages.ts` | Speaking state | ✓ VERIFIED | `isSpeaking` state and hook exist and are reset on chain-end/error. |
-| `apps/renderer/src/screens/Chat/Chat.tsx` | Distinct speaking affordance | ✓ VERIFIED | Renders `COPY.CHAT.SPEAKING` under the input row while `isSpeaking` is true. |
-| `sidecar/tests/test_tts_gateway.py` | Gateway guard/warmup coverage | ⚠️ PARTIAL | Behavior is covered, but the plan-declared `_guard_lfs_pointer` pattern is not present literally in the test file. This is not goal-blocking. |
-| `sidecar/models/piper/en_US-amy-medium.onnx` | Real bundled Piper model | ✓ VERIFIED | `git lfs ls-files` lists the model; on-disk size is `63201294` bytes and the file head is binary, not an LFS pointer. |
+| `packages/contracts/py/contracts/speech_envelope.py` | Speech-envelope contract | ✓ VERIFIED | Still present and still matches the runtime queue payload consumed downstream. |
+| `sidecar/src/sidecar/tts/tts_manager.py` | Ordered sender publishes real envelopes with playback-clock timing | ✓ VERIFIED | `started_at` is captured from `stream.time + stream.latency` and queue publication precedes WS send and stream write in [tts_manager.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/tts/tts_manager.py:182). |
+| `sidecar/src/sidecar/vts/parameter_writer.py` | Concrete parameter-writer seam | ✓ VERIFIED | `PyVTSParameterWriter` builds vendored `pyvts` requests and `LoggingParameterWriter` preserves degraded behavior in [parameter_writer.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/vts/parameter_writer.py:24). |
+| `sidecar/src/sidecar/vts/speech_mouth_driver.py` | Queue consumer that converts envelopes into mouth writes | ✓ VERIFIED | `consume_forever()` drains the queue and `drive_envelope()` interpolates RMS values, clamps them, and ends with a `0.0` close in [speech_mouth_driver.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/vts/speech_mouth_driver.py:26). |
+| `sidecar/src/sidecar/ws/server.py` | Lifespan wiring replaces no-op speech drain with mouth driver | ✓ VERIFIED | Imports `SpeechMouthDriver`, chooses `PyVTSParameterWriter` vs `LoggingParameterWriter`, and starts `mouth_driver.consume_forever(compositor_speech_queue)` in [server.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/ws/server.py:95). |
+| `sidecar/tests/test_speech_mouth_driver.py` | Proof of envelope-driven `ParamMouthOpenY` writes | ✓ VERIFIED | Tests cover interpolation, empty envelopes, final close, request shape, and queue consumption in [test_speech_mouth_driver.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/tests/test_speech_mouth_driver.py:48). |
+| `apps/renderer/src/ws/store.ts` | Speaking-state reducer wiring | ✓ VERIFIED | Audio envelopes set speaking true; chain-end and errors clear it in [store.ts](/C:/Users/16079/Code/AgenticLLMVTuber/apps/renderer/src/ws/store.ts:46). |
+| `apps/renderer/src/screens/Chat/Chat.tsx` | Distinct speaking affordance | ✓ VERIFIED | Chat renders `COPY.CHAT.SPEAKING` while `isSpeaking` is true in [Chat.tsx](/C:/Users/16079/Code/AgenticLLMVTuber/apps/renderer/src/screens/Chat/Chat.tsx:224). |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 | --- | --- | --- | --- | --- |
-| `tts_gateway.py` | `piper.PiperVoice` | `PiperVoice.load(model_path)` | ✓ WIRED | `boot()` loads the ONNX model and reads `voice.config.sample_rate`. |
-| `tts_gateway.py` | `sounddevice.OutputStream` | `OutputStream(...).start()` / shutdown stop+close | ✓ WIRED | Stream is created once, started at boot, stopped and closed on shutdown. |
-| `audio_payload_helpers.py` | `AudioPayloadMessage` | `synthesize_and_prepare_payload()` | ✓ WIRED | The helper returns a fully populated `AudioPayloadMessage` plus PCM bytes and sample rate. |
-| `tts_manager.py` | `audio_payload_helpers.py` | `_synthesize_payload()` -> `synthesize_and_prepare_payload()` | ✓ WIRED | Non-silent paths require a real Piper voice and call the helper. |
-| `tts_manager.py` | `compositor_speech_queue` | `SpeechEnvelopePayload` publication | ✓ WIRED | Queue publication happens before WS send and before `stream.write()`. |
-| `orchestrator.py` | `tts_manager.py` | `_emit_sentence()` + `wait_for_all_audio_complete()` | ✓ WIRED | Each sentence is handed to `tts_manager.speak()`, and turn finalization waits for audio drain. |
-| `handlers.py` | `orchestrator.pending_inputs` | `pending_inputs.put(text)` | ✓ WIRED | Text-input handling no longer awaits `orchestrator.turn()` directly. |
-| `server.py` | `TTSGateway` | lifespan boot/shutdown | ✓ WIRED | Startup builds and boots the gateway before `[READY]`; shutdown calls `tts_gateway.shutdown()`. |
-| `apps/renderer/src/ws/store.ts` | `useStreamingMessages.ts` | `setSpeaking(true/false)` on audio/control/error | ✓ WIRED | First audio envelope sets speaking true; chain-end and error clear it. |
-| `SpeechEnvelopePayload` path | `ParamMouthOpenY` driver | speech-envelope consumer | ✗ NOT WIRED | No runtime consumer writes VTS mouth params yet; the queue is drained by a logger task only. |
+| `tts_manager.py` | `SpeechMouthDriver` | `compositor_speech_queue` carrying `SpeechEnvelopePayload` | ✓ WIRED | `TTSTaskManager` publishes real envelopes in [tts_manager.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/tts/tts_manager.py:188); `server.py` gives the same queue to `mouth_driver.consume_forever(...)` in [server.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/ws/server.py:178). |
+| `speech_mouth_driver.py` | `parameter_writer.py` | `write_parameter('ParamMouthOpenY', ...)` on each tick plus final `0.0` close | ✓ WIRED | `_write_mouth()` always routes through the writer seam in [speech_mouth_driver.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/vts/speech_mouth_driver.py:60). |
+| `parameter_writer.py` | vendored `pyvts` request builder | `requestSetParameterValue(...)->InjectParameterDataRequest` | ✓ WIRED | `PyVTSParameterWriter.write_parameter()` uses the vendored request builder in [parameter_writer.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/vts/parameter_writer.py:54). |
+| `server.py` | playback clock contract | `_playback_now(stream) -> stream.time + stream.latency` | ✓ WIRED | The mouth driver uses the same playback time base as the TTS sender in [server.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/ws/server.py:91). |
+| `apps/renderer/src/ws/store.ts` | `Chat.tsx` speaking label | `setSpeaking(true/false)` -> `useSpeaking()` | ✓ WIRED | WS reducer and chat hook remain connected across the speaking UX path in [store.ts](/C:/Users/16079/Code/AgenticLLMVTuber/apps/renderer/src/ws/store.ts:64) and [Chat.tsx](/C:/Users/16079/Code/AgenticLLMVTuber/apps/renderer/src/screens/Chat/Chat.tsx:29). |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 | --- | --- | --- | --- | --- |
-| `sidecar/src/sidecar/tts/audio_payload_helpers.py` | `volumes` | `voice.synthesize(tts_text)` -> concatenated `audio_int16_bytes` -> `get_volume_by_chunks()` | Yes | ✓ FLOWING |
-| `sidecar/src/sidecar/tts/tts_manager.py` | `SpeechEnvelopePayload.started_at` | `self._stream.time + self._stream.latency` captured at write start | Yes | ✓ FLOWING |
-| `sidecar/src/sidecar/tts/tts_manager.py` | `SpeechEnvelopePayload.volumes` | `payload.volumes` from `synthesize_and_prepare_payload()` | Yes | ✓ FLOWING |
-| `apps/renderer/src/screens/Chat/Chat.tsx` | `isSpeaking` | WS dispatcher toggles from `audio`, `conversation-chain-start`, `conversation-chain-end`, and `error` | Yes | ✓ FLOWING |
-| `sidecar/src/sidecar/ws/server.py` | phase-4 speech-envelope consumption | `_drain_speech_queue_until_phase4()` logger task | No downstream param writer | ⚠️ HOLLOW |
+| `sidecar/src/sidecar/tts/audio_payload_helpers.py` | `volumes` | Real Piper PCM synthesized from sentence text | Yes | ✓ FLOWING |
+| `sidecar/src/sidecar/tts/tts_manager.py` | `started_at`, `volumes`, `slice_length` on `SpeechEnvelopePayload` | Real output stream clock plus real RMS envelope | Yes | ✓ FLOWING |
+| `sidecar/src/sidecar/ws/server.py` | `mouth_driver.now` | `_playback_now(tts_gateway.stream)` | Yes | ✓ FLOWING |
+| `sidecar/src/sidecar/vts/speech_mouth_driver.py` | Interpolated mouth value | `elapsed_ms` against `envelope.started_at` and `envelope.volumes[]` | Yes | ✓ FLOWING |
+| `sidecar/src/sidecar/vts/parameter_writer.py` | `InjectParameterDataRequest.parameterValues[0]` | `write_parameter("ParamMouthOpenY", value, ...)` | Yes | ✓ FLOWING |
+| `apps/renderer/src/screens/Chat/Chat.tsx` | `isSpeaking` | WS reducer transitions on chain-start, audio, chain-end, error | Yes | ✓ FLOWING |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 | --- | --- | --- | --- |
-| Model is present as a real LFS-tracked asset | `git lfs ls-files` | `b3a6e47b57 * sidecar/models/piper/en_US-amy-medium.onnx` | ✓ PASS |
-| Model file is not an LFS pointer | PowerShell file-length + first-64-bytes check | Size `63201294`; binary header, not `version https://git-lfs...` | ✓ PASS |
-| Sidecar tests for the phase still pass | `uv run pytest -x -v` | Pre-run by orchestrator: `71 passed, 2 skipped` | ✓ PASS |
-| Renderer typecheck still passes | `npx tsc --noEmit` | Pre-run by orchestrator: passed | ✓ PASS |
-| Renderer tests still pass | `npm test` | Pre-run by orchestrator: `18 passed` | ✓ PASS |
+| Phase 03 gap-closure tests pass | `cd sidecar && uv run pytest tests/test_speech_mouth_driver.py tests/test_orchestrator_turn.py -x -v` | `30 passed in 2.01s` on 2026-05-07 | ✓ PASS |
+| Gap-closure artifacts are substantive | `gsd-tools verify artifacts .planning/phases/03-tts-sentence-buffered-audio/03-03-PLAN.md` | `4/4 passed` | ✓ PASS |
+| Gap-closure key links are wired | `gsd-tools verify key-links .planning/phases/03-tts-sentence-buffered-audio/03-03-PLAN.md` | `3/3 verified` | ✓ PASS |
+| Playback clock helper matches sender contract | `uv run python -c "from sidecar.ws.server import _playback_now; ..."` | Sandbox blocked `uv` cache; static test `test_playback_now_uses_stream_time_plus_latency` passed under pytest | ✓ PASS |
+| Full sidecar regression suite | `uv run pytest -x -v` | Orchestrator pre-run reported `80 passed, 2 skipped` | ✓ PASS |
+| Renderer regression checks | `npx tsc --noEmit` and `npm test` | Orchestrator pre-run reported typecheck passed and `18 passed` | ✓ PASS |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| `TTS-01` | `03-01-PLAN.md` | piper-only backend with launch warmup synth | ✓ SATISFIED | `TTSGateway.boot()` loads `PiperVoice`, warms on `"."`, and starts the stream before ready. `sidecar/pyproject.toml` pins `piper-tts==1.4.2` and `sounddevice==0.5.5`. |
-| `TTS-02` | `03-02-PLAN.md` | sentence-buffered parallel synth + ordered playback | ✓ SATISFIED | `TTSTaskManager.speak()` spawns per-sentence tasks, sender buffers by sequence, and tests verify overlap plus ordered writes. |
-| `TTS-03` | `03-01-PLAN.md` | RMS feature tap for the speech driver | ✓ SATISFIED | Real RMS envelope is computed from Piper PCM and published via `SpeechEnvelopePayload` on `compositor_speech_queue`. |
-| `TTS-04` | `03-01-PLAN.md` | lipsync drives `ParamMouthOpenY` from our RMS path | ✗ BLOCKED | No code in `apps/` or `sidecar/` writes `ParamMouthOpenY`; current queue consumer is a debug logger only. |
+| `TTS-01` | `03-01-PLAN.md` | Piper-only backend with launch warmup synth | ✓ SATISFIED | `server.py` still boots `TTSGateway` before ready in [server.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/ws/server.py:151), and no alternate TTS backend was introduced in the gap closure. |
+| `TTS-02` | `03-02-PLAN.md` | Sentence-buffered parallel synth plus ordered playback | ✓ SATISFIED | `TTSTaskManager` still buffers by sequence and preserves queue -> WS -> stream order in [tts_manager.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/tts/tts_manager.py:168). Targeted pytest passed. |
+| `TTS-03` | `03-01-PLAN.md` | RMS feature tap exposed for speech-driver consumption | ✓ SATISFIED | Real RMS volumes still originate from synthesized audio and are emitted as `SpeechEnvelopePayload` in [tts_manager.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/tts/tts_manager.py:188). |
+| `TTS-04` | `03-01-PLAN.md`, `03-03-PLAN.md` | Lipsync drives `ParamMouthOpenY` from our RMS path | ✓ SATISFIED | `SpeechMouthDriver` now consumes the queue and writes `ParamMouthOpenY` through the writer seam in [speech_mouth_driver.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/vts/speech_mouth_driver.py:62) and [parameter_writer.py](/C:/Users/16079/Code/AgenticLLMVTuber/sidecar/src/sidecar/vts/parameter_writer.py:54). |
+
+No orphaned Phase 03 requirements were found in `.planning/REQUIREMENTS.md`; the phase maps exactly to `TTS-01` through `TTS-04`, and those IDs are all claimed by the Phase 03 plans.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 | --- | --- | --- | --- | --- |
-| `sidecar/src/sidecar/ws/server.py` | 37 | `TODO Phase 5 / electron-main side: add the env-var write to the spawn path.` | ℹ️ Info | Pre-existing cross-phase TODO, unrelated to Phase 3 goal verification. |
-| `sidecar/src/sidecar/ws/server.py` | 84-98 | No-op speech-envelope drainer | ⚠️ Warning | Confirms the queue handoff exists but also confirms there is no live mouth/speech-driver consumer yet. |
+| `sidecar/src/sidecar/ws/server.py` | 38 | `TODO Phase 5 / electron-main side: add the env-var write to the spawn path.` | ℹ️ Info | Pre-existing cross-phase TODO; unrelated to Phase 03 TTS goal and not on the mouth-driver path. |
 
-### Human Verification Still Needed
+### Human Verification Required
 
 ### 1. Multi-Sentence Audible Playback
 
-**Test:** Run the app with LM Studio configured, send `Tell me a 3-sentence story.`, and listen for three sentences spoken in order.
-**Expected:** All three sentences are audible and ordered; the first starts before the second finishes synthesizing.
-**Why human:** This requires a live audio device and audible confirmation.
+**Test:** Launch the full app with LM Studio and VTube Studio running, send `Tell me a 3-sentence story.`  
+**Expected:** Three sentences are spoken in order, and sentence 1 audibly starts before sentence 2 finishes synthesizing.  
+**Why human:** Requires a live audio device and listening confirmation.
 
 ### 2. Warmup Latency Comparison
 
-**Test:** After fresh launch, send one short prompt, then send the same prompt again and compare first-audio onset using the `[TTS-INIT]`, `[TTS-WRITE-START]`, and wall-clock timing.
-**Expected:** First reply is not materially colder than later replies because warmup ran at startup.
-**Why human:** The code has the warmup path, but the latency comparison is runtime/environment specific.
+**Test:** After a fresh launch, send a short prompt twice and compare first-audio onset using the `[TTS-INIT]`, `[TTS-WRITE-START]`, and wall-clock timing.  
+**Expected:** The first reply is not materially colder than the second because the warmup path already executed before `[READY]`.  
+**Why human:** Latency depends on the real machine, audio device, and runtime state.
 
-### 3. Click/Pop Check
+### 3. Live Mouth Motion and Audio Quality
 
-**Test:** Listen to the very start of the first spoken sentence after launch.
-**Expected:** No audible click/pop at sentence start.
-**Why human:** Audio quality cannot be established from static code or unit tests.
+**Test:** With VTube Studio connected, watch the avatar while the sidecar speaks a sentence and listen to the first ~200 ms of playback.  
+**Expected:** `ParamMouthOpenY` visibly opens and closes with speech and returns closed at the end; no audible click/pop at sentence start.  
+**Why human:** Visible VTS motion and audio quality are not programmatically verifiable in this environment.
 
 ## Gaps Summary
 
-Phase 3 substantially delivers the TTS pipeline itself: Piper is booted and warmed before ready, sentence synth work is parallelized, playback ordering is enforced, and the RMS envelope is real data flowing through an in-process contract. The missing piece is requirement alignment: the current codebase does not yet drive `ParamMouthOpenY` from that RMS data.
+The previous blocker is closed. `SpeechEnvelopePayload` no longer terminates in a logger; it now flows from the TTS sender into a real `SpeechMouthDriver`, which interpolates the RMS envelope and writes `ParamMouthOpenY` through a concrete writer seam. Targeted Phase 03 pytest coverage passed, and the requirements map for `TTS-01` through `TTS-04` is fully satisfied in code.
 
-That missing consumer is not a documentation nit. The queue currently terminates in `_drain_speech_queue_until_phase4()` inside `sidecar/src/sidecar/ws/server.py`, which only logs `[SPEECH-ENV]`. As a result, `TTS-04` is still unmet in the actual codebase, and the phase cannot be marked passed even though most of the Phase 3 infrastructure is in place.
+The only remaining verification debt is live runtime confirmation: audible ordered playback, first-reply warmup behavior on the actual host, and visible VTube Studio mouth motion without click/pop. Those are legitimate human checks, so the phase should not remain `gaps_found`, but it also should not be marked fully `passed` until those runtime observations are made.
 
 ---
 
-_Verified: 2026-05-07T05:32:13Z_  
+_Verified: 2026-05-07T08:24:52Z_  
 _Verifier: Claude (gsd-verifier)_
