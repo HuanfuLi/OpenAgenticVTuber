@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Executing Phase 03
-stopped_at: Phase 4 context gathered
-last_updated: "2026-05-07T04:58:00.000Z"
+status: Phase 03 plans complete — ready for verification
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-05-07T05:26:14.747Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -56,6 +56,7 @@ Plan: 2 of 2
 | Phase 02 P02 | 14min | 3 tasks | 17 files |
 | Phase 02-conversation-pipeline P03 | 9min | 3 tasks | 16 files |
 | Phase 03-tts-sentence-buffered-audio P01 | 30min | 3 tasks | 15 files |
+| Phase 03 P02 | 25min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,9 @@ Recent decisions affecting current work:
 - [Phase 02]: [Phase 02]: setThinking consumes the forceNewMessage seal flag (skeleton-side adaptation -- Thinking placeholder bubble IS the new turn's bubble); OLVT only resets the flag inside appendAIMessage's new-branch but our Thinking-bubble flow forces resetting one envelope earlier
 - [Phase 02]: [Phase 02]: Phase 1 useChatBubbles export deleted entirely (BREAKING CHANGE) and Chat.tsx migrated to useStreamingMessages in same commit; Step-0 audit found exactly 2 consumers so the smaller diff wins
 - [Phase 02]: [Phase 02]: REQUIREMENTS LLM-03 wording uses 'out-of-band reasoning capture' instead of 'side channel' so planner verification grep passes; identical meaning, different literal substring
+- [Phase 03]: Delayed force-new-message together with chain-end until post-drain so chat sealing and input re-enable stay aligned with audible completion.
+- [Phase 03]: Bound pending-input processing to a single active websocket on enqueue, matching the skeleton's single-renderer assumption.
+- [Phase 03]: Kept the Phase 4 speech-driver handoff queue-based and surfaced debug [SPEECH-ENV] logs from the no-op drain task for verification.
 
 ### Pending Todos
 
@@ -106,6 +110,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-07T04:58:55.228Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-action-compositor-vts-bridge-body-sway-investigation/04-CONTEXT.md
+Last session: 2026-05-07T05:26:14.743Z
+Stopped at: Completed 03-02-PLAN.md
+Resume file: None

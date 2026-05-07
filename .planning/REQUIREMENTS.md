@@ -26,7 +26,7 @@ The walking-skeleton scope validates the layered architecture (Electron + Python
 ### TTS & Audio Playback
 
 - [ ] **TTS-01**: piper TTS (ONNX, local) is the only voice backend in the skeleton; warmup synth at app launch caches one-token render to amortize ~200-500ms cold-start latency
-- [ ] **TTS-02**: TTS playback uses sentence-buffered model — per-sentence parallel synth + ordered delivery (the OLVT pattern); first sentence plays while subsequent sentences synthesize; perceived latency = first-sentence-synth-time
+- [x] **TTS-02**: TTS playback uses sentence-buffered model — per-sentence parallel synth + ordered delivery (the OLVT pattern); first sentence plays while subsequent sentences synthesize; perceived latency = first-sentence-synth-time
 - [ ] **TTS-03**: TTS gateway exposes an RMS feature tap (audio amplitude envelope) that the action compositor's speech driver consumes in real time
 - [ ] **TTS-04**: Lipsync drives `ParamMouthOpenY` from the TTS RMS we compute (our-RMS path); VTS-native lipsync is not wired in the skeleton
 
@@ -179,7 +179,7 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | LLM-03 | Phase 2 | Complete |
 | LLM-04 | Phase 2 | Complete |
 | TTS-01 | Phase 3 | Pending |
-| TTS-02 | Phase 3 | Pending |
+| TTS-02 | Phase 3 | Complete |
 | TTS-03 | Phase 3 | Pending |
 | TTS-04 | Phase 3 | Pending |
 | AVT-01 | Phase 4 | Pending |
