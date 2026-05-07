@@ -88,13 +88,13 @@ Plans:
   4. Moving the cursor over the avatar canvas region makes Teto's eyes/head track the cursor; cursor exiting the canvas eases the avatar back to center (no wild dart)
   5. Pressing the test hotkey toggles a single VTS prop visibility (the discrete-event contract demo)
   6. With an active webcam feed in VTS, ambient and speech driver contributions still produce visible motion (proves `mode:"add"` for ambient layers, `mode:"set"` + `weight` only for intent overlays)
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 04-00: TBD — **Teto smoke-pass entry gate** (AVT-06 entry; AVT-07 stub schema). Run smoke-pass on the dev Teto rig; record non-orphan downstream body params (or absence thereof) and physics-chain proxy candidates into `avatars/teto/teto_overrides.yaml`. Outputs the input that 04-02 needs to pick a default speech-driver strategy.
-- [ ] 04-01: TBD — pyvts single-writer task + ParamID resolver + rest-state continuous-write (AVT-01, AVT-04, AVT-05, AVT-09)
-- [ ] 04-02: TBD — Compositor core + idle/intent/reaction drivers + speech-driver strategy registry + body-sway investigation (AVT-02, AVT-03, AVT-08, AVT-10, AVT-06 main work). **NEEDS RESEARCH-PHASE**: minimum 2 strategy implementations attempted on the Teto rig before head-only fallback ships.
-- [ ] 04-03: TBD — Cursor tracker overlay + test hotkey + DiscreteEvent path (AVT-09 main work, AVT-10 renderer side)
+- [ ] 04-00-PLAN.md — Teto smoke-pass entry gate: TetoOverrides Pydantic loader + sidecar/scripts/teto_smoke_pass.py CLI + populated avatars/teto/teto_overrides.yaml (AVT-06, AVT-07)
+- [ ] 04-01-PLAN.md — VTS infrastructure: PyvtsSafeWriter (issue #51 mitigation) + ParamID resolver + DiscreteDispatcher + VTS handshake + DPI awareness + ParamFrame/DiscreteEvent contracts (AVT-04, AVT-05, AVT-09, AVT-02 partial)
+- [ ] 04-02-PLAN.md — Compositor core: 60Hz deadline scheduler + idle/intent/speech drivers + body-sway strategy registry (head_only/proxy_param/exp3_modulation) + dev-panel hot-switch + sentence-end signal + body-sway investigation evidence (AVT-01, AVT-02, AVT-03, AVT-06, AVT-08)
+- [ ] 04-03-PLAN.md — Cursor tracker (Win32-poll → ParamAngle deflection with 80px dead-zone + cubic ease-back) + DiscreteEvent demo target lock (Star Eye [7]) + sidecar lifespan integration (AVT-09 demo, AVT-10)
 
 **UI hint**: yes  <!-- Cursor tracker is a transparent React overlay; the avatar canvas region's UX is part of this phase -->
 
