@@ -17,3 +17,15 @@
 - D-01: sidecar-side playback owns audio output; the renderer does not play Web Audio in the skeleton.
 - D-09: let-finish plus queued next input replaces OLVT’s interrupt-and-abort path.
 - D-14: `chain-end` timing follows audio drain completion rather than WS send completion.
+
+## piper_tts.py reference → tts_gateway.py
+
+Upstream: `OpenLLM_Vtuber/src/open_llm_vtuber/tts/piper_tts.py` (commit `12d42d7`)
+
+Adaptation per CONTEXT D-06/D-07/D-08:
+- `PiperVoice.load` + `voice.synthesize` used; `voice.config.sample_rate` derived
+  (NOT a yaml field per RESEARCH §Open Q1).
+- Warmup is synth-and-discard against `"."` (D-08), not file synthesis.
+- Long-lived `sounddevice.OutputStream` lifecycle (open at boot, close at
+  shutdown) instead of per-sentence file writes (D-01 sidecar-side playback).
+- LFS-pointer-file guard added per RESEARCH Pitfall 3.
