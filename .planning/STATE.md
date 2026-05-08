@@ -68,6 +68,7 @@ Last activity: 2026-05-08
 | Phase 04 P02 | 2h | 4 tasks | 25 files |
 | Phase 04 P03 | 45min | 3 tasks | 7 files |
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P04 | 7min | 3 tasks | 15 files |
+| Phase 04-action-compositor-vts-bridge-body-sway-investigation P05 | 4min | 2 tasks | 3 files |
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P07 | 4min | 3 tasks | 6 files |
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P06 | 4min | 2 tasks | 4 files |
 

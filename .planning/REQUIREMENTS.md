@@ -48,6 +48,89 @@ The walking-skeleton scope validates the layered architecture (Electron + Python
 - [ ] **SC-01**: All six §14 success criteria are formally verified against the running system and recorded in a `.planning/skeleton-verification.md` handoff document (1. text→reply with synced lipsync, 2. `[joy]` smooth blend, 3. visible idle micro-motion, 4. visible speech-driven body/head sway, 5. cursor tracking, 6. WS protocol matches OLVT shape)
 - [ ] **SC-02**: `packages/contracts/` initially ships hand-written TypeScript mirroring the Pydantic models in Python; final phase replaces hand-written TS with codegen (`datamodel-code-generator` or `pydantic2ts`); Pydantic models are the source of truth
 
+## v2.0 Milestone Requirements: Plugin + Animation Control
+
+**Defined:** 2026-05-08
+**Phases:** 6, 8, 7, 9, 10 (gating-derived order — Phase 8 catalogs feed Phase 7 parsers; locked 2026-05-08)
+**Source:** `PROJECT_DESIGN.md` §14B + `.planning/research/v2.0/SUMMARY.md`
+
+This milestone refactors the animation layer from compositor-internal to plugin-driven, adds an in-app slider HUD with per-param locks, formalizes a three-category LLM emit code system (action / variant / event), and lands a user-facing avatar import flow. Agent system development (PROJECT_DESIGN.md §9) is deferred in favor of this animation-architecture pivot.
+
+### Plugin Architecture & Contracts (cross-cutting; lands across Phases 6, 7, 9)
+
+These are the load-bearing architectural invariants that make plug-and-play possible. Every concrete requirement in PLG/IMP/PARSE/HUD/VFY below must honor these. Violating any of these breaks the plug-and-play property.
+
+- [ ] **ARCH-01**: **Strict separation: system owns the LLM contract and the VTS contract; plugin owns the motion contract.** System routes LLM token stream into plugin's `on_token_stream`; system receives `ParamFrame` stream from plugin and dispatches to VTS via the single `PyvtsSafeWriter`. Plugin MUST NOT call pyvts, the filesystem, the network, or other side-effects directly outside its declared lifecycle hooks. The system is the intermediary; plugins are pure motion-functions.
+- [ ] **ARCH-02**: **`RigCapabilities` is the rig-introspection contract** — single Pydantic model fed to BOTH plugin's `on_load(capabilities)` AND renderer's HUD via `GET /admin/rig-capabilities`. Fields: writable param IDs (Cubism-standard names), per-param ranges (when known), expressions list (per-rig), hotkeys list with VTS hotkey IDs, `cdi3.json` display-name map (when present), per-rig sign inversions from `_avatar_overrides.yaml`, plugin-default emotion bindings from `_avatar_overrides.yaml`. Frozen at sidecar boot. Plugin authors target this contract; plugins are rig-agnostic by design and adapt at `on_load` based on what `capabilities` reports.
+- [ ] **ARCH-03**: **Plugin's token-stream input is the orchestrator-decorated stream, NOT raw LLM tokens.** Plugin sees per-sentence text deltas (post `sentence_divider`, pre `code_extractor`) so plugin sees its action codes IN context with surrounding text — plugin can use semantic context, not just bare codes. Action-code dispatch is in-band: plugin receives the sentence containing `[joy]` and emits ParamFrames in response. Plugin chooses its own parser strategy for its own action codes.
+- [ ] **ARCH-04**: **Plugin's output is `AsyncIterator[ParamFrame]` at any cadence ≤ 60 Hz.** Compositor's `PluginAdapter(TickDriver)` buffers the most recent ParamFrame; `tick(now)` returns it (with stale-decay pattern matching milestone-1's `IntentDriver`). Plugin under-rate falls back to hold-last-frame (preserves AVT-02 1-second re-injection rule). Plugin over-rate is coalesced by rate-limiter at the loader boundary. Plugins are pull-rate-limited at the compositor edge — the plugin author cannot accidentally flood VTS.
+- [ ] **ARCH-05**: **Compositor merge order is fixed and load-bearing:** `IdleDriver → SpeechDriver (lipsync only) → PluginAdapter (output from active plugin) → CursorDriver → system-primitive override list → lock_filter → clamp_and_validate → pyvts.inject_params`. Plugin output enters the merge in the third slot; lock filter applies last among contributors; system-primitive overrides (e.g., lipsync on `MouthOpenY` overrides user lock) apply BEFORE lock filter. This ordering is not a planner choice — Phase 6 implements it as written.
+- [ ] **ARCH-06**: **Single pyvts writer rule (carried over from M1 AVT-04) extends to all v2.0 entry points.** Every new entry point — plugin output, variant dispatch, event dispatch, HUD lock writes, cursor frames — flows through `PyvtsSafeWriter`. Plugin CANNOT import or instantiate pyvts directly. CI enforces this via `grep "import pyvts" sidecar/src/ | wc -l == 1` test (must equal 1, the writer file).
+- [ ] **ARCH-07**: **Plugin process model: in-sidecar Python, no isolation, full trust.** Plugins are trusted Python code with the same trust model as the existing skills system (PROJECT_DESIGN.md §13.122). Plugin marketplace, signing, sandboxing, and per-plugin venvs are explicitly deferred to milestone-3+. R-19 (PROJECT_DESIGN.md §15) tracks this risk.
+- [ ] **ARCH-08**: **Plugin discovery precedence: `userData/plugins/` overrides `plugins/` (in-tree) when both declare the same `name`.** Allows users to install replacement implementations (including a replacement default plugin) without modifying the in-tree codebase. System emits a WARN log at boot when an override is detected, naming both paths.
+- [ ] **ARCH-09**: **Plugin extends LLM emit vocabulary architecturally, not via mid-conversation prompt rebuild.** Plugin's `action_codes` (with descriptions) are appended to the system prompt under a fixed delimiter at orchestrator boot. Prompt is KV-cache prefix-stable (M1 D-17 rule). The LLM learns "you may emit `[joy]`, `[wave]`, ..." once at session start; switching plugins requires sidecar restart (PLG-09 lifecycle rule); no mid-conversation rebuild EVER.
+- [ ] **ARCH-10**: **Plugin runtime is fully decoupled from milestone-1 compositor primitives.** `IdleDriver`, `SpeechDriver` (lipsync only post-v2), `CursorDriver`, `PyvtsSafeWriter` keep their `TickDriver` Protocol seams. `IntentDriver` is DELETED in Phase 6 — its body-motion logic migrates verbatim into the default plugin (rig-specific by definition). Adding or swapping a plugin must NOT require touching idle / lipsync / cursor / pyvts-writer code. This decoupling is what makes plug-and-play possible.
+- [ ] **ARCH-11**: **Plugin authoring API surface is stable post-Phase-6 and gated by `api_version`.** The `BodyMotionPlugin` ABC, `RigCapabilities` contract, and `ParamFrame` payload shape are versioned via `api_version: "1.0"` in `plugin.yaml`. System refuses to load plugins with incompatible major versions; minor-version mismatches produce WARN log only. Breaking changes to the plugin contract bump the major version and migrate the default plugin in lockstep.
+- [ ] **ARCH-12**: **System-primitive override list is explicit and per-param, not a magic global rule.** The list lives in `compositor/lock_filter.py` and currently contains only `MouthOpenY` (overridden by lipsync). Adding entries requires explicit code review — an architectural decision per param, not a runtime config knob. Documents WHY each entry is on the list (lipsync without mouth = broken).
+
+### Plugin Runtime (Phase 6)
+
+- [ ] **PLG-01**: System loads single-active body-motion plugin from `plugin.yaml` manifest at sidecar startup; manifest declares `name`, `version`, `entrypoint` (`module:class`), `api_version`, `action_codes` (with descriptions), and optional metadata fields `author`, `license`, `homepage`, `description`
+- [ ] **PLG-02**: Plugin's `action_codes` (sorted deterministically) contribute to LLM system prompt assembly under a fixed delimiter; assembly happens once at orchestrator construction (KV-cache prefix-stability is load-bearing per Phase 2 D-17)
+- [ ] **PLG-03**: Plugin implements `BodyMotionPlugin` ABC with three lifecycle hooks: `on_load(capabilities: RigCapabilities)` synchronous setup, `on_token_stream(tokens) -> AsyncIterator[ParamFrame]` async generator, `on_unload()` cleanup
+- [ ] **PLG-04**: Plugin runtime supervises async-generator lifecycle with circuit-breaker (3 restarts within 60s); plugin crashes during `__init__`/`on_load`/`on_token_stream` are caught and fall back to a null plugin emitting rest-state ParamFrames at 60 Hz; the sidecar process must NOT crash
+- [ ] **PLG-05**: ParamFrame values from plugin output are clamped to `[0, 1]` at the compositor → renderer boundary (`clamp_and_validate(frame, capabilities)` pass); NaN/Inf drops the frame; unknown param keys are dropped with WARN log
+- [ ] **PLG-06**: Manifest loader validates against `plugin.yaml` JSON Schema via `jsonschema 4.26.0`; reserved-name guard rejects action_codes matching `<think>`, `<thinking>`, `<tool_call>`, `<function_call>`, `<function_calls>`, `<invoke>`, `<parameter>` (sweep extended during Phase 7 plan-phase research for any additional LLM-protocol sentinels)
+- [ ] **PLG-07**: Default plugin ships in-tree at `plugins/default/`, absorbs current Phase-4 `IntentDriver` + `compositor/body_sway/*` logic, uses OLVT 8-emotion vocabulary (`neutral`, `anger`, `disgust`, `fear`, `joy`, `smirk`, `sadness`, `surprise`) as its `action_codes` set
+- [ ] **PLG-08**: Plugin discovery scans both `plugins/` (in-tree, repo root — defaults ship here) and `app.getPath('userData')/plugins/` (user-installed)
+- [ ] **PLG-09**: Plugin switching is startup-only: developer changes config-file, sidecar restart applies; runtime hot-swap is explicitly deferred (avoids state-handoff complexity for in-flight ParamFrames)
+- [ ] **PLG-10**: `plugin.yaml` manifest hot-reload via `watchdog 6.0.0` triggers manifest re-parse + WARN log if `action_codes` set changed (engineer DX); does NOT reload plugin behavior
+
+### Avatar Import + Catalog (Phase 8)
+
+- [ ] **IMP-01**: User imports an avatar via Electron file dialog (`dialog.showOpenDialog()`); folder path passes to sidecar via `ipc:avatar:import-pick`; sidecar detects type from file shape: VTS standard (has `.vtube.json`), Cubism with named expressions (`model3.json` `FileReferences.Expressions` populated), Cubism bare (no expressions), or OLVT (has `model_dict.json`)
+- [ ] **IMP-02**: VTS extractor parses `*.vtube.json` `Hotkeys[]`, filters `Action: "ToggleExpression"`, derives variant code names (strip `[N]` keybind suffix, strip `【】` decorative brackets, lowercase, hyphenate, e.g., `【SV】Microphone[1]` → `sv-microphone`)
+- [ ] **IMP-03**: Cubism-with-expressions extractor reads `model3.json` `FileReferences.Expressions[].Name` and emits placeholder names; mandatory review screen REQUIRES the user to relabel placeholders before Save is enabled (e.g., `exp_01` → user-supplied semantic name)
+- [ ] **IMP-04**: Cubism-bare extractor produces empty variant catalog (avatar is plugin-only); event catalog still extractable from `.motion3.json` files when present
+- [ ] **IMP-05**: OLVT `model_dict.json` extractor reads `emotionMap` (becomes default-plugin per-rig action-code → expression binding) and `actionMap` (becomes variant catalog with semantic names — no placeholder relabeling required)
+- [ ] **IMP-06**: Event catalog auto-extracted from `.motion3.json` files; event code names derived from `Motions` group keys + filenames (slug rule: lowercase, hyphenate, no path separators)
+- [ ] **IMP-07**: Mandatory review screen presents draft variant + event catalogs in a dedicated React route (NOT modal); user edits names, deletes irrelevant entries, or skips a category; Save is disabled while placeholder names remain
+- [ ] **IMP-08**: Review screen accessible from Settings at any time for re-edit; commits write `_avatar_overrides.yaml` (sibling to `avatar.yaml`); writes are validated against the YAML schema via `jsonschema` at write-time
+- [ ] **IMP-09**: Existing `TetoOverrides` Pydantic class renamed to `AvatarOverrides`; `avatar.yaml` remains read-only (introspection-only); `_avatar_overrides.yaml` carries user-edited variant + event catalogs + per-rig sign inversions + plugin-default emotion bindings
+- [ ] **IMP-10**: VTS API introspection smoke-test (`sidecar/scripts/vts_introspect_smoke.py`) validates `pyvts 0.3.3` produces expected fields against the actual Teto rig before extractor implementation lands (pyvts is aged with no commits since 2024-09-10)
+
+### Three-Category Code Parsing + Dispatch (Phase 7)
+
+- [ ] **PARSE-01**: New `code_extractor` decorator replaces `actions_extractor` in the orchestrator chain; single-pass bracket walker dispatches on opener char (`[` → action, `{` → variant, `<` → event); handles split-token-boundary cases for all three syntaxes (the milestone-1 `[`/`jo`/`y]` adversarial fix extends to `{` and `<`)
+- [ ] **PARSE-02**: `display_processor.filter_brackets` extends to strip all three syntaxes from chat display + TTS text
+- [ ] **PARSE-03**: Dispatch routing: action codes (`[xxx]`) feed the active plugin's input queue; variant codes (`{xxx}`) dispatch via `PyvtsSafeWriter` toggle hotkey; event codes (`<xxx>`) dispatch via VTS motion hotkey (registered during Phase 8 import)
+- [ ] **PARSE-04**: Parser ordering is load-bearing: `<think>...</think>` reasoning-strip runs FIRST (before sentence-buffer, before three-category extractor) so DeepSeek-R1's reasoning never leaks into event-code dispatch
+- [ ] **PARSE-05**: Variant collision policy is **radio-button single-active** — when LLM emits a new variant code while a previous variant is still toggled, the new variant turns ON and the previous variant turns OFF (deterministic, no additive layering)
+- [ ] **PARSE-06**: Event auto-completion uses `motion3.json.Meta.Duration + 1s blend pad`; if `Meta.Duration` is missing or > 10s, hardcoded 10s ceiling fallback fires the auto-untoggle
+- [ ] **PARSE-07**: Cross-category uniqueness check at sidecar boot: `plugin_action_codes ∩ variant_codes ∩ event_codes = ∅`; loud failure (boot-blocking exception) if collision detected
+- [ ] **PARSE-08**: Adversarial test fixtures verify split-token reassembly for all three categories: `[`/`joy]` → ActionIntent, `{`/`hold-mic}` → VariantToggle, `<`/`wave>` → EventFire; no bracket character ever leaks to chat or TTS
+
+### Slider HUD + Per-Param Lock (Phase 9)
+
+- [ ] **HUD-01**: Sidecar exposes a separate WebSocket endpoint `/hud/ws` that is opened only when the renderer's HUD route is mounted; closed on unmount; preserves the AVT-01 "renderer never sees 60 Hz traffic" rule for non-HUD operation
+- [ ] **HUD-02**: Compositor taps its emit step at 15 Hz throttle (sidecar-side gate, not renderer-side); ParamFrame deltas are pushed to `/hud/ws` connected clients
+- [ ] **HUD-03**: Renderer HUD shows a scrollable list of all writable params from `RigCapabilities`; each row contains: param name, value display, slider, lock toggle
+- [ ] **HUD-04**: Slider drag fires `set-lock(param_id, value)` over `/hud/ws`; lock auto-engages renderer-side optimistically; sidecar confirms within the next 15 Hz frame; the sidecar is single-source-of-truth for `compositor.lock_state`
+- [ ] **HUD-05**: Compositor merge applies locks LAST in the merge order; system primitives (lipsync writing `MouthOpenY`) override locks for safety — speech without mouth movement looks broken
+- [ ] **HUD-06**: Override badge surfaces on slider rows where a system primitive overrode the user lock (visual indication that lock didn't stick, with the cause — e.g., "lipsync overriding"); user understands without confusion
+- [ ] **HUD-07**: Lock state is session-only — process memory in sidecar, cleared on app restart (locks are a discovery tool, not a persistent preference)
+- [ ] **HUD-08**: New `GET /admin/rig-capabilities` HTTP endpoint returns rig param IDs + ranges + expressions + hotkeys for HUD's first-open population (synchronous fetch on HUD mount; not WS push, since the data is static for the session)
+
+### Verification + Cursor Polish (Phase 10)
+
+- [ ] **VFY-01**: Cursor sensor work is OPTIONAL polish for v2.0; the current sidecar-side cursor capture (Phase 4) keeps its in-VTS-window gate. **Documented future-direction:** a later milestone may introduce native Cubism rendering integration that supports better global cursor tracking; v2.0 doesn't bet on this. The original §14 SC #4 (cursor tracking visible across the desktop) becomes a PARTIAL verdict in §14 re-verification.
+- [ ] **VFY-02**: If Phase 10 cursor polish does land: drop the in-VTS-window gate at `cursor_driver.py:27-28`; add synthetic-canvas fallback (project against primary-monitor center when no VTS window detected); DPI awareness + multi-monitor robustness is deferred (cursor is no longer a v2.0 priority)
+- [ ] **VFY-03**: §14 success criteria re-run against the refactored architecture: all six SCs verified or explicitly marked PARTIAL with rationale (cursor SC may be PARTIAL per VFY-01); SC #2 (`[joy]` smooth fade) and SC #3 (body sway throughout utterance) are the highest-risk regressions because the responsibilities migrated from compositor-internal to default plugin
+- [ ] **VFY-04**: §14 verification record committed to `.planning/skeleton-verification.md` (the milestone-1 SC-01 deferred deliverable, now realized under refactored architecture); records pass/partial/fail verdicts for all six §14 SCs with concrete observations
+- [ ] **VFY-05**: Side-by-side §14 SC comparison harness (built as part of Phase 6's plumbing-week sub-phase) captures milestone-1 baselines; Phase 10 replays against current and reports tolerance-band passes (latency ±100ms, param values ±0.05 — defaults; tune at Phase 10 plan-phase if baselines indicate)
+
+---
+
 ## v2 Requirements
 
 Acknowledged for v1 horizon, deferred to subsequent milestones in priority order. Tracked but not in current roadmap.
