@@ -51,7 +51,8 @@ def test_head_only_fallback_uses_vts_input_params(tmp_path):
     }
     assert out["FaceAngleZ"] != 0.0
     assert out["FacePositionX"] != 0.0
-    assert abs(out["FacePositionZ"]) < abs(out["FaceAngleZ"])
+    assert abs(out["FaceAngleZ"]) > 1.0
+    assert abs(out["FacePositionZ"]) < 0.3
 
 
 def test_head_only_sway_alternates_side_to_side(tmp_path):

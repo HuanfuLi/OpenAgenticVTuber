@@ -16,9 +16,9 @@ class HeadOnlyStrategy:
         counter = math.sin(sway_phase + math.pi / 2.0)
         breathe = math.sin(breathe_phase)
         return {
-            "FaceAngleX": drive * 0.25 * counter,
-            "FaceAngleY": drive * 0.35 * counter,
-            "FaceAngleZ": drive * 0.75 * sway,
-            "FacePositionX": drive * 0.12 * sway,
-            "FacePositionZ": drive * -0.18 * (0.65 + 0.35 * breathe),
+            "FaceAngleX": drive * 3.0 * counter,
+            "FaceAngleY": drive * 5.0 * counter,
+            "FaceAngleZ": drive * 12.0 * sway,
+            "FacePositionX": drive * 0.35 * sway,
+            "FacePositionZ": drive * -0.25 * (0.65 + 0.35 * breathe),
         }

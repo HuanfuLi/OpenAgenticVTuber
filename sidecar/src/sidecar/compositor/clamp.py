@@ -6,7 +6,10 @@ from loguru import logger
 
 from contracts import ParamFrame
 from contracts.rig_capabilities import RigCapabilities
-from sidecar.compositor.param_id_resolver import VTS_TRACKING_INPUT_PARAM_IDS
+from sidecar.compositor.param_id_resolver import (
+    VTS_TRACKING_INPUT_PARAM_IDS,
+    VTS_TRACKING_INPUT_PARAM_RANGES,
+)
 
 _warned_drops: set[tuple[str, str, str]] = set()
 
@@ -21,6 +24,11 @@ def _warning_once(reason: str, mode: str, key: str, message: str, *args: object)
 
 def reset_drop_warning_cache() -> None:
     _warned_drops.clear()
+
+
+def _clamp_param_value(key: str, value: float) -> float:
+    lower, upper = VTS_TRACKING_INPUT_PARAM_RANGES.get(key, (-1.0, 1.0))
+    return max(lower, min(upper, float(value)))
 
 
 def clamp_and_validate(frame: ParamFrame, capabilities: RigCapabilities) -> ParamFrame:
@@ -42,7 +50,7 @@ def clamp_and_validate(frame: ParamFrame, capabilities: RigCapabilities) -> Para
                 value,
             )
             continue
-        add_params[key] = max(-1.0, min(1.0, float(value)))
+        add_params[key] = _clamp_param_value(key, float(value))
 
     for key, value_weight in frame.set_params.items():
         value, weight = value_weight
@@ -60,7 +68,7 @@ def clamp_and_validate(frame: ParamFrame, capabilities: RigCapabilities) -> Para
             )
             continue
         set_params[key] = (
-            max(-1.0, min(1.0, float(value))),
+            _clamp_param_value(key, float(value)),
             max(0.0, min(1.0, float(weight))),
         )
 

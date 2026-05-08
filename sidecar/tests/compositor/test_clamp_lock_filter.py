@@ -69,11 +69,11 @@ def test_clamp_and_validate_clamps_add_values_set_values_and_set_weights() -> No
 def test_clamp_and_validate_allows_vts_tracking_inputs_not_reflected_from_rig() -> None:
     frame = ParamFrame(
         add_params={
-            "FaceAngleX": 0.5,
-            "FaceAngleY": -0.25,
-            "FaceAngleZ": 0.1,
+            "FaceAngleX": 12.5,
+            "FaceAngleY": -8.25,
+            "FaceAngleZ": 7.1,
             "EyeRightY": 0.2,
-            "FacePositionZ": -0.15,
+            "FacePositionZ": -2.15,
         },
         set_params={"MouthOpen": (0.8, 1.0)},
     )
@@ -83,6 +83,29 @@ def test_clamp_and_validate_allows_vts_tracking_inputs_not_reflected_from_rig() 
 
     assert clamped.add_params == frame.add_params
     assert clamped.set_params == frame.set_params
+
+
+def test_clamp_and_validate_uses_tracking_input_ranges() -> None:
+    frame = ParamFrame(
+        add_params={
+            "FaceAngleX": 45.0,
+            "FaceAngleZ": -45.0,
+            "FacePositionZ": -9.0,
+            "FacePositionX": 2.0,
+        },
+        set_params={"MouthOpen": (2.0, 1.0)},
+    )
+    capabilities = RigCapabilities(writable_param_ids=[])
+
+    clamped = clamp_and_validate(frame, capabilities)
+
+    assert clamped.add_params == {
+        "FaceAngleX": 30.0,
+        "FaceAngleZ": -30.0,
+        "FacePositionZ": -3.0,
+        "FacePositionX": 1.0,
+    }
+    assert clamped.set_params == {"MouthOpen": (1.0, 1.0)}
 
 
 def test_clamp_and_validate_warns_unknown_param_once(monkeypatch) -> None:

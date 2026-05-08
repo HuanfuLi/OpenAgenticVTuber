@@ -52,7 +52,8 @@ async def test_speech_driver_applies_ema_to_body_strategy(tmp_path):
     out = driver.tick(0.25)
     assert out["FaceAngleZ"] != 0.0
     assert out["FacePositionX"] != 0.0
-    assert abs(out["FacePositionZ"]) < abs(out["FaceAngleZ"])
+    assert abs(out["FaceAngleZ"]) > 1.0
+    assert abs(out["FacePositionZ"]) < 0.3
 
 
 @pytest.mark.asyncio
