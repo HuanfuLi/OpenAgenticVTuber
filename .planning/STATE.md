@@ -1,18 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Plugin + Animation Control
-status: Defining requirements
-stopped_at: Milestone v2.0 started — gathering requirements and roadmap
-last_updated: "2026-05-08T04:43:12.515Z"
+milestone: v1.0
+milestone_name: milestone
+status: Defining requirements for milestone v2.0
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-05-08T04:51:14.124Z"
+last_activity: 2026-05-08 — Milestone v2.0 (Plugin + Animation Control) started
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 14
-  completed_plans: 12
-v1_pending:
-  - .planning/phases/04-action-compositor-vts-bridge-body-sway-investigation/04-04-PLAN.md
-  - .planning/phases/05-polish-contracts-codegen-14-verification/05-01-PLAN.md
+  completed_plans: 13
 ---
 
 # Project State
@@ -31,7 +29,7 @@ Plan: —
 Status: Defining requirements for milestone v2.0
 Last activity: 2026-05-08 — Milestone v2.0 (Plugin + Animation Control) started
 
-**Note on v1.0:** 04-04 (body-sway investigation) and 05-01 (codegen pipeline) remain pending from v1.0 and will execute on the way to v2.0 phase work. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
+**Note on v1.0:** 04-04 (body-sway investigation) is complete. 05-01 (codegen pipeline) remains pending from v1.0 and will execute on the way to v2.0 phase work. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
 
 ## Performance Metrics
 
@@ -69,6 +67,7 @@ Last activity: 2026-05-08 — Milestone v2.0 (Plugin + Animation Control) starte
 | Phase 04 P01 | 2h 15min | 3 tasks | 20 files |
 | Phase 04 P02 | 2h | 4 tasks | 25 files |
 | Phase 04 P03 | 45min | 3 tasks | 7 files |
+| Phase 04-action-compositor-vts-bridge-body-sway-investigation P04 | 7min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -101,6 +100,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Bound pending-input processing to a single active websocket on enqueue, matching the skeleton's single-renderer assumption.
 - [Phase 03]: Kept the Phase 4 speech-driver handoff queue-based and surfaced debug [SPEECH-ENV] logs from the no-op drain task for verification.
 - [Phase 03]: TTS-04 gap closure supersedes D-04 narrowly: SpeechEnvelopePayload now drives ParamMouthOpenY via a minimal mouth-driver seam; broader Phase 4 compositor/body-sway/expression/cursor scope remains deferred.
+- [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: head_only remains the ship default because live VTS/operator verification was unavailable and proxy_param is still unproven.
+- [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: exp3_modulation is not viable with Teto's current expression inventory; only ParamBHandIN appears and it is tied to prop/hand toggles, not body sway.
+- [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: Phase 5 SC-01 must re-run live A/B and replace deferred logs, plots, ratings, and missing clip.mp4 files before sign-off.
 
 ### Pending Todos
 
@@ -123,6 +125,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-07T23:18:14.081Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-05-08T04:51:14.120Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
