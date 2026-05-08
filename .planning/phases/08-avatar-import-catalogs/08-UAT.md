@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 08-avatar-import-catalogs
 source:
   - 08-01-SUMMARY.md
@@ -7,7 +7,7 @@ source:
   - 08-03-SUMMARY.md
   - 08-04-SUMMARY.md
 started: 2026-05-08T06:06:51.3290149-04:00
-updated: 2026-05-08T06:33:08.7356878-04:00
+updated: 2026-05-08T06:36:40.9983733-04:00
 ---
 
 ## Current Test
@@ -56,6 +56,7 @@ blocked: 0
   reason: "User clarified: Save catalog creates `_avatar_overrides.yaml`, but it is written under `Live2D/重音テト/` instead of the expected runtime/evidence path `avatars/teto/_avatar_overrides.yaml`. Imported model folders may live anywhere outside the repo, so Save must write the runtime override to `avatars/teto/_avatar_overrides.yaml` and leave the source folder intact."
   severity: blocker
   test: 1
+  root_cause: "sidecar/src/sidecar/admin/avatar.py::commit_avatar treats AvatarImportPlan.source_rig_path as the persistence directory. That field should remain provenance metadata for the selected external rig folder, while the active runtime override must be written to the app-managed avatar directory `avatars/<avatar_id>/_avatar_overrides.yaml`."
   artifacts:
     - path: "apps/renderer/src/screens/AvatarImport/AvatarImport.tsx"
       issue: "Save flow writes the override to the selected source rig path, not the expected runtime/evidence path."
@@ -69,11 +70,13 @@ blocked: 0
     - "Implement the Phase 8 runtime/evidence path policy: Save catalog writes validated YAML to `avatars/teto/_avatar_overrides.yaml` for the current avatar and does not write into or mutate the selected source rig folder."
     - "Ensure `avatars/teto/_avatar_overrides.yaml` exists and validates after the native-dialog dogfood flow."
     - "Keep `teto_overrides.yaml` treated as legacy; it is not the correct Phase 8 target artifact."
+  debug_session: "diagnosed inline by gsd-debugger 019e0726-bd81-7443-a6a8-455942dad70f"
 - truth: "Avatar import Save/Cancel controls are placed at the bottom of the page without a misaligned dedicated banner"
   status: failed
   reason: "User reported: Cancel and Save catalogs controls are contained in a misaligned dedicated banner; they should just be placed at the bottom of the page."
   severity: cosmetic
   test: 1
+  root_cause: "apps/renderer/src/screens/AvatarImport/AvatarImport.tsx wraps Save/Cancel in `styles.footer`, and apps/renderer/src/screens/AvatarImport/AvatarImport.module.css makes `.footer` a sticky footer-style banner with `position: sticky`, `bottom: 0`, and a dedicated background."
   artifacts:
     - path: "apps/renderer/src/screens/AvatarImport/AvatarImport.tsx"
       issue: "Save/Cancel control layout uses an unwanted dedicated banner container."
@@ -82,11 +85,13 @@ blocked: 0
   missing:
     - "Remove the dedicated banner treatment for Save/Cancel controls."
     - "Place Cancel and Save catalogs buttons naturally at the bottom of the page."
+  debug_session: "diagnosed inline by gsd-debugger 019e0726-bde8-7c63-9b22-921d3b44299e"
 - truth: "VTS introspection smoke authenticates successfully and returns a HotkeyList response with `availableHotkeys` as a list"
   status: failed
   reason: "User reported: VTS API was enabled and VTS responded, but AuthenticationResponse returned authenticated=False because the token is invalid or revoked. The following HotkeyList request failed with APIError errorID 8 because the session was not authenticated. VTS now shows one plugin where two existed before this phase/regression."
   severity: blocker
   test: 5
+  root_cause: "sidecar/scripts/vts_introspect_smoke.py uses a new VTS plugin name (`AgenticLLMVTuber Phase 8 Introspection Smoke`) while reusing the shared token file `sidecar/.vts_token.txt`, which may contain a token issued for another plugin identity. Vendored pyvts reuses any non-empty token file, so VTS rejects authentication as invalid/revoked. The script then ignores the false return from `request_authenticate()` and sends HotkeyList while unauthenticated."
   artifacts:
     - path: "sidecar/scripts/vts_introspect_smoke.py"
       issue: "Smoke continues to HotkeyList after authentication failure and reports a misleading HotkeyList shape failure instead of stopping on auth failure."
@@ -98,3 +103,5 @@ blocked: 0
     - "Diagnose why VTS authentication token is invalid/revoked after Phase 8 changes."
     - "Make `vts_introspect_smoke.py` fail loud on AuthenticationResponse authenticated=False before issuing authenticated requests."
     - "Document or automate token reset/re-auth path when VTube Studio revokes the plugin token."
+    - "Stop sharing one token file across different VTS plugin identities, or use one stable AgenticLLMVTuber plugin identity consistently."
+  debug_session: "diagnosed inline by gsd-debugger 019e0726-be6d-7413-9f42-93ae7d9e0db1"
