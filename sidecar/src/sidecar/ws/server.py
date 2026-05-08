@@ -219,7 +219,7 @@ async def lifespan(app: FastAPI):
                 sentence_complete_queue=compositor_sentence_complete_queue,
                 writer=writer,
                 capabilities=capabilities,
-                overrides=overrides,
+                avatar_dir=teto_dir,
             )
             compositor = Compositor(
                 writer=writer,

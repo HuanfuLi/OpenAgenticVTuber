@@ -80,6 +80,7 @@ def test_sentence_complete_decays_expression_and_expires_by_ramp_out(tmp_path):
     driver.tick(RAMP_IN_MS / 1000.0)
     done_queue.put_nowait(1)
     end = 1.0
+    driver.tick(end)
 
     decayed_weight = _param_joy(driver.tick(end + ((RAMP_OUT_MS / 2.0) / 1000.0)))
     expected_decayed = 0.8 * (1.0 - ease_out_cubic(0.5))

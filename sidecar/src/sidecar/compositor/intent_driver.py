@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 from loguru import logger
 
 from contracts import ActionIntent
 from sidecar.avatar.capabilities import AvatarCapabilities
-from sidecar.avatar.overrides import DiscoveredHotkey, TetoOverrides
+from sidecar.compositor.easing import ease_out_cubic
 
 RAMP_IN_MS = 300.0
 RAMP_OUT_MS = 600.0
@@ -32,14 +34,15 @@ class IntentDriver:
         sentence_complete_queue: asyncio.Queue[int],
         writer=None,
         capabilities: AvatarCapabilities | None = None,
-        overrides: TetoOverrides | None = None,
+        avatar_dir: Path | None = None,
     ) -> None:
         self._intent_queue = intent_queue
         self._sentence_complete_queue = sentence_complete_queue
         self._writer = writer
         self._capabilities = capabilities
-        self._overrides = overrides
+        self._avatar_dir = avatar_dir
         self._active: dict[str, _ActiveIntent] = {}
+        self._expression_params: dict[str, list[tuple[str, float]]] = {}
 
     def tick(self, now: float) -> dict[str, tuple[float, float]]:
         self._drain_queues(now)
@@ -51,7 +54,18 @@ class IntentDriver:
                     expired.append(name)
         for name in expired:
             self._active.pop(name, None)
-        return {}
+
+        out: dict[str, tuple[float, float]] = {}
+        for intent in self._active.values():
+            params = self._params_for_expression(intent.name)
+            if not params:
+                continue
+            weight = self._weight_for(intent, now)
+            if weight <= 0.0 and intent.ending_at is not None:
+                continue
+            for param_id, value in params:
+                out[param_id] = (value, weight)
+        return out
 
     def _drain_queues(self, now: float) -> None:
         while True:
@@ -60,12 +74,12 @@ class IntentDriver:
             except asyncio.QueueEmpty:
                 break
             if intent.kind == "expression":
-                self._active[intent.name] = _ActiveIntent(
+                normalized_name = _normalize(intent.name)
+                self._active[normalized_name] = _ActiveIntent(
                     name=intent.name,
-                    strength=intent.strength,
+                    strength=_clamp(intent.strength),
                     started_at=now,
                 )
-                self._schedule_hotkey(intent.name, active=True)
             self._intent_queue.task_done()
 
         complete_seen = False
@@ -80,45 +94,47 @@ class IntentDriver:
             for intent in list(self._active.values()):
                 if intent.ending_at is None:
                     intent.ending_at = now
-                    self._schedule_hotkey(intent.name, active=False)
 
-    def _schedule_hotkey(self, intent_name: str, *, active: bool) -> None:
-        if self._writer is None or self._overrides is None:
-            return
-        hotkey = self._resolve_hotkey(intent_name)
-        if hotkey is None:
-            logger.warning("[INTENT-HOTKEY] no hotkey found for expression={!r}", intent_name)
-            return
-        action = "on" if active else "off"
-        logger.info(
-            "[INTENT-HOTKEY] trigger expression={!r} action={} hotkey={!r}",
-            intent_name,
-            action,
-            hotkey.name,
-        )
-        asyncio.create_task(self._fire_hotkey(hotkey))
-
-    async def _fire_hotkey(self, hotkey: DiscoveredHotkey) -> None:
-        try:
-            request = self._writer.vts_request.requestTriggerHotKey(hotkey.hotkey_id)
-            await self._writer.request(request)
-        except Exception:
-            logger.exception("[INTENT-HOTKEY] trigger failed hotkey={!r}", hotkey.name)
-
-    def _resolve_hotkey(self, intent_name: str) -> DiscoveredHotkey | None:
-        if self._overrides is None:
-            return None
-        desired_file = self._expression_file(intent_name)
+    def _params_for_expression(self, intent_name: str) -> list[tuple[str, float]]:
         normalized_name = _normalize(intent_name)
+        if normalized_name in self._expression_params:
+            return self._expression_params[normalized_name]
 
-        for hotkey in self._overrides.discovered_hotkeys:
-            if hotkey.is_meta or not hotkey.llm_emittable:
-                continue
-            if desired_file and hotkey.file.casefold() == desired_file.casefold():
-                return hotkey
-            if normalized_name and normalized_name in _normalize(hotkey.name):
-                return hotkey
-        return None
+        expression_file = self._expression_file(intent_name)
+        if expression_file is None:
+            logger.warning("[INTENT-EXPRESSION] unknown expression={!r}", intent_name)
+            self._expression_params[normalized_name] = []
+            return []
+
+        paths: list[Path] = []
+        if self._avatar_dir is not None:
+            paths.append(self._avatar_dir / "Expressions" / expression_file)
+        paths.append(
+            Path(__file__).resolve().parents[4]
+            / "Live2D"
+            / "重音テト"
+            / "Expressions"
+            / expression_file
+        )
+
+        exp3_path = next((path for path in paths if path.exists()), None)
+        if exp3_path is None:
+            logger.warning(
+                "[INTENT-EXPRESSION] missing exp3 file expression={!r} file={!r}",
+                intent_name,
+                expression_file,
+            )
+            self._expression_params[normalized_name] = []
+            return []
+
+        raw = json.loads(exp3_path.read_text(encoding="utf-8"))
+        params = [
+            (entry["Id"], float(entry.get("Value", 0.0)))
+            for entry in raw.get("Parameters", [])
+            if entry.get("Id")
+        ]
+        self._expression_params[normalized_name] = params
+        return params
 
     def _expression_file(self, intent_name: str) -> str | None:
         if self._capabilities is None:
@@ -129,6 +145,19 @@ class IntentDriver:
                 return expression.file
         return None
 
+    def _weight_for(self, intent: _ActiveIntent, now: float) -> float:
+        strength = _clamp(intent.strength)
+        if intent.ending_at is not None:
+            elapsed_ms = max(0.0, (now - intent.ending_at) * 1000.0)
+            return strength * (1.0 - ease_out_cubic(elapsed_ms / RAMP_OUT_MS))
+
+        elapsed_ms = max(0.0, (now - intent.started_at) * 1000.0)
+        return strength * ease_out_cubic(elapsed_ms / RAMP_IN_MS)
+
 
 def _normalize(value: str) -> str:
     return "".join(ch for ch in value.casefold() if ch.isalnum())
+
+
+def _clamp(value: float) -> float:
+    return max(0.0, min(1.0, float(value)))
