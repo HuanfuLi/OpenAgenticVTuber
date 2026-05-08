@@ -188,7 +188,7 @@ Plans:
 - [x] 08-02-PLAN.md — Type detector (5-shape ladder + Cubism 5.3 moc3 header check) + atomic overrides_writer (.tmp → fsync → os.replace, jsonschema pre-validate) + sidecar admin/avatar.py FastAPI router (POST /import + /import/commit + GET /import/current) + Electron IPC handlers (avatar:pickFolder, avatar:requestImportPlan, avatar:commitOverrides) + 5 hand-written TS contract mirrors — Wave 2 (IMP-01, IMP-08)
 - [x] 08-03-PLAN.md — Dedicated React AvatarImport route (single-page scrollable per D-A3-1, NOT modal) + VariantTable/EventTable with 4 per-row controls + usePlaceholderGate (^exp_?\d+$/i regex) + Save-disabled friction with scroll-to-first-placeholder UX + AppShell + route-store wiring + Settings "Edit avatar catalogs" entrypoint + Cubism 5.3 reject UX + 9+ vitest assertions — Wave 3 (IMP-07)
 - [x] 08-04-PLAN.md — Gap closure: add DefaultPluginActionBinding contracts, default_plugin_action_bindings fields, generated TS/schema output, and sidecar avatar_overrides schema support — Wave 4 (IMP-05, IMP-09, ARCH-02)
-- [ ] 08-05-PLAN.md — Gap closure: wire OLVT emotionMap through sidecar import/commit/RigCapabilities, produce Teto native-dialog dogfood evidence, and persist VTS smoke PASS/BLOCKED evidence — Wave 5 (IMP-05, IMP-08, IMP-09, IMP-10, ARCH-02)
+- [ ] 08-05-PLAN.md — Gap closure: fix app-managed override save path, bottom-of-page Save/Cancel controls, VTS smoke stable auth/fail-fast behavior, then rerun Teto native-dialog dogfood and VTS PASS/BLOCKED evidence — Wave 5 (IMP-05, IMP-08, IMP-09, IMP-10, ARCH-02)
 
 **UI hint**: yes  <!-- Dedicated React route for the review screen; multi-row catalog editor is core UI surface. -->
 
