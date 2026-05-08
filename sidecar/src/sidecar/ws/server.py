@@ -27,6 +27,7 @@ from sidecar.vts import LoggingParameterWriter, PyVTSParameterWriter, SpeechMout
 from sidecar.vts.handshake import connect_and_authenticate
 from sidecar.vts.discrete_dispatcher import DiscreteDispatcher
 from sidecar.vts.pyvts_writer import PyvtsSafeWriter
+from sidecar.admin import avatar as admin_avatar
 
 from .handlers import handle_control, handle_shutdown, handle_text_input  # noqa: F401 -- side-effect: registers @on(...)
 from .protocol import route
@@ -337,3 +338,4 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 from ..llm.setup_test import router as admin_router  # noqa: E402
 
 app.include_router(admin_router)
+app.include_router(admin_avatar.router)
