@@ -70,7 +70,7 @@ blocked: 0
     - "Implement the Phase 8 runtime/evidence path policy: Save catalog writes validated YAML to `avatars/teto/_avatar_overrides.yaml` for the current avatar and does not write into or mutate the selected source rig folder."
     - "Ensure `avatars/teto/_avatar_overrides.yaml` exists and validates after the native-dialog dogfood flow."
     - "Keep `teto_overrides.yaml` treated as legacy; it is not the correct Phase 8 target artifact."
-  debug_session: "diagnosed inline by gsd-debugger 019e0726-bd81-7443-a6a8-455942dad70f"
+  debug_session: ".planning/debug/phase-8-uat-save-path.md"
 - truth: "Avatar import Save/Cancel controls are placed at the bottom of the page without a misaligned dedicated banner"
   status: failed
   reason: "User reported: Cancel and Save catalogs controls are contained in a misaligned dedicated banner; they should just be placed at the bottom of the page."
