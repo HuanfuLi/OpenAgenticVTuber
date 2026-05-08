@@ -8,6 +8,11 @@
 # Expressions panel.
 
 expressions:
+  # Required by the Phase 4 headline demo: the system prompt teaches the LLM
+  # to emit [joy], and actions_extractor only emits intents for names listed
+  # here. Love is the closest existing Teto expression asset for that alias.
+  - name: joy
+    file: Love.exp3.json
   - name: Blush
     file: Blush.exp3.json
   - name: chibi

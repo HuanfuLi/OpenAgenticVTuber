@@ -6,11 +6,12 @@ chain with the split-bracket adversarial fixture and assert that no
 ActionIntents (joy=expression, hold-mic=action) are produced.
 """
 from typing import AsyncIterator
+from pathlib import Path
 
 import pytest
 
 from contracts import ActionIntent
-from sidecar.avatar.capabilities import AvatarCapabilities, Expression, Hotkey
+from sidecar.avatar.capabilities import AvatarCapabilities, Expression, Hotkey, load_capabilities
 from sidecar.orchestrator.output_types import SentenceOutput
 from sidecar.orchestrator.sentence_divider import SentenceWithTags
 from sidecar.orchestrator.transformers import (
@@ -146,3 +147,20 @@ async def test_full_decorator_chain_strips_brackets():
     kinds = sorted(i.kind for i in all_intents)
     assert names == ["hold-mic", "joy"], f"got names={names}, intents={all_intents}"
     assert kinds == ["action", "expression"], f"got kinds={kinds}"
+
+
+@pytest.mark.asyncio
+async def test_real_teto_avatar_yaml_extracts_joy_intent():
+    repo_root = Path(__file__).resolve().parents[2]
+    caps = load_capabilities(repo_root / "avatars" / "teto")
+
+    @actions_extractor(caps)
+    async def fake() -> AsyncIterator:
+        yield SentenceWithTags(text="[joy] Got it!", tags=[])
+
+    items = [x async for x in fake()]
+    sentence, intents = items[0]
+
+    assert sentence.text == "[joy] Got it!"
+    assert len(intents) == 1
+    assert intents[0] == ActionIntent(kind="expression", name="joy", avatar_id="teto")
