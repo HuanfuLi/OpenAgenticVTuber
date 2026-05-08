@@ -275,17 +275,77 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | AVT-08 | Phase 4 | Complete |
 | AVT-09 | Phase 4 | Complete |
 | AVT-10 | Phase 4 | Complete |
-| SC-01 | Phase 5 | Pending |
+| SC-01 | Phase 5 → Phase 10 | Migrated 2026-05-08 (skeleton-verification.md ceremony lands as v2.0 Phase 10 exit criterion) |
 | SC-02 | Phase 5 | Pending |
+| ARCH-01 | Phase 6 | Pending — strict system/plugin separation invariant |
+| ARCH-02 | Phase 6 | Pending — `RigCapabilities` shared with Phase 9 HUD |
+| ARCH-03 | Phase 6 | Pending — orchestrator-decorated token stream feed |
+| ARCH-04 | Phase 6 | Pending — `AsyncIterator[ParamFrame]` ≤ 60 Hz contract |
+| ARCH-05 | Phase 6 | Pending — fixed compositor merge order |
+| ARCH-06 | Phase 6 | Pending — single pyvts writer rule (extends AVT-04) |
+| ARCH-07 | Phase 6 | Pending — in-sidecar Python, no isolation, full trust |
+| ARCH-08 | Phase 6 | Pending — plugin discovery precedence (`userData/` > in-tree) |
+| ARCH-09 | Phase 6 | Pending — vocabulary extension at orchestrator boot, KV-cache stable |
+| ARCH-10 | Phase 6 | Pending — runtime decoupled from M1 primitives; `IntentDriver` deleted |
+| ARCH-11 | Phase 6 | Pending — `api_version: "1.0"` gating |
+| ARCH-12 | Phase 6 | Pending — system-primitive override list explicit + per-param |
+| PLG-01 | Phase 6 | Pending — single-active body-motion plugin from `plugin.yaml` |
+| PLG-02 | Phase 6 | Pending — sorted action_codes → fixed-delimiter system-prompt fragment |
+| PLG-03 | Phase 6 | Pending — `BodyMotionPlugin` ABC with three lifecycle hooks |
+| PLG-04 | Phase 6 | Pending — async-gen supervisor + circuit breaker + null-plugin fallback |
+| PLG-05 | Phase 6 | Pending — `[0,1]` clamp at compositor → renderer boundary |
+| PLG-06 | Phase 6 | Pending — jsonschema manifest + reserved-name guard |
+| PLG-07 | Phase 6 | Pending — default plugin in-tree absorbs `IntentDriver` + body-sway |
+| PLG-08 | Phase 6 | Pending — discovery scans both in-tree and `userData/` |
+| PLG-09 | Phase 6 | Pending — startup-only switching (no runtime hot-swap) |
+| PLG-10 | Phase 6 | Pending — manifest hot-reload via `watchdog` (engineer DX) |
+| IMP-01 | Phase 8 | Pending — file-dialog import + sidecar type detection |
+| IMP-02 | Phase 8 | Pending — VTS `.vtube.json` Hotkeys[] extractor |
+| IMP-03 | Phase 8 | Pending — Cubism `model3.json` placeholder relabel-required |
+| IMP-04 | Phase 8 | Pending — Cubism-bare extractor (events from .motion3.json only) |
+| IMP-05 | Phase 8 | Pending — OLVT `model_dict.json` drop-in (emotionMap + actionMap) |
+| IMP-06 | Phase 8 | Pending — event catalog from .motion3.json group keys + filenames |
+| IMP-07 | Phase 8 | Pending — mandatory review React route (NOT modal) + Save-disabled friction |
+| IMP-08 | Phase 8 | Pending — re-openable from Settings + `_avatar_overrides.yaml` jsonschema-validated |
+| IMP-09 | Phase 8 | Pending — `TetoOverrides` → `AvatarOverrides` rename |
+| IMP-10 | Phase 8 | Pending — `vts_introspect_smoke.py` against actual Teto rig |
+| PARSE-01 | Phase 7 | Pending — `code_extractor` decorator (single-pass bracket walker) |
+| PARSE-02 | Phase 7 | Pending — `display_processor.filter_brackets` extension to all three syntaxes |
+| PARSE-03 | Phase 7 | Pending — three-path dispatch (action / variant / event) |
+| PARSE-04 | Phase 7 | Pending — `<think>` reasoning-strip runs FIRST in chain |
+| PARSE-05 | Phase 7 | Pending — radio-button single-active variant policy |
+| PARSE-06 | Phase 7 | Pending — `motion3.json.Meta.Duration + 1s` event auto-completion + 10s fallback |
+| PARSE-07 | Phase 7 | Pending — cross-category uniqueness check at boot (loud failure) |
+| PARSE-08 | Phase 7 | Pending — split-token reassembly fixtures for all three categories |
+| HUD-01 | Phase 9 | Pending — dedicated `/hud/ws` WebSocket endpoint |
+| HUD-02 | Phase 9 | Pending — sidecar 15 Hz throttle gate |
+| HUD-03 | Phase 9 | Pending — scrollable param list from `RigCapabilities` |
+| HUD-04 | Phase 9 | Pending — drag → optimistic lock + sidecar single-source-of-truth |
+| HUD-05 | Phase 9 | Pending — locks LAST in merge; system-primitive override list |
+| HUD-06 | Phase 9 | Pending — override-badge UX surfaces lock-overridden rows |
+| HUD-07 | Phase 9 | Pending — session-only lock persistence |
+| HUD-08 | Phase 9 | Pending — `GET /admin/rig-capabilities` HTTP endpoint |
+| VFY-01 | Phase 10 | Pending — cursor polish OPTIONAL; SC #4 may be PARTIAL |
+| VFY-02 | Phase 10 | Pending — if cursor lands: drop in-canvas gate + synthetic fallback |
+| VFY-03 | Phase 10 | Pending — re-run all six §14 SCs against refactored architecture |
+| VFY-04 | Phase 10 | Pending — `.planning/skeleton-verification.md` commit |
+| VFY-05 | Phase 10 | Pending — side-by-side baseline harness (built in Phase 6 plumbing-week) |
 
-**Cross-phase note**: PLUMB-05 (pyvts vendoring) is logically Phase 1 plumbing but is *consumed* by Phase 4 (compositor's single-writer wrapper around the vendored pyvts). It is mapped to Phase 1 only — Phase 4 builds on Phase 1's deliverable.
+**Cross-phase note (M1)**: PLUMB-05 (pyvts vendoring) is logically Phase 1 plumbing but is *consumed* by Phase 4 (compositor's single-writer wrapper around the vendored pyvts). It is mapped to Phase 1 only — Phase 4 builds on Phase 1's deliverable.
+
+**Cross-phase notes (v2.0):**
+- ARCH-01..12 are cross-cutting architectural invariants. They are *primary-mapped* to Phase 6 (where the contracts cement) but every subsequent phase (7, 8, 9, 10) must honor them.
+- ARCH-02 (`RigCapabilities`) is *defined* in Phase 6 and *consumed* by Phase 9 HUD `GET /admin/rig-capabilities`.
+- ARCH-06 (single pyvts writer) is *introduced* in milestone-1 (AVT-04) and *extended* to all v2.0 entry points (plugin output, variant dispatch, event dispatch, HUD locks, cursor frames). CI grep-test runs in Phase 6's plumbing-week.
+- VFY-05 (side-by-side baseline harness) is *built* in Phase 6's plumbing-week and *consumed* in Phase 10.
+- SC-01 *migrated* from Phase 5 to Phase 10 (deferred 2026-05-08; skeleton-verification.md ceremony lands under refactored architecture).
 
 **Coverage:**
-- v1 requirements: 25 total
-- Mapped to phases: 25 ✓
-- Unmapped: 0
-- Distribution: Phase 1 = 5, Phase 2 = 4, Phase 3 = 4, Phase 4 = 10, Phase 5 = 2
+- v1 requirements: 25 total — Mapped to phases: 25 ✓
+- v2.0 requirements: 53 total — Mapped to phases: 53 ✓
+- Total: 78 — Mapped: 78 ✓ — Unmapped: 0
+- Distribution: Phase 1 = 5, Phase 2 = 4, Phase 3 = 4, Phase 4 = 10, Phase 5 = 2 (SC-01 migrated to 10), Phase 6 = 22 (12 ARCH + 10 PLG), Phase 8 = 10, Phase 7 = 8, Phase 9 = 8, Phase 10 = 5
 
 ---
 *Requirements defined: 2026-05-06*
-*Last updated: 2026-05-06 — traceability populated by roadmapper (5-phase walking-skeleton structure)*
+*Last updated: 2026-05-08 — v2.0 traceability appended by roadmapper (5 v2.0 phases, 53 requirements; gating-derived order 6 → 8 → 7 → 9 → 10)*
