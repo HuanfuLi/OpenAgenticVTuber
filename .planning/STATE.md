@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
-status: verifying
-stopped_at: Completed 08-04-PLAN.md
-last_updated: "2026-05-08T09:41:01.294Z"
+status: executing
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-05-08T10:05:05.692Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
   completed_phases: 5
-  total_plans: 22
-  completed_plans: 21
+  total_plans: 27
+  completed_plans: 22
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon — v2.0 is infrastructure prep on the way there)
-**Current focus:** Phase 08 — avatar-import-catalogs
+**Current focus:** Phase 06 — plugin-runtime-default-plugin
 
 ## Current Position
 
-Phase: 08 (avatar-import-catalogs) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 06 (plugin-runtime-default-plugin) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-05-08
 
 **Note on v1.0:** Phase 4 body-sway investigation and Phase 5 codegen are complete. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
@@ -80,6 +80,7 @@ Last activity: 2026-05-08
 | Phase 08-avatar-import-catalogs P02 | 55min | 5 tasks | 25 files |
 | Phase 08-avatar-import-catalogs P03 | 7min | 3 tasks | 11 files |
 | Phase 08-avatar-import-catalogs P04 | 6min | 2 tasks | 17 files |
+| Phase 06-plugin-runtime-default-plugin P01 | 7min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,9 @@ Recent decisions affecting current work:
 - [Phase 08-avatar-import-catalogs]: Settings uses the existing useStore().setView path instead of adding a second route-store dependency.
 - [Phase 08-avatar-import-catalogs]: Plan 08-04 preserves OLVT emotionMap entries through DefaultPluginActionBinding rather than generic emotion_bindings.
 - [Phase 08-avatar-import-catalogs]: Plan 08-04 applies the existing reserved-name rejection policy to default plugin action_code validation in persisted avatar overrides.
+- [Phase 06-plugin-runtime-default-plugin]: Plugin manifests reject incompatible API major versions while accepting the v1.x contract line.
+- [Phase 06-plugin-runtime-default-plugin]: userData plugin manifests override repo plugin manifests with the same name; duplicate userData names fail loudly.
+- [Phase 06-plugin-runtime-default-plugin]: MouthOpen is the only system primitive override because lipsync owns the VTS mouth input.
 
 ### Pending Todos
 
@@ -155,6 +159,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-08T09:41:01.288Z
-Stopped at: Completed 08-04-PLAN.md
+Last session: 2026-05-08T10:05:05.686Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
