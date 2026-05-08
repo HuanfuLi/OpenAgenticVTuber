@@ -35,19 +35,19 @@ def _cursor_to_param_angles(
     dy = cy - face_y
     if (dx * dx + dy * dy) ** 0.5 < dead_zone_px:
         return {
-            "FaceAngleX": 0.0,
-            "FaceAngleY": 0.0,
-            "EyeLeftX": 0.0,
-            "EyeRightY": 0.0,
+            "ParamAngleX": 0.0,
+            "ParamAngleY": 0.0,
+            "ParamEyeBallX": 0.0,
+            "ParamEyeBallY": 0.0,
         }
 
     nx = max(-1.0, min(1.0, dx / (width * 0.5)))
     ny = max(-1.0, min(1.0, dy / (height * 0.5)))
     return {
-        "FaceAngleX": nx * head_max_deg,
-        "FaceAngleY": -ny * head_max_deg,
-        "EyeLeftX": nx * eye_max_deg / head_max_deg,
-        "EyeRightY": -ny * eye_max_deg / head_max_deg,
+        "ParamAngleX": nx * head_max_deg,
+        "ParamAngleY": -ny * head_max_deg,
+        "ParamEyeBallX": nx * eye_max_deg / head_max_deg,
+        "ParamEyeBallY": -ny * eye_max_deg / head_max_deg,
     }
 
 
