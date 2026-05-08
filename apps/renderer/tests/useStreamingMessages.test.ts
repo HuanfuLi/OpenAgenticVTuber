@@ -65,6 +65,23 @@ describe('useStreamingMessages reducer', () => {
     expect(after[1]!.isThinking).toBe(false)
   })
 
+  it('duplicate chain-start keeps one THINKING placeholder for the turn', () => {
+    appendUserMessage('hi')
+    setThinking(true)
+    setThinking(true)
+
+    const beforeAudio = _internalState().messages
+    expect(beforeAudio).toHaveLength(2)
+    expect(beforeAudio[1]!.text).toBe(COPY.CHAT.THINKING)
+    expect(beforeAudio[1]!.isThinking).toBe(true)
+
+    appendAssistantSentence('First sentence.', 1)
+    const afterAudio = _internalState().messages
+    expect(afterAudio).toHaveLength(2)
+    expect(afterAudio[1]!.text).toBe('First sentence.')
+    expect(afterAudio[1]!.isThinking).toBe(false)
+  })
+
   it('IP-6 edge: full-text arrives but no audio -- bubble stays, banner can fire', () => {
     appendUserMessage('hi')
     setThinking(true)

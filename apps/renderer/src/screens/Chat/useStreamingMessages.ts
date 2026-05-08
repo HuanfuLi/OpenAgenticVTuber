@@ -93,6 +93,17 @@ export function appendUserMessage(text: string): void {
  */
 export function setThinking(on: boolean): void {
   if (on) {
+    const messages = state.messages
+    const last = messages[messages.length - 1]
+    if (last?.role === 'assistant' && last.isThinking) {
+      setState({
+        // Duplicate chain-start envelopes can arrive for the same turn; keep
+        // the existing placeholder so the first audio sentence still replaces it.
+        forceNewMessage: false,
+        banner: null
+      })
+      return
+    }
     const next: StreamingMessage = {
       id: genId(),
       role: 'assistant',
@@ -100,7 +111,7 @@ export function setThinking(on: boolean): void {
       isThinking: true
     }
     setState({
-      messages: [...state.messages, next],
+      messages: [...messages, next],
       // The Thinking bubble IS the new turn's bubble, so the seal flag is
       // consumed here -- otherwise the first sentence's appendAssistantSentence
       // would see forceNewMessage=true and create yet another bubble. OLVT's
