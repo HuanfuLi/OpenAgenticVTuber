@@ -7,6 +7,14 @@ import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-imp
 
 type Unsubscribe = () => void
 
+export interface BodyMotionPluginSummary {
+  name: string
+  version: string | null
+  description: string | null
+  source: 'repo' | 'userData'
+  path: string
+}
+
 const api = {
   // Sidecar lifecycle
   getReadyUrl: (): Promise<string | null> => ipcRenderer.invoke('sidecar:getReadyUrl'),
@@ -37,6 +45,8 @@ const api = {
   saveStoredConfig: (cfg: StoredConfig): Promise<void> =>
     ipcRenderer.invoke('config:save', cfg),
   clearStoredConfig: (): Promise<void> => ipcRenderer.invoke('config:clear'),
+  listBodyMotionPlugins: (): Promise<BodyMotionPluginSummary[]> =>
+    ipcRenderer.invoke('plugin:listBodyMotionPlugins'),
 
   // Avatar import
   pickAvatarFolder: (): Promise<string | null> => ipcRenderer.invoke('avatar:pickFolder'),

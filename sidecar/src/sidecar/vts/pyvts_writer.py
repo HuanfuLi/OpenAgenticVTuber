@@ -20,6 +20,8 @@ from loguru import logger
 
 from contracts import ParamFrame
 
+COMPOSITOR_PLUGIN_NAME = "AgenticLLMVTuber Phase4 Safe Writer"
+
 
 class VTubeStudioAPIError(RuntimeError):
     def __init__(self, response: dict[str, Any]) -> None:
@@ -46,7 +48,7 @@ class PyvtsSafeWriter:
                 token_path = Path(__file__).resolve().parents[3] / ".vts_token.txt"
             if plugin_info is None:
                 plugin_info = {
-                    "plugin_name": "AgenticLLMVTuber Phase3 Mouth Driver",
+                    "plugin_name": COMPOSITOR_PLUGIN_NAME,
                     "developer": "AgenticLLMVTuber",
                     "authentication_token_path": str(token_path),
                 }

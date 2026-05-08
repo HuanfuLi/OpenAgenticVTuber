@@ -23,8 +23,13 @@ export interface ProviderConfig {
   modelName: string // empty string = auto-detect (LM Studio only)
 }
 
+export interface BodyMotionPluginConfig {
+  activePluginName: string
+}
+
 export interface StoredConfig {
   provider: ProviderConfig
+  plugin?: BodyMotionPluginConfig
   hasCompletedSetup: boolean
   schemaVersion: 1
 }

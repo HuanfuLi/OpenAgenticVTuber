@@ -9,6 +9,7 @@
 
 import { spawn, type ChildProcess } from 'node:child_process'
 import { app } from 'electron'
+import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { loadConfig, type StoredConfig } from './safe-storage'
 
@@ -21,6 +22,14 @@ export interface SidecarHandle {
   child: ChildProcess
   wsUrl: string
   port: number
+}
+
+export interface BodyMotionPluginSummary {
+  name: string
+  version: string | null
+  description: string | null
+  source: 'repo' | 'userData'
+  path: string
 }
 
 interface SidecarSupervisorState {
@@ -62,6 +71,65 @@ export function buildSidecarConfigEnv(stored: StoredConfig | null): string | und
   })
 }
 
+export function activeBodyMotionPluginName(stored: StoredConfig | null): string {
+  const configured = stored?.plugin?.activePluginName?.trim()
+  return configured || 'default'
+}
+
+function parseYamlScalar(text: string, key: string): string | null {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = text.match(new RegExp(`^${escapedKey}:\\s*(?:"([^"]*)"|'([^']*)'|([^#\\r\\n]+))`, 'm'))
+  const value = match?.[1] ?? match?.[2] ?? match?.[3]
+  return value ? value.trim() : null
+}
+
+function readPluginSummary(
+  manifestPath: string,
+  source: BodyMotionPluginSummary['source']
+): BodyMotionPluginSummary | null {
+  try {
+    const text = fs.readFileSync(manifestPath, 'utf8') as string
+    const fallbackName = path.basename(path.dirname(manifestPath))
+    return {
+      name: parseYamlScalar(text, 'name') || fallbackName,
+      version: parseYamlScalar(text, 'version'),
+      description: parseYamlScalar(text, 'description'),
+      source,
+      path: manifestPath
+    }
+  } catch {
+    return null
+  }
+}
+
+function pluginManifestPaths(root: string): string[] {
+  if (!fs.existsSync(root)) return []
+  return fs
+    .readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(root, entry.name, 'plugin.yaml'))
+    .filter((manifestPath) => fs.existsSync(manifestPath))
+    .sort()
+}
+
+export function listBodyMotionPlugins(): BodyMotionPluginSummary[] {
+  const repoRoot = path.resolve(app.getAppPath(), '..', '..')
+  const repoPluginRoot = path.join(repoRoot, 'plugins')
+  const userPluginRoot = path.join(app.getPath('userData'), 'plugins')
+  const discovered = new Map<string, BodyMotionPluginSummary>()
+
+  for (const manifestPath of pluginManifestPaths(repoPluginRoot)) {
+    const summary = readPluginSummary(manifestPath, 'repo')
+    if (summary) discovered.set(summary.name, summary)
+  }
+  for (const manifestPath of pluginManifestPaths(userPluginRoot)) {
+    const summary = readPluginSummary(manifestPath, 'userData')
+    if (summary) discovered.set(summary.name, summary)
+  }
+
+  return [...discovered.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
 function resolveSidecarRoot(): string {
   // Dev layout (running via electron-vite dev): app.getAppPath() resolves to
   //   <repo>/apps/electron-main
@@ -79,7 +147,9 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
 
   const sidecarRoot = resolveSidecarRoot()
   const repoRoot = path.resolve(app.getAppPath(), '..', '..')
-  const llmConfigJson = buildSidecarConfigEnv(loadConfig())
+  const storedConfig = loadConfig()
+  const llmConfigJson = buildSidecarConfigEnv(storedConfig)
+  const activePluginName = activeBodyMotionPluginName(storedConfig)
   const child = spawn('uv', ['run', 'python', '-m', 'sidecar'], {
     cwd: sidecarRoot,
     env: {
@@ -99,6 +169,8 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
       // when setup is incomplete; sidecar then idles with config-error replies
       // and the renderer setup gate keeps the user out of /chat.
       AGENTICLLMVTUBER_REPO_ROOT: repoRoot,
+      AGENTICLLMVTUBER_USER_DATA: app.getPath('userData'),
+      AGENTICLLMVTUBER_ACTIVE_PLUGIN: activePluginName,
       ...(llmConfigJson ? { AGENTICLLMVTUBER_LLM_CONFIG_JSON: llmConfigJson } : {})
     },
     stdio: ['ignore', 'pipe', 'pipe'],

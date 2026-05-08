@@ -9,6 +9,8 @@ from loguru import logger
 
 from sidecar.vts.pyvts_writer import PyvtsSafeWriter
 
+MOUTH_DRIVER_PLUGIN_NAME = "AgenticLLMVTuber Phase3 Mouth Driver"
+
 
 class ParameterWriter(Protocol):
     async def write_parameter(
@@ -27,10 +29,10 @@ class PyVTSParameterWriter:
 
     def __init__(self, token_path: Path | None = None) -> None:
         if token_path is None:
-            token_path = Path(__file__).resolve().parents[3] / ".vts_token.txt"
+            token_path = Path(__file__).resolve().parents[3] / ".vts_mouth_token.txt"
         self._writer = PyvtsSafeWriter(
             plugin_info={
-                "plugin_name": "AgenticLLMVTuber Phase3 Mouth Driver",
+                "plugin_name": MOUTH_DRIVER_PLUGIN_NAME,
                 "developer": "AgenticLLMVTuber",
                 "authentication_token_path": str(token_path),
             }

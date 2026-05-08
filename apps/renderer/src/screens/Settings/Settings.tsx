@@ -10,6 +10,7 @@ import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
 import { useTheme, type ThemeMode, type LightAccent, type DarkBg, type DarkAccent } from '@/state/theme-provider'
 import { mockStatus } from '@/dev/__mocks__/mock-backend'
+import type { BodyMotionPluginSummary, StoredConfig } from '@preload-types'
 
 // -------- Swatch resolvers ------------------------------------------------
 function lightAccentSwatchColor(id: LightAccent): string {
@@ -300,6 +301,74 @@ function ConnectionSection() {
   )
 }
 
+// -------- Body motion plugins --------------------------------------------
+function PluginSection() {
+  const C = COPY.SETTINGS
+  const [plugins, setPlugins] = useState<BodyMotionPluginSummary[]>([])
+  const [storedCfg, setStoredCfg] = useState<StoredConfig | null>(null)
+  const [status, setStatus] = useState<string>('')
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.api) return
+    let cancelled = false
+    Promise.all([window.api.getStoredConfig(), window.api.listBodyMotionPlugins()])
+      .then(([cfg, discovered]) => {
+        if (cancelled) return
+        setStoredCfg(cfg)
+        setPlugins(discovered)
+      })
+      .catch(() => {
+        if (!cancelled) setPlugins([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const activePlugin = storedCfg?.plugin?.activePluginName || 'default'
+
+  const selectPlugin = async (name: string): Promise<void> => {
+    if (!storedCfg || name === activePlugin) return
+    const nextCfg: StoredConfig = {
+      ...storedCfg,
+      plugin: { activePluginName: name }
+    }
+    setStoredCfg(nextCfg)
+    setStatus(C.PLUGINS_SAVING)
+    try {
+      await window.api.saveStoredConfig(nextCfg)
+      setStatus(C.PLUGINS_SAVED)
+    } catch {
+      setStoredCfg(storedCfg)
+      setStatus(C.PLUGINS_ERROR)
+    }
+  }
+
+  return (
+    <section className="section" id="sec-plugins">
+      <h2>{C.PLUGINS_HEADER}</h2>
+      <div className="group-help">{C.PLUGINS_HELP}</div>
+      {plugins.length === 0 ? (
+        <div className="placeholder-line muted">{C.PLUGINS_EMPTY}</div>
+      ) : (
+        <div className="radio-group" role="radiogroup" aria-label={C.PLUGINS_HEADER}>
+          {plugins.map((plugin) => (
+            <RadioRow
+              key={`${plugin.source}:${plugin.name}`}
+              id={plugin.name}
+              label={`${plugin.name}${plugin.version ? ` v${plugin.version}` : ''}`}
+              isDefault={plugin.name === 'default'}
+              checked={activePlugin === plugin.name}
+              onChange={selectPlugin}
+            />
+          ))}
+        </div>
+      )}
+      {status && <div className="tx-sm muted mt-2">{status}</div>}
+    </section>
+  )
+}
+
 // -------- §15 Diagnostics ------------------------------------------------
 function DiagnosticsSection({ onResetClick }: { onResetClick: () => void }) {
   const C = COPY.SETTINGS
@@ -485,6 +554,7 @@ export function Settings() {
   const anchors = [
     { id: 'sec-connection', label: 'Connection' },
     { id: 'sec-2', label: 'Avatars' },
+    { id: 'sec-plugins', label: 'Plugins' },
     { id: 'sec-4', label: 'VTube Studio' },
     { id: 'sec-tts', label: 'TTS' },
     { id: 'sec-appearance', label: 'Appearance' },
@@ -543,6 +613,8 @@ export function Settings() {
             </button>
           </div>
         </section>
+
+        <PluginSection />
 
         {C.PLACEHOLDERS.filter((p) => p.num < 5).map((p) => (
           <PlaceholderSection

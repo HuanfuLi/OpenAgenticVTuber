@@ -103,6 +103,12 @@ export const COPY = {
     CONN_CHANGE_DISABLED_TT: 'Re-configure provider lands in v1.',
     AVATAR_CATALOGS_HEADER: 'Avatar catalogs',
     AVATAR_CATALOGS_HELP: 'Import or edit avatar variant and event catalogs.',
+    PLUGINS_HEADER: 'Body motion plugin',
+    PLUGINS_HELP: 'Selected at sidecar startup.',
+    PLUGINS_EMPTY: 'No body motion plugins found.',
+    PLUGINS_SAVING: 'Saving...',
+    PLUGINS_SAVED: 'Saved. Sidecar restarting...',
+    PLUGINS_ERROR: 'Could not save plugin selection.',
     APPEARANCE_HEADER: 'Appearance',
     MODE_LABEL: 'Mode',
     MODE_OPTIONS: [

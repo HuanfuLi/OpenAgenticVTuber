@@ -6,6 +6,8 @@ import pytest
 
 from contracts import ParamFrame
 from sidecar.vts import PyvtsSafeWriter, connect_and_authenticate
+import sidecar.vts.pyvts_writer as pyvts_writer
+from sidecar.vts.parameter_writer import PyVTSParameterWriter
 
 
 @pytest.mark.asyncio
@@ -171,6 +173,44 @@ def test_recv_loop_is_only_recv_caller():
     source = inspect.getsource(PyvtsSafeWriter)
     assert source.count("websocket.recv") == 1
     assert "async def _recv_loop" in source
+
+
+def test_default_safe_writer_uses_distinct_compositor_vts_identity(monkeypatch):
+    clients = []
+
+    class FakeClient:
+        vts_request = object()
+
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            clients.append(self)
+
+    monkeypatch.setattr(pyvts_writer.pyvts, "vts", lambda **kwargs: FakeClient(**kwargs))
+
+    PyvtsSafeWriter()
+
+    plugin_info = clients[0].kwargs["plugin_info"]
+    assert plugin_info["plugin_name"] == "AgenticLLMVTuber Phase4 Safe Writer"
+    assert plugin_info["authentication_token_path"].endswith(".vts_token.txt")
+
+
+def test_mouth_writer_uses_distinct_vts_identity_and_token(monkeypatch):
+    clients = []
+
+    class FakeClient:
+        vts_request = object()
+
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            clients.append(self)
+
+    monkeypatch.setattr(pyvts_writer.pyvts, "vts", lambda **kwargs: FakeClient(**kwargs))
+
+    PyVTSParameterWriter()
+
+    plugin_info = clients[0].kwargs["plugin_info"]
+    assert plugin_info["plugin_name"] == "AgenticLLMVTuber Phase3 Mouth Driver"
+    assert plugin_info["authentication_token_path"].endswith(".vts_mouth_token.txt")
 
 
 @pytest.mark.asyncio

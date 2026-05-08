@@ -3,7 +3,7 @@ status: testing
 phase: 06-plugin-runtime-default-plugin
 source: [06-VERIFICATION.md]
 started: 2026-05-08T11:57:55Z
-updated: 2026-05-08T12:19:00Z
+updated: 2026-05-08T16:56:00Z
 ---
 
 # Phase 06 Human UAT
@@ -66,4 +66,9 @@ blocked: 0
     - "Bridge Electron app userData/config into sidecar env (`AGENTICLLMVTUBER_USER_DATA`, `AGENTICLLMVTUBER_ACTIVE_PLUGIN`) before spawning."
     - "Restore distinct/intended VTS API plugin identity for the compositor/body-motion writer, or intentionally consolidate to one VTS writer identity with explicit docs and regression tests."
     - "Add UAT/regression coverage proving plugin selection is operator-accessible and VTS plugin identity does not regress silently."
-  debug_session: ""
+  fix_attempted:
+    - "Settings now exposes a Body motion plugin radio group backed by persisted StoredConfig.plugin.activePluginName."
+    - "Electron now lists repo/userData body-motion plugin manifests, passes AGENTICLLMVTUBER_USER_DATA and AGENTICLLMVTUBER_ACTIVE_PLUGIN into sidecar spawn env, and restarts sidecar on selection save."
+    - "Compositor VTS writer identity restored to AgenticLLMVTuber Phase4 Safe Writer; mouth writer keeps AgenticLLMVTuber Phase3 Mouth Driver and uses .vts_mouth_token.txt."
+    - "Regression tests added for Settings plugin selection and VTS writer identity separation."
+  debug_session: "retest_needed"
