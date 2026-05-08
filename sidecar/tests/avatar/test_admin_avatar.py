@@ -95,6 +95,7 @@ def test_commit_writes_yaml(tmp_path, monkeypatch) -> None:
     resp = client.post("/admin/avatar/import/commit", json=plan)
 
     assert resp.status_code == 200
+    assert Path(resp.json()["path"]).as_posix().endswith("avatars/teto/_avatar_overrides.yaml")
     assert resp.json()["path"] == str(runtime_avatar_dir / "_avatar_overrides.yaml")
     assert (runtime_avatar_dir / "_avatar_overrides.yaml").exists()
     assert not (external_source / "_avatar_overrides.yaml").exists()

@@ -109,9 +109,14 @@ async def import_avatar(req: ImportRequest) -> AvatarImportPlan:
 
 @router.post("/import/commit", response_model=CommitResponse)
 async def commit_avatar(plan: AvatarImportPlan) -> CommitResponse:
-    target_dir = Path(plan.source_rig_path)
-    if not target_dir.exists() or not target_dir.is_dir():
-        raise HTTPException(status_code=400, detail=f"source_rig_path does not exist: {target_dir}")
+    source_rig_path = Path(plan.source_rig_path)
+    if not source_rig_path.exists() or not source_rig_path.is_dir():
+        raise HTTPException(status_code=400, detail=f"source_rig_path does not exist: {source_rig_path}")
+
+    repo_root = Path(os.environ.get("AGENTICLLMVTUBER_REPO_ROOT", os.getcwd()))
+    avatar_id = plan.avatar_id or "teto"
+    target_dir = repo_root / "avatars" / avatar_id
+    target = target_dir / "_avatar_overrides.yaml"
 
     existing = plan.existing_overrides
     new_overrides = AvatarOverrides(
@@ -130,7 +135,7 @@ async def commit_avatar(plan: AvatarImportPlan) -> CommitResponse:
         discovered_hotkeys=existing.discovered_hotkeys if existing else [],
         notes=existing.notes if existing else {},
     )
-    target = target_dir / "_avatar_overrides.yaml"
+    target_dir.mkdir(parents=True, exist_ok=True)
     try:
         write_avatar_overrides_atomic(
             target,
