@@ -1,20 +1,16 @@
 ---
-status: testing
+status: complete
 phase: 06-plugin-runtime-default-plugin
 source: [06-VERIFICATION.md]
 started: 2026-05-08T11:57:55Z
-updated: 2026-05-08T17:59:00Z
+updated: 2026-05-08T19:06:50-04:00
 ---
 
 # Phase 06 Human UAT
 
 ## Current Test
 
-number: 2
-name: [joy] default plugin action
-expected: |
-  A forced [joy] reply shows visible head/eye/face ramp-in and decay with no VTS request-error flood or exp3 activation.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -28,19 +24,21 @@ severity: blocker
 ### 2. [joy] default plugin action
 
 expected: A forced [joy] reply shows visible head/eye/face ramp-in and decay with no VTS request-error flood or exp3 activation.
-result: pending
+result: issue
+reported: "问题：1. 我在设计和文档中已经明确要求不使用joy标签了，因为这个标签并不存在于teto模型中，而variant code必须完全严格地只使用模型自带的expressions。很显然joy不在此类。2. 我要求LLM输出了这个joy标签，log显示捕捉了，但无事发生。"
+severity: major
 
 ### 3. Speech motion
 
 expected: A 30s utterance keeps mouth movement synced and head/body motion non-flat.
-result: pending
+result: pass
 
 ## Summary
 
 total: 3
-passed: 0
-issues: 1
-pending: 2
+passed: 1
+issues: 2
+pending: 0
 skipped: 0
 blocked: 0
 
@@ -76,3 +74,13 @@ blocked: 0
     - "Follow-up: repeated clamp drops for truly unknown params are warning-once per param/reason/mode to prevent log flood."
     - "Follow-up: mouth writer now uses the same PyvtsSafeWriter handshake path as the compositor instead of direct pyvts auth calls, avoiding receive-loop races that degrade lipsync to LoggingParameterWriter."
   debug_session: "retest_needed"
+
+- truth: "Variant/action tags must be strictly limited to expressions discovered from the active Teto model; nonexistent tags such as [joy] must not be treated as valid model actions or UAT success criteria."
+  status: failed
+  reason: "User reported: 问题：1. 我在设计和文档中已经明确要求不使用joy标签了，因为这个标签并不存在于teto模型中，而variant code必须完全严格地只使用模型自带的expressions。很显然joy不在此类。2. 我要求LLM输出了这个joy标签，log显示捕捉了，但无事发生。"
+  severity: major
+  test: 2
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
