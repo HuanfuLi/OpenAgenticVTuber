@@ -25,9 +25,14 @@ from pydantic import TypeAdapter  # noqa: E402
 from contracts import (  # noqa: E402
     ActionIntent,
     AudioPayloadMessage,
+    AvatarImportPlan,
+    AvatarOverrides,
     DiscreteEvent,
+    EventEntry,
     ParamFrame,
+    RigCapabilities,
     SpeechEnvelopePayload,
+    VariantEntry,
     WSMessage,
 )
 
@@ -41,6 +46,11 @@ TARGETS = [
     (SpeechEnvelopePayload, "speech-envelope", "speech_envelope", "SpeechEnvelopePayload"),
     (ParamFrame, "param-frame", "param_frame", "ParamFrame"),
     (DiscreteEvent, "discrete-event", "discrete_event", "DiscreteEvent"),
+    (VariantEntry, "variant-entry", "variant_entry", "VariantEntry"),
+    (EventEntry, "event-entry", "event_entry", "EventEntry"),
+    (AvatarOverrides, "avatar-overrides", "avatar_overrides", "AvatarOverrides"),
+    (RigCapabilities, "rig-capabilities", "rig_capabilities", "RigCapabilities"),
+    (AvatarImportPlan, "avatar-import-plan", "avatar_import_plan", "AvatarImportPlan"),
     (WSMessage, "ws-message", "ws_message", "WSMessage"),
 ]
 
@@ -52,6 +62,17 @@ OWNER_FILE = {
     "ParamFrame": "param-frame",
     "ParamMode": "param-frame",
     "DiscreteEvent": "discrete-event",
+    "VariantEntry": "variant-entry",
+    "EventEntry": "event-entry",
+    "Voice": "avatar-overrides",
+    "ParamProbeResult": "avatar-overrides",
+    "DiscoveredHotkey": "avatar-overrides",
+    "AvatarOverrides": "avatar-overrides",
+    "Expression": "rig-capabilities",
+    "Hotkey": "rig-capabilities",
+    "RigCapabilities": "rig-capabilities",
+    "ImportWarning": "avatar-import-plan",
+    "AvatarImportPlan": "avatar-import-plan",
 }
 
 GUARD_NAMES = {

@@ -1,0 +1,29 @@
+{
+  "properties": {
+    "code": {
+      "title": "Code",
+      "type": "string"
+    },
+    "hotkey_id": {
+      "title": "Hotkey Id",
+      "type": "string"
+    },
+    "is_placeholder": {
+      "default": false,
+      "title": "Is Placeholder",
+      "type": "boolean"
+    },
+    "source_name": {
+      "title": "Source Name",
+      "type": "string"
+    }
+  },
+  "required": [
+    "code",
+    "hotkey_id",
+    "is_placeholder",
+    "source_name"
+  ],
+  "title": "VariantEntry",
+  "type": "object"
+}

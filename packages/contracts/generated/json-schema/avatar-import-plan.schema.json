@@ -1,0 +1,388 @@
+{
+  "$defs": {
+    "AvatarOverrides": {
+      "properties": {
+        "body_sway_strategy": {
+          "default": "head_only",
+          "enum": [
+            "head_only",
+            "proxy_param",
+            "exp3_modulation"
+          ],
+          "title": "Body Sway Strategy",
+          "type": "string"
+        },
+        "discovered_hotkeys": {
+          "items": {
+            "$ref": "#/$defs/DiscoveredHotkey"
+          },
+          "title": "Discovered Hotkeys",
+          "type": "array"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/EventEntry"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "exp3_body_pose": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exp3 Body Pose"
+        },
+        "notes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "object"
+        },
+        "orphan_params": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Orphan Params",
+          "type": "array"
+        },
+        "param_probes": {
+          "items": {
+            "$ref": "#/$defs/ParamProbeResult"
+          },
+          "title": "Param Probes",
+          "type": "array"
+        },
+        "physics_chain_proxies": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Physics Chain Proxies",
+          "type": "object"
+        },
+        "proxy_body_param": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proxy Body Param"
+        },
+        "sign_inversions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sign Inversions",
+          "type": "array"
+        },
+        "source_rig_path": {
+          "default": "",
+          "title": "Source Rig Path",
+          "type": "string"
+        },
+        "variants": {
+          "items": {
+            "$ref": "#/$defs/VariantEntry"
+          },
+          "title": "Variants",
+          "type": "array"
+        },
+        "voice": {
+          "$ref": "#/$defs/Voice"
+        }
+      },
+      "required": [
+        "body_sway_strategy",
+        "exp3_body_pose",
+        "proxy_body_param",
+        "source_rig_path"
+      ],
+      "title": "AvatarOverrides",
+      "type": "object"
+    },
+    "DiscoveredHotkey": {
+      "properties": {
+        "file": {
+          "default": "",
+          "title": "File",
+          "type": "string"
+        },
+        "hotkey_id": {
+          "title": "Hotkey Id",
+          "type": "string"
+        },
+        "is_meta": {
+          "default": false,
+          "title": "Is Meta",
+          "type": "boolean"
+        },
+        "llm_emittable": {
+          "default": true,
+          "title": "Llm Emittable",
+          "type": "boolean"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "hotkey_id",
+        "is_meta",
+        "llm_emittable",
+        "name",
+        "type"
+      ],
+      "title": "DiscoveredHotkey",
+      "type": "object"
+    },
+    "EventEntry": {
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "duration_seconds": {
+          "title": "Duration Seconds",
+          "type": "number"
+        },
+        "is_loop": {
+          "default": false,
+          "title": "Is Loop",
+          "type": "boolean"
+        },
+        "is_placeholder": {
+          "default": false,
+          "title": "Is Placeholder",
+          "type": "boolean"
+        },
+        "motion_file": {
+          "title": "Motion File",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "duration_seconds",
+        "is_loop",
+        "is_placeholder",
+        "motion_file"
+      ],
+      "title": "EventEntry",
+      "type": "object"
+    },
+    "ImportWarning": {
+      "properties": {
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "related_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Related Code"
+        }
+      },
+      "required": [
+        "kind",
+        "message",
+        "related_code"
+      ],
+      "title": "ImportWarning",
+      "type": "object"
+    },
+    "ParamProbeResult": {
+      "properties": {
+        "blend_partial": {
+          "title": "Blend Partial",
+          "type": "boolean"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "orphan_face_tracker": {
+          "title": "Orphan Face Tracker",
+          "type": "boolean"
+        },
+        "readback": {
+          "title": "Readback",
+          "type": "number"
+        },
+        "visible": {
+          "title": "Visible",
+          "type": "boolean"
+        },
+        "wrote": {
+          "title": "Wrote",
+          "type": "number"
+        }
+      },
+      "required": [
+        "blend_partial",
+        "name",
+        "orphan_face_tracker",
+        "readback",
+        "visible",
+        "wrote"
+      ],
+      "title": "ParamProbeResult",
+      "type": "object"
+    },
+    "VariantEntry": {
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "hotkey_id": {
+          "title": "Hotkey Id",
+          "type": "string"
+        },
+        "is_placeholder": {
+          "default": false,
+          "title": "Is Placeholder",
+          "type": "boolean"
+        },
+        "source_name": {
+          "title": "Source Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "hotkey_id",
+        "is_placeholder",
+        "source_name"
+      ],
+      "title": "VariantEntry",
+      "type": "object"
+    },
+    "Voice": {
+      "properties": {
+        "backend": {
+          "default": "piper",
+          "title": "Backend",
+          "type": "string"
+        },
+        "lipsync_mode": {
+          "default": "our-rms",
+          "title": "Lipsync Mode",
+          "type": "string"
+        },
+        "model": {
+          "default": "en_US-amy-medium",
+          "title": "Model",
+          "type": "string"
+        }
+      },
+      "required": [
+        "backend",
+        "lipsync_mode",
+        "model"
+      ],
+      "title": "Voice",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "avatar_id": {
+      "default": "",
+      "title": "Avatar Id",
+      "type": "string"
+    },
+    "avatar_name": {
+      "default": "",
+      "title": "Avatar Name",
+      "type": "string"
+    },
+    "detected_type": {
+      "title": "Detected Type",
+      "type": "string"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/EventEntry"
+      },
+      "title": "Events",
+      "type": "array"
+    },
+    "existing_overrides": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AvatarOverrides"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_rig_path": {
+      "default": "",
+      "title": "Source Rig Path",
+      "type": "string"
+    },
+    "variants": {
+      "items": {
+        "$ref": "#/$defs/VariantEntry"
+      },
+      "title": "Variants",
+      "type": "array"
+    },
+    "voice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Voice"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "warnings": {
+      "items": {
+        "$ref": "#/$defs/ImportWarning"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "avatar_id",
+    "avatar_name",
+    "detected_type",
+    "existing_overrides",
+    "source_rig_path",
+    "voice"
+  ],
+  "title": "AvatarImportPlan",
+  "type": "object"
+}

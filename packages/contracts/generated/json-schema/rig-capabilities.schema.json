@@ -1,0 +1,108 @@
+{
+  "$defs": {
+    "Expression": {
+      "properties": {
+        "file": {
+          "title": "File",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "name"
+      ],
+      "title": "Expression",
+      "type": "object"
+    },
+    "Hotkey": {
+      "properties": {
+        "hotkey_id": {
+          "title": "Hotkey Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "hotkey_id",
+        "name",
+        "type"
+      ],
+      "title": "Hotkey",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "cdi3_display_names": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Cdi3 Display Names",
+      "type": "object"
+    },
+    "expressions": {
+      "items": {
+        "$ref": "#/$defs/Expression"
+      },
+      "title": "Expressions",
+      "type": "array"
+    },
+    "hotkeys": {
+      "items": {
+        "$ref": "#/$defs/Hotkey"
+      },
+      "title": "Hotkeys",
+      "type": "array"
+    },
+    "param_ranges": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Param Ranges",
+      "type": "object"
+    },
+    "sign_inversions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Sign Inversions",
+      "type": "array"
+    },
+    "writable_param_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Writable Param Ids",
+      "type": "array"
+    }
+  },
+  "title": "RigCapabilities",
+  "type": "object"
+}

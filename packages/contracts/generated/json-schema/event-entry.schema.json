@@ -1,0 +1,35 @@
+{
+  "properties": {
+    "code": {
+      "title": "Code",
+      "type": "string"
+    },
+    "duration_seconds": {
+      "title": "Duration Seconds",
+      "type": "number"
+    },
+    "is_loop": {
+      "default": false,
+      "title": "Is Loop",
+      "type": "boolean"
+    },
+    "is_placeholder": {
+      "default": false,
+      "title": "Is Placeholder",
+      "type": "boolean"
+    },
+    "motion_file": {
+      "title": "Motion File",
+      "type": "string"
+    }
+  },
+  "required": [
+    "code",
+    "duration_seconds",
+    "is_loop",
+    "is_placeholder",
+    "motion_file"
+  ],
+  "title": "EventEntry",
+  "type": "object"
+}
