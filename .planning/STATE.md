@@ -4,7 +4,7 @@ milestone: v2.0
 milestone_name: Phases
 status: completed
 stopped_at: Phase 8 context gathered
-last_updated: "2026-05-08T07:12:04.231Z"
+last_updated: "2026-05-08T08:00:00.000Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
@@ -17,19 +17,21 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-06)
+See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon — v2.0 is infrastructure prep on the way there)
-**Current focus:** Phase 08 — avatar-import-+-catalogs
+**Current focus:** v2.0 Phase 08 — avatar-import-+-catalogs
 
 ## Current Position
 
 Phase: 8
 Plan: Not started
-Status: Phase 05 complete — ready to discuss Phase 8
+Status: v1.0 archived — ready to discuss Phase 8
 Last activity: 2026-05-08
 
-**Note on v1.0:** 04-04 (body-sway investigation) is complete. 05-01 (codegen pipeline) remains pending from v1.0 and will execute on the way to v2.0 phase work. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
+**Note on v1.0:** Phase 4 body-sway investigation and Phase 5 codegen are complete. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
+
+**Milestone archive:** v1.0 Walking Skeleton archived on 2026-05-08. See `.planning/MILESTONES.md`, `.planning/v1.0-MILESTONE-AUDIT.md`, and `.planning/milestones/v1.0-ROADMAP.md`.
 
 **Note on v2.0 order (REVISED 2026-05-08):** v2.0 execution order changed from 6→8→7→9→10 to **8→6→7→9→10**. Phase 8 now runs first because it produces the data + defines the `RigCapabilities` and `AvatarOverrides` Pydantic contracts that Phase 6 plugin runtime consumes. ARCH-02 requirement moved from Phase 6 → Phase 8. Decision recorded in ROADMAP.md "Overview (v2.0)" + REQUIREMENTS.md v2.0 header. Discovered during /gsd:discuss-phase 6 — the discussion was paused; user runs /gsd:discuss-phase 8 next.
 

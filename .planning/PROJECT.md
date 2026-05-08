@@ -8,7 +8,13 @@ A local-first desktop companion app: a VTube Studio Live2D avatar that holds con
 
 Multi-avatar identity persistence — the same user can have meaningfully *distinct* relationships with different avatars (per-avatar episodic memory + shared user-facts) such that switching avatars genuinely switches the conversation partner, not just the skin.
 
-This is the **v1-horizon** core value. The current milestone (walking skeleton, §14 of `PROJECT_DESIGN.md`) is single-avatar / in-memory only — it lays the architectural foundation that makes multi-avatar identity achievable in the milestone after.
+This is the **v1-horizon** core value. The v1.0 walking skeleton shipped the single-avatar / in-memory foundation; v2.0 now refactors animation control so later multi-avatar identity work can depend on explicit rig capabilities and swappable motion plugins.
+
+## Current State
+
+**Shipped:** v1.0 Walking Skeleton on 2026-05-08.
+
+The app now boots as an Electron desktop shell with a Python sidecar, speaks via local Piper TTS, streams LLM replies sentence-by-sentence, and drives VTube Studio through a sidecar-owned compositor. Teto remains the dev rig. The accepted current body-motion strategy is `head_only`; full rig-adaptive body control is intentionally moved into the v2.0 plugin/HUD architecture.
 
 ## Current Milestone: v2.0 Plugin + Animation Control
 
@@ -44,17 +50,14 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 
 ### Active
 
-<!-- Walking-skeleton scope only (per PROJECT_DESIGN.md §14). Subsequent milestones layer memory, agent, scheduler, skills, multi-thread, pet mode, multi-avatar on top. -->
+<!-- v2.0 Plugin + Animation Control. Detailed requirement IDs live in .planning/REQUIREMENTS.md. -->
 
-- [ ] TTS queue with sentence-buffered playback (parallel synth, ordered delivery) — *Phase 2 ported sentence_divider/actions_extractor/tts_filter; Phase 3 lands the queue + piper integration*
-- [ ] piper TTS only; lipsync via our-RMS path driving `ParamMouthOpenY`
-- [ ] Minimal action compositor running at 60 Hz with three drivers — idle baseline (Perlin drift + blink scheduler), speech driver (TTS RMS → head sway; body-sway is an unsolved problem on VTS rigs and may end up head-only in the skeleton — see Risks), intent overlay (smooth fade-in/out on `[joy]`/`[shy]` etc.)
-- [ ] Renderer binding: `ParamFrame` stream → pyvts `InjectParameterDataRequest` (60 Hz) against one VTS avatar; one `DiscreteEvent` test (e.g. prop) maps to a hotkey
-- [ ] Renderer-aware ParamID resolver (~30 LOC) — VTS path writes input-layer names (`ParamAngleX`) and lets VTS internal routing handle smoothing; non-VTS branch is a stub that errors helpfully. Keeps the compositor portable to a post-MVP Pixi attempt without rewrite.
-- [ ] Speech-driver body-sway investigation: try multiple approaches on VTS rigs (smoke-pass for non-orphan downstream body params; `.exp3.json` body-pose modulation by RMS; custom physics chain via `<model>.vtube.json`; head-only with breathing/micro-shoulder alternative). Skeleton ships either with visible body sway OR with head-only motion + a written rationale documenting what was tried.
-- [ ] Ship a stub `teto_overrides.yaml` (or .json) checked into the repo even though import + smoke-pass tooling is deferred — establishes the per-avatar override file schema (orphan params list, physics-chain proxies, sign inversions) so the import-pipeline milestone inherits it for free.
-- [ ] Companion-mode chat: single thread, in-memory only (cleared on relaunch); cursor-in-canvas eye/head tracking on the avatar
-- [ ] LLM emits `[joy]` → expression smoothly blends in over ~300ms and decays after the sentence ends — **not a hotkey pop** (success criterion §14)
+- [ ] Avatar import + catalogs: user imports an avatar, reviews extracted variant/event/emotion bindings, and saves `_avatar_overrides.yaml`.
+- [ ] Rig capabilities contract: sidecar exposes a single `RigCapabilities` source for plugin `on_load()` and renderer HUD population.
+- [ ] Plugin runtime: body-motion logic moves behind a `BodyMotionPlugin` API; the default plugin absorbs milestone-1 intent/body-sway behavior.
+- [ ] Three-category code system: `[action]` routes to plugin logic, `{variant}` toggles persistent avatar variants, and `<event>` fires one-shot motion/event hotkeys.
+- [ ] Slider HUD: user can inspect writable rig params and apply session-only per-param locks.
+- [ ] v2.0 §14 re-verification: replay the skeleton success criteria against the refactored plugin architecture, including the migrated SC-01 ceremony.
 ### Out of Scope (this milestone — deferred to later v1 milestones)
 
 - **Agent mode and goal-loop** — entire §9; deferred to dedicated agent-runtime milestone
@@ -149,4 +152,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-08 — Phase 5 complete; contracts codegen validated before v2.0 plugin/avatar work*
+*Last updated: 2026-05-08 after v1.0 milestone archive — walking skeleton shipped; v2.0 plugin/avatar work active*
