@@ -13,6 +13,7 @@ from sidecar.compositor.speech_driver import (
     MOUTH_NOISE_FLOOR,
     MOUTH_PARAM,
     MOUTH_RELEASE_ALPHA,
+    SPEECH_EVIDENCE_LOG_ENV,
     SpeechDriver,
 )
 
@@ -54,7 +55,32 @@ async def test_speech_driver_applies_ema_to_body_strategy(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_speech_driver_logs_strategy_body_params_without_mouth(tmp_path):
+async def test_speech_driver_does_not_log_evidence_by_default(tmp_path):
+    queue: asyncio.Queue = asyncio.Queue()
+    await queue.put(
+        SpeechEnvelopePayload(
+            sentence_id=1,
+            volumes=[1.0],
+            slice_length=20,
+            started_at=0.0,
+        )
+    )
+    overrides = TetoOverrides(body_sway_strategy="proxy_param", proxy_body_param="Lean Forward")
+    driver = SpeechDriver(queue, overrides, tmp_path)
+    messages: list[str] = []
+    sink_id = logger.add(messages.append, format="{message}")
+    try:
+        driver.tick(0.0)
+        driver.tick(0.001)
+    finally:
+        logger.remove(sink_id)
+
+    assert not [message for message in messages if "[SPEECH-DRIVER]" in message]
+
+
+@pytest.mark.asyncio
+async def test_speech_driver_logs_strategy_body_params_when_evidence_enabled(tmp_path, monkeypatch):
+    monkeypatch.setenv(SPEECH_EVIDENCE_LOG_ENV, "1")
     queue: asyncio.Queue = asyncio.Queue()
     await queue.put(
         SpeechEnvelopePayload(
@@ -78,6 +104,32 @@ async def test_speech_driver_logs_strategy_body_params_without_mouth(tmp_path):
     assert "strategy=proxy_param" in speech_logs[0]
     assert "body_params=[Lean Forward=0.200]" in speech_logs[0]
     assert "MouthOpen=" not in speech_logs[0].split("body_params=[", 1)[1]
+
+
+@pytest.mark.asyncio
+async def test_speech_driver_throttles_evidence_logs(tmp_path, monkeypatch):
+    monkeypatch.setenv(SPEECH_EVIDENCE_LOG_ENV, "1")
+    queue: asyncio.Queue = asyncio.Queue()
+    await queue.put(
+        SpeechEnvelopePayload(
+            sentence_id=1,
+            volumes=[1.0],
+            slice_length=20,
+            started_at=0.0,
+        )
+    )
+    driver = SpeechDriver(queue, TetoOverrides(), tmp_path)
+    messages: list[str] = []
+    sink_id = logger.add(messages.append, format="{message}")
+    try:
+        driver.tick(0.0)
+        driver.tick(0.001)
+        driver.tick(0.251)
+    finally:
+        logger.remove(sink_id)
+
+    speech_logs = [message for message in messages if "[SPEECH-DRIVER]" in message]
+    assert len(speech_logs) == 2
 
 
 def test_speech_driver_swap_strategy(tmp_path):

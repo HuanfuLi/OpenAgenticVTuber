@@ -32,12 +32,13 @@ Procedure for the Phase 5 live re-run:
 4. Confirm mouth sync responds to the same TTS prompt used for all strategies.
 5. Set strategy via the dev-panel Body-sway radio control.
 6. Use the prompt `Tell me a 3-sentence story`.
-7. Capture `[SPEECH-DRIVER]` log lines to `<strategy>/log_capture.txt`.
-8. Record a 5-10s screen capture as `<strategy>/clip.mp4`.
-9. Switch strategy via the dev-panel radio; the swap should take effect within 1 second.
-10. Replay the same prompt and repeat capture.
-11. Run `uv run python -m scripts.plot_speech_evidence` from `sidecar/` to regenerate each `rms_vs_output.png`.
-12. Replace each deferred `rating.md` paragraph with live observations.
+7. Enable evidence logging for the sidecar before launch: `AGENTICLLMVTUBER_SPEECH_EVIDENCE_LOG=1`. On PowerShell, run `$env:AGENTICLLMVTUBER_SPEECH_EVIDENCE_LOG='1'` in the terminal that starts the app.
+8. Capture `[SPEECH-DRIVER]` log lines to `<strategy>/log_capture.txt`. These lines are opt-in and throttled so normal logs remain readable.
+9. Record a 5-10s screen capture as `<strategy>/clip.mp4`.
+10. Switch strategy via the dev-panel radio; the swap should take effect within 1 second.
+11. Replay the same prompt and repeat capture.
+12. Run `uv run python -m scripts.plot_speech_evidence` from `sidecar/` to regenerate each `rms_vs_output.png`.
+13. Replace each deferred `rating.md` paragraph with live observations.
 
 Expected runtime log example:
 

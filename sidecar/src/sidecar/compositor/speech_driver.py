@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
 
 from loguru import logger
@@ -20,6 +21,8 @@ MOUTH_GAIN = 0.9
 MOUTH_MAX_OPEN = 0.7
 MOUTH_ATTACK_ALPHA = 0.55
 MOUTH_RELEASE_ALPHA = 0.45
+SPEECH_EVIDENCE_LOG_ENV = "AGENTICLLMVTUBER_SPEECH_EVIDENCE_LOG"
+SPEECH_EVIDENCE_LOG_INTERVAL_S = 0.25
 
 
 def _format_body_params(params: dict[str, float]) -> str:
@@ -42,6 +45,8 @@ class SpeechDriver:
         self._mouth_smooth = 0.0
         self._emit_mouth = emit_mouth
         self._strategy = build_strategy(overrides.body_sway_strategy, overrides, avatar_dir)
+        self._evidence_logging_enabled = os.environ.get(SPEECH_EVIDENCE_LOG_ENV) == "1"
+        self._last_evidence_log_at: float | None = None
 
     def swap_strategy(self, name: BodySwayStrategyName) -> None:
         self._overrides.body_sway_strategy = name
@@ -55,8 +60,8 @@ class SpeechDriver:
         body_params = self._strategy.tick(self._rms_smooth, now)
         out = {MOUTH_PARAM: mouth} if self._emit_mouth else {}
         out.update(body_params)
-        if self._current is not None:
-            logger.debug(
+        if self._should_log_evidence(now):
+            logger.info(
                 "[SPEECH-DRIVER] sentence_id={} strategy={} rms={:.3f} mouth={:.3f} body_params=[{}]",
                 self._current.sentence_id,
                 self._overrides.body_sway_strategy,
@@ -65,6 +70,17 @@ class SpeechDriver:
                 _format_body_params(body_params),
             )
         return out
+
+    def _should_log_evidence(self, now: float) -> bool:
+        if not self._evidence_logging_enabled or self._current is None:
+            return False
+        if self._last_evidence_log_at is None:
+            self._last_evidence_log_at = now
+            return True
+        if now - self._last_evidence_log_at < SPEECH_EVIDENCE_LOG_INTERVAL_S:
+            return False
+        self._last_evidence_log_at = now
+        return True
 
     def _drain_queue(self) -> None:
         while True:
