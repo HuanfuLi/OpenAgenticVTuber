@@ -20,6 +20,15 @@ from loguru import logger
 from contracts import ParamFrame
 
 
+class VTubeStudioAPIError(RuntimeError):
+    def __init__(self, response: dict[str, Any]) -> None:
+        self.response = response
+        data = response.get("data", {})
+        self.error_id = data.get("errorID")
+        self.message = str(data.get("message", ""))
+        super().__init__(f"VTube Studio API error {self.error_id}: {self.message}")
+
+
 class PyvtsSafeWriter:
     def __init__(
         self,
@@ -47,6 +56,7 @@ class PyvtsSafeWriter:
         self._pending: dict[str, asyncio.Future[dict[str, Any]]] = {}
         self._recv_task: asyncio.Task[None] | None = None
         self._send_lock = asyncio.Lock()
+        self._disabled_params: set[str] = set()
         self.vts_request = self._client.vts_request
 
     async def connect(self) -> None:
@@ -87,30 +97,48 @@ class PyvtsSafeWriter:
                 await self._client.websocket.send(json.dumps(request_copy))
             response = await asyncio.wait_for(future, timeout=timeout)
             if response.get("messageType") == "APIError":
-                logger.warning("[VTS-REQUEST-ERROR] response={}", response)
-                raise RuntimeError(f"VTube Studio API error: {response}")
+                raise VTubeStudioAPIError(response)
             return response
         except Exception:
             self._pending.pop(request_id, None)
             raise
 
     async def inject_params(self, frame: ParamFrame) -> None:
-        if frame.add_params:
+        add_params = {
+            param_id: value
+            for param_id, value in frame.add_params.items()
+            if param_id not in self._disabled_params
+        }
+        if add_params:
             add_msg = self.vts_request.requestSetMultiParameterValue(
-                parameters=list(frame.add_params.keys()),
-                values=list(frame.add_params.values()),
+                parameters=list(add_params.keys()),
+                values=list(add_params.values()),
                 mode="add",
             )
             await self.request(add_msg)
 
         for param_id, (value, weight) in frame.set_params.items():
+            if param_id in self._disabled_params:
+                continue
             set_msg = self.vts_request.requestSetParameterValue(
                 parameter=param_id,
                 value=value,
                 weight=weight,
                 mode="set",
             )
-            await self.request(set_msg)
+            try:
+                await self.request(set_msg)
+            except VTubeStudioAPIError as exc:
+                if exc.error_id == 453 and "not found" in exc.message:
+                    self._disabled_params.add(param_id)
+                    logger.warning(
+                        "[VTS-PARAM-DISABLED] param={} errorID={} message={!r}",
+                        param_id,
+                        exc.error_id,
+                        exc.message,
+                    )
+                    continue
+                raise
 
     async def close(self) -> None:
         if self._recv_task is not None:

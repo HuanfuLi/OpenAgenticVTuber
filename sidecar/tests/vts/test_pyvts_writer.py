@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import json
 
 import pytest
 
@@ -47,6 +48,62 @@ async def test_inject_params_batches_add_and_per_param_set(fake_pyvts_client):
     assert "InjectParameterDataRequest" in fake_pyvts_client.websocket._outbound[0]
     assert "ParamMouthOpenY" in fake_pyvts_client.websocket._outbound[1]
     assert "ParamBrowLY" in fake_pyvts_client.websocket._outbound[2]
+
+
+@pytest.mark.asyncio
+async def test_inject_params_disables_missing_set_param_after_first_vts_error(fake_pyvts_client):
+    original_send = fake_pyvts_client.websocket.send
+
+    async def send_with_missing_param(payload: str) -> None:
+        request = json.loads(payload)
+        if (
+            request["messageType"] == "InjectParameterDataRequest"
+            and request.get("data", {}).get("mode") == "set"
+            and request.get("data", {}).get("parameterValues", [{}])[0].get("id") == "Paramchibi"
+        ):
+            fake_pyvts_client.websocket._outbound.append(payload)
+            await fake_pyvts_client.websocket._responses.put(
+                json.dumps(
+                    {
+                        "apiName": "VTubeStudioPublicAPI",
+                        "apiVersion": "1.0",
+                        "requestID": request["requestID"],
+                        "messageType": "APIError",
+                        "data": {
+                            "errorID": 453,
+                            "message": "Parameter Paramchibi not found. Did you create it yet?",
+                        },
+                    }
+                )
+            )
+            return
+        await original_send(payload)
+
+    fake_pyvts_client.websocket.send = send_with_missing_param
+    writer = PyvtsSafeWriter(client=fake_pyvts_client)
+    await writer.connect()
+
+    frame = ParamFrame(
+        set_params={"Paramchibi": (1.0, 0.8), "ParamJoy": (1.0, 0.8)},
+        tick_n=4,
+        emitted_at_monotonic=1.5,
+    )
+
+    try:
+        await writer.inject_params(frame)
+        await writer.inject_params(frame)
+    finally:
+        await writer.close()
+
+    sent_payloads = [json.loads(payload) for payload in fake_pyvts_client.websocket._outbound]
+    sent_params = [
+        payload["data"]["parameterValues"][0]["id"]
+        for payload in sent_payloads
+        if payload["messageType"] == "InjectParameterDataRequest"
+        and payload.get("data", {}).get("mode") == "set"
+    ]
+    assert sent_params.count("Paramchibi") == 1
+    assert sent_params.count("ParamJoy") == 2
 
 
 def test_recv_loop_is_only_recv_caller():
