@@ -88,7 +88,7 @@ Plans:
   4. Moving the cursor over the avatar canvas region makes Teto's eyes/head track the cursor; cursor exiting the canvas eases the avatar back to center (no wild dart)
   5. Pressing the test hotkey toggles a single VTS prop visibility (the discrete-event contract demo)
   6. With an active webcam feed in VTS, ambient and speech driver contributions still produce visible motion (proves `mode:"add"` for ambient layers, `mode:"set"` + `weight` only for intent overlays)
-**Plans**: 5 plans
+**Plans**: 8 plans
 
 Plans:
 - [x] 04-00-PLAN.md — Teto smoke-pass entry gate: TetoOverrides Pydantic loader + sidecar/scripts/teto_smoke_pass.py CLI + populated avatars/teto/teto_overrides.yaml (AVT-06, AVT-07) [Wave 1]
@@ -96,6 +96,9 @@ Plans:
 - [x] 04-02-PLAN.md — Compositor core: 60Hz deadline scheduler + idle/intent/speech drivers + body-sway strategy registry (head_only/proxy_param/exp3_modulation) + dev-panel hot-switch + sentence-end signal (AVT-01, AVT-02, AVT-03, AVT-06 foundation, AVT-08) [Wave 2]
 - [x] 04-03-PLAN.md — Cursor tracker (Win32-poll → ParamAngle deflection with 80px dead-zone + cubic ease-back) + DiscreteEvent demo target lock (Star Eye [7]) + sidecar lifespan integration (AVT-09 demo, AVT-10) [Wave 3 — depends on 04-02 ws/server.py edits]
 - [x] 04-04-PLAN.md — Body-sway investigation execution + per-strategy evidence (operator-driven A/B via dev-panel hot-switch, RESEARCH §Open-Q2 closure, ship-default locked in teto_overrides.yaml) (AVT-06 execution) [Wave 3 — operator-driven, runs in parallel with 04-03]
+- [ ] 04-05-PLAN.md — Gap closure: replace expression hotkey-pop path with exp3-backed weighted ParamFrame set_params and no HotkeyTriggerRequest for expression intents (AVT-03, AVT-08) [Wave 1 gap]
+- [ ] 04-06-PLAN.md — Gap closure: implement renderer cursor overlay → cursor-reaction WS contract → ActionIntent(kind="reaction") CursorDriver path, preserving Win32 fallback (AVT-10) [Wave 1 gap]
+- [ ] 04-07-PLAN.md — Gap closure: align SpeechDriver body_params runtime logs with plot_speech_evidence.py parser for Phase 5 live evidence re-runs (AVT-06) [Wave 1 gap]
 
 **UI hint**: yes  <!-- Cursor tracker is a transparent React overlay; the avatar canvas region's UX is part of this phase -->
 
