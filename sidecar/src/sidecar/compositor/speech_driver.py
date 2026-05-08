@@ -35,7 +35,6 @@ class SpeechDriver:
         speech_queue: asyncio.Queue[SpeechEnvelopePayload],
         overrides: TetoOverrides,
         avatar_dir: Path,
-        emit_mouth: bool = True,
     ) -> None:
         self._speech_queue = speech_queue
         self._overrides = overrides
@@ -43,7 +42,6 @@ class SpeechDriver:
         self._current: SpeechEnvelopePayload | None = None
         self._rms_smooth = 0.0
         self._mouth_smooth = 0.0
-        self._emit_mouth = emit_mouth
         self._strategy = build_strategy(overrides.body_sway_strategy, overrides, avatar_dir)
         self._evidence_logging_enabled = os.environ.get(SPEECH_EVIDENCE_LOG_ENV) == "1"
         self._last_evidence_log_at: float | None = None
@@ -58,7 +56,7 @@ class SpeechDriver:
         self._rms_smooth = EMA_ALPHA * rms + (1.0 - EMA_ALPHA) * self._rms_smooth
         mouth = self._smooth_mouth(self._mouth_target(rms))
         body_params = self._strategy.tick(self._rms_smooth, now)
-        out = {MOUTH_PARAM: mouth} if self._emit_mouth else {}
+        out = {MOUTH_PARAM: mouth}
         out.update(body_params)
         if self._should_log_evidence(now):
             logger.info(

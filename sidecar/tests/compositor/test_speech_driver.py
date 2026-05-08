@@ -136,25 +136,6 @@ def test_speech_driver_swap_strategy(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_speech_driver_can_disable_mouth_output_for_external_mouth_driver(tmp_path):
-    queue: asyncio.Queue = asyncio.Queue()
-    await queue.put(
-        SpeechEnvelopePayload(
-            sentence_id=1,
-            volumes=[1.0],
-            slice_length=20,
-            started_at=0.0,
-        )
-    )
-    driver = SpeechDriver(queue, TetoOverrides(), tmp_path, emit_mouth=False)
-
-    out = driver.tick(0.0)
-
-    assert MOUTH_PARAM not in out
-    assert "FaceAngleZ" in out
-
-
-@pytest.mark.asyncio
 async def test_speech_driver_caps_and_releases_mouth(tmp_path):
     queue: asyncio.Queue = asyncio.Queue()
     await queue.put(
