@@ -170,6 +170,17 @@ class VTSRequest:
         data = {"hotkeyID": hotkeyID}
         return self.BaseRequest(msg_type, data)
 
+    def requestExpressionActivation(
+        self, expression_file: str, active: bool = True, fade_time: float = 0.3
+    ) -> dict:
+        """Activate or deactivate a model expression with VTS-managed fade."""
+        data = {
+            "expressionFile": expression_file,
+            "fadeTime": fade_time,
+            "active": active,
+        }
+        return self.BaseRequest("ExpressionActivationRequest", data=data)
+
     def requestTrackingParameterList(self) -> dict:
         return self.BaseRequest("InputParameterListRequest")
 

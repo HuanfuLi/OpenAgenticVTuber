@@ -1,103 +1,113 @@
 import asyncio
-import json
 
 import pytest
+from pyvts import vts_request
 
 from contracts import ActionIntent
 from sidecar.avatar.capabilities import AvatarCapabilities, Expression
-from sidecar.compositor.easing import ease_out_cubic
 from sidecar.compositor.intent_driver import IntentDriver, RAMP_IN_MS, RAMP_OUT_MS
 
 
-class _ForbiddenWriter:
-    class _Request:
-        def requestTriggerHotKey(self, hotkey_id):
-            raise AssertionError("HotkeyTriggerRequest forbidden for expression intents")
+class _RecordingWriter:
+    def __init__(self) -> None:
+        self.vts_request = vts_request.VTSRequest(
+            developer="AgenticLLMVTuber",
+            plugin_name="IntentDriver Test",
+        )
+        self.requests: list[dict] = []
 
-    vts_request = _Request()
-
-
-def _write_joy_expression(tmp_path):
-    expression_dir = tmp_path / "Expressions"
-    expression_dir.mkdir()
-    (expression_dir / "joy.exp3.json").write_text(
-        json.dumps(
-            {
-                "Type": "Live2D Expression",
-                "Parameters": [{"Id": "ParamJoy", "Value": 1.0, "Blend": "Add"}],
-            }
-        ),
-        encoding="utf-8",
-    )
+    async def request(self, msg: dict) -> dict:
+        self.requests.append(msg)
+        return {
+            "apiName": "VTubeStudioPublicAPI",
+            "apiVersion": "1.0",
+            "requestID": msg["requestID"],
+            "messageType": msg["messageType"].replace("Request", "Response"),
+            "data": {},
+        }
 
 
-def _driver(tmp_path, intent_queue, done_queue):
-    _write_joy_expression(tmp_path)
+def _driver(intent_queue, done_queue, writer):
     return IntentDriver(
         intent_queue,
         done_queue,
-        writer=_ForbiddenWriter(),
+        writer=writer,
         capabilities=AvatarCapabilities(
-            expressions=[Expression(name="joy", file="joy.exp3.json")]
+            expressions=[Expression(name="joy", file="Love.exp3.json")]
         ),
-        avatar_dir=tmp_path,
     )
 
 
-def _param_joy(frame):
-    value, weight = frame["ParamJoy"]
-    assert value == pytest.approx(1.0)
-    return weight
-
-
-def test_expression_intent_ramps_weighted_set_params_from_exp3(tmp_path):
+@pytest.mark.asyncio
+async def test_expression_intent_activates_vts_expression_with_fade_time():
     intent_queue: asyncio.Queue = asyncio.Queue()
     done_queue: asyncio.Queue = asyncio.Queue()
+    writer = _RecordingWriter()
     intent_queue.put_nowait(
         ActionIntent(kind="expression", name="joy", strength=0.8, avatar_id="teto")
     )
-    driver = _driver(tmp_path, intent_queue, done_queue)
+    driver = _driver(intent_queue, done_queue, writer)
 
-    assert driver.tick(0.0) == {"ParamJoy": (pytest.approx(1.0), pytest.approx(0.0))}
+    assert driver.tick(0.0) == {}
+    await asyncio.sleep(0)
 
-    mid_weight = _param_joy(driver.tick((RAMP_IN_MS / 2.0) / 1000.0))
-    expected_mid = 0.8 * ease_out_cubic(0.5)
-    assert 0.0 < mid_weight < 0.8
-    assert mid_weight == pytest.approx(expected_mid)
+    assert len(writer.requests) == 1
+    request = writer.requests[0]
+    assert request["messageType"] == "ExpressionActivationRequest"
+    assert request["data"] == {
+        "expressionFile": "Love.exp3.json",
+        "fadeTime": RAMP_IN_MS / 1000.0,
+        "active": True,
+    }
 
-    full_weight = _param_joy(driver.tick(RAMP_IN_MS / 1000.0))
-    assert full_weight == pytest.approx(0.8)
 
-
-def test_sentence_complete_decays_expression_and_expires_by_ramp_out(tmp_path):
+@pytest.mark.asyncio
+async def test_sentence_complete_deactivates_expression_with_ramp_out_fade():
     intent_queue: asyncio.Queue = asyncio.Queue()
     done_queue: asyncio.Queue = asyncio.Queue()
+    writer = _RecordingWriter()
     intent_queue.put_nowait(
         ActionIntent(kind="expression", name="joy", strength=0.8, avatar_id="teto")
     )
-    driver = _driver(tmp_path, intent_queue, done_queue)
+    driver = _driver(intent_queue, done_queue, writer)
 
-    driver.tick(RAMP_IN_MS / 1000.0)
+    driver.tick(0.0)
+    await asyncio.sleep(0)
     done_queue.put_nowait(1)
-    end = 1.0
-    driver.tick(end)
+    driver.tick(1.0)
+    await asyncio.sleep(0)
 
-    decayed_weight = _param_joy(driver.tick(end + ((RAMP_OUT_MS / 2.0) / 1000.0)))
-    expected_decayed = 0.8 * (1.0 - ease_out_cubic(0.5))
-    assert 0.0 < decayed_weight < 0.8
-    assert decayed_weight == pytest.approx(expected_decayed)
+    assert len(writer.requests) == 2
+    request = writer.requests[1]
+    assert request["messageType"] == "ExpressionActivationRequest"
+    assert request["data"] == {
+        "expressionFile": "Love.exp3.json",
+        "fadeTime": RAMP_OUT_MS / 1000.0,
+        "active": False,
+    }
+    assert driver.tick(1.0 + (RAMP_OUT_MS / 1000.0)) == {}
 
-    assert driver.tick(end + (RAMP_OUT_MS / 1000.0)) == {}
 
-
-def test_expression_intents_never_request_hotkeys(tmp_path):
+@pytest.mark.asyncio
+async def test_expression_intents_never_inject_raw_exp3_params_or_hotkeys():
     intent_queue: asyncio.Queue = asyncio.Queue()
     done_queue: asyncio.Queue = asyncio.Queue()
+    writer = _RecordingWriter()
     intent_queue.put_nowait(
         ActionIntent(kind="expression", name="joy", strength=0.8, avatar_id="teto")
     )
-    driver = _driver(tmp_path, intent_queue, done_queue)
+    driver = _driver(intent_queue, done_queue, writer)
 
-    assert "ParamJoy" in driver.tick(0.0)
+    driver.tick(0.0)
+    await asyncio.sleep(0)
     done_queue.put_nowait(1)
-    driver.tick(RAMP_IN_MS / 1000.0)
+    driver.tick(0.3)
+    await asyncio.sleep(0)
+
+    message_types = [request["messageType"] for request in writer.requests]
+    assert message_types == [
+        "ExpressionActivationRequest",
+        "ExpressionActivationRequest",
+    ]
+    assert "HotkeyTriggerRequest" not in message_types
+    assert "InjectParameterDataRequest" not in message_types
