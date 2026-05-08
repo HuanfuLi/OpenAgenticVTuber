@@ -7,6 +7,7 @@ from contracts.avatar_overrides import AvatarOverrides
 from contracts.rig_capabilities import RigCapabilities
 from plugins.default import DefaultPlugin
 from sidecar.compositor.plugin_adapter import PluginAdapter
+from sidecar.plugins.supervisor import PluginSupervisor
 
 
 class _Plugin:
@@ -95,5 +96,53 @@ def test_enqueue_joy_renders_nonzero_timed_frames() -> None:
             or all(value == 0.0 for value in frame_950.add_params.values())
         )
         assert plugin.active_action is None
+
+    asyncio.run(run())
+
+
+def test_supervised_default_plugin_render_frame_drives_joy_ramp() -> None:
+    async def run() -> None:
+        clock = _FakeClock()
+        plugin = DefaultPlugin(clock=clock)
+        supervisor = await PluginSupervisor.load_or_null(
+            plugin,
+            RigCapabilities(
+                writable_param_ids=[
+                    "FaceAngleZ",
+                    "FaceAngleY",
+                    "EyeOpenLeft",
+                    "EyeOpenRight",
+                ]
+            ),
+            AvatarOverrides(),
+            load_timeout_seconds=0.1,
+        )
+        adapter = PluginAdapter(supervisor)
+
+        adapter.enqueue_sentence("[joy]")
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        clock.now = 0.15
+        frame_150 = adapter.tick(0.15)
+        clock.now = 0.30
+        frame_300 = adapter.tick(0.30)
+        clock.now = 0.95
+        frame_950 = adapter.tick(0.95)
+
+        assert any(
+            value > 0.0
+            for key, value in frame_150.add_params.items()
+            if key.startswith("FaceAngle") or key.startswith("EyeOpen")
+        )
+        assert any(
+            value > 0.0
+            for key, value in frame_300.add_params.items()
+            if key.startswith("FaceAngle") or key.startswith("EyeOpen")
+        )
+        assert (
+            frame_950.add_params == {}
+            or all(value == 0.0 for value in frame_950.add_params.values())
+        )
 
     asyncio.run(run())
