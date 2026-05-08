@@ -4,6 +4,9 @@ from pathlib import Path
 
 import yaml
 from loguru import logger
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from watchdog.observers import Observer
+from watchdog.observers.api import BaseObserver
 
 from sidecar.plugins.manifest import PluginManifest
 
@@ -72,3 +75,59 @@ def warn_if_manifest_changed(current: PluginManifest, reloaded: PluginManifest) 
         "(current session uses boot-time vocabulary)."
     )
     return True
+
+
+class _ManifestFileEventHandler(FileSystemEventHandler):
+    def __init__(self, manifest_path: Path, boot_manifest: PluginManifest) -> None:
+        self._manifest_path = manifest_path.resolve()
+        self._boot_manifest = boot_manifest
+
+    def on_created(self, event: FileSystemEvent) -> None:
+        self._handle_event(event)
+
+    def on_modified(self, event: FileSystemEvent) -> None:
+        self._handle_event(event)
+
+    def on_moved(self, event: FileSystemEvent) -> None:
+        self._handle_event(event)
+
+    def _handle_event(self, event: FileSystemEvent) -> None:
+        if event.is_directory:
+            return
+        if not self._matches_active_manifest(event):
+            return
+
+        try:
+            reloaded = load_manifest(self._manifest_path)
+        except Exception as exc:  # noqa: BLE001 -- watcher must stay alive on malformed edits
+            logger.warning("[PLUGIN-MANIFEST-WATCH] failed to reload {}: {}", self._manifest_path, exc)
+            return
+        warn_if_manifest_changed(self._boot_manifest, reloaded)
+
+    def _matches_active_manifest(self, event: FileSystemEvent) -> bool:
+        paths = [Path(str(event.src_path))]
+        dest_path = getattr(event, "dest_path", None)
+        if dest_path:
+            paths.append(Path(str(dest_path)))
+        return any(path.resolve() == self._manifest_path for path in paths)
+
+
+class ManifestChangeWatcher:
+    def __init__(self, observer: BaseObserver) -> None:
+        self._observer = observer
+
+    def stop(self) -> None:
+        self._observer.stop()
+        self._observer.join()
+
+
+def start_manifest_change_watcher(
+    manifest_path: Path,
+    boot_manifest: PluginManifest,
+) -> ManifestChangeWatcher:
+    active_manifest_path = manifest_path.resolve()
+    handler = _ManifestFileEventHandler(active_manifest_path, boot_manifest)
+    observer = Observer()
+    observer.schedule(handler, str(active_manifest_path.parent), recursive=False)
+    observer.start()
+    return ManifestChangeWatcher(observer)

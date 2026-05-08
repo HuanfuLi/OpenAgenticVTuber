@@ -24,6 +24,7 @@ dependencies = [
     "matplotlib>=3.8",
     "jsonschema==4.26.0",
     "contracts",
+    "watchdog==6.0.0",
 ]
 
 [project.scripts]

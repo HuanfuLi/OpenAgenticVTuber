@@ -4,6 +4,8 @@ import inspect
 from pathlib import Path
 from types import SimpleNamespace
 
+from loguru import logger
+
 from sidecar.plugins import loader
 from sidecar.plugins.loader import load_manifest
 
@@ -26,7 +28,7 @@ action_codes:
     return manifest_path
 
 
-def test_manifest_change_handler_warns_for_action_description_change(tmp_path: Path, caplog) -> None:
+def test_manifest_change_handler_warns_for_action_description_change(tmp_path: Path) -> None:
     manifest_path = _write_manifest(tmp_path / "default", description="Show joy.")
     boot_manifest = load_manifest(manifest_path)
     manifest_path.write_text(
@@ -42,34 +44,46 @@ action_codes:
         encoding="utf-8",
     )
     handler = loader._ManifestFileEventHandler(manifest_path, boot_manifest)
+    messages: list[str] = []
+    sink_id = logger.add(lambda msg: messages.append(msg.record["message"]), level="WARNING")
 
-    with caplog.at_level("WARNING"):
+    try:
         handler.on_modified(SimpleNamespace(src_path=str(manifest_path), is_directory=False))
+    finally:
+        logger.remove(sink_id)
 
-    assert "restart sidecar to apply" in caplog.text
+    assert any("restart sidecar to apply" in message for message in messages)
 
 
-def test_manifest_change_handler_ignores_unrelated_file(tmp_path: Path, caplog) -> None:
+def test_manifest_change_handler_ignores_unrelated_file(tmp_path: Path) -> None:
     manifest_path = _write_manifest(tmp_path / "default")
     boot_manifest = load_manifest(manifest_path)
     handler = loader._ManifestFileEventHandler(manifest_path, boot_manifest)
+    messages: list[str] = []
+    sink_id = logger.add(lambda msg: messages.append(msg.record["message"]), level="WARNING")
 
-    with caplog.at_level("WARNING"):
+    try:
         handler.on_modified(SimpleNamespace(src_path=str(tmp_path / "other.yaml"), is_directory=False))
+    finally:
+        logger.remove(sink_id)
 
-    assert caplog.text == ""
+    assert messages == []
 
 
-def test_manifest_change_handler_logs_invalid_yaml_without_raising(tmp_path: Path, caplog) -> None:
+def test_manifest_change_handler_logs_invalid_yaml_without_raising(tmp_path: Path) -> None:
     manifest_path = _write_manifest(tmp_path / "default")
     boot_manifest = load_manifest(manifest_path)
     manifest_path.write_text("name: [", encoding="utf-8")
     handler = loader._ManifestFileEventHandler(manifest_path, boot_manifest)
+    messages: list[str] = []
+    sink_id = logger.add(lambda msg: messages.append(msg.record["message"]), level="WARNING")
 
-    with caplog.at_level("WARNING"):
+    try:
         handler.on_modified(SimpleNamespace(src_path=str(manifest_path), is_directory=False))
+    finally:
+        logger.remove(sink_id)
 
-    assert "[PLUGIN-MANIFEST-WATCH]" in caplog.text
+    assert any("[PLUGIN-MANIFEST-WATCH]" in message for message in messages)
 
 
 def test_manifest_watcher_helper_does_not_rebuild_prompt() -> None:
