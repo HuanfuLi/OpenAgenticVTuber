@@ -56,6 +56,14 @@ class _FakeTTSManager:
         await self.release_wait.wait()
 
 
+class _FakePluginAdapter:
+    def __init__(self) -> None:
+        self.received: list[str] = []
+
+    def enqueue_sentence(self, sentence: str) -> None:
+        self.received.append(sentence)
+
+
 async def _fake_sentence_stream(*sentences: str) -> AsyncIterator[SentenceOutput]:
     for text in sentences:
         yield SentenceOutput(display_text=DisplayText(text=text), tts_text=text, actions=[])
@@ -157,6 +165,36 @@ async def test_intent_emitted_in_audio_actions():
         and a["avatar_id"] == "teto"
         for a in all_actions
     ), all_actions
+
+
+@pytest.mark.asyncio
+async def test_plugin_adapter_receives_bracketed_sentence_while_display_and_tts_are_stripped():
+    gw = _FakeGateway(chunks=["Hello [joy] world."])
+    plugin_adapter = _FakePluginAdapter()
+    orch = Orchestrator(
+        gateway=gw,
+        persona_text="You are Teto.",
+        action_codes_section=ACTION_CODES_SECTION,
+        tts_preprocessor_config=TTSPreprocessorConfig(),
+        plugin_adapter=plugin_adapter,
+        valid_expression_names={"joy"},
+    )
+    ws = _WSRecorder()
+
+    await orch.turn("hi", ws)
+
+    assert plugin_adapter.received == ["Hello [joy] world."]
+    audio_writes = [w for w in ws.writes if w.get("type") == "audio"]
+    assert audio_writes
+    for audio in audio_writes:
+        assert "[" not in audio["display_text"]["text"]
+        assert "]" not in audio["display_text"]["text"]
+    assert any(
+        action["kind"] == "expression" and action["name"] == "joy"
+        for audio in audio_writes
+        for action in audio["actions"]
+    )
+    assert audio_writes[0]["display_text"]["text"] == "Hello world."
 
 
 @pytest.mark.asyncio
