@@ -2,7 +2,7 @@
 phase: 06-plugin-runtime-default-plugin
 verified: 2026-05-08T11:57:55Z
 status: human_needed
-score: 8/8 must-haves verified
+score: 8/8 automated must-haves verified; F-1/F-2 closed by 06-07; F-3 remains runtime UAT observation
 re_verification:
   previous_status: gaps_found
   previous_score: 7/8
@@ -11,16 +11,74 @@ re_verification:
     - "PluginSupervisor.render_frame(now) safely proxies render-capable wrapped plugins and returns empty ParamFrame for missing hook/circuit-open/failure cases."
   gaps_remaining: []
   regressions: []
+re_verification_2:
+  verified: 2026-05-08T18:09:47-04:00
+  status: human_needed
+  gaps_closed:
+    - "F-1 closed: MouthOpen now emits from SpeechDriver into the compositor path; ws/server.py no longer constructs SpeechMouthDriver, mouth_speech_queue, mouth_task, _build_mouth_writer, or PyVTSParameterWriter."
+    - "F-1 closed: split VTS writer modules were deleted: sidecar/src/sidecar/vts/speech_mouth_driver.py and sidecar/src/sidecar/vts/parameter_writer.py."
+    - "F-2 closed: sidecar/tests/test_arch06_single_writer.py asserts VTS parameter write requests and VTS plugin identity ownership stay isolated to sidecar/src/sidecar/vts/pyvts_writer.py."
+  gaps_remaining:
+    - "F-3 remains human/runtime observation only: after writer consolidation, confirm live VTS lipsync and whether head_only multi-axis sway is visible."
+  evidence:
+    - "Targeted gate passed: cd sidecar; uv run pytest tests/test_arch06_single_writer.py tests/avatar/test_extract_olvt.py tests/test_orchestrator_turn.py -q -> 29 passed."
+    - "Targeted writer/compositor gate passed: cd sidecar; uv run pytest tests/vts/test_pyvts_writer.py tests/test_orchestrator_turn.py tests/compositor/test_speech_driver.py -q -> 41 passed."
+    - "Targeted post-harness gate passed: cd sidecar; uv run pytest tests/scripts/test_plumbing_harness.py tests/test_arch06_single_writer.py tests/vts/test_pyvts_writer.py tests/test_orchestrator_turn.py tests/compositor/test_speech_driver.py -q -> 47 passed."
+    - "Full sidecar suite after 06-07: 235 passed, 2 skipped, 3 failed; all remaining failures are pre-existing avatar override file failures caused by missing avatars/teto/teto_overrides.yaml."
+    - "Static grep: requestSetParameterValue/requestInjectParameterData under sidecar/src/*.py appears only in sidecar/src/sidecar/vts/pyvts_writer.py."
+    - "Static grep: plugin_name under sidecar/src/*.py appears only in sidecar/src/sidecar/vts/pyvts_writer.py."
+    - "Static grep: emit_mouth under sidecar/src/*.py appears zero times."
+  boot_smoke:
+    status: "human_needed"
+    reason: "Requires live sidecar + VTube Studio session. Automated code path now constructs one PyvtsSafeWriter and one connect_and_authenticate(writer) task; live log confirmation remains UAT."
+post_verification_findings:
+  discovered_at: 2026-05-08T13:30:00Z
+  trigger: "Operator UAT — lipsync absent + body sway only along one axis"
+  findings:
+    - id: F-1
+      severity: blocker
+      kind: arch_violation
+      reqs: [ARCH-05, ARCH-06]
+      summary: "Lipsync (MouthOpen) flows through a SECOND VTS plugin identity + writer, not through the compositor's single PyvtsSafeWriter."
+      evidence:
+        - "sidecar/src/sidecar/vts/parameter_writer.py:12 — MOUTH_DRIVER_PLUGIN_NAME = 'AgenticLLMVTuber Phase3 Mouth Driver' — separate VTS plugin identity"
+        - "sidecar/src/sidecar/vts/parameter_writer.py:27-66 — PyVTSParameterWriter wraps PyvtsSafeWriter independently, does its own connect_and_authenticate, calls requestSetParameterValue directly"
+        - "sidecar/src/sidecar/vts/speech_mouth_driver.py:13-71 — independent driver class consuming a separate mouth_speech_queue"
+        - "sidecar/src/sidecar/ws/server.py:268-275 — server lifespan instantiates SpeechMouthDriver alongside the compositor; mouth_task runs as a parallel coroutine"
+        - "sidecar/src/sidecar/ws/server.py:288 — compositor's SpeechDriver instantiated with emit_mouth=False, so MouthOpen is intentionally suppressed in the compositor path"
+      arch_quote: "ARCH-05: 'IdleDriver → SpeechDriver (lipsync only) → PluginAdapter → CursorDriver → ... → pyvts.inject_params'. ARCH-06: 'Every entry point flows through PyvtsSafeWriter.'"
+      diagnosis: "The split mouth writer is an M1 Phase 3 (TTS-04) artifact that 06-02 plumbing surgery was meant to consolidate but didn't. Two separate VTS plugin identities, two WebSocket connections, two auth flows. The recent fix(06) commits ('authenticate mouth writer through safe handshake', 'restore VTS tracking params and token path') were patching the split path rather than removing it."
+    - id: F-2
+      severity: blocker
+      kind: ci_test_gap
+      reqs: [ARCH-06]
+      summary: "ARCH-06 CI grep test ('import pyvts' count == 1) is too narrow — it catches direct imports but not second-class wrappers."
+      evidence:
+        - "sidecar/src/sidecar/vts/parameter_writer.py:10 — uses 'from sidecar.vts.pyvts_writer import PyvtsSafeWriter' (indirect), so does not contribute to the grep count"
+        - "Actual count today: 1 (pyvts_writer.py only) → CI passes despite F-1 being live"
+      diagnosis: "The grep guards module-level pyvts import, not 'how many writer classes own a VTS plugin identity / call requestSetParameterValue / requestInjectParameterData'. Need a stronger CI assertion."
+    - id: F-3
+      severity: investigate
+      kind: runtime_quality
+      reqs: [PLG-07]
+      summary: "Operator reports body sway shows only forward-lean (FacePositionZ axis) — head_only is documented as 3-axis (FaceAngleZ + FaceAngleY + FacePositionZ)."
+      evidence:
+        - "plugins/default/body_sway/head_only.py:9-14 — strategy returns FaceAngleZ * 2.0, FaceAngleY * 1.0, FacePositionZ * -0.8"
+      diagnosis: "Possible causes (not yet measured): (a) clamp drops FaceAngleZ/Y (look for [PLUGIN-FRAME-DROP] unknown logs); (b) Teto rig does not bind FaceAngleZ/Y to visible motion; (c) RMS amplitude too low so 2.0×/1.0× coefficients fall below perceptibility; (d) sign-inversion mismatch between rig probe and runtime. Defer root-cause to runtime-log inspection after F-1 is fixed (writer auth issues currently mask other failure modes)."
+  proposed_closure: "06-07-PLAN.md — Writer consolidation gap closure"
+  status_change_rationale: "Status drops from human_needed back to gaps_found. The 8/8 automated must-haves are still passing in their narrow scope, but F-1 violates ARCH-05/06 which were never automated to detect. Phase 6 cannot ship as 'code-complete' with split VTS plugin identities."
 human_verification:
   - test: "Active plugin swap"
     expected: "Restarting the sidecar with a different active plugin changes body-motion behavior or falls back safely for an invalid plugin."
     why_human: "Requires live sidecar/VTube Studio observation and log review."
+    blocked_by: "F-1 — until single-writer is restored, plugin swap masks the split-writer auth instability"
   - test: "[joy] default plugin action"
     expected: "A forced [joy] reply shows visible head/eye/face ramp-in and decay with no VTS request-error flood or exp3 activation."
     why_human: "Final visual quality is intentionally deferred to Phase 10/operator judgment."
   - test: "Speech motion"
     expected: "A 30s utterance keeps mouth movement synced and head/body motion non-flat."
     why_human: "Requires live audiovisual inspection."
+    blocked_by: "F-1 — lipsync currently absent; F-3 — body sway visibility may need tuning"
 ---
 
 # Phase 6: Plugin Runtime + Default Plugin Verification Report
