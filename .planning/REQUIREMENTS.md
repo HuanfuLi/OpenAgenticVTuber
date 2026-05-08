@@ -125,9 +125,9 @@ These are the load-bearing architectural invariants that make plug-and-play poss
 
 - [ ] **VFY-01**: Cursor sensor work is OPTIONAL polish for v2.0; the current sidecar-side cursor capture (Phase 4) keeps its in-VTS-window gate. **Documented future-direction:** a later milestone may introduce native Cubism rendering integration that supports better global cursor tracking; v2.0 doesn't bet on this. The original §14 SC #4 (cursor tracking visible across the desktop) becomes a PARTIAL verdict in §14 re-verification.
 - [ ] **VFY-02**: If Phase 10 cursor polish does land: drop the in-VTS-window gate at `cursor_driver.py:27-28`; add synthetic-canvas fallback (project against primary-monitor center when no VTS window detected); DPI awareness + multi-monitor robustness is deferred (cursor is no longer a v2.0 priority)
-- [ ] **VFY-03**: §14 success criteria re-run against the refactored architecture: all six SCs verified or explicitly marked PARTIAL with rationale (cursor SC may be PARTIAL per VFY-01); SC #2 (`[joy]` smooth fade) and SC #3 (body sway throughout utterance) are the highest-risk regressions because the responsibilities migrated from compositor-internal to default plugin
+- [ ] **VFY-03**: §14 success criteria re-run against the refactored architecture: all six SCs verified or explicitly marked PARTIAL with rationale (cursor SC may be PARTIAL per VFY-01). **SC #2 (`[joy]` smooth blend) and SC #3 (body sway during utterance) are operator-judged via Phase 10 visual-review ceremony** — NOT automated diff against milestone-1 baselines (per 2026-05-08 Phase 6 discuss-phase decision: locking head_only ship state as regression reference would punish improved future implementations on a known-mediocre baseline; ARCH-06 also forbids reproducing milestone-1's [joy] → Love.exp3 visual mechanism in v2.0 plugin code)
 - [ ] **VFY-04**: §14 verification record committed to `.planning/skeleton-verification.md` (the milestone-1 SC-01 deferred deliverable, now realized under refactored architecture); records pass/partial/fail verdicts for all six §14 SCs with concrete observations
-- [ ] **VFY-05**: Side-by-side §14 SC comparison harness (built as part of Phase 6's plumbing-week sub-phase) captures milestone-1 baselines; Phase 10 replays against current and reports tolerance-band passes (latency ±100ms, param values ±0.05 — defaults; tune at Phase 10 plan-phase if baselines indicate)
+- [ ] **VFY-05**: Side-by-side §14 SC comparison harness (built as part of Phase 6's plumbing-week sub-phase 06-02) captures milestone-1 baselines for the **mechanism-preserved automatable SC subset only**: lipsync RMS-vs-MouthOpen Pearson correlation (≥0.7 threshold), idle micro-motion non-zero variance on head/eye params. Phase 10 replays harness against current and reports tolerance-band passes (latency ±100ms, param values ±0.05 — defaults; tune at Phase 10 plan-phase if baselines indicate). **SC #2 / SC #3 / cursor SC / WS-protocol-shape SC are NOT in harness scope** — SC #2/3 are operator-judged per VFY-03; cursor SC depends on optional VFY-02 polish; WS-shape SC was verified in M1 Phase 1+2 and doesn't regress under v2.0 refactor
 
 ---
 
@@ -329,7 +329,7 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | VFY-02 | Phase 10 | Pending — if cursor lands: drop in-canvas gate + synthetic fallback |
 | VFY-03 | Phase 10 | Pending — re-run all six §14 SCs against refactored architecture |
 | VFY-04 | Phase 10 | Pending — `.planning/skeleton-verification.md` commit |
-| VFY-05 | Phase 10 | Pending — side-by-side baseline harness (built in Phase 6 plumbing-week) |
+| VFY-05 | Phase 10 | Pending — side-by-side baseline harness (built in Phase 6 plumbing-week 06-02; covers lipsync + idle automatable SCs only per 2026-05-08 Phase 6 discuss-phase decision) |
 
 **Cross-phase note (M1)**: PLUMB-05 (pyvts vendoring) is logically Phase 1 plumbing but is *consumed* by Phase 4 (compositor's single-writer wrapper around the vendored pyvts). It is mapped to Phase 1 only — Phase 4 builds on Phase 1's deliverable.
 
@@ -337,7 +337,9 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 - ARCH-01..12 are cross-cutting architectural invariants. They are *primary-mapped* to Phase 6 (where the contracts cement) but every subsequent phase (7, 8, 9, 10) must honor them.
 - ARCH-02 (`RigCapabilities`) is *defined* in Phase 6 and *consumed* by Phase 9 HUD `GET /admin/rig-capabilities`.
 - ARCH-06 (single pyvts writer) is *introduced* in milestone-1 (AVT-04) and *extended* to all v2.0 entry points (plugin output, variant dispatch, event dispatch, HUD locks, cursor frames). CI grep-test runs in Phase 6's plumbing-week.
-- VFY-05 (side-by-side baseline harness) is *built* in Phase 6's plumbing-week and *consumed* in Phase 10.
+- VFY-05 (side-by-side baseline harness) is *built* in Phase 6's plumbing-week 06-02 and *consumed* in Phase 10. Scope is **lipsync + idle automatable SCs only** (per 2026-05-08 Phase 6 discuss-phase Area 1 decision).
+- Phase 6 SC #2 / Phase 10 §14 SC #2+#3 are **operator-judged**, NOT diffed (per 2026-05-08 Phase 6 discuss-phase Area 1 decision; rationale: head_only ship-state is mediocre, ARCH-06 forbids reproducing M1's [joy] → Love.exp3 path).
+- Phase 6 plan count REVISED 2026-05-08 from ~2 to 3 (06-01 contracts / 06-02 plumbing surgery / 06-03 default plugin) per Phase 6 discuss-phase Area 2 decision.
 - SC-01 *migrated* from Phase 5 to Phase 10 (deferred 2026-05-08; skeleton-verification.md ceremony lands under refactored architecture).
 
 **Coverage:**
