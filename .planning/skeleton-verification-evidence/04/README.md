@@ -18,6 +18,8 @@ Phase 5 SC-01 must reference this directory from `.planning/skeleton-verificatio
 
 Reasoning: live VTS/operator verification was unavailable during 04-04, and the `exp3_modulation` audit found no reusable body-pose expression in Teto's current expression set. `head_only` remains the safe default until Phase 5 SC-01 re-runs `proxy_param` against a live Teto rig and proves `Lean Forward` is visible and coupled to TTS RMS.
 
+The same decision is recorded in `avatars/teto/teto_overrides.yaml` under `notes.body_sway_investigation_outcome`.
+
 ## A/B Comparison Methodology
 
 Per CONTEXT D-12, the dev-panel hot-switch is the intended way to A/B compare strategies on the same TTS audio.

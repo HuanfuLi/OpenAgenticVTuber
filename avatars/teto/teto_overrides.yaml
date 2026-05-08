@@ -100,3 +100,4 @@ notes:
   smoke_pass_status: deferred - operator to re-run when VTS available
   hotkey_source: Live2D/重音テト/重音テト.vtube.json
   discrete_event_demo_target: Star Eye [7]
+  body_sway_investigation_outcome: deferred - head_only remains the safe default until Phase 5 SC-01 reruns live A/B; see .planning/skeleton-verification-evidence/04/head_only/rating.md
