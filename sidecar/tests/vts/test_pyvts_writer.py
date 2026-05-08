@@ -106,6 +106,67 @@ async def test_inject_params_disables_missing_set_param_after_first_vts_error(fa
     assert sent_params.count("ParamJoy") == 2
 
 
+@pytest.mark.asyncio
+async def test_inject_params_disables_missing_add_param_and_retries_batch(fake_pyvts_client):
+    original_send = fake_pyvts_client.websocket.send
+
+    async def send_with_missing_add_param(payload: str) -> None:
+        request = json.loads(payload)
+        values = request.get("data", {}).get("parameterValues", [])
+        ids = [entry.get("id") for entry in values]
+        if (
+            request["messageType"] == "InjectParameterDataRequest"
+            and request.get("data", {}).get("mode") == "add"
+            and "Lean Forward" in ids
+        ):
+            fake_pyvts_client.websocket._outbound.append(payload)
+            await fake_pyvts_client.websocket._responses.put(
+                json.dumps(
+                    {
+                        "apiName": "VTubeStudioPublicAPI",
+                        "apiVersion": "1.0",
+                        "requestID": request["requestID"],
+                        "messageType": "APIError",
+                        "data": {
+                            "errorID": 453,
+                            "message": "Parameter Lean Forward not found. Did you create it yet?",
+                        },
+                    }
+                )
+            )
+            return
+        await original_send(payload)
+
+    fake_pyvts_client.websocket.send = send_with_missing_add_param
+    writer = PyvtsSafeWriter(client=fake_pyvts_client)
+    await writer.connect()
+
+    frame = ParamFrame(
+        add_params={"FaceAngleZ": 0.1, "Lean Forward": 0.2},
+        tick_n=4,
+        emitted_at_monotonic=1.5,
+    )
+
+    try:
+        await writer.inject_params(frame)
+        await writer.inject_params(frame)
+    finally:
+        await writer.close()
+
+    sent_payloads = [json.loads(payload) for payload in fake_pyvts_client.websocket._outbound]
+    add_batches = [
+        [entry["id"] for entry in payload["data"]["parameterValues"]]
+        for payload in sent_payloads
+        if payload["messageType"] == "InjectParameterDataRequest"
+        and payload.get("data", {}).get("mode") == "add"
+    ]
+    assert add_batches == [
+        ["FaceAngleZ", "Lean Forward"],
+        ["FaceAngleZ"],
+        ["FaceAngleZ"],
+    ]
+
+
 def test_recv_loop_is_only_recv_caller():
     source = inspect.getsource(PyvtsSafeWriter)
     assert source.count("websocket.recv") == 1

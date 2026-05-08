@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import uuid
 from pathlib import Path
 from typing import Any
@@ -110,12 +111,7 @@ class PyvtsSafeWriter:
             if param_id not in self._disabled_params
         }
         if add_params:
-            add_msg = self.vts_request.requestSetMultiParameterValue(
-                parameters=list(add_params.keys()),
-                values=list(add_params.values()),
-                mode="add",
-            )
-            await self.request(add_msg)
+            await self._inject_add_params(add_params)
 
         for param_id, (value, weight) in frame.set_params.items():
             if param_id in self._disabled_params:
@@ -140,6 +136,43 @@ class PyvtsSafeWriter:
                     continue
                 raise
 
+    async def _inject_add_params(self, add_params: dict[str, float]) -> None:
+        remaining = dict(add_params)
+        while remaining:
+            add_msg = self.vts_request.requestSetMultiParameterValue(
+                parameters=list(remaining.keys()),
+                values=list(remaining.values()),
+                mode="add",
+            )
+            try:
+                await self.request(add_msg)
+                return
+            except VTubeStudioAPIError as exc:
+                disabled = self._disable_missing_param_from_error(exc, remaining.keys())
+                if disabled is None:
+                    raise
+                remaining.pop(disabled, None)
+
+    def _disable_missing_param_from_error(
+        self, exc: VTubeStudioAPIError, candidates: Any
+    ) -> str | None:
+        candidates = list(candidates)
+        if exc.error_id != 453 or "not found" not in exc.message:
+            return None
+        missing = _missing_param_from_message(exc.message, candidates)
+        if missing is None and len(candidates) == 1:
+            missing = candidates[0]
+        if missing is None:
+            return None
+        self._disabled_params.add(missing)
+        logger.warning(
+            "[VTS-PARAM-DISABLED] param={} errorID={} message={!r}",
+            missing,
+            exc.error_id,
+            exc.message,
+        )
+        return missing
+
     async def close(self) -> None:
         if self._recv_task is not None:
             self._recv_task.cancel()
@@ -152,3 +185,15 @@ class PyvtsSafeWriter:
         websocket = getattr(self._client, "websocket", None)
         if websocket is not None:
             await self._client.close()
+
+
+def _missing_param_from_message(message: str, candidates: list[str]) -> str | None:
+    match = re.search(r"Parameter (?P<param>.+?) not found", message)
+    if match:
+        missing = match.group("param")
+        if missing in candidates:
+            return missing
+    for candidate in candidates:
+        if candidate in message:
+            return candidate
+    return None
