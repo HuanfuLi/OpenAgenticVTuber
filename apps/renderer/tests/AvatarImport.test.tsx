@@ -84,7 +84,10 @@ describe('AvatarImport review route', () => {
       api: {
         pickAvatarFolder: vi.fn(),
         requestImportPlan: vi.fn(),
-        commitAvatarOverrides: vi.fn()
+        commitAvatarOverrides: vi.fn(),
+        onSidecarReady: vi.fn(() => vi.fn()),
+        onSidecarCrash: vi.fn(() => vi.fn()),
+        onSidecarLog: vi.fn(() => vi.fn())
       }
     })
   })

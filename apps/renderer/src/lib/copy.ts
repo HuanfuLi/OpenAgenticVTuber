@@ -192,11 +192,11 @@ export const COPY = {
   AVATAR_IMPORT: {
     PAGE_TITLE: 'Import Avatar',
     PAGE_SUBTITLE: 'Review the auto-detected variants + events from your rig and Save when ready.',
-    IMPORT_BUTTON_LABEL: 'Choose folder...',
+    IMPORT_BUTTON_LABEL: 'Choose folder…',
     SETTINGS_BUTTON_LABEL: 'Edit avatar catalogs',
     SAVE_BUTTON_LABEL: 'Save catalogs',
     SAVE_DISABLED_PLACEHOLDER: (n: number) =>
-      `Save disabled - ${n} placeholder name${n === 1 ? '' : 's'} remain. Click here to scroll to the first.`,
+      `Save disabled — ${n} placeholder name${n === 1 ? '' : 's'} remain. Click here to scroll to the first.`,
     VARIANTS_HEADING: 'Variants (toggle expressions)',
     VARIANTS_EMPTY: 'This rig exposes no toggle expressions.',
     EVENTS_HEADING: 'Events (one-shot motions)',
@@ -212,7 +212,7 @@ export const COPY = {
     ERROR_NO_MODEL3:
       "This folder doesn't look like a runtime Live2D export. " +
       'If you have a .cmo3 Cubism Editor project, export it first ' +
-      '(File -> Export to .moc3 in Cubism Editor).',
+      '(File → Export to .moc3 in Cubism Editor).',
     NEW_BADGE: 'NEW',
     EDITED_BADGE: 'edited',
     CANCEL_BUTTON_LABEL: 'Cancel',
