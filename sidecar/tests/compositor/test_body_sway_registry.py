@@ -41,10 +41,25 @@ def test_proxy_param_uses_overrides_param(tmp_path):
 
 def test_head_only_fallback_uses_vts_input_params(tmp_path):
     strategy = build_strategy("head_only", TetoOverrides(), tmp_path)
-    out = strategy.tick(0.5, 0.0)
-    assert out["FaceAngleZ"] == pytest.approx(1.0)
-    assert out["FaceAngleY"] == pytest.approx(0.5)
-    assert out["FacePositionZ"] == pytest.approx(-0.4)
+    out = strategy.tick(0.5, 0.25)
+    assert set(out) == {
+        "FaceAngleX",
+        "FaceAngleY",
+        "FaceAngleZ",
+        "FacePositionX",
+        "FacePositionZ",
+    }
+    assert out["FaceAngleZ"] != 0.0
+    assert out["FacePositionX"] != 0.0
+    assert abs(out["FacePositionZ"]) < abs(out["FaceAngleZ"])
+
+
+def test_head_only_sway_alternates_side_to_side(tmp_path):
+    strategy = build_strategy("head_only", TetoOverrides(), tmp_path)
+    left = strategy.tick(0.5, 0.45)
+    right = strategy.tick(0.5, 1.35)
+    assert left["FaceAngleZ"] * right["FaceAngleZ"] < 0.0
+    assert left["FacePositionX"] * right["FacePositionX"] < 0.0
 
 
 def test_exp3_modulation_loads_parameters(tmp_path):

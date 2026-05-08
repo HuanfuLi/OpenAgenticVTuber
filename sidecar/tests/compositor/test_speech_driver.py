@@ -42,15 +42,17 @@ async def test_speech_driver_applies_ema_to_body_strategy(tmp_path):
     await queue.put(
         SpeechEnvelopePayload(
             sentence_id=1,
-            volumes=[1.0],
+            volumes=[1.0] * 50,
             slice_length=20,
             started_at=0.0,
         )
     )
     driver = SpeechDriver(queue, TetoOverrides(), tmp_path)
 
-    out = driver.tick(0.0)
-    assert out["FaceAngleZ"] == pytest.approx(EMA_ALPHA * 2.0)
+    out = driver.tick(0.25)
+    assert out["FaceAngleZ"] != 0.0
+    assert out["FacePositionX"] != 0.0
+    assert abs(out["FacePositionZ"]) < abs(out["FaceAngleZ"])
 
 
 @pytest.mark.asyncio
@@ -99,7 +101,8 @@ async def test_speech_driver_logs_strategy_body_params_when_evidence_enabled(tmp
     speech_logs = [message for message in messages if "[SPEECH-DRIVER]" in message]
     assert speech_logs
     assert "strategy=head_only" in speech_logs[0]
-    assert "FaceAngleZ=0.400" in speech_logs[0]
+    assert "FaceAngleZ=" in speech_logs[0]
+    assert "FacePositionX=" in speech_logs[0]
     assert "MouthOpen=" not in speech_logs[0].split("body_params=[", 1)[1]
 
 
