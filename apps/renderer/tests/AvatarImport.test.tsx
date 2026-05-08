@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { readFileSync } from 'node:fs'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
 import type { VariantEntry } from '@contracts/variant-entry'
 import { AppStoreProvider } from '@/state/app-store'
@@ -99,6 +100,36 @@ describe('AvatarImport review route', () => {
     ]))
 
     expect(screen.getByRole('button', { name: /save catalogs/i })).toBeDisabled()
+  })
+
+  it('keeps Save and Cancel in a regular non-sticky page footer', () => {
+    renderImport(mockPlan([
+      { code: 'joy', hotkey_id: hotkeyId, source_name: 'Joy', is_placeholder: false }
+    ]))
+
+    const footer = screen.getByTestId('avatar-import-footer')
+    expect(footer).toContainElement(screen.getByRole('button', { name: /cancel/i }))
+    expect(footer).toContainElement(screen.getByRole('button', { name: /save catalogs/i }))
+    expect(screen.getByTestId('avatar-import-footer-actions')).toBeInTheDocument()
+
+    const css = readFileSync(new URL('../src/screens/AvatarImport/AvatarImport.module.css', import.meta.url), 'utf-8')
+    const footerCss = css.match(/\.footer\s*\{[\s\S]*?\}/)?.[0] ?? ''
+    expect(footerCss).not.toMatch(/position\s*:\s*sticky/)
+    expect(footerCss).not.toMatch(/bottom\s*:\s*0/)
+    expect(footerCss).not.toMatch(/background\s*:/)
+  })
+
+  it('keeps the placeholder save-disabled message visible and clickable', () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    renderImport(mockPlan([
+      { code: 'exp_01', hotkey_id: hotkeyId, source_name: 'exp_01', is_placeholder: true }
+    ]))
+
+    const message = screen.getByRole('button', { name: /placeholder/i })
+    expect(message).toBeVisible()
+    fireEvent.click(message)
+    expect(scrollIntoView).toHaveBeenCalled()
   })
 
   it('enables Save after user renames the placeholder', () => {
