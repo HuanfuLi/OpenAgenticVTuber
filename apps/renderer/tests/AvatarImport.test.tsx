@@ -19,6 +19,7 @@ function mockPlan(
     source_rig_path: 'Live2D/teto',
     variants,
     events: [],
+    default_plugin_action_bindings: [],
     voice: null,
     warnings: [],
     existing_overrides: null
