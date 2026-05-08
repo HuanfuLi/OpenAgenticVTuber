@@ -15,6 +15,12 @@ interface AvatarImportProps {
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
+  if (typeof error === 'object' && error !== null) {
+    const record = error as Record<string, unknown>
+    if (typeof record.message === 'string') return record.message
+    if (typeof record.error === 'string') return record.error
+    if (typeof record.detail === 'string') return record.detail
+  }
   return String(error || COPY.AVATAR_IMPORT.SAVE_ERROR_FALLBACK)
 }
 
@@ -49,7 +55,11 @@ export function AvatarImport({ _testInitialPlan }: AvatarImportProps = {}) {
     setSaving(true)
     setErrorMsg(null)
     try {
-      await window.api.commitAvatarOverrides({ ...plan, variants, events })
+      const result = await window.api.commitAvatarOverrides({ ...plan, variants, events })
+      if (result.status !== 'ok') {
+        setErrorMsg(result.status || C.SAVE_ERROR_FALLBACK)
+        return
+      }
       console.log(C.SUCCESS_TOAST)
       setView('chat')
     } catch (error) {
