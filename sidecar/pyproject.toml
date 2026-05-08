@@ -21,6 +21,7 @@ dependencies = [
     "pywin32==311 ; sys_platform == 'win32'",
     "opensimplex==0.4.5.1",
     "numpy>=1.26",
+    "matplotlib>=3.8",
     "contracts",
 ]
 

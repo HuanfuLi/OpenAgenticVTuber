@@ -1,0 +1,4 @@
+# DEFERRED - operator must re-run with live VTS+Teto only if a new viable body-pose .exp3.json is authored before Phase 5 SC-01.
+# Expected live format:
+# [SPEECH-DRIVER strategy=exp3_modulation rms=0.123 mouth=0.456 body_params=[<body-param-id>=0.12]]
+# Reason: the audit found no existing Teto expression suitable for speech-driven body sway.

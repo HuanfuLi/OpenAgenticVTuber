@@ -1,0 +1,4 @@
+# DEFERRED - operator must re-run with live VTS+Teto and re-capture before Phase 5 SC-01.
+# Expected live format:
+# [SPEECH-DRIVER strategy=head_only rms=0.123 mouth=0.456 body_params=[ParamAngleX=1.23]]
+# Reason: live VTS/operator verification was unavailable during 04-04 execution.
