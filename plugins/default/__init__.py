@@ -6,10 +6,13 @@ from collections.abc import AsyncIterator
 from time import monotonic
 from typing import Callable
 
+from loguru import logger
+
 from contracts import ParamFrame
 from contracts.action_binding import DefaultPluginActionBinding
 from contracts.avatar_overrides import AvatarOverrides
 from contracts.rig_capabilities import RigCapabilities
+from plugins.default.body_sway.registry import build_strategy
 from sidecar.plugins.api import BodyMotionPlugin
 
 
@@ -46,6 +49,7 @@ class DefaultPlugin(BodyMotionPlugin):
         self.capabilities: RigCapabilities | None = None
         self.overrides: AvatarOverrides | None = None
         self.composition_sources: dict[str, str] = {}
+        self.body_sway_strategy = None
         self._clock = clock
         self._parse_buffer = ""
         self._active_action: str | None = None
@@ -59,6 +63,12 @@ class DefaultPlugin(BodyMotionPlugin):
         self.capabilities = capabilities
         self.overrides = overrides
         self.composition_sources = self._build_composition_sources(capabilities, overrides)
+        if overrides.body_sway_strategy != "head_only":
+            logger.warning(
+                "[DEFAULT-PLUGIN] unsupported body_sway_strategy=%s; using head_only",
+                overrides.body_sway_strategy,
+            )
+        self.body_sway_strategy = build_strategy("head_only")
 
     async def on_token_stream(self, sentence: str) -> AsyncIterator[ParamFrame]:
         action_codes = self._extract_action_codes(sentence)
@@ -73,6 +83,7 @@ class DefaultPlugin(BodyMotionPlugin):
         self.capabilities = None
         self.overrides = None
         self.composition_sources = {}
+        self.body_sway_strategy = None
         self._parse_buffer = ""
         self._active_action = None
 
