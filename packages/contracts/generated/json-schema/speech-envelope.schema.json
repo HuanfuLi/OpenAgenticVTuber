@@ -1,0 +1,32 @@
+{
+  "description": "In-process queue payload \u2014 NOT a WS message. Published by\nTTSTaskManager._process_payload_queue at write-time (D-02 / D-05);\nconsumed by Phase 4 compositor speech driver.\n\nsentence_id: cross-envelope correlation key (D-13). Same value as\n             AudioPayloadMessage.sentence_id for the same sentence.\nvolumes:     OLVT-shape RMS envelope, slice_length-ms slices, normalized\n             to per-sentence max. Phase 4 reads volumes[i] / volumes[i+1]\n             with linear interp (D-04).\nslice_length: ms per slice; OLVT-canonical 20.\nstarted_at:  stream.time + stream.output_latency at the moment the\n             sender task called stream.write() for sentence's first chunk.\n             Compositor reads stream.time directly to compute\n             elapsed = stream.time - started_at; index = floor(\n             elapsed * 1000 / slice_length).",
+  "properties": {
+    "sentence_id": {
+      "title": "Sentence Id",
+      "type": "integer"
+    },
+    "slice_length": {
+      "title": "Slice Length",
+      "type": "integer"
+    },
+    "started_at": {
+      "title": "Started At",
+      "type": "number"
+    },
+    "volumes": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Volumes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "sentence_id",
+    "slice_length",
+    "started_at",
+    "volumes"
+  ],
+  "title": "SpeechEnvelopePayload",
+  "type": "object"
+}

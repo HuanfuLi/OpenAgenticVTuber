@@ -1,24 +1,9 @@
-// Hand-written mirror of packages/contracts/py/ws_message.py (Phase 1+2).
-// Codegen replaces this in Phase 5 (SC-02). Pydantic is source-of-truth.
-import type { AudioPayloadMessage } from './audio-payload'
-export type { AudioPayloadMessage } from './audio-payload'
-export type { ActionIntent } from './action-intent'
-export type { DisplayTextField } from './audio-payload'
+// GENERATED FROM packages/contracts/py/contracts/ws_message.py - do not edit;
+// run packages/contracts/codegen.sh to regenerate.
 
-// Phase 1:
-export interface TextInputMessage { type: 'text-input'; text: string }
-export interface DisplayTextMessage { type: 'display-text'; text: string }
-export interface ShutdownMessage { type: 'shutdown' }
-
-// Phase 2:
-export interface ControlMessage { type: 'control'; text: string }
-export interface FullTextMessage { type: 'full-text'; text: string }
-export interface ForceNewMessageMessage { type: 'force-new-message' }
-export interface ErrorMessage { type: 'error'; message: string }
-export interface LogMessage { type: 'log'; level: string; message: string }
-
-export type WSMessage =
-  | TextInputMessage
+import type { AudioPayloadMessage, DisplayTextField } from './audio-payload';
+import type { ActionIntent } from './action-intent';
+export type WSMessage = TextInputMessage
   | DisplayTextMessage
   | ShutdownMessage
   | AudioPayloadMessage
@@ -26,17 +11,80 @@ export type WSMessage =
   | FullTextMessage
   | ForceNewMessageMessage
   | ErrorMessage
-  | LogMessage
+  | LogMessage;
 
-// Type guards (Phase 1 -- unchanged):
-export const isTextInput = (m: WSMessage): m is TextInputMessage => m.type === 'text-input'
-export const isDisplayText = (m: WSMessage): m is DisplayTextMessage => m.type === 'display-text'
-export const isShutdown = (m: WSMessage): m is ShutdownMessage => m.type === 'shutdown'
+export interface TextInputMessage {
+  text: string;
+  type: 'text-input'
+}
+export interface DisplayTextMessage {
+  text: string;
+  type: 'display-text'
+}
+export interface ShutdownMessage {
+  type: 'shutdown'
+}
 
-// Type guards (Phase 2 -- new):
-export const isAudioPayload = (m: WSMessage): m is AudioPayloadMessage => m.type === 'audio'
-export const isControl = (m: WSMessage): m is ControlMessage => m.type === 'control'
-export const isFullText = (m: WSMessage): m is FullTextMessage => m.type === 'full-text'
-export const isForceNewMessage = (m: WSMessage): m is ForceNewMessageMessage => m.type === 'force-new-message'
-export const isError = (m: WSMessage): m is ErrorMessage => m.type === 'error'
-export const isLog = (m: WSMessage): m is LogMessage => m.type === 'log'
+
+export interface ControlMessage {
+  text: string;
+  type: 'control'
+}
+/**
+ * OLVT conversation_utils.py:143 -- turn-start 'Thinking...' echo (D-03).
+ */
+export interface FullTextMessage {
+  text: string;
+  type: 'full-text'
+}
+/**
+ * OLVT conversation_utils.py:181 -- turn seal (D-04).
+ */
+export interface ForceNewMessageMessage {
+  type: 'force-new-message'
+}
+/**
+ * Surfaced as a banner above the chat input (CHAT.STREAM_ERROR or
+ * CHAT.CONTEXT_OVERFLOW per UI-SPEC Copywriting Contract).
+ */
+export interface ErrorMessage {
+  message: string;
+  type: 'error'
+}
+/**
+ * Sidecar stdout/loguru bridge to renderer Logs drawer (Phase 1 channel,
+ * re-used in Phase 2 for [INTENT] and [STUB-TTS] lines per D-14, D-23).
+ */
+export interface LogMessage {
+  level: string;
+  message: string;
+  type: 'log'
+}
+
+
+export const isTextInput = (message: WSMessage): message is TextInputMessage =>
+  message.type === 'text-input';
+
+export const isDisplayText = (message: WSMessage): message is DisplayTextMessage =>
+  message.type === 'display-text';
+
+export const isShutdown = (message: WSMessage): message is ShutdownMessage =>
+  message.type === 'shutdown';
+
+export const isAudioPayload = (message: WSMessage): message is AudioPayloadMessage =>
+  message.type === 'audio';
+
+export const isControl = (message: WSMessage): message is ControlMessage =>
+  message.type === 'control';
+
+export const isFullText = (message: WSMessage): message is FullTextMessage =>
+  message.type === 'full-text';
+
+export const isForceNewMessage = (message: WSMessage): message is ForceNewMessageMessage =>
+  message.type === 'force-new-message';
+
+export const isError = (message: WSMessage): message is ErrorMessage =>
+  message.type === 'error';
+
+export const isLog = (message: WSMessage): message is LogMessage =>
+  message.type === 'log';

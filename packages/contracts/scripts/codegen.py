@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -108,8 +109,11 @@ def emit_schema(model: Any) -> dict[str, Any]:
 
 
 def run_jsts(schema_path: Path) -> str:
+    npx = shutil.which("npx") or shutil.which("npx.cmd")
+    if npx is None:
+        raise RuntimeError("npx not found on PATH; run npm install from the repo root")
     cmd = [
-        "npx",
+        npx,
         "--yes",
         "json-schema-to-typescript",
         "--bannerComment",
@@ -130,12 +134,38 @@ def run_jsts(schema_path: Path) -> str:
 
 def post_process(ts: str) -> str:
     ts = ts.replace("\r\n", "\n")
+    ts = ts.replace("export type WsMessageSchema =", "export type WSMessage =")
+    ts = ts.replace("[unknown, unknown]", "[number, number]")
+    ts = re.sub(r'"([^"]+)"', r"'\1'", ts)
+    ts = inline_aliases(ts)
     ts = re.sub(r"\n{3,}", "\n\n", ts)
     ts = ts.replace("export type WSMessage =\n  |", "export type WSMessage =")
     ts = re.sub(r"\n +\|", "\n  |", ts)
     ts = re.sub(r";\n}", "\n}", ts)
     ts = re.sub(r"(\w+)\?:", r"\1:", ts)
     return ts.strip() + "\n"
+
+
+def inline_aliases(ts: str) -> str:
+    aliases: dict[str, str] = {}
+    for match in re.finditer(r"^export type (\w+) = ([^;\n]+);$", ts, flags=re.MULTILINE):
+        name, value = match.groups()
+        if name in {"WSMessage", "ParamMode"}:
+            continue
+        aliases[name] = value
+
+    for name in sorted(aliases, key=len, reverse=True):
+        ts = re.sub(rf"^export type {re.escape(name)} = [^;\n]+;\n", "", ts, flags=re.MULTILINE)
+
+    changed = True
+    while changed:
+        changed = False
+        for name, value in sorted(aliases.items(), key=lambda item: len(item[0]), reverse=True):
+            next_ts = re.sub(rf"\b{re.escape(name)}\b", value, ts)
+            if next_ts != ts:
+                ts = next_ts
+                changed = True
+    return ts
 
 
 def declaration_pattern(name: str) -> re.Pattern[str]:
@@ -233,6 +263,11 @@ def main() -> int:
     ts_by_file = dedup_cross_file(ts_by_file)
 
     for ts_name in [target[1] for target in TARGETS]:
+        if ts_name == "param-frame" and "export type ParamMode" not in ts_by_file[ts_name]:
+            ts_by_file[ts_name] = "export type ParamMode = 'add' | 'set';\n\n" + ts_by_file[ts_name]
+        if ts_name == "ws-message":
+            ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "ActionIntent", "./action-intent")
+            ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "DisplayTextField", "./audio-payload")
         out_path = TS_DIR / f"{ts_name}.ts"
         out_path.write_text(banner(py_names[ts_name]) + ts_by_file[ts_name].strip() + "\n", encoding="utf-8")
         print(f"[codegen] wrote {out_path.relative_to(REPO_ROOT)}")

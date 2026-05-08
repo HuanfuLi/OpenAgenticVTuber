@@ -1,0 +1,47 @@
+{
+  "properties": {
+    "avatar_id": {
+      "title": "Avatar Id",
+      "type": "string"
+    },
+    "duration_ms": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Duration Ms"
+    },
+    "kind": {
+      "enum": [
+        "expression",
+        "action",
+        "reaction"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "strength": {
+      "default": 1.0,
+      "title": "Strength",
+      "type": "number"
+    }
+  },
+  "required": [
+    "avatar_id",
+    "duration_ms",
+    "kind",
+    "name",
+    "strength"
+  ],
+  "title": "ActionIntent",
+  "type": "object"
+}

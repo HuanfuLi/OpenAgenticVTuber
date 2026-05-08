@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def test_codegen_idempotent() -> None:
     subprocess.run(
-        ["bash", "packages/contracts/codegen.sh"],
+        ["node", "packages/contracts/scripts/run-codegen.cjs"],
         cwd=ROOT,
         check=True,
     )
@@ -22,7 +22,7 @@ def test_codegen_idempotent() -> None:
     }
 
     subprocess.run(
-        ["bash", "packages/contracts/codegen.sh"],
+        ["node", "packages/contracts/scripts/run-codegen.cjs"],
         cwd=ROOT,
         check=True,
     )

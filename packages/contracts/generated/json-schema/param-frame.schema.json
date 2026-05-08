@@ -1,0 +1,45 @@
+{
+  "description": "One tick's worth of merged param values bound for VTS.",
+  "properties": {
+    "add_params": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Add Params",
+      "type": "object"
+    },
+    "emitted_at_monotonic": {
+      "default": 0.0,
+      "title": "Emitted At Monotonic",
+      "type": "number"
+    },
+    "set_params": {
+      "additionalProperties": {
+        "maxItems": 2,
+        "minItems": 2,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Set Params",
+      "type": "object"
+    },
+    "tick_n": {
+      "default": 0,
+      "title": "Tick N",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "emitted_at_monotonic",
+    "tick_n"
+  ],
+  "title": "ParamFrame",
+  "type": "object"
+}

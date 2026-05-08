@@ -1,9 +1,10 @@
-// Hand-written mirror of packages/contracts/py/contracts/action_intent.py.
-// Codegen replaces this in Phase 5 (SC-02).
+// GENERATED FROM packages/contracts/py/contracts/action_intent.py - do not edit;
+// run packages/contracts/codegen.sh to regenerate.
+
 export interface ActionIntent {
-  kind: 'expression' | 'action' | 'reaction'
-  name: string
+  avatar_id: string;
+  duration_ms: number | null;
+  kind: 'expression' | 'action' | 'reaction';
+  name: string;
   strength: number
-  duration_ms: number | null
-  avatar_id: string
 }

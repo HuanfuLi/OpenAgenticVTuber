@@ -1,0 +1,23 @@
+{
+  "properties": {
+    "hotkey_id": {
+      "title": "Hotkey Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "triggered_at": {
+      "title": "Triggered At",
+      "type": "number"
+    }
+  },
+  "required": [
+    "hotkey_id",
+    "name",
+    "triggered_at"
+  ],
+  "title": "DiscreteEvent",
+  "type": "object"
+}

@@ -13,8 +13,8 @@
     "lint": "npm --workspace apps/electron-main run lint && npm --workspace apps/renderer run typecheck",
     "format": "npm --workspace apps/electron-main run format",
     "typecheck:renderer": "npm --workspace apps/renderer run typecheck",
-    "codegen:contracts": "bash ./packages/contracts/codegen.sh",
-    "check:contracts": "bash ./packages/contracts/codegen.sh && git diff --exit-code packages/contracts/ts/ packages/contracts/generated/"
+    "codegen:contracts": "node packages/contracts/scripts/run-codegen.cjs",
+    "check:contracts": "node packages/contracts/scripts/run-codegen.cjs && git diff --exit-code packages/contracts/ts/ packages/contracts/generated/"
   },
   "engines": {
     "node": ">=22.0.0",

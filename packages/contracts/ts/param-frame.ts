@@ -1,10 +1,24 @@
-// Hand-written mirror of packages/contracts/py/contracts/param_frame.py.
-// Codegen replaces this in Phase 5 (SC-02).
-export type ParamMode = 'add' | 'set'
+// GENERATED FROM packages/contracts/py/contracts/param_frame.py - do not edit;
+// run packages/contracts/codegen.sh to regenerate.
 
+export type ParamMode = 'add' | 'set';
+
+/**
+ * One tick's worth of merged param values bound for VTS.
+ */
 export interface ParamFrame {
-  add_params: Record<string, number>
-  set_params: Record<string, [number, number]>
+  add_params: AddParams;
+  emitted_at_monotonic: number;
+  set_params: SetParams;
   tick_n: number
-  emitted_at_monotonic: number
+}
+export interface AddParams {
+  [k: string]: number
+}
+export interface SetParams {
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  [k: string]: [number, number]
 }

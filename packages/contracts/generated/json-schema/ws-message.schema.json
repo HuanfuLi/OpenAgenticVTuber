@@ -1,0 +1,347 @@
+{
+  "$defs": {
+    "ActionIntent": {
+      "properties": {
+        "avatar_id": {
+          "title": "Avatar Id",
+          "type": "string"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
+        "kind": {
+          "enum": [
+            "expression",
+            "action",
+            "reaction"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "strength": {
+          "default": 1.0,
+          "title": "Strength",
+          "type": "number"
+        }
+      },
+      "required": [
+        "avatar_id",
+        "duration_ms",
+        "kind",
+        "name",
+        "strength"
+      ],
+      "title": "ActionIntent",
+      "type": "object"
+    },
+    "AudioPayloadMessage": {
+      "properties": {
+        "actions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ActionIntent"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "audio": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audio"
+        },
+        "display_text": {
+          "$ref": "#/$defs/DisplayTextField"
+        },
+        "forwarded": {
+          "default": false,
+          "title": "Forwarded",
+          "type": "boolean"
+        },
+        "sentence_id": {
+          "title": "Sentence Id",
+          "type": "integer"
+        },
+        "slice_length": {
+          "default": 20,
+          "title": "Slice Length",
+          "type": "integer"
+        },
+        "type": {
+          "const": "audio",
+          "default": "audio",
+          "title": "Type",
+          "type": "string"
+        },
+        "volumes": {
+          "default": [],
+          "items": {
+            "type": "number"
+          },
+          "title": "Volumes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "actions",
+        "audio",
+        "display_text",
+        "forwarded",
+        "sentence_id",
+        "slice_length",
+        "type",
+        "volumes"
+      ],
+      "title": "AudioPayloadMessage",
+      "type": "object"
+    },
+    "ControlMessage": {
+      "description": "OLVT conversation_utils.py:138-204 control signals.\ntext values used in Phase 2:\n  - \"conversation-chain-start\"  (D-03)\n  - \"conversation-chain-end\"    (D-04)",
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "type": {
+          "const": "control",
+          "default": "control",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "type"
+      ],
+      "title": "ControlMessage",
+      "type": "object"
+    },
+    "DisplayTextField": {
+      "description": "Mirrors OLVT DisplayText.to_dict() -- see output_types.py:36-39.",
+      "properties": {
+        "avatar": {
+          "default": "teto",
+          "title": "Avatar",
+          "type": "string"
+        },
+        "name": {
+          "default": "Teto",
+          "title": "Name",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "avatar",
+        "name",
+        "text"
+      ],
+      "title": "DisplayTextField",
+      "type": "object"
+    },
+    "DisplayTextMessage": {
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "type": {
+          "const": "display-text",
+          "default": "display-text",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "type"
+      ],
+      "title": "DisplayTextMessage",
+      "type": "object"
+    },
+    "ErrorMessage": {
+      "description": "Surfaced as a banner above the chat input (CHAT.STREAM_ERROR or\nCHAT.CONTEXT_OVERFLOW per UI-SPEC Copywriting Contract).",
+      "properties": {
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "type": {
+          "const": "error",
+          "default": "error",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message",
+        "type"
+      ],
+      "title": "ErrorMessage",
+      "type": "object"
+    },
+    "ForceNewMessageMessage": {
+      "description": "OLVT conversation_utils.py:181 -- turn seal (D-04).",
+      "properties": {
+        "type": {
+          "const": "force-new-message",
+          "default": "force-new-message",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "ForceNewMessageMessage",
+      "type": "object"
+    },
+    "FullTextMessage": {
+      "description": "OLVT conversation_utils.py:143 -- turn-start \"Thinking...\" echo (D-03).",
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "type": {
+          "const": "full-text",
+          "default": "full-text",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "type"
+      ],
+      "title": "FullTextMessage",
+      "type": "object"
+    },
+    "LogMessage": {
+      "description": "Sidecar stdout/loguru bridge to renderer Logs drawer (Phase 1 channel,\nre-used in Phase 2 for [INTENT] and [STUB-TTS] lines per D-14, D-23).",
+      "properties": {
+        "level": {
+          "title": "Level",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "type": {
+          "const": "log",
+          "default": "log",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "level",
+        "message",
+        "type"
+      ],
+      "title": "LogMessage",
+      "type": "object"
+    },
+    "ShutdownMessage": {
+      "properties": {
+        "type": {
+          "const": "shutdown",
+          "default": "shutdown",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "ShutdownMessage",
+      "type": "object"
+    },
+    "TextInputMessage": {
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "type": {
+          "const": "text-input",
+          "default": "text-input",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "type"
+      ],
+      "title": "TextInputMessage",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "audio": "#/$defs/AudioPayloadMessage",
+      "control": "#/$defs/ControlMessage",
+      "display-text": "#/$defs/DisplayTextMessage",
+      "error": "#/$defs/ErrorMessage",
+      "force-new-message": "#/$defs/ForceNewMessageMessage",
+      "full-text": "#/$defs/FullTextMessage",
+      "log": "#/$defs/LogMessage",
+      "shutdown": "#/$defs/ShutdownMessage",
+      "text-input": "#/$defs/TextInputMessage"
+    },
+    "propertyName": "type"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/TextInputMessage"
+    },
+    {
+      "$ref": "#/$defs/DisplayTextMessage"
+    },
+    {
+      "$ref": "#/$defs/ShutdownMessage"
+    },
+    {
+      "$ref": "#/$defs/AudioPayloadMessage"
+    },
+    {
+      "$ref": "#/$defs/ControlMessage"
+    },
+    {
+      "$ref": "#/$defs/FullTextMessage"
+    },
+    {
+      "$ref": "#/$defs/ForceNewMessageMessage"
+    },
+    {
+      "$ref": "#/$defs/ErrorMessage"
+    },
+    {
+      "$ref": "#/$defs/LogMessage"
+    }
+  ]
+}
