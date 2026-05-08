@@ -68,6 +68,22 @@ class PluginSupervisor(BodyMotionPlugin):
             logger.warning("[PLUGIN] token stream failed: {!r}", exc)
             self._record_failure()
 
+    def render_frame(self, now: float) -> ParamFrame:
+        if self._circuit_open:
+            return ParamFrame()
+
+        render_frame = getattr(self.plugin, "render_frame", None)
+        if not callable(render_frame):
+            return ParamFrame()
+
+        try:
+            return render_frame(now)
+        except Exception as exc:  # noqa: BLE001 - isolate plugin render failures
+            logger.warning("[PLUGIN] render_frame failed: {!r}", exc)
+            with suppress(RuntimeError):
+                self._record_failure()
+            return ParamFrame()
+
     def _record_failure(self) -> None:
         now = asyncio.get_running_loop().time()
         self._failure_times.append(now)
