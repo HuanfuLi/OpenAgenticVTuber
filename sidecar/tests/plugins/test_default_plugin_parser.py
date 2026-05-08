@@ -27,10 +27,10 @@ async def test_extracts_supported_action_codes_case_insensitively() -> None:
     plugin = _load_plugin_class()(clock=lambda: 0.0)
     plugin.on_load(RigCapabilities(writable_param_ids=["FaceAngleZ"]), AvatarOverrides())
 
-    frames = [frame async for frame in plugin.on_token_stream("Hi [JOY] there [unknown].")]
+    frames = [frame async for frame in plugin.on_token_stream("Hi [SURPRISE] there [unknown].")]
 
     assert len(frames) == 1
-    assert frames[0].add_params == {"FaceAngleZ": pytest.approx(0.0)}
+    assert frames[0].add_params == {}
 
 
 @pytest.mark.asyncio
@@ -38,11 +38,30 @@ async def test_parser_buffers_split_action_tokens_across_sentence_chunks() -> No
     plugin = _load_plugin_class()(clock=lambda: 0.0)
     plugin.on_load(RigCapabilities(writable_param_ids=["FaceAngleZ"]), AvatarOverrides())
 
-    assert [frame async for frame in plugin.on_token_stream("start [jo")] == []
-    frames = [frame async for frame in plugin.on_token_stream("y] done")]
+    assert [frame async for frame in plugin.on_token_stream("start [sur")] == []
+    frames = [frame async for frame in plugin.on_token_stream("prise] done")]
 
     assert len(frames) == 1
-    assert frames[0].add_params["FaceAngleZ"] == pytest.approx(0.0)
+    assert frames[0].add_params == {}
+
+
+@pytest.mark.asyncio
+async def test_ignores_joy_action_code() -> None:
+    plugin = _load_plugin_class()(clock=lambda: 0.0)
+    plugin.on_load(RigCapabilities(writable_param_ids=["FaceAngleZ"]), AvatarOverrides())
+
+    assert [frame async for frame in plugin.on_token_stream("[joy]")] == []
+    assert plugin.active_action is None
+
+
+@pytest.mark.asyncio
+async def test_ignores_split_joy_action_code() -> None:
+    plugin = _load_plugin_class()(clock=lambda: 0.0)
+    plugin.on_load(RigCapabilities(writable_param_ids=["FaceAngleZ"]), AvatarOverrides())
+
+    assert [frame async for frame in plugin.on_token_stream("[jo")] == []
+    assert [frame async for frame in plugin.on_token_stream("y]")] == []
+    assert plugin.active_action is None
 
 
 @pytest.mark.asyncio

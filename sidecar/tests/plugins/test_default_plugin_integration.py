@@ -31,7 +31,7 @@ def _load_default_plugin_class() -> type[BodyMotionPlugin]:
     return plugin_class
 
 
-def test_default_manifest_declares_olvt_action_codes() -> None:
+def test_default_manifest_declares_current_phase6_action_codes_without_joy() -> None:
     manifest = load_manifest(DEFAULT_PLUGIN_DIR / "plugin.yaml")
 
     assert manifest.name == "default"
@@ -41,12 +41,12 @@ def test_default_manifest_declares_olvt_action_codes() -> None:
         "anger",
         "disgust",
         "fear",
-        "joy",
         "neutral",
         "sadness",
         "smirk",
         "surprise",
     ]
+    assert "joy" not in {action.code for action in manifest.action_codes}
 
 
 @pytest.mark.asyncio
