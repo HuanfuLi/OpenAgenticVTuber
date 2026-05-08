@@ -10,6 +10,8 @@ from loguru import logger
 from contracts import ParamFrame
 from sidecar.avatar.overrides import BodySwayStrategyName
 
+MOUTH_PARAM = "MouthOpen"
+
 
 class TickDriver(Protocol):
     def tick(self, now: float) -> dict[str, float]: ...
@@ -23,7 +25,9 @@ class Compositor:
     """Deadline-driven 60Hz merge loop.
 
     Merge order is idle -> speech -> intent -> cursor. Idle/speech/cursor write
-    additive values; intent is isolated to set_params for AVT-03.
+    additive values except MouthOpen, which must be set to avoid over-opening
+    when VTS blends it with face-tracking inputs. Intent is isolated to
+    set_params for AVT-03.
     """
 
     TICK_HZ = 60
@@ -78,8 +82,13 @@ class Compositor:
         add_acc: dict[str, float] = {}
         set_acc: dict[str, tuple[float, float]] = {}
 
-        for source in (self._idle.tick(now), self._speech.tick(now)):
-            for key, value in source.items():
+        for key, value in self._idle.tick(now).items():
+            add_acc[key] = add_acc.get(key, 0.0) + value
+
+        for key, value in self._speech.tick(now).items():
+            if key == MOUTH_PARAM:
+                set_acc[key] = (value, 1.0)
+            else:
                 add_acc[key] = add_acc.get(key, 0.0) + value
 
         for key, value_weight in self._intent.tick(now).items():

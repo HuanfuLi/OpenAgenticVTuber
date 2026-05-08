@@ -40,7 +40,7 @@ def recording_writer() -> RecordingWriter:
 @pytest.fixture
 def stub_drivers() -> dict[str, object]:
     return {
-        "idle": StubDriver({"ParamAngleX": 0.25}),
+        "idle": StubDriver({"FaceAngleX": 0.25}),
         "speech": StubDriver({"ParamMouthOpenY": 0.5}),
         "intent": StubIntentDriver({"ParamJoy": (0.8, 1.0)}),
     }

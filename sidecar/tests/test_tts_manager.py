@@ -209,6 +209,46 @@ async def test_sender_uses_locked_order_for_non_silent_payload(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_sender_broadcasts_speech_envelope_to_extra_queues(monkeypatch):
+    stream = _FakeStream(latency=0.2, stream_time=50.0)
+    ws = _FakeWS()
+    speech_queue: asyncio.Queue = asyncio.Queue()
+    mouth_queue: asyncio.Queue = asyncio.Queue()
+    manager = TTSTaskManager(
+        stream=stream,
+        compositor_speech_queue=speech_queue,
+        extra_speech_queues=[mouth_queue],
+    )
+
+    async def fake_prepare(*, tts_text, display_text, actions, sentence_id):
+        return (
+            {
+                "type": "audio",
+                "audio": _pcm_wav_b64(),
+                "volumes": [0.2, 0.8],
+                "slice_length": 20,
+                "display_text": display_text.model_dump(),
+                "actions": [a.model_dump() for a in actions],
+                "sentence_id": sentence_id,
+                "forwarded": False,
+            },
+            b"\x01\x00\x02\x00",
+            22050,
+        )
+
+    monkeypatch.setattr(manager, "_synthesize_payload", fake_prepare)
+
+    await manager.speak("hello.", _display("hello."), _actions(), 1, ws)
+    await manager.wait_for_all_audio_complete()
+
+    compositor_envelope = await speech_queue.get()
+    mouth_envelope = await mouth_queue.get()
+    assert compositor_envelope.sentence_id == 1
+    assert mouth_envelope.sentence_id == 1
+    assert compositor_envelope.started_at == pytest.approx(mouth_envelope.started_at)
+
+
+@pytest.mark.asyncio
 async def test_silent_payload_skips_queue_put_and_stream_write(monkeypatch):
     stream = _FakeStream()
     ws = _FakeWS()

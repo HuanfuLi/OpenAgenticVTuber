@@ -8,6 +8,7 @@ class HeadOnlyStrategy:
 
     def tick(self, rms: float, now: float) -> dict[str, float]:
         return {
-            "ParamAngleZ": rms * 2.0,
-            "ParamAngleY": rms * 1.0,
+            "FaceAngleZ": rms * 2.0,
+            "FaceAngleY": rms * 1.0,
+            "FacePositionZ": -rms * 0.8,
         }

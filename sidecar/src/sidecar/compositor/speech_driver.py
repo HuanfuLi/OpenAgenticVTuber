@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+from loguru import logger
+
 from contracts import SpeechEnvelopePayload
 from sidecar.avatar.overrides import BodySwayStrategyName, TetoOverrides
 
@@ -13,6 +15,11 @@ from .body_sway import build_strategy
 
 EMA_ALPHA = 0.2
 MOUTH_PARAM = "MouthOpen"
+MOUTH_NOISE_FLOOR = 0.05
+MOUTH_GAIN = 0.9
+MOUTH_MAX_OPEN = 0.7
+MOUTH_ATTACK_ALPHA = 0.55
+MOUTH_RELEASE_ALPHA = 0.45
 
 
 class SpeechDriver:
@@ -21,12 +28,15 @@ class SpeechDriver:
         speech_queue: asyncio.Queue[SpeechEnvelopePayload],
         overrides: TetoOverrides,
         avatar_dir: Path,
+        emit_mouth: bool = True,
     ) -> None:
         self._speech_queue = speech_queue
         self._overrides = overrides
         self._avatar_dir = avatar_dir
         self._current: SpeechEnvelopePayload | None = None
         self._rms_smooth = 0.0
+        self._mouth_smooth = 0.0
+        self._emit_mouth = emit_mouth
         self._strategy = build_strategy(overrides.body_sway_strategy, overrides, avatar_dir)
 
     def swap_strategy(self, name: BodySwayStrategyName) -> None:
@@ -37,8 +47,17 @@ class SpeechDriver:
         self._drain_queue()
         rms = self._current_rms(now)
         self._rms_smooth = EMA_ALPHA * rms + (1.0 - EMA_ALPHA) * self._rms_smooth
-        out = {MOUTH_PARAM: rms}
+        mouth = self._smooth_mouth(self._mouth_target(rms))
+        out = {MOUTH_PARAM: mouth} if self._emit_mouth else {}
         out.update(self._strategy.tick(self._rms_smooth, now))
+        if self._current is not None:
+            logger.debug(
+                "[SPEECH-DRIVER] sentence_id={} rms={:.3f} mouth={:.3f} strategy={}",
+                self._current.sentence_id,
+                rms,
+                mouth,
+                self._overrides.body_sway_strategy,
+            )
         return out
 
     def _drain_queue(self) -> None:
@@ -60,3 +79,15 @@ class SpeechDriver:
         current = self._current.volumes[idx]
         nxt = self._current.volumes[idx + 1] if idx + 1 < len(self._current.volumes) else current
         return current * (1.0 - frac) + nxt * frac
+
+    def _mouth_target(self, rms: float) -> float:
+        if rms <= MOUTH_NOISE_FLOOR:
+            return 0.0
+        return min(MOUTH_MAX_OPEN, (rms - MOUTH_NOISE_FLOOR) * MOUTH_GAIN)
+
+    def _smooth_mouth(self, target: float) -> float:
+        alpha = MOUTH_ATTACK_ALPHA if target > self._mouth_smooth else MOUTH_RELEASE_ALPHA
+        self._mouth_smooth = alpha * target + (1.0 - alpha) * self._mouth_smooth
+        if self._mouth_smooth < 0.01:
+            self._mouth_smooth = 0.0
+        return self._mouth_smooth

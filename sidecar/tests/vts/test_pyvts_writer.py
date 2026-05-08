@@ -63,5 +63,40 @@ async def test_handshake_uses_background_safe_writer(fake_pyvts_client):
     await writer.close()
 
     assert fake_pyvts_client.connect_calls == 1
-    assert fake_pyvts_client.token_requests == 1
-    assert fake_pyvts_client.authenticate_requests == 1
+    assert fake_pyvts_client.token_requests == 0
+    assert fake_pyvts_client.authenticate_requests == 0
+    assert fake_pyvts_client.read_token_calls == 1
+    assert len(fake_pyvts_client.websocket._outbound) == 1
+    assert "AuthenticationRequest" in fake_pyvts_client.websocket._outbound[-1]
+
+
+@pytest.mark.asyncio
+async def test_handshake_requests_token_through_safe_writer_when_missing(fake_pyvts_client):
+    fake_pyvts_client.authentic_token = ""
+    writer = PyvtsSafeWriter(client=fake_pyvts_client)
+    await connect_and_authenticate(writer)
+
+    await writer.close()
+
+    assert fake_pyvts_client.token_requests == 0
+    assert fake_pyvts_client.authenticate_requests == 0
+    assert fake_pyvts_client.write_token_calls == 1
+    assert len(fake_pyvts_client.websocket._outbound) == 2
+    assert "AuthenticationTokenRequest" in fake_pyvts_client.websocket._outbound[0]
+    assert "AuthenticationRequest" in fake_pyvts_client.websocket._outbound[1]
+
+
+@pytest.mark.asyncio
+async def test_handshake_refreshes_rejected_existing_token(fake_pyvts_client):
+    fake_pyvts_client.websocket.auth_response_results.clear()
+    fake_pyvts_client.websocket.auth_response_results.extend([False, True])
+    writer = PyvtsSafeWriter(client=fake_pyvts_client)
+    await connect_and_authenticate(writer)
+
+    await writer.close()
+
+    assert fake_pyvts_client.write_token_calls == 1
+    assert len(fake_pyvts_client.websocket._outbound) == 3
+    assert "AuthenticationRequest" in fake_pyvts_client.websocket._outbound[0]
+    assert "AuthenticationTokenRequest" in fake_pyvts_client.websocket._outbound[1]
+    assert "AuthenticationRequest" in fake_pyvts_client.websocket._outbound[2]

@@ -12,6 +12,7 @@ class FakeWebSocket:
         self._outbound: list[str] = []
         self._responses: asyncio.Queue[str] = asyncio.Queue()
         self.closed = False
+        self.auth_response_results = deque([True])
 
     async def send(self, payload: str) -> None:
         self._outbound.append(payload)
@@ -24,10 +25,18 @@ class FakeWebSocket:
             "data": {
                 "echoMessageType": request["messageType"],
                 "parameterValues": request.get("data", {}).get("parameterValues", []),
-                "authenticated": True,
+                "authenticated": self._authenticated_for(request),
+                "authenticationToken": "token-from-vts",
             },
         }
         await self._responses.put(json.dumps(response))
+
+    def _authenticated_for(self, request: dict) -> bool:
+        if request["messageType"] != "AuthenticationRequest":
+            return True
+        if self.auth_response_results:
+            return self.auth_response_results.popleft()
+        return True
 
     async def recv(self) -> str:
         return await self._responses.get()
@@ -49,6 +58,8 @@ class FakePyvtsClient:
         self.token_requests = 0
         self.authenticate_requests = 0
         self.auth_results = deque([True])
+        self.read_token_calls = 0
+        self.write_token_calls = 0
 
     async def connect(self) -> None:
         self.connect_calls += 1
@@ -63,6 +74,13 @@ class FakePyvtsClient:
     async def request_authenticate(self) -> bool:
         self.authenticate_requests += 1
         return self.auth_results[0] if self.auth_results else True
+
+    async def read_token(self) -> str:
+        self.read_token_calls += 1
+        return self.authentic_token
+
+    async def write_token(self) -> None:
+        self.write_token_calls += 1
 
 
 @pytest.fixture

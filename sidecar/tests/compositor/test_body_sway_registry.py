@@ -39,6 +39,14 @@ def test_proxy_param_uses_overrides_param(tmp_path):
     assert strategy.tick(0.5, 0.0) == {"Lean Forward": 0.5}
 
 
+def test_head_only_fallback_uses_vts_input_params(tmp_path):
+    strategy = build_strategy("head_only", TetoOverrides(), tmp_path)
+    out = strategy.tick(0.5, 0.0)
+    assert out["FaceAngleZ"] == pytest.approx(1.0)
+    assert out["FaceAngleY"] == pytest.approx(0.5)
+    assert out["FacePositionZ"] == pytest.approx(-0.4)
+
+
 def test_exp3_modulation_loads_parameters(tmp_path):
     exp3 = tmp_path / "body.exp3.json"
     exp3.write_text(

@@ -168,6 +168,7 @@ async def lifespan(app: FastAPI):
 
             overrides = load_overrides(teto_dir)
             compositor_speech_queue: asyncio.Queue = asyncio.Queue()
+            mouth_speech_queue: asyncio.Queue = asyncio.Queue()
             compositor_intent_queue: asyncio.Queue = asyncio.Queue()
             compositor_sentence_complete_queue: asyncio.Queue = asyncio.Queue()
             pending_inputs: asyncio.Queue[str] = asyncio.Queue()
@@ -175,6 +176,7 @@ async def lifespan(app: FastAPI):
                 stream=tts_gateway.stream,
                 voice=tts_gateway.voice,
                 compositor_speech_queue=compositor_speech_queue,
+                extra_speech_queues=[mouth_speech_queue],
                 compositor_sentence_complete_queue=compositor_sentence_complete_queue,
             )
             app.state.orchestrator = Orchestrator(
@@ -194,7 +196,7 @@ async def lifespan(app: FastAPI):
                 now=lambda: _playback_now(tts_gateway.stream),
             )
             mouth_task = asyncio.create_task(
-                mouth_driver.consume_forever(compositor_speech_queue)
+                mouth_driver.consume_forever(mouth_speech_queue)
             )
             turn_loop_task = asyncio.create_task(app.state.orchestrator._turn_loop())
 
@@ -204,7 +206,12 @@ async def lifespan(app: FastAPI):
                 p.name == "Auto Breath" and p.visible for p in overrides.param_probes
             )
             idle_drv = IdleDriver(seed=42, breath_writeable=breath_writeable)
-            speech_drv = SpeechDriver(compositor_speech_queue, overrides, teto_dir)
+            speech_drv = SpeechDriver(
+                compositor_speech_queue,
+                overrides,
+                teto_dir,
+                emit_mouth=False,
+            )
             cursor_drv = CursorDriver()
             discrete_dispatcher = DiscreteDispatcher(writer)
             intent_drv = IntentDriver(

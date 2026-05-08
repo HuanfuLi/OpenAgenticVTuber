@@ -34,12 +34,14 @@ class TTSTaskManager:
         stream: Any,
         compositor_speech_queue: asyncio.Queue[SpeechEnvelopePayload],
         compositor_sentence_complete_queue: asyncio.Queue[int] | None = None,
+        extra_speech_queues: list[asyncio.Queue[SpeechEnvelopePayload]] | None = None,
         voice: Any | None = None,
     ) -> None:
         self._stream = stream
         self._voice = voice
         self.compositor_speech_queue = compositor_speech_queue
         self.compositor_sentence_complete_queue = compositor_sentence_complete_queue
+        self.extra_speech_queues = extra_speech_queues or []
         self.task_list: list[asyncio.Task[None]] = []
         self._payload_queue: asyncio.Queue[_QueuedPayload] = asyncio.Queue()
         self._sender_task: asyncio.Task[None] | None = None
@@ -189,14 +191,15 @@ class TTSTaskManager:
                             f"started_at={started_at:.6f} volumes_n={len(payload.volumes)} "
                             f"slice_ms={payload.slice_length}"
                         )
-                        await self.compositor_speech_queue.put(
-                            SpeechEnvelopePayload(
-                                sentence_id=next_payload.sentence_id,
-                                volumes=payload.volumes,
-                                slice_length=payload.slice_length,
-                                started_at=started_at,
-                            )
+                        speech_envelope = SpeechEnvelopePayload(
+                            sentence_id=next_payload.sentence_id,
+                            volumes=payload.volumes,
+                            slice_length=payload.slice_length,
+                            started_at=started_at,
                         )
+                        await self.compositor_speech_queue.put(speech_envelope)
+                        for speech_queue in self.extra_speech_queues:
+                            await speech_queue.put(speech_envelope)
                         await ws.send_json(payload.model_dump())
 
                         write_start = time.perf_counter()

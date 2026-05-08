@@ -13,7 +13,7 @@ from .conftest import StubDriver, StubIntentDriver
 async def test_60hz_tick_count(recording_writer) -> None:
     compositor = Compositor(
         writer=recording_writer,
-        idle_driver=StubDriver({"ParamAngleX": 0.1}),
+        idle_driver=StubDriver({"FaceAngleX": 0.1}),
         speech_driver=StubDriver(),
         intent_driver=StubIntentDriver(),
     )
@@ -36,7 +36,7 @@ async def test_strategy_swap_gates_at_tick_boundary(recording_writer) -> None:
 
     compositor = Compositor(
         writer=recording_writer,
-        idle_driver=StubDriver({"ParamAngleX": 0.1}),
+        idle_driver=StubDriver({"FaceAngleX": 0.1}),
         speech_driver=TrackingSpeechDriver(),
         intent_driver=StubIntentDriver(),
     )

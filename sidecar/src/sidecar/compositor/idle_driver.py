@@ -24,11 +24,11 @@ class IdleDriver:
 
     def tick(self, now: float) -> dict[str, float]:
         out = {
-            "ParamAngleX": self._noise.noise2(now * 0.35, 1.0) * 5.0,
-            "ParamAngleY": self._noise.noise2(now * 0.30, 2.0) * 3.0,
-            "ParamAngleZ": self._noise.noise2(now * 0.25, 3.0) * 4.0,
-            "ParamEyeBallX": self._noise.noise2(now * 0.45, 4.0) * 0.35,
-            "ParamEyeBallY": self._noise.noise2(now * 0.40, 5.0) * 0.25,
+            "FaceAngleX": self._noise.noise2(now * 0.35, 1.0) * 5.0,
+            "FaceAngleY": self._noise.noise2(now * 0.30, 2.0) * 3.0,
+            "FaceAngleZ": self._noise.noise2(now * 0.25, 3.0) * 4.0,
+            "EyeLeftX": self._noise.noise2(now * 0.45, 4.0) * 0.35,
+            "EyeRightY": self._noise.noise2(now * 0.40, 5.0) * 0.25,
         }
         if self._breath_writeable:
             out["Auto Breath"] = (math.sin(now * math.tau * 0.25) + 1.0) * 0.5
@@ -39,6 +39,6 @@ class IdleDriver:
             if self._rng.random() < 0.10:
                 self._next_blink_at = self._blink_until + 0.08
         if now < self._blink_until:
-            out["ParamEyeLOpen"] = -1.0
-            out["ParamEyeROpen"] = -1.0
+            out["EyeOpenLeft"] = -1.0
+            out["EyeOpenRight"] = -1.0
         return out

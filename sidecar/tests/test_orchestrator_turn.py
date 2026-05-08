@@ -555,14 +555,17 @@ async def test_warmup_ping_does_not_raise_on_gateway_error(fake_gateway):
     await _warmup_ping(gw)
 
 
-def test_server_replaces_phase4_noop_speech_drain_with_mouth_driver():
+def test_server_broadcasts_speech_to_dedicated_mouth_queue():
     from sidecar.ws import server
 
     src = inspect.getsource(server)
     assert "_drain_speech_queue_until_phase4" not in src
     assert "SpeechMouthDriver" in src
-    assert "PyVTSParameterWriter" in src
-    assert "consume_forever" in src
+    assert "mouth_speech_queue: asyncio.Queue = asyncio.Queue()" in src
+    assert "speech_drv = SpeechDriver(" in src
+    assert "compositor_speech_queue," in src
+    assert "mouth_driver.consume_forever(mouth_speech_queue)" in src
+    assert "emit_mouth=False" in src
 
 
 def test_playback_now_uses_stream_time_plus_latency():

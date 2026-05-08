@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import pyvts
+from loguru import logger
 
 from contracts import ParamFrame
 
@@ -35,7 +36,7 @@ class PyvtsSafeWriter:
                 token_path = Path(__file__).resolve().parents[3] / ".vts_token.txt"
             if plugin_info is None:
                 plugin_info = {
-                    "plugin_name": "AgenticLLMVTuber Phase4 Safe Writer",
+                    "plugin_name": "AgenticLLMVTuber Phase3 Mouth Driver",
                     "developer": "AgenticLLMVTuber",
                     "authentication_token_path": str(token_path),
                 }
@@ -84,7 +85,11 @@ class PyvtsSafeWriter:
         try:
             async with self._send_lock:
                 await self._client.websocket.send(json.dumps(request_copy))
-            return await asyncio.wait_for(future, timeout=timeout)
+            response = await asyncio.wait_for(future, timeout=timeout)
+            if response.get("messageType") == "APIError":
+                logger.warning("[VTS-REQUEST-ERROR] response={}", response)
+                raise RuntimeError(f"VTube Studio API error: {response}")
+            return response
         except Exception:
             self._pending.pop(request_id, None)
             raise
