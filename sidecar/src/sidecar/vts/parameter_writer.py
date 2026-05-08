@@ -39,11 +39,9 @@ class PyVTSParameterWriter:
         )
 
     async def connect_and_authenticate(self) -> None:
-        await self._writer.connect()
-        await self._writer._client.request_authenticate_token()
-        authenticated = await self._writer._client.request_authenticate()
-        if authenticated is not True:
-            raise RuntimeError("VTube Studio authentication failed")
+        from sidecar.vts.handshake import connect_and_authenticate
+
+        await connect_and_authenticate(self._writer)
 
     async def write_parameter(
         self,

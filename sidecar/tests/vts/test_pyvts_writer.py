@@ -214,6 +214,22 @@ def test_mouth_writer_uses_distinct_vts_identity_and_token(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_mouth_writer_authenticates_through_safe_handshake(monkeypatch, fake_pyvts_client):
+    monkeypatch.setattr(pyvts_writer.pyvts, "vts", lambda **kwargs: fake_pyvts_client)
+    writer = PyVTSParameterWriter()
+
+    await writer.connect_and_authenticate()
+
+    await writer.close()
+    assert fake_pyvts_client.connect_calls == 1
+    assert fake_pyvts_client.token_requests == 0
+    assert fake_pyvts_client.authenticate_requests == 0
+    assert fake_pyvts_client.read_token_calls == 1
+    assert len(fake_pyvts_client.websocket._outbound) == 1
+    assert "AuthenticationRequest" in fake_pyvts_client.websocket._outbound[0]
+
+
+@pytest.mark.asyncio
 async def test_handshake_uses_background_safe_writer(fake_pyvts_client):
     writer = PyvtsSafeWriter(client=fake_pyvts_client)
     await connect_and_authenticate(writer)

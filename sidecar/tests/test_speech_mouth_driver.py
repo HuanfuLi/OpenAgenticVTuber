@@ -117,7 +117,7 @@ async def test_drive_envelope_interpolates_half_step():
 def test_pyvts_writer_builds_inject_parameter_request():
     writer = PyVTSParameterWriter()
 
-    request = writer._client.vts_request.requestSetParameterValue(
+    request = writer._writer.vts_request.requestSetParameterValue(
         parameter="MouthOpen",
         value=0.75,
         weight=1.0,

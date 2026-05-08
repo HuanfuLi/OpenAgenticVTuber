@@ -3,7 +3,7 @@ status: testing
 phase: 06-plugin-runtime-default-plugin
 source: [06-VERIFICATION.md]
 started: 2026-05-08T11:57:55Z
-updated: 2026-05-08T17:42:00Z
+updated: 2026-05-08T17:59:00Z
 ---
 
 # Phase 06 Human UAT
@@ -74,4 +74,5 @@ blocked: 0
     - "Follow-up: restored old shared .vts_token.txt path for the mouth writer to avoid VTS auth regression."
     - "Follow-up: clamp now permits standard VTS tracking input parameters such as FaceAngleX/Y/Z, EyeRightY, FacePositionZ, and MouthOpen even when rig reflection only exposes Cubism/output IDs."
     - "Follow-up: repeated clamp drops for truly unknown params are warning-once per param/reason/mode to prevent log flood."
+    - "Follow-up: mouth writer now uses the same PyvtsSafeWriter handshake path as the compositor instead of direct pyvts auth calls, avoiding receive-loop races that degrade lipsync to LoggingParameterWriter."
   debug_session: "retest_needed"
