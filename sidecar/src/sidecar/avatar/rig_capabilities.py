@@ -59,3 +59,10 @@ def build_rig_capabilities(overrides: AvatarOverrides, rig_dir: Path) -> RigCapa
 def resolve_source_rig_path(overrides: AvatarOverrides, repo_root: Path) -> Path:
     path = Path(overrides.source_rig_path)
     return path if path.is_absolute() else repo_root / path
+
+
+def _rig_capabilities_tag_vocabulary(self: RigCapabilities) -> str:
+    return ""
+
+
+RigCapabilities.tag_vocabulary = _rig_capabilities_tag_vocabulary  # type: ignore[attr-defined]

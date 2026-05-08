@@ -13,8 +13,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger as loguru_logger
 
-from sidecar.avatar.capabilities import load_capabilities
-from sidecar.avatar.overrides import load_overrides
+from sidecar.avatar.overrides import load_avatar_overrides
+from sidecar.avatar.rig_capabilities import build_rig_capabilities, resolve_source_rig_path
 from sidecar.compositor import Compositor
 from sidecar.compositor.cursor_driver import CursorDriver
 from sidecar.compositor.idle_driver import IdleDriver
@@ -103,7 +103,7 @@ def _playback_now(stream) -> float:
 
 
 async def _build_mouth_writer(capabilities):
-    param_ids = {p.id for p in capabilities.parameters}
+    param_ids = set(capabilities.writable_param_ids)
     if "ParamMouthOpenY" not in param_ids:
         loguru_logger.warning("[VTS-MOUTH] degraded missing ParamMouthOpenY")
         return LoggingParameterWriter()
@@ -151,9 +151,21 @@ async def lifespan(app: FastAPI):
         )
     else:
         try:
-            capabilities = load_capabilities(teto_dir)
+            overrides = load_avatar_overrides(teto_dir)
+            rig_dir = (
+                resolve_source_rig_path(overrides, repo_root=Path(__file__).resolve().parents[4])
+                if overrides.source_rig_path
+                else teto_dir
+            )
+            capabilities = build_rig_capabilities(overrides=overrides, rig_dir=rig_dir)
+            loguru_logger.info(
+                "[BOOT] RigCapabilities loaded: writable_param_ids=%d, hotkeys=%d, expressions=%d",
+                len(capabilities.writable_param_ids),
+                len(capabilities.hotkeys),
+                len(capabilities.expressions),
+            )
             persona = (teto_dir / "personality.md").read_text(encoding="utf-8")
-            voice_model = capabilities.voice.model if capabilities.voice else "en_US-amy-medium"
+            voice_model = overrides.voice.model if overrides.voice else "en_US-amy-medium"
             model_path = (
                 Path(__file__).resolve().parents[4]
                 / "sidecar"
@@ -167,7 +179,6 @@ async def lifespan(app: FastAPI):
             gateway = LLMGateway(provider_cfg)
             await _warmup_ping(gateway)
 
-            overrides = load_overrides(teto_dir)
             compositor_speech_queue: asyncio.Queue = asyncio.Queue()
             mouth_speech_queue: asyncio.Queue = asyncio.Queue()
             compositor_intent_queue: asyncio.Queue = asyncio.Queue()
