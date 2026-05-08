@@ -78,6 +78,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
   }
 
   const sidecarRoot = resolveSidecarRoot()
+  const repoRoot = path.resolve(app.getAppPath(), '..', '..')
   const llmConfigJson = buildSidecarConfigEnv(loadConfig())
   const child = spawn('uv', ['run', 'python', '-m', 'sidecar'], {
     cwd: sidecarRoot,
@@ -97,6 +98,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
       // One-shot LLM config handoff (see buildSidecarConfigEnv above). Omitted
       // when setup is incomplete; sidecar then idles with config-error replies
       // and the renderer setup gate keeps the user out of /chat.
+      AGENTICLLMVTUBER_REPO_ROOT: repoRoot,
       ...(llmConfigJson ? { AGENTICLLMVTUBER_LLM_CONFIG_JSON: llmConfigJson } : {})
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -178,6 +180,13 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
 
 export function getReadyUrl(): string | null {
   return state.readyUrl
+}
+
+export function getSidecarHttpUrl(): string {
+  if (!state.readyUrl) {
+    throw new Error('Sidecar is not ready')
+  }
+  return state.readyUrl.replace(/^ws:/, 'http:').replace(/\/ws$/, '')
 }
 
 export function onReady(cb: (url: string) => void): () => void {

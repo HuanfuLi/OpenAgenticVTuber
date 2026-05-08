@@ -3,6 +3,7 @@
 // is whitelisted here.
 import { contextBridge, ipcRenderer } from 'electron'
 import type { StoredConfig } from '../src/safe-storage'
+import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
 
 type Unsubscribe = () => void
 
@@ -35,7 +36,14 @@ const api = {
   getStoredConfig: (): Promise<StoredConfig | null> => ipcRenderer.invoke('config:load'),
   saveStoredConfig: (cfg: StoredConfig): Promise<void> =>
     ipcRenderer.invoke('config:save', cfg),
-  clearStoredConfig: (): Promise<void> => ipcRenderer.invoke('config:clear')
+  clearStoredConfig: (): Promise<void> => ipcRenderer.invoke('config:clear'),
+
+  // Avatar import
+  pickAvatarFolder: (): Promise<string | null> => ipcRenderer.invoke('avatar:pickFolder'),
+  requestImportPlan: (folder: string): Promise<AvatarImportPlan> =>
+    ipcRenderer.invoke('avatar:requestImportPlan', folder),
+  commitAvatarOverrides: (plan: AvatarImportPlan): Promise<{ status: string; path: string }> =>
+    ipcRenderer.invoke('avatar:commitOverrides', plan)
 }
 
 contextBridge.exposeInMainWorld('api', api)

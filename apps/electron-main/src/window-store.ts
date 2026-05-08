@@ -16,6 +16,7 @@ export interface ChromeState {
 export interface StoreSchema {
   window: WindowState
   chrome: ChromeState
+  currentAvatarId: string
 }
 
 // Defaults per UI-SPEC §Spacing: 400×700 default window, drawer disabled, 200px height.
@@ -26,6 +27,7 @@ export const store = new Store<StoreSchema>({
       logsDrawerEnabled: false,
       logsDrawerHeight: 200,
       logsDrawerCollapsed: true
-    }
+    },
+    currentAvatarId: 'teto'
   }
 })
