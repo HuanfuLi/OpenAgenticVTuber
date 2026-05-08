@@ -210,7 +210,7 @@ def test_mouth_writer_uses_distinct_vts_identity_and_token(monkeypatch):
 
     plugin_info = clients[0].kwargs["plugin_info"]
     assert plugin_info["plugin_name"] == "AgenticLLMVTuber Phase3 Mouth Driver"
-    assert plugin_info["authentication_token_path"].endswith(".vts_mouth_token.txt")
+    assert plugin_info["authentication_token_path"].endswith(".vts_token.txt")
 
 
 @pytest.mark.asyncio

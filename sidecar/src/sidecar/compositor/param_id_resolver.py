@@ -18,6 +18,28 @@ _VTS_INPUT_PARAM_MAP = {
     "ParamMouthOpenY": "MouthOpen",
 }
 
+VTS_TRACKING_INPUT_PARAM_IDS = frozenset(
+    {
+        "FaceAngleX",
+        "FaceAngleY",
+        "FaceAngleZ",
+        "FacePositionX",
+        "FacePositionY",
+        "FacePositionZ",
+        "EyeLeftX",
+        "EyeLeftY",
+        "EyeRightX",
+        "EyeRightY",
+        "EyeOpenLeft",
+        "EyeOpenRight",
+        "MouthOpen",
+        "MouthSmile",
+        "Brows",
+        "BrowsLeftY",
+        "BrowsRightY",
+    }
+)
+
 
 def resolve_param_id(name: str, renderer: RendererName = "vts") -> str:
     if renderer == "vts":

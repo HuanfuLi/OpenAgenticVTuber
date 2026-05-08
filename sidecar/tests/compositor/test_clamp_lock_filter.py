@@ -5,7 +5,7 @@ import math
 from contracts import ParamFrame
 from contracts.rig_capabilities import RigCapabilities
 
-from sidecar.compositor.clamp import clamp_and_validate
+from sidecar.compositor.clamp import clamp_and_validate, reset_drop_warning_cache
 from sidecar.compositor.lock_filter import SYSTEM_PRIMITIVE_OVERRIDES, is_system_primitive_override
 
 
@@ -64,6 +64,42 @@ def test_clamp_and_validate_clamps_add_values_set_values_and_set_weights() -> No
         "ParamEyeOpenL": (1.0, 1.0),
         "ParamEyeOpenR": (-1.0, 0.0),
     }
+
+
+def test_clamp_and_validate_allows_vts_tracking_inputs_not_reflected_from_rig() -> None:
+    frame = ParamFrame(
+        add_params={
+            "FaceAngleX": 0.5,
+            "FaceAngleY": -0.25,
+            "FaceAngleZ": 0.1,
+            "EyeRightY": 0.2,
+            "FacePositionZ": -0.15,
+        },
+        set_params={"MouthOpen": (0.8, 1.0)},
+    )
+    capabilities = RigCapabilities(writable_param_ids=["ParamAngleX"])
+
+    clamped = clamp_and_validate(frame, capabilities)
+
+    assert clamped.add_params == frame.add_params
+    assert clamped.set_params == frame.set_params
+
+
+def test_clamp_and_validate_warns_unknown_param_once(monkeypatch) -> None:
+    reset_drop_warning_cache()
+    warnings: list[tuple[str, tuple[object, ...]]] = []
+    monkeypatch.setattr(
+        "sidecar.compositor.clamp.logger.warning",
+        lambda message, *args: warnings.append((message, args)),
+    )
+    frame = ParamFrame(add_params={"UnknownAdd": 0.5})
+    capabilities = RigCapabilities(writable_param_ids=[])
+
+    clamp_and_validate(frame, capabilities)
+    clamp_and_validate(frame, capabilities)
+
+    assert warnings == [("[PLUGIN-FRAME-DROP] unknown add param={}", ("UnknownAdd",))]
+    reset_drop_warning_cache()
 
 
 def test_mouth_open_is_only_system_primitive_override() -> None:

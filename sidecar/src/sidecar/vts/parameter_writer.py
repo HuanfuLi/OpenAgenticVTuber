@@ -29,7 +29,7 @@ class PyVTSParameterWriter:
 
     def __init__(self, token_path: Path | None = None) -> None:
         if token_path is None:
-            token_path = Path(__file__).resolve().parents[3] / ".vts_mouth_token.txt"
+            token_path = Path(__file__).resolve().parents[3] / ".vts_token.txt"
         self._writer = PyvtsSafeWriter(
             plugin_info={
                 "plugin_name": MOUTH_DRIVER_PLUGIN_NAME,

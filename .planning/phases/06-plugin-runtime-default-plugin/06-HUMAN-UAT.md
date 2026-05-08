@@ -3,7 +3,7 @@ status: testing
 phase: 06-plugin-runtime-default-plugin
 source: [06-VERIFICATION.md]
 started: 2026-05-08T11:57:55Z
-updated: 2026-05-08T16:56:00Z
+updated: 2026-05-08T17:42:00Z
 ---
 
 # Phase 06 Human UAT
@@ -71,4 +71,7 @@ blocked: 0
     - "Electron now lists repo/userData body-motion plugin manifests, passes AGENTICLLMVTUBER_USER_DATA and AGENTICLLMVTUBER_ACTIVE_PLUGIN into sidecar spawn env, and restarts sidecar on selection save."
     - "Compositor VTS writer identity restored to AgenticLLMVTuber Phase4 Safe Writer; mouth writer keeps AgenticLLMVTuber Phase3 Mouth Driver and uses .vts_mouth_token.txt."
     - "Regression tests added for Settings plugin selection and VTS writer identity separation."
+    - "Follow-up: restored old shared .vts_token.txt path for the mouth writer to avoid VTS auth regression."
+    - "Follow-up: clamp now permits standard VTS tracking input parameters such as FaceAngleX/Y/Z, EyeRightY, FacePositionZ, and MouthOpen even when rig reflection only exposes Cubism/output IDs."
+    - "Follow-up: repeated clamp drops for truly unknown params are warning-once per param/reason/mode to prevent log flood."
   debug_session: "retest_needed"
