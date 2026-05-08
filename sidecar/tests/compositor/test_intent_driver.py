@@ -1,100 +1,102 @@
 import asyncio
+import json
 
 import pytest
 
 from contracts import ActionIntent
 from sidecar.avatar.capabilities import AvatarCapabilities, Expression
-from sidecar.avatar.overrides import DiscoveredHotkey, TetoOverrides
-from sidecar.compositor.intent_driver import IntentDriver, RAMP_OUT_MS
+from sidecar.compositor.easing import ease_out_cubic
+from sidecar.compositor.intent_driver import IntentDriver, RAMP_IN_MS, RAMP_OUT_MS
 
 
-@pytest.mark.asyncio
-async def test_intent_triggers_matching_hotkey(monkeypatch):
-    intent_queue: asyncio.Queue = asyncio.Queue()
-    done_queue: asyncio.Queue = asyncio.Queue()
-    await intent_queue.put(
-        ActionIntent(kind="expression", name="chibi", strength=1.0, avatar_id="teto")
+class _ForbiddenWriter:
+    class _Request:
+        def requestTriggerHotKey(self, hotkey_id):
+            raise AssertionError("HotkeyTriggerRequest forbidden for expression intents")
+
+    vts_request = _Request()
+
+
+def _write_joy_expression(tmp_path):
+    expression_dir = tmp_path / "Expressions"
+    expression_dir.mkdir()
+    (expression_dir / "joy.exp3.json").write_text(
+        json.dumps(
+            {
+                "Type": "Live2D Expression",
+                "Parameters": [{"Id": "ParamJoy", "Value": 1.0, "Blend": "Add"}],
+            }
+        ),
+        encoding="utf-8",
     )
-    tasks = []
 
-    class _Writer:
-        class _Request:
-            def requestTriggerHotKey(self, hotkey_id):
-                return {"messageType": "HotkeyTriggerRequest", "data": {"hotkeyID": hotkey_id}}
 
-        vts_request = _Request()
-
-        async def request(self, request):
-            tasks.append(request)
-
-    driver = IntentDriver(
+def _driver(tmp_path, intent_queue, done_queue):
+    _write_joy_expression(tmp_path)
+    return IntentDriver(
         intent_queue,
         done_queue,
-        writer=_Writer(),
+        writer=_ForbiddenWriter(),
         capabilities=AvatarCapabilities(
-            expressions=[Expression(name="chibi", file="chibi.exp3.json")]
+            expressions=[Expression(name="joy", file="joy.exp3.json")]
         ),
-        overrides=TetoOverrides(
-            discovered_hotkeys=[
-                DiscoveredHotkey(
-                    hotkey_id="hid-chibi",
-                    name="【Chibi】[Q]",
-                    type="ToggleExpression",
-                    file="chibi.exp3.json",
-                )
-            ]
-        ),
+        avatar_dir=tmp_path,
     )
 
-    assert driver.tick(0.0) == {}
-    await asyncio.sleep(0)
-    assert tasks[0]["data"]["hotkeyID"] == "hid-chibi"
+
+def _param_joy(frame):
+    value, weight = frame["ParamJoy"]
+    assert value == pytest.approx(1.0)
+    return weight
 
 
-@pytest.mark.asyncio
-async def test_sentence_complete_toggles_expression_off():
+def test_expression_intent_ramps_weighted_set_params_from_exp3(tmp_path):
     intent_queue: asyncio.Queue = asyncio.Queue()
     done_queue: asyncio.Queue = asyncio.Queue()
-    await intent_queue.put(
-        ActionIntent(kind="expression", name="chibi", strength=1.0, avatar_id="teto")
+    intent_queue.put_nowait(
+        ActionIntent(kind="expression", name="joy", strength=0.8, avatar_id="teto")
     )
-    tasks = []
+    driver = _driver(tmp_path, intent_queue, done_queue)
 
-    class _Writer:
-        class _Request:
-            def requestTriggerHotKey(self, hotkey_id):
-                return {"messageType": "HotkeyTriggerRequest", "data": {"hotkeyID": hotkey_id}}
+    assert driver.tick(0.0) == {"ParamJoy": (pytest.approx(1.0), pytest.approx(0.0))}
 
-        vts_request = _Request()
+    mid_weight = _param_joy(driver.tick((RAMP_IN_MS / 2.0) / 1000.0))
+    expected_mid = 0.8 * ease_out_cubic(0.5)
+    assert 0.0 < mid_weight < 0.8
+    assert mid_weight == pytest.approx(expected_mid)
 
-        async def request(self, request):
-            tasks.append(request)
+    full_weight = _param_joy(driver.tick(RAMP_IN_MS / 1000.0))
+    assert full_weight == pytest.approx(0.8)
 
-    driver = IntentDriver(
-        intent_queue,
-        done_queue,
-        writer=_Writer(),
-        capabilities=AvatarCapabilities(
-            expressions=[Expression(name="chibi", file="chibi.exp3.json")]
-        ),
-        overrides=TetoOverrides(
-            discovered_hotkeys=[
-                DiscoveredHotkey(
-                    hotkey_id="hid-chibi",
-                    name="【Chibi】[Q]",
-                    type="ToggleExpression",
-                    file="chibi.exp3.json",
-                )
-            ]
-        ),
+
+def test_sentence_complete_decays_expression_and_expires_by_ramp_out(tmp_path):
+    intent_queue: asyncio.Queue = asyncio.Queue()
+    done_queue: asyncio.Queue = asyncio.Queue()
+    intent_queue.put_nowait(
+        ActionIntent(kind="expression", name="joy", strength=0.8, avatar_id="teto")
     )
-    driver.tick(1.0)
-    await asyncio.sleep(0)
-    await done_queue.put(1)
+    driver = _driver(tmp_path, intent_queue, done_queue)
 
-    assert driver.tick(2.0) == {}
-    await asyncio.sleep(0)
-    assert [task["data"]["hotkeyID"] for task in tasks] == ["hid-chibi", "hid-chibi"]
+    driver.tick(RAMP_IN_MS / 1000.0)
+    done_queue.put_nowait(1)
+    end = 1.0
 
-    driver.tick(2.0 + (RAMP_OUT_MS / 1000.0))
-    assert "chibi" not in driver._active
+    decayed_weight = _param_joy(driver.tick(end + ((RAMP_OUT_MS / 2.0) / 1000.0)))
+    expected_decayed = 0.8 * (1.0 - ease_out_cubic(0.5))
+    assert 0.0 < decayed_weight < 0.8
+    assert decayed_weight == pytest.approx(expected_decayed)
+
+    assert driver.tick(end + (RAMP_OUT_MS / 1000.0)) == {}
+
+
+def test_expression_intents_never_request_hotkeys(tmp_path):
+    intent_queue: asyncio.Queue = asyncio.Queue()
+    done_queue: asyncio.Queue = asyncio.Queue()
+    intent_queue.put_nowait(
+        ActionIntent(kind="expression", name="joy", strength=0.8, avatar_id="teto")
+    )
+    driver = _driver(tmp_path, intent_queue, done_queue)
+
+    assert "ParamJoy" in driver.tick(0.0)
+    done_queue.put_nowait(1)
+    driver.tick(RAMP_IN_MS / 1000.0)
