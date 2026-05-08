@@ -26,6 +26,7 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 - Phase numbering continues from milestone-1's last phase (5) → this milestone covers Phases 6–10 per §14B.7.
 - Agent system development (entire §9 of PROJECT_DESIGN.md, originally the planned next milestone) is **deferred** in favor of this animation-architecture pivot.
 - Milestone-1's 05-02 (`skeleton-verification.md` ceremony) was deferred 2026-05-08; SC-01 migrates to Phase 10's exit criterion under the refactored architecture.
+- Phase 5's contracts codegen pipeline is complete: Pydantic contracts now regenerate the six TypeScript mirrors plus committed JSON Schema intermediates, guarded by `npm run check:contracts`.
 - Default plugin must adapt to rig (Teto's body params are orphaned per Phase 4 investigation → plugin emulates body sway via head/face params; plugin reads `RigCapabilities` at `on_load` and adapts).
 
 ## Requirements
@@ -39,6 +40,7 @@ This is the **v1-horizon** core value. The current milestone (walking skeleton, 
 - [x] LiteLLM streaming gateway with provider-specific reasoning-disable (no parser-strip, no out-of-band capture) — *Validated in Phase 2 (LLM-01); 4 provider branches verified by unit tests; live `<think>` suppression confirmed against compliant reasoning model*
 - [x] OLVT 4-decorator chain ported (sentence_divider → actions_extractor → display_processor → tts_filter); LLM emits `[tag]` → ActionIntent extracted, bracket stripped from chat, INTENT log line fires; adversarial split-bracket robustness — *Validated in Phase 2 (LLM-02); split-bracket SC #3 BLOCKER closed programmatically; live verified against real Teto rig vocabulary (Blush, Cry, Star Eye, …)*
 - [x] Append-only `_memory` + forward-only `_head_idx` orchestrator; in-memory single thread cleared on relaunch — *Validated in Phase 2 (LLM-04); KV-cache discipline grep returns 0 violations; fresh-thread invariant verified at runtime introspection*
+- [x] Pydantic contracts are the source of truth for the six TypeScript contract mirrors; JSON Schema intermediates are committed and `npm run check:contracts` guards drift — *Validated in Phase 5: Polish, Contracts Codegen (SC-02)*
 
 ### Active
 
@@ -147,4 +149,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-08 — milestone v2.0 (Plugin + Animation Control) started*
+*Last updated: 2026-05-08 — Phase 5 complete; contracts codegen validated before v2.0 plugin/avatar work*
