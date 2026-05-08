@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: verifying
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-05-08T10:30:46.050Z"
+stopped_at: Completed 06-04-PLAN.md
+last_updated: "2026-05-08T11:02:17.197Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
   completed_phases: 6
-  total_plans: 32
-  completed_plans: 24
+  total_plans: 34
+  completed_plans: 26
 ---
 
 # Project State
@@ -83,6 +83,8 @@ Last activity: 2026-05-08
 | Phase 06-plugin-runtime-default-plugin P01 | 7min | 3 tasks | 11 files |
 | Phase 06-plugin-runtime-default-plugin P02 | 12min | 4 tasks | 35 files |
 | Phase 06-plugin-runtime-default-plugin P03 | 7min | 4 tasks | 6 files |
+| Phase 06-plugin-runtime-default-plugin P05 | 9min | 2 tasks | 5 files |
+| Phase 06-plugin-runtime-default-plugin P04 | 5min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -143,6 +145,11 @@ Recent decisions affecting current work:
 - [Phase 06-plugin-runtime-default-plugin]: The default plugin keeps OLVT emotion names but renders them as ParamFrame head/eye/face compositions instead of VTS expression activations.
 - [Phase 06-plugin-runtime-default-plugin]: Default plugin parsing is stateful across sentence chunks so split bracket tokens can still activate plugin actions.
 - [Phase 06-plugin-runtime-default-plugin]: body_sway_strategy values other than head_only warn at plugin load and fall back to head_only; proxy_param and exp3_modulation remain source artifacts only.
+- [Phase 06-plugin-runtime-default-plugin]: Manifest changes are warning-only: plugin.yaml is reparsed for comparison, but active manifest, prompt section, and plugin runtime remain boot-time values until restart.
+- [Phase 06-plugin-runtime-default-plugin]: Manifest watcher tests exercise event callbacks directly instead of relying on filesystem timing.
+- [Phase 06-plugin-runtime-default-plugin]: Plugin action codes are preserved on SentenceOutput.plugin_text while display_text and tts_text remain bracket-stripped.
+- [Phase 06-plugin-runtime-default-plugin]: DefaultPlugin action parsing remains plugin-owned; PluginAdapter.tick() is the authoritative runtime ramp renderer.
+- [Phase 06-plugin-runtime-default-plugin]: Timed default-plugin frames remain ParamFrame-only with no pyvts, exp3, or requestExpressionActivation path.
 
 ### Pending Todos
 
@@ -165,6 +172,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-08T10:30:46.045Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-05-08T11:02:17.191Z
+Stopped at: Completed 06-04-PLAN.md
 Resume file: None
