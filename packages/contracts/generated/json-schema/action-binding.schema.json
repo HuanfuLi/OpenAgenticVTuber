@@ -1,0 +1,43 @@
+{
+  "properties": {
+    "action_code": {
+      "pattern": "^[a-z][a-z0-9-]{0,30}$",
+      "title": "Action Code",
+      "type": "string"
+    },
+    "expression_index": {
+      "minimum": 0,
+      "title": "Expression Index",
+      "type": "integer"
+    },
+    "expression_name": {
+      "default": "",
+      "title": "Expression Name",
+      "type": "string"
+    },
+    "plugin_name": {
+      "const": "default",
+      "default": "default",
+      "title": "Plugin Name",
+      "type": "string"
+    },
+    "source": {
+      "default": "olvt_emotionMap",
+      "enum": [
+        "olvt_emotionMap",
+        "manual"
+      ],
+      "title": "Source",
+      "type": "string"
+    }
+  },
+  "required": [
+    "action_code",
+    "expression_index",
+    "expression_name",
+    "plugin_name",
+    "source"
+  ],
+  "title": "DefaultPluginActionBinding",
+  "type": "object"
+}

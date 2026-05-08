@@ -3,10 +3,12 @@
 
 import type { VariantEntry } from './variant-entry';
 import type { EventEntry } from './event-entry';
+import type { DefaultPluginActionBinding } from './action-binding';
 import type { AvatarOverrides, Voice } from './avatar-overrides';
 export interface AvatarImportPlan {
   avatar_id: string;
   avatar_name: string;
+  default_plugin_action_bindings: DefaultPluginActionBinding[];
   detected_type: string;
   events: EventEntry[];
   existing_overrides: AvatarOverrides | null;
@@ -15,6 +17,7 @@ export interface AvatarImportPlan {
   voice: Voice | null;
   warnings: ImportWarning[]
 }
+
 
 export interface Notes {
   [k: string]: string

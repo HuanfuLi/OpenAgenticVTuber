@@ -122,6 +122,28 @@
       },
       "default": []
     },
+    "default_plugin_action_bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["plugin_name", "action_code", "expression_index", "expression_name", "source"],
+        "properties": {
+          "plugin_name": { "type": "string", "enum": ["default"], "default": "default" },
+          "action_code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,30}$",
+            "not": {
+              "enum": ["think", "thinking", "function_call", "function_calls", "tool_call", "tool_calls", "system"]
+            }
+          },
+          "expression_index": { "type": "integer", "minimum": 0 },
+          "expression_name": { "type": "string", "default": "" },
+          "source": { "type": "string", "enum": ["olvt_emotionMap", "manual"], "default": "olvt_emotionMap" }
+        }
+      },
+      "default": []
+    },
     "source_rig_path": { "type": "string", "default": "" }
   }
 }

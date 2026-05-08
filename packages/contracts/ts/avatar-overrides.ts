@@ -3,8 +3,10 @@
 
 import type { VariantEntry } from './variant-entry';
 import type { EventEntry } from './event-entry';
+import type { DefaultPluginActionBinding } from './action-binding';
 export interface AvatarOverrides {
   body_sway_strategy: 'head_only' | 'proxy_param' | 'exp3_modulation';
+  default_plugin_action_bindings: DefaultPluginActionBinding[];
   discovered_hotkeys: DiscoveredHotkey[];
   events: EventEntry[];
   exp3_body_pose: string | null;
@@ -18,6 +20,7 @@ export interface AvatarOverrides {
   variants: VariantEntry[];
   voice: Voice
 }
+
 export interface DiscoveredHotkey {
   file: string;
   hotkey_id: string;

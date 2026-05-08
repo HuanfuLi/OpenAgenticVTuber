@@ -12,6 +12,13 @@
           "title": "Body Sway Strategy",
           "type": "string"
         },
+        "default_plugin_action_bindings": {
+          "items": {
+            "$ref": "#/$defs/DefaultPluginActionBinding"
+          },
+          "title": "Default Plugin Action Bindings",
+          "type": "array"
+        },
         "discovered_hotkeys": {
           "items": {
             "$ref": "#/$defs/DiscoveredHotkey"
@@ -108,6 +115,49 @@
         "source_rig_path"
       ],
       "title": "AvatarOverrides",
+      "type": "object"
+    },
+    "DefaultPluginActionBinding": {
+      "properties": {
+        "action_code": {
+          "pattern": "^[a-z][a-z0-9-]{0,30}$",
+          "title": "Action Code",
+          "type": "string"
+        },
+        "expression_index": {
+          "minimum": 0,
+          "title": "Expression Index",
+          "type": "integer"
+        },
+        "expression_name": {
+          "default": "",
+          "title": "Expression Name",
+          "type": "string"
+        },
+        "plugin_name": {
+          "const": "default",
+          "default": "default",
+          "title": "Plugin Name",
+          "type": "string"
+        },
+        "source": {
+          "default": "olvt_emotionMap",
+          "enum": [
+            "olvt_emotionMap",
+            "manual"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_code",
+        "expression_index",
+        "expression_name",
+        "plugin_name",
+        "source"
+      ],
+      "title": "DefaultPluginActionBinding",
       "type": "object"
     },
     "DiscoveredHotkey": {
@@ -321,6 +371,13 @@
       "default": "",
       "title": "Avatar Name",
       "type": "string"
+    },
+    "default_plugin_action_bindings": {
+      "items": {
+        "$ref": "#/$defs/DefaultPluginActionBinding"
+      },
+      "title": "Default Plugin Action Bindings",
+      "type": "array"
     },
     "detected_type": {
       "title": "Detected Type",

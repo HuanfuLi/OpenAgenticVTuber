@@ -24,6 +24,7 @@ sys.path.insert(0, str(REPO_ROOT / "packages/contracts/py"))
 from pydantic import TypeAdapter  # noqa: E402
 from contracts import (  # noqa: E402
     ActionIntent,
+    DefaultPluginActionBinding,
     AudioPayloadMessage,
     AvatarImportPlan,
     AvatarOverrides,
@@ -42,6 +43,7 @@ PY_SOURCE_REL = "packages/contracts/py/contracts"
 
 TARGETS = [
     (ActionIntent, "action-intent", "action_intent", "ActionIntent"),
+    (DefaultPluginActionBinding, "action-binding", "action_binding", "DefaultPluginActionBinding"),
     (AudioPayloadMessage, "audio-payload", "audio_payload", "AudioPayloadMessage"),
     (SpeechEnvelopePayload, "speech-envelope", "speech_envelope", "SpeechEnvelopePayload"),
     (ParamFrame, "param-frame", "param_frame", "ParamFrame"),
@@ -56,6 +58,7 @@ TARGETS = [
 
 OWNER_FILE = {
     "ActionIntent": "action-intent",
+    "DefaultPluginActionBinding": "action-binding",
     "AudioPayloadMessage": "audio-payload",
     "DisplayTextField": "audio-payload",
     "SpeechEnvelopePayload": "speech-envelope",
