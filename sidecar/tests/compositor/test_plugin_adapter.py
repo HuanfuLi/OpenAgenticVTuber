@@ -3,12 +3,23 @@ from __future__ import annotations
 import asyncio
 
 from contracts import ParamFrame
+from contracts.avatar_overrides import AvatarOverrides
+from contracts.rig_capabilities import RigCapabilities
+from plugins.default import DefaultPlugin
 from sidecar.compositor.plugin_adapter import PluginAdapter
 
 
 class _Plugin:
     async def on_token_stream(self, sentence: str):
         yield ParamFrame(add_params={"FaceAngleX": 0.4})
+
+
+class _FakeClock:
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        return self.now
 
 
 def test_latest_frame_wins() -> None:
@@ -41,5 +52,48 @@ def test_enqueue_sentence_feeds_plugin_input() -> None:
         await asyncio.sleep(0)
         await asyncio.sleep(0)
         assert adapter.tick(asyncio.get_running_loop().time()).add_params == {"FaceAngleX": 0.4}
+
+    asyncio.run(run())
+
+
+def test_enqueue_joy_renders_nonzero_timed_frames() -> None:
+    async def run() -> None:
+        clock = _FakeClock()
+        plugin = DefaultPlugin(clock=clock)
+        plugin.on_load(
+            RigCapabilities(
+                writable_param_ids=[
+                    "FaceAngleZ",
+                    "FaceAngleY",
+                    "EyeOpenLeft",
+                    "EyeOpenRight",
+                ]
+            ),
+            AvatarOverrides(),
+        )
+        adapter = PluginAdapter(plugin)
+
+        adapter.enqueue_sentence("[joy]")
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        clock.now = 0.15
+        frame_150 = adapter.tick(0.15)
+        clock.now = 0.30
+        frame_300 = adapter.tick(0.30)
+        clock.now = 0.95
+        frame_950 = adapter.tick(0.95)
+
+        assert any(
+            value != 0.0
+            for key, value in frame_150.add_params.items()
+            if key.startswith("FaceAngle") or key.startswith("EyeOpen")
+        )
+        assert frame_300.add_params["FaceAngleZ"] >= frame_150.add_params["FaceAngleZ"]
+        assert (
+            frame_950.add_params == {}
+            or all(value == 0.0 for value in frame_950.add_params.values())
+        )
+        assert plugin.active_action is None
 
     asyncio.run(run())
