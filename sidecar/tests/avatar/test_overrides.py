@@ -58,17 +58,35 @@ def test_save_load_roundtrip(tmp_path):
     assert loaded.model_dump() == o.model_dump()
 
 
-def test_committed_teto_overrides_yaml_validates():
-    """The committed avatars/teto/teto_overrides.yaml must validate against the schema."""
+def test_committed_imported_avatar_overrides_yaml_validates():
+    """The committed imported avatar override YAML is the canonical v2 runtime file."""
 
     repo_root = Path(__file__).resolve().parents[3]
-    avatar_dir = repo_root / "avatars" / "teto"
+    avatar_dir = repo_root / "avatars" / "重音テト"
     o = load_overrides(avatar_dir)
     assert o.body_sway_strategy in ("head_only", "proxy_param", "exp3_modulation")
-    assert len(o.discovered_hotkeys) >= 15
-    assert sum(1 for h in o.discovered_hotkeys if h.is_meta) >= 2
-    assert sum(1 for h in o.discovered_hotkeys if h.llm_emittable) >= 13
-    assert "smoke_pass_status" in o.notes or "smoke_pass_run_at" in o.notes
+    assert len(o.variants) >= 13
+    assert o.source_rig_path
+    assert (avatar_dir / "_avatar_overrides.yaml").exists()
+
+
+def test_legacy_teto_overrides_yaml_still_loads_as_fallback(tmp_path):
+    legacy = tmp_path / "teto_overrides.yaml"
+    legacy.write_text(
+        "body_sway_strategy: head_only\n"
+        "discovered_hotkeys:\n"
+        "- hotkey_id: abc123\n"
+        "  name: Star Eye [7]\n"
+        "  type: ToggleExpression\n"
+        "  file: Star Eye.exp3.json\n"
+        "  is_meta: false\n"
+        "  llm_emittable: true\n",
+        encoding="utf-8",
+    )
+
+    o = load_overrides(tmp_path)
+    assert o.body_sway_strategy == "head_only"
+    assert len(o.discovered_hotkeys) == 1
 
 
 def test_meta_hotkeys_are_not_llm_emittable():

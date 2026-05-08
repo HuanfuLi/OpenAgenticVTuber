@@ -661,3 +661,10 @@ def test_server_routes_speech_only_to_compositor_queue():
     assert "mouth_speech_queue" not in src
     assert "mouth_task" not in src
     assert "emit_mouth" not in src
+
+
+def test_server_active_avatar_id_comes_from_env(monkeypatch):
+    from sidecar.ws.server import _active_avatar_id
+
+    monkeypatch.setenv("AGENTICLLMVTUBER_ACTIVE_AVATAR", "重音テト")
+    assert _active_avatar_id() == "重音テト"

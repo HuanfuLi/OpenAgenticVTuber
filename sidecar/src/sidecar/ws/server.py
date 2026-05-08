@@ -83,6 +83,17 @@ def _avatars_root() -> Path:
     return Path(__file__).resolve().parents[4] / "avatars"
 
 
+def _active_avatar_id() -> str:
+    return os.environ.get("AGENTICLLMVTUBER_ACTIVE_AVATAR") or "teto"
+
+
+def _persona_path(avatars_root: Path, avatar_dir: Path) -> Path:
+    persona_path = avatar_dir / "personality.md"
+    if persona_path.exists():
+        return persona_path
+    return avatars_root / "teto" / "personality.md"
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[4]
 
@@ -152,12 +163,13 @@ async def lifespan(app: FastAPI):
 
     provider_cfg = _load_provider_config_from_env()
     avatars = _avatars_root()
-    teto_dir = avatars / "teto"
-    if provider_cfg is None or not teto_dir.exists():
+    active_avatar_id = _active_avatar_id()
+    avatar_dir = avatars / active_avatar_id
+    if provider_cfg is None or not avatar_dir.exists():
         loguru_logger.warning(
             f"Sidecar started without LLM config (env var present="
             f"{provider_cfg is not None}) or avatar dir missing "
-            f"(teto/={teto_dir.exists()}). Orchestrator inactive. "
+            f"({active_avatar_id}/={avatar_dir.exists()}). Orchestrator inactive. "
             f"text-input will reply with config error."
         )
         app.state.orchestrator = None
@@ -169,20 +181,22 @@ async def lifespan(app: FastAPI):
         )
     else:
         try:
-            overrides = load_avatar_overrides(teto_dir)
+            overrides = load_avatar_overrides(avatar_dir)
             rig_dir = (
                 resolve_source_rig_path(overrides, repo_root=Path(__file__).resolve().parents[4])
                 if overrides.source_rig_path
-                else teto_dir
+                else avatar_dir
             )
             capabilities = build_rig_capabilities(overrides=overrides, rig_dir=rig_dir)
             loguru_logger.info(
-                "[BOOT] RigCapabilities loaded: writable_param_ids=%d, hotkeys=%d, expressions=%d",
+                "[BOOT] avatar_id={} rig={} writable_param_ids={}, hotkeys={}, expressions={}",
+                active_avatar_id,
+                rig_dir,
                 len(capabilities.writable_param_ids),
                 len(capabilities.hotkeys),
                 len(capabilities.expressions),
             )
-            persona = (teto_dir / "personality.md").read_text(encoding="utf-8")
+            persona = _persona_path(avatars, avatar_dir).read_text(encoding="utf-8")
             voice_model = overrides.voice.model if overrides.voice else "en_US-amy-medium"
             model_path = (
                 Path(__file__).resolve().parents[4]
@@ -249,7 +263,7 @@ async def lifespan(app: FastAPI):
             speech_drv = SpeechDriver(
                 compositor_speech_queue,
                 overrides,
-                teto_dir,
+                avatar_dir,
             )
             cursor_drv = CursorDriver()
             discrete_dispatcher = DiscreteDispatcher(writer)

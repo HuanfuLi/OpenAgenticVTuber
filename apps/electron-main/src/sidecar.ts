@@ -12,6 +12,7 @@ import { app } from 'electron'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { loadConfig, type StoredConfig } from './safe-storage'
+import { store } from './window-store'
 
 const READY_RE = /^\[READY\] (ws:\/\/127\.0\.0\.1:(\d+)\/ws)$/
 const READY_TIMEOUT_MS = 10_000
@@ -150,6 +151,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
   const storedConfig = loadConfig()
   const llmConfigJson = buildSidecarConfigEnv(storedConfig)
   const activePluginName = activeBodyMotionPluginName(storedConfig)
+  const activeAvatarId = store.get('currentAvatarId')?.trim() || 'teto'
   const child = spawn('uv', ['run', 'python', '-m', 'sidecar'], {
     cwd: sidecarRoot,
     env: {
@@ -171,6 +173,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
       AGENTICLLMVTUBER_REPO_ROOT: repoRoot,
       AGENTICLLMVTUBER_USER_DATA: app.getPath('userData'),
       AGENTICLLMVTUBER_ACTIVE_PLUGIN: activePluginName,
+      AGENTICLLMVTUBER_ACTIVE_AVATAR: activeAvatarId,
       ...(llmConfigJson ? { AGENTICLLMVTUBER_LLM_CONFIG_JSON: llmConfigJson } : {})
     },
     stdio: ['ignore', 'pipe', 'pipe'],
