@@ -24,7 +24,13 @@ from sidecar.compositor.speech_driver import SpeechDriver
 from sidecar.llm.gateway import LLMGateway, ProviderConfig
 from sidecar.orchestrator.orchestrator import Orchestrator
 from sidecar.plugins.api import BodyMotionPlugin
-from sidecar.plugins.loader import build_action_codes_section, discover_manifests, load_manifest, resolve_entrypoint
+from sidecar.plugins.loader import (
+    build_action_codes_section,
+    discover_manifests,
+    load_manifest,
+    resolve_entrypoint,
+    start_manifest_change_watcher,
+)
 from sidecar.plugins.supervisor import NullPlugin, PluginSupervisor
 from sidecar.tts import TTSGateway, TTSTaskManager
 from sidecar.vts import LoggingParameterWriter, PyVTSParameterWriter, SpeechMouthDriver
@@ -164,6 +170,7 @@ async def lifespan(app: FastAPI):
     writer: PyvtsSafeWriter | None = None
     tts_gateway: TTSGateway | None = None
     mouth_writer = None
+    plugin_manifest_watcher = None
     app.state.startup_error_message = None
 
     provider_cfg = _load_provider_config_from_env()
@@ -226,6 +233,10 @@ async def lifespan(app: FastAPI):
                 manifest_path = manifests.get(_active_plugin_name())
                 if manifest_path is not None:
                     plugin_manifest = load_manifest(manifest_path)
+                    plugin_manifest_watcher = start_manifest_change_watcher(
+                        manifest_path,
+                        plugin_manifest,
+                    )
                     plugin = _load_plugin_instance(manifest_path, plugin_manifest.entrypoint)
                 else:
                     loguru_logger.warning("[PLUGIN] active plugin not found: {}", _active_plugin_name())
@@ -294,6 +305,7 @@ async def lifespan(app: FastAPI):
             app.state.teto_overrides = overrides
             app.state.discrete_dispatcher = discrete_dispatcher
             app.state.plugin_manifest = plugin_manifest
+            app.state.plugin_manifest_watcher = plugin_manifest_watcher
             app.state.plugin_adapter = plugin_adapter
             app.state.plugin_supervisor = plugin_supervisor
             app.state.mouth_driver_task = mouth_task
@@ -342,6 +354,8 @@ async def lifespan(app: FastAPI):
     plugin_supervisor = getattr(app.state, "plugin_supervisor", None)
     if plugin_supervisor is not None:
         await plugin_supervisor.close()
+    if plugin_manifest_watcher is not None:
+        plugin_manifest_watcher.stop()
     if mouth_writer is not None:
         await mouth_writer.close()
     if tts_gateway is not None:
