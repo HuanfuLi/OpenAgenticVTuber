@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: executing
-stopped_at: Completed 08-avatar-import-catalogs-01-PLAN.md
-last_updated: "2026-05-08T08:35:06.240Z"
+stopped_at: Completed 08-avatar-import-catalogs-02-PLAN.md
+last_updated: "2026-05-08T08:48:02.876Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
   completed_phases: 5
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 # Project State
@@ -77,6 +77,7 @@ Last activity: 2026-05-08
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P06 | 4min | 2 tasks | 4 files |
 | Phase 05-polish-contracts-codegen-14-verification P01 | 9min | 2 tasks | 21 files |
 | Phase 08-avatar-import-catalogs P01 | 13min | 4 tasks | 31 files |
+| Phase 08-avatar-import-catalogs P02 | 55min | 5 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -124,6 +125,7 @@ Recent decisions affecting current work:
 - [Phase 08-avatar-import-catalogs]: Plan 08-01 kept capabilities.py as a temporary empty compatibility shim until Phase 6 rewrites legacy AvatarCapabilities callers.
 - [Phase 08-avatar-import-catalogs]: Plan 08-01 forces jsonschema==4.26.0 through uv override-dependencies because litellm==1.83.14 pins jsonschema==4.23.0.
 - [Phase 08-avatar-import-catalogs]: Plan 08-01 includes cdi3 parameter IDs in RigCapabilities.writable_param_ids so HUD/plugin consumers see the full Teto rig surface.
+- [Phase 08-avatar-import-catalogs]: Phase 5 codegen is active, so Phase 8 TS mirrors are generated from Pydantic instead of hand-written.
 
 ### Pending Todos
 
@@ -146,6 +148,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-08T08:35:06.233Z
-Stopped at: Completed 08-avatar-import-catalogs-01-PLAN.md
+Last session: 2026-05-08T08:47:50.786Z
+Stopped at: Completed 08-avatar-import-catalogs-02-PLAN.md
 Resume file: None

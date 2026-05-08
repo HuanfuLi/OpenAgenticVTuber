@@ -88,14 +88,14 @@ These are the load-bearing architectural invariants that make plug-and-play poss
 
 ### Avatar Import + Catalog (Phase 8)
 
-- [ ] **IMP-01**: User imports an avatar via Electron file dialog (`dialog.showOpenDialog()`); folder path passes to sidecar via `ipc:avatar:import-pick`; sidecar detects type from file shape: VTS standard (has `.vtube.json`), Cubism with named expressions (`model3.json` `FileReferences.Expressions` populated), Cubism bare (no expressions), or OLVT (has `model_dict.json`)
+- [x] **IMP-01**: User imports an avatar via Electron file dialog (`dialog.showOpenDialog()`); folder path passes to sidecar via `ipc:avatar:import-pick`; sidecar detects type from file shape: VTS standard (has `.vtube.json`), Cubism with named expressions (`model3.json` `FileReferences.Expressions` populated), Cubism bare (no expressions), or OLVT (has `model_dict.json`)
 - [x] **IMP-02**: VTS extractor parses `*.vtube.json` `Hotkeys[]`, filters `Action: "ToggleExpression"`, derives variant code names (strip `[N]` keybind suffix, strip `【】` decorative brackets, lowercase, hyphenate, e.g., `【SV】Microphone[1]` → `sv-microphone`)
 - [x] **IMP-03**: Cubism-with-expressions extractor reads `model3.json` `FileReferences.Expressions[].Name` and emits placeholder names; mandatory review screen REQUIRES the user to relabel placeholders before Save is enabled (e.g., `exp_01` → user-supplied semantic name)
 - [x] **IMP-04**: Cubism-bare extractor produces empty variant catalog (avatar is plugin-only); event catalog still extractable from `.motion3.json` files when present
 - [x] **IMP-05**: OLVT `model_dict.json` extractor reads `emotionMap` (becomes default-plugin per-rig action-code → expression binding) and `actionMap` (becomes variant catalog with semantic names — no placeholder relabeling required)
 - [x] **IMP-06**: Event catalog auto-extracted from `.motion3.json` files; event code names derived from `Motions` group keys + filenames (slug rule: lowercase, hyphenate, no path separators)
 - [ ] **IMP-07**: Mandatory review screen presents draft variant + event catalogs in a dedicated React route (NOT modal); user edits names, deletes irrelevant entries, or skips a category; Save is disabled while placeholder names remain
-- [ ] **IMP-08**: Review screen accessible from Settings at any time for re-edit; commits write `_avatar_overrides.yaml` (sibling to `avatar.yaml`); writes are validated against the YAML schema via `jsonschema` at write-time
+- [x] **IMP-08**: Review screen accessible from Settings at any time for re-edit; commits write `_avatar_overrides.yaml` (sibling to `avatar.yaml`); writes are validated against the YAML schema via `jsonschema` at write-time
 - [x] **IMP-09**: Existing `TetoOverrides` Pydantic class renamed to `AvatarOverrides`; `avatar.yaml` remains read-only (introspection-only); `_avatar_overrides.yaml` carries user-edited variant + event catalogs + per-rig sign inversions + plugin-default emotion bindings
 - [x] **IMP-10**: VTS API introspection smoke-test (`sidecar/scripts/vts_introspect_smoke.py`) validates `pyvts 0.3.3` produces expected fields against the actual Teto rig before extractor implementation lands (pyvts is aged with no commits since 2024-09-10)
 
