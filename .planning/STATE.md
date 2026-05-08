@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-05-08T10:05:05.692Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-05-08T10:20:31.091Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
   completed_phases: 5
-  total_plans: 27
-  completed_plans: 22
+  total_plans: 32
+  completed_plans: 23
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 06 (plugin-runtime-default-plugin) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-05-08
 
@@ -81,6 +81,7 @@ Last activity: 2026-05-08
 | Phase 08-avatar-import-catalogs P03 | 7min | 3 tasks | 11 files |
 | Phase 08-avatar-import-catalogs P04 | 6min | 2 tasks | 17 files |
 | Phase 06-plugin-runtime-default-plugin P01 | 7min | 3 tasks | 11 files |
+| Phase 06-plugin-runtime-default-plugin P02 | 12min | 4 tasks | 35 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,7 @@ Recent decisions affecting current work:
 - [Phase 06-plugin-runtime-default-plugin]: Plugin manifests reject incompatible API major versions while accepting the v1.x contract line.
 - [Phase 06-plugin-runtime-default-plugin]: userData plugin manifests override repo plugin manifests with the same name; duplicate userData names fail loudly.
 - [Phase 06-plugin-runtime-default-plugin]: MouthOpen is the only system primitive override because lipsync owns the VTS mouth input.
+- [Phase 06-plugin-runtime-default-plugin]: The orchestrator does not emit plugin action codes as ActionIntent values; plugins receive raw sentence text separately.
 
 ### Pending Todos
 
@@ -159,6 +161,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-08T10:05:05.686Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-05-08T10:20:18.952Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
