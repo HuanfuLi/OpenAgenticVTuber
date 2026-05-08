@@ -17,10 +17,10 @@ updated: 2026-05-08T06:36:40.9983733-04:00
 ## Tests
 
 ### 1. Native Dialog Teto Import Save
-expected: Run the app with `npm run dev`, open Settings, click `Edit avatar catalogs`, choose `Live2D/重音テト/` through the native folder dialog, review the extracted catalog, rename or delete at least one row, save, and confirm `avatars/teto/_avatar_overrides.yaml` exists. The YAML should validate and contain `variants`, `events`, `default_plugin_action_bindings`, and `source_rig_path`.
-result: issue
-reported: "Panel works, but the Cancel/Save catalogs controls are in a misaligned dedicated bottom banner and should be regular bottom-of-page buttons. The save did create `_avatar_overrides.yaml`, but it was written under `Live2D/重音テト/` instead of the expected runtime/evidence path `avatars/teto/_avatar_overrides.yaml`. The legacy `teto_overrides.yaml` name is not the correct Phase 8 target. User clarified that imported Live2D/VTS model folders may live anywhere such as Downloads, so Save should write the runtime override to `avatars/teto/_avatar_overrides.yaml` and keep the source folder intact."
-severity: blocker
+expected: Run the app with `npm run dev`, open Settings, click `Edit avatar catalogs`, choose `Live2D/重音テト/` through the native folder dialog, review the extracted catalog, rename or delete at least one row, save, and confirm `avatars/重音テト/_avatar_overrides.yaml` exists. The YAML should validate and contain `variants`, `events`, `default_plugin_action_bindings`, and `source_rig_path`.
+result: pass
+reported: "After the 08-05 gap fix, native-dialog dogfood PASS wrote the runtime override to `C:\\Users\\16079\\Code\\AgenticLLMVTuber\\avatars\\重音テト\\_avatar_overrides.yaml`. User clarified this observed app-managed path is correct for the imported avatar name, while `avatars/teto` directories may need a future cleanup. The source model folder stayed intact and `Live2D/重音テト/_avatar_overrides.yaml` must not be staged or modified."
+severity: none
 
 ### 2. Placeholder Save Gate
 expected: Import a Cubism avatar whose extracted expression names are placeholders such as `exp_01`. The review route keeps Save disabled while any placeholder remains, then enables Save after placeholder codes are renamed to valid semantic codes.
@@ -35,46 +35,44 @@ expected: With an existing `_avatar_overrides.yaml`, opening Settings and clicki
 result: pass
 
 ### 5. VTS Introspection Smoke Evidence
-expected: Running `cd sidecar && uv run python scripts/vts_introspect_smoke.py` with VTube Studio and Teto available exits 0 with the PASS output. If VTube Studio or Teto is unavailable, the attempt is recorded as blocked with exit code 3, output containing `Is VTube Studio running?`, date, command, and reason.
-result: issue
-reported: "Smoke test failed while VTS was open and API was enabled. Output showed AuthenticationResponse authenticated=False with reason 'Authentication request failed because token is invalid or has been revoked by the user.' The subsequent HotkeyList request returned APIError errorID 8: current session is not authenticated. User also observed VTS shows one plugin, while there used to be two before this phase/regression."
-severity: blocker
+expected: Running `cd sidecar && uv run python scripts/vts_introspect_smoke.py` with VTube Studio and Teto available exits 0 with the PASS output, or fails fast on authentication rejection before any HotkeyList request with reset guidance.
+result: blocked-auth
+reported: "Smoke test failed with the intended fail-fast auth behavior. Output showed AuthenticationResponse authenticated=False because the token is invalid or revoked, then `[SMOKE] FAIL: VTube Studio authentication failed...` with token reset guidance. No HotkeyList unauthenticated failure was reported after the 08-05 fix."
+severity: human-action
 
 ## Summary
 
 total: 5
-passed: 3
-issues: 2
+passed: 4
+issues: 0
 pending: 0
 skipped: 0
-blocked: 0
+blocked: 1
 
 ## Gaps
 
-- truth: "Saving the native-dialog Teto import creates `avatars/teto/_avatar_overrides.yaml` containing variants, events, default_plugin_action_bindings, and source_rig_path"
-  status: failed
-  reason: "User clarified: Save catalog creates `_avatar_overrides.yaml`, but it is written under `Live2D/重音テト/` instead of the expected runtime/evidence path `avatars/teto/_avatar_overrides.yaml`. Imported model folders may live anywhere outside the repo, so Save must write the runtime override to `avatars/teto/_avatar_overrides.yaml` and leave the source folder intact."
-  severity: blocker
+- truth: "Saving the native-dialog Teto import creates `avatars/重音テト/_avatar_overrides.yaml` containing variants, events, default_plugin_action_bindings, and source_rig_path"
+  status: passed
+  reason: "User-completed dogfood UAT confirmed Save writes the runtime override to the app-managed imported-avatar path `avatars/重音テト/_avatar_overrides.yaml`; this supersedes the earlier shorthand `avatars/teto` evidence path. Source model folder remains provenance only and must stay intact."
+  severity: none
   test: 1
   root_cause: "sidecar/src/sidecar/admin/avatar.py::commit_avatar treats AvatarImportPlan.source_rig_path as the persistence directory. That field should remain provenance metadata for the selected external rig folder, while the active runtime override must be written to the app-managed avatar directory `avatars/<avatar_id>/_avatar_overrides.yaml`."
   artifacts:
     - path: "apps/renderer/src/screens/AvatarImport/AvatarImport.tsx"
-      issue: "Save flow writes the override to the selected source rig path, not the expected runtime/evidence path."
+      issue: "Resolved by writing to the app-managed imported-avatar runtime path."
     - path: "sidecar/src/sidecar/admin/avatar.py"
-      issue: "Commit endpoint writes beside `source_rig_path`; Phase 8 evidence requires `avatars/teto/_avatar_overrides.yaml` or an explicit post-save copy/import step."
+      issue: "Resolved by deriving destination from repo root plus `avatars/<avatar_id>/_avatar_overrides.yaml`."
     - path: "apps/electron-main/src/ipc.ts"
-      issue: "IPC save chain completes without surfacing that the artifact landed outside `avatars/teto`."
+      issue: "Observed save landed at `avatars/重音テト/_avatar_overrides.yaml`."
     - path: "Live2D/重音テト/_avatar_overrides.yaml"
-      issue: "Actual UAT save output path."
+      issue: "Pre-fix actual UAT output path; do not stage or modify."
   missing:
-    - "Implement the Phase 8 runtime/evidence path policy: Save catalog writes validated YAML to `avatars/teto/_avatar_overrides.yaml` for the current avatar and does not write into or mutate the selected source rig folder."
-    - "Ensure `avatars/teto/_avatar_overrides.yaml` exists and validates after the native-dialog dogfood flow."
-    - "Keep `teto_overrides.yaml` treated as legacy; it is not the correct Phase 8 target artifact."
+    - "Future cleanup: reconcile legacy/shorthand `avatars/teto` directory naming with imported avatar display-name directory `avatars/重音テト`."
   debug_session: ".planning/debug/phase-8-uat-save-path.md"
 - truth: "Avatar import Save/Cancel controls are placed at the bottom of the page without a misaligned dedicated banner"
-  status: failed
-  reason: "User reported: Cancel and Save catalogs controls are contained in a misaligned dedicated banner; they should just be placed at the bottom of the page."
-  severity: cosmetic
+  status: passed
+  reason: "08-05 removed sticky/banner footer styling and renderer tests assert Save/Cancel render in a regular page footer."
+  severity: none
   test: 1
   root_cause: "apps/renderer/src/screens/AvatarImport/AvatarImport.tsx wraps Save/Cancel in `styles.footer`, and apps/renderer/src/screens/AvatarImport/AvatarImport.module.css makes `.footer` a sticky footer-style banner with `position: sticky`, `bottom: 0`, and a dedicated background."
   artifacts:
@@ -87,21 +85,18 @@ blocked: 0
     - "Place Cancel and Save catalogs buttons naturally at the bottom of the page."
   debug_session: "diagnosed inline by gsd-debugger 019e0726-bde8-7c63-9b22-921d3b44299e"
 - truth: "VTS introspection smoke authenticates successfully and returns a HotkeyList response with `availableHotkeys` as a list"
-  status: failed
-  reason: "User reported: VTS API was enabled and VTS responded, but AuthenticationResponse returned authenticated=False because the token is invalid or revoked. The following HotkeyList request failed with APIError errorID 8 because the session was not authenticated. VTS now shows one plugin where two existed before this phase/regression."
-  severity: blocker
+  status: blocked-auth
+  reason: "08-05 now uses stable plugin identity and fails fast when AuthenticationResponse has authenticated=False, before HotkeyList. The remaining blocker is manual VTS token reset/re-approval and rerun."
+  severity: human-action
   test: 5
   root_cause: "sidecar/scripts/vts_introspect_smoke.py uses a new VTS plugin name (`AgenticLLMVTuber Phase 8 Introspection Smoke`) while reusing the shared token file `sidecar/.vts_token.txt`, which may contain a token issued for another plugin identity. Vendored pyvts reuses any non-empty token file, so VTS rejects authentication as invalid/revoked. The script then ignores the false return from `request_authenticate()` and sends HotkeyList while unauthenticated."
   artifacts:
     - path: "sidecar/scripts/vts_introspect_smoke.py"
-      issue: "Smoke continues to HotkeyList after authentication failure and reports a misleading HotkeyList shape failure instead of stopping on auth failure."
+      issue: "Resolved: smoke stops at authentication failure and prints reset guidance before HotkeyList."
     - path: "sidecar/src/sidecar/vts/handshake.py"
-      issue: "Shared VTS authentication/token handling may not recover cleanly from revoked/invalid tokens."
+      issue: "Manual token reset is still required for a PASS introspection run."
     - path: "sidecar/vendor/pyvts"
       issue: "VTS plugin token identity/storage may be stale or inconsistent with the VTube Studio plugin list."
   missing:
-    - "Diagnose why VTS authentication token is invalid/revoked after Phase 8 changes."
-    - "Make `vts_introspect_smoke.py` fail loud on AuthenticationResponse authenticated=False before issuing authenticated requests."
-    - "Document or automate token reset/re-auth path when VTube Studio revokes the plugin token."
-    - "Stop sharing one token file across different VTS plugin identities, or use one stable AgenticLLMVTuber plugin identity consistently."
+    - "Complete human-action reset: delete `sidecar/.vts_token.txt`, revoke stale AgenticLLMVTuber plugin entry in VTube Studio if present, rerun smoke, and approve the VTS plugin permission prompt."
   debug_session: "diagnosed inline by gsd-debugger 019e0726-be6d-7413-9f42-93ae7d9e0db1"
