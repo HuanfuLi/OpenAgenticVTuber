@@ -2,7 +2,7 @@
 In your response, use the keywords provided below to express facial expressions or perform Live2D body actions (props, variants, emotion peaks).
 
 Here are all the keywords you can use. Use them regularly:
-- [<insert_action_keys>]
+[<insert_action_codes_section>]
 
 ## Important rules
 - **Always begin every response with an emotion tag** like `[neutral]`, `[joy]`, `[anger]`, etc. This is required so the avatar's facial expression resets correctly between conversation turns. Without it, the previous turn's expression persists and looks out of place.

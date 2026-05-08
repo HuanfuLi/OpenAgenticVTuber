@@ -118,8 +118,14 @@ def test_warn_if_manifest_changed_for_prompt_affecting_changes() -> None:
             "action_codes": [{"code": "joy", "description": "Joy."}],
         }
     )
-    changed = current.model_copy(
-        update={"action_codes": [{"code": "joy", "description": "Different."}]}
+    changed = PluginManifest.model_validate(
+        {
+            "name": "default",
+            "version": "1.0.0",
+            "entrypoint": "plugin.py:Plugin",
+            "api_version": "1.0",
+            "action_codes": [{"code": "joy", "description": "Different."}],
+        }
     )
 
     assert warn_if_manifest_changed(current, changed) is True
