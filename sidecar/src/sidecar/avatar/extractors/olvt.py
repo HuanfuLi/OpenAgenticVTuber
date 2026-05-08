@@ -1,24 +1,29 @@
-"""OpenLLM-VTuber model_dict.json extractor.
-
-Pinned to OpenLLM_Vtuber 12d42d7 (2026-05-05). Per Phase 8 D-A2-3,
-emotionMap is intentionally ignored; only actionMap produces variants.
-"""
+"""OpenLLM-VTuber model_dict.json extractor."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
+from contracts.action_binding import DefaultPluginActionBinding
 from contracts.avatar_import_plan import ImportWarning
 from contracts.event_entry import EventEntry
 from contracts.variant_entry import VariantEntry
 from sidecar.avatar.normalize import is_placeholder_code, slug_from_hotkey_name
 
 
-def extract_olvt(path: Path) -> tuple[list[VariantEntry], list[EventEntry], list[ImportWarning]]:
+def extract_olvt(
+    path: Path,
+) -> tuple[
+    list[VariantEntry],
+    list[EventEntry],
+    list[DefaultPluginActionBinding],
+    list[ImportWarning],
+]:
     model_dict_path = path / "model_dict.json" if path.is_dir() else path
     data = json.loads(model_dict_path.read_text(encoding="utf-8"))
     variants: list[VariantEntry] = []
+    bindings: list[DefaultPluginActionBinding] = []
 
     for model in data:
         action_map = model.get("actionMap")
@@ -34,6 +39,16 @@ def extract_olvt(path: Path) -> tuple[list[VariantEntry], list[EventEntry], list
                     is_placeholder=is_placeholder_code(normalized),
                 )
             )
+        for code, expression_index in (model.get("emotionMap") or {}).items():
+            bindings.append(
+                DefaultPluginActionBinding(
+                    action_code=str(code),
+                    expression_index=int(expression_index),
+                    expression_name="",
+                    source="olvt_emotionMap",
+                    plugin_name="default",
+                )
+            )
         break
 
-    return variants, [], []
+    return variants, [], bindings, []

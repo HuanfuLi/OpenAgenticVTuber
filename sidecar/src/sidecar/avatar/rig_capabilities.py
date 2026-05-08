@@ -53,6 +53,7 @@ def build_rig_capabilities(overrides: AvatarOverrides, rig_dir: Path) -> RigCapa
         hotkeys=hotkeys,
         cdi3_display_names=cdi3_names,
         sign_inversions=overrides.sign_inversions,
+        default_plugin_action_bindings=overrides.default_plugin_action_bindings,
     )
 
 

@@ -89,7 +89,11 @@ async def import_avatar(req: ImportRequest) -> AvatarImportPlan:
             warnings=[ImportWarning(kind="no_model3", message=COPY_ERROR_NO_MODEL3)],
         )
 
-    variants, events, warnings = _EXTRACTORS[avatar_type](folder)
+    if avatar_type == AvatarType.OLVT:
+        variants, events, default_plugin_action_bindings, warnings = extract_olvt(folder)
+    else:
+        variants, events, warnings = _EXTRACTORS[avatar_type](folder)
+        default_plugin_action_bindings = []
     return AvatarImportPlan(
         detected_type=avatar_type.value,
         avatar_id=folder.name,
@@ -97,6 +101,7 @@ async def import_avatar(req: ImportRequest) -> AvatarImportPlan:
         source_rig_path=str(folder),
         variants=variants,
         events=events,
+        default_plugin_action_bindings=default_plugin_action_bindings,
         warnings=warnings,
         existing_overrides=_load_existing(folder),
     )
@@ -114,6 +119,7 @@ async def commit_avatar(plan: AvatarImportPlan) -> CommitResponse:
         events=plan.events,
         voice=plan.voice or Voice(),
         source_rig_path=plan.source_rig_path,
+        default_plugin_action_bindings=plan.default_plugin_action_bindings,
         sign_inversions=existing.sign_inversions if existing else [],
         body_sway_strategy=existing.body_sway_strategy if existing else "head_only",
         proxy_body_param=existing.proxy_body_param if existing else None,
@@ -154,6 +160,7 @@ async def get_current_avatar(avatar_id: str) -> AvatarImportPlan:
         source_rig_path=overrides.source_rig_path,
         variants=overrides.variants,
         events=overrides.events,
+        default_plugin_action_bindings=overrides.default_plugin_action_bindings,
         voice=overrides.voice,
         existing_overrides=overrides,
     )
