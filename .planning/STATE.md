@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: executing
-stopped_at: Phase 6 complete — re_verification_3 passed 2026-05-08T18:35; 06-07 closed F-1/F-2 (writer consolidation), follow-on fixes 946abd7 + 4e2ff12 closed F-3 (head_only lateral sway + VTS tracking input ranges)
-last_updated: "2026-05-08T19:00:00.000Z"
+stopped_at: Completed 06-08-PLAN.md
+last_updated: "2026-05-08T23:56:34.965Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
   completed_phases: 7
-  total_plans: 39
-  completed_plans: 29
+  total_plans: 37
+  completed_plans: 30
 ---
 
 # Project State
@@ -25,14 +25,17 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 06 (plugin-runtime-default-plugin) — COMPLETE 2026-05-08 PM
-Plan: 7 of 7 — 06-01..06-07 all SUMMARY.md / status: completed
+Plan: 8 of 8 — 06-01..06-08 all SUMMARY.md / status: completed
 Status:
+
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
   - F-2 closed by `tests/test_arch06_single_writer.py` (asserts requestSetParameterValue / requestInjectParameterData / plugin_name ownership single-file)
   - F-3 closed by follow-on commits: 946abd7 (head_only lateral sway) + 4e2ff12 (preserve VTS tracking input ranges)
+  - F-4/joy-vocabulary gap closed by 06-08: active Teto catalog is strict, `joy` is absent/invalid, forced `[joy]` is ignored safely, and `heart-eye` variant dispatch remains Phase 7 work
   - Phase validation gate: 119 passed (pytest tests/plugins tests/compositor tests/architecture/... etc.)
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
+
 Last activity: 2026-05-08
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
@@ -96,6 +99,7 @@ Last activity: 2026-05-08
 | Phase 06-plugin-runtime-default-plugin P05 | 9min | 2 tasks | 5 files |
 | Phase 06-plugin-runtime-default-plugin P04 | 5min | 2 tasks | 8 files |
 | Phase 06-plugin-runtime-default-plugin P06 | 3min | 2 tasks | 3 files |
+| Phase 06-plugin-runtime-default-plugin P08 | 5 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -163,6 +167,8 @@ Recent decisions affecting current work:
 - [Phase 06-plugin-runtime-default-plugin]: Timed default-plugin frames remain ParamFrame-only with no pyvts, exp3, or requestExpressionActivation path.
 - [Phase 06-plugin-runtime-default-plugin]: PluginSupervisor is the production render-capable surface: it proxies render_frame(now) to the active wrapped plugin when available.
 - [Phase 06-plugin-runtime-default-plugin]: Supervisor render failures fail closed to ParamFrame() and count toward the existing circuit breaker only when an event loop is available.
+- [Phase 06-plugin-runtime-default-plugin]: For active Teto, joy is obsolete/invalid production vocabulary because it is absent from avatars/重音テト/_avatar_overrides.yaml.
+- [Phase 06-plugin-runtime-default-plugin]: Phase 6 keeps default plugin action dispatch only; model-owned variant/event dispatch such as heart-eye remains Phase 7 work.
 
 ### Pending Todos
 
@@ -185,6 +191,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-08T11:54:14.373Z
-Stopped at: Completed 06-06-PLAN.md
+Last session: 2026-05-08T23:56:34.957Z
+Stopped at: Completed 06-08-PLAN.md
 Resume file: None

@@ -81,7 +81,7 @@ These are the load-bearing architectural invariants that make plug-and-play poss
 - [x] **PLG-04**: Plugin runtime supervises async-generator lifecycle with circuit-breaker (3 restarts within 60s); plugin crashes during `__init__`/`on_load`/`on_token_stream` are caught and fall back to a null plugin emitting rest-state ParamFrames at 60 Hz; the sidecar process must NOT crash
 - [x] **PLG-05**: ParamFrame values from plugin output are clamped to `[0, 1]` at the compositor → renderer boundary (`clamp_and_validate(frame, capabilities)` pass); NaN/Inf drops the frame; unknown param keys are dropped with WARN log
 - [x] **PLG-06**: Manifest loader validates against `plugin.yaml` JSON Schema via `jsonschema 4.26.0`; reserved-name guard rejects action_codes matching `<think>`, `<thinking>`, `<tool_call>`, `<function_call>`, `<function_calls>`, `<invoke>`, `<parameter>` (sweep extended during Phase 7 plan-phase research for any additional LLM-protocol sentinels)
-- [x] **PLG-07**: Default plugin ships in-tree at `plugins/default/`, absorbs current Phase-4 `IntentDriver` + `compositor/body_sway/*` logic, uses OLVT 8-emotion vocabulary (`neutral`, `anger`, `disgust`, `fear`, `joy`, `smirk`, `sadness`, `surprise`) as its `action_codes` set
+- [x] **PLG-07**: Default plugin ships in-tree at `plugins/default/`, absorbs current Phase-4 `IntentDriver` + `compositor/body_sway/*` logic, and uses the current Phase 6 action vocabulary (`neutral`, `anger`, `disgust`, `fear`, `smirk`, `sadness`, `surprise`) as its `action_codes` set. The original OLVT `joy` carry-forward is superseded by 06-08 because active Teto does not own a `joy` variant/expression.
 - [x] **PLG-08**: Plugin discovery scans both `plugins/` (in-tree, repo root — defaults ship here) and `app.getPath('userData')/plugins/` (user-installed)
 - [x] **PLG-09**: Plugin switching is startup-only: developer changes config-file, sidecar restart applies; runtime hot-swap is explicitly deferred (avoids state-handoff complexity for in-flight ParamFrames)
 - [x] **PLG-10**: `plugin.yaml` manifest hot-reload via `watchdog 6.0.0` triggers manifest re-parse + WARN log if `action_codes` set changed (engineer DX); does NOT reload plugin behavior
@@ -295,7 +295,7 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | PLG-04 | Phase 6 | Pending — async-gen supervisor + circuit breaker + null-plugin fallback |
 | PLG-05 | Phase 6 | Pending — `[0,1]` clamp at compositor → renderer boundary |
 | PLG-06 | Phase 6 | Pending — jsonschema manifest + reserved-name guard |
-| PLG-07 | Phase 6 | Pending — default plugin in-tree absorbs `IntentDriver` + body-sway |
+| PLG-07 | Phase 6 | Complete — default plugin in-tree absorbs `IntentDriver` + body-sway; 06-08 removed active-Teto-invalid `joy` |
 | PLG-08 | Phase 6 | Pending — discovery scans both in-tree and `userData/` |
 | PLG-09 | Phase 6 | Pending — startup-only switching (no runtime hot-swap) |
 | PLG-10 | Phase 6 | Pending — manifest hot-reload via `watchdog` (engineer DX) |
