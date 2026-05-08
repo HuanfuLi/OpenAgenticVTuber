@@ -1,7 +1,7 @@
 ---
 phase: 08-avatar-import-catalogs
 evidence: vts-introspection-smoke
-status: blocked-auth
+status: pass
 date: "2026-05-08"
 operator: ""
 ---
@@ -21,12 +21,16 @@ Equivalent one-line command: `cd sidecar && uv run python scripts/vts_introspect
 
 ## PASS Evidence
 
-Record:
-
 - status: pass
 - attempted command: `cd sidecar && uv run python scripts/vts_introspect_smoke.py`
 - exit code `0`
-- output containing `[SMOKE] PASS: pyvts 0.3.3 + VTS API "1.0" introspection shape verified`
+- output:
+
+```text
+warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+None
+[SMOKE] PASS: pyvts 0.3.3 + VTS API "1.0" introspection shape verified
+```
 
 ## BLOCKED Evidence
 
@@ -43,7 +47,7 @@ Record:
 
 ## BLOCKED-AUTH Evidence
 
-VTube Studio was available, but authentication failed because the existing token was invalid or revoked. The smoke now fails fast before HotkeyList, which confirms the 08-05 auth-handling fix. A successful VTS introspection rerun still requires the token reset below.
+Earlier in this checkpoint, VTube Studio was available, but authentication failed because the existing token was invalid or revoked. The smoke failed fast before HotkeyList, which confirmed the 08-05 auth-handling fix. The token was then reset and the final rerun passed, as recorded above.
 
 - status: blocked-auth
 - date/time attempted: 2026-05-08

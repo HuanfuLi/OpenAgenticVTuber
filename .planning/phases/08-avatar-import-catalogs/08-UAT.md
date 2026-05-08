@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: passed
 phase: 08-avatar-import-catalogs
 source:
   - 08-01-SUMMARY.md
@@ -7,7 +7,7 @@ source:
   - 08-03-SUMMARY.md
   - 08-04-SUMMARY.md
 started: 2026-05-08T06:06:51.3290149-04:00
-updated: 2026-05-08T06:36:40.9983733-04:00
+updated: 2026-05-08T07:00:00-04:00
 ---
 
 ## Current Test
@@ -36,18 +36,18 @@ result: pass
 
 ### 5. VTS Introspection Smoke Evidence
 expected: Running `cd sidecar && uv run python scripts/vts_introspect_smoke.py` with VTube Studio and Teto available exits 0 with the PASS output, or fails fast on authentication rejection before any HotkeyList request with reset guidance.
-result: blocked-auth
-reported: "Smoke test failed with the intended fail-fast auth behavior. Output showed AuthenticationResponse authenticated=False because the token is invalid or revoked, then `[SMOKE] FAIL: VTube Studio authentication failed...` with token reset guidance. No HotkeyList unauthenticated failure was reported after the 08-05 fix."
-severity: human-action
+result: pass
+reported: "After deleting the stale token and re-approving the AgenticLLMVTuber VTube Studio plugin permission prompt, the smoke exited 0 with `[SMOKE] PASS: pyvts 0.3.3 + VTS API \"1.0\" introspection shape verified`. The earlier invalid-token run also confirmed the new fail-fast auth behavior before any HotkeyList request."
+severity: none
 
 ## Summary
 
 total: 5
-passed: 4
+passed: 5
 issues: 0
 pending: 0
 skipped: 0
-blocked: 1
+blocked: 0
 
 ## Gaps
 
@@ -85,18 +85,18 @@ blocked: 1
     - "Place Cancel and Save catalogs buttons naturally at the bottom of the page."
   debug_session: "diagnosed inline by gsd-debugger 019e0726-bde8-7c63-9b22-921d3b44299e"
 - truth: "VTS introspection smoke authenticates successfully and returns a HotkeyList response with `availableHotkeys` as a list"
-  status: blocked-auth
-  reason: "08-05 now uses stable plugin identity and fails fast when AuthenticationResponse has authenticated=False, before HotkeyList. The remaining blocker is manual VTS token reset/re-approval and rerun."
-  severity: human-action
+  status: passed
+  reason: "After token reset and VTube Studio plugin re-approval, the smoke exited 0 with the expected PASS output. The prior invalid-token run also proved the smoke now fails fast before HotkeyList with reset guidance."
+  severity: none
   test: 5
   root_cause: "sidecar/scripts/vts_introspect_smoke.py uses a new VTS plugin name (`AgenticLLMVTuber Phase 8 Introspection Smoke`) while reusing the shared token file `sidecar/.vts_token.txt`, which may contain a token issued for another plugin identity. Vendored pyvts reuses any non-empty token file, so VTS rejects authentication as invalid/revoked. The script then ignores the false return from `request_authenticate()` and sends HotkeyList while unauthenticated."
   artifacts:
     - path: "sidecar/scripts/vts_introspect_smoke.py"
-      issue: "Resolved: smoke stops at authentication failure and prints reset guidance before HotkeyList."
+      issue: "Resolved: smoke stops at authentication failure before HotkeyList and passes after token reset/re-approval."
     - path: "sidecar/src/sidecar/vts/handshake.py"
       issue: "Manual token reset is still required for a PASS introspection run."
     - path: "sidecar/vendor/pyvts"
       issue: "VTS plugin token identity/storage may be stale or inconsistent with the VTube Studio plugin list."
   missing:
-    - "Complete human-action reset: delete `sidecar/.vts_token.txt`, revoke stale AgenticLLMVTuber plugin entry in VTube Studio if present, rerun smoke, and approve the VTS plugin permission prompt."
+    - "None."
   debug_session: "diagnosed inline by gsd-debugger 019e0726-be6d-7413-9f42-93ae7d9e0db1"
