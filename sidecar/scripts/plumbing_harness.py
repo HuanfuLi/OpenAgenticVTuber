@@ -46,7 +46,7 @@ async def run_lipsync() -> dict[str, object]:
             started_at=0.0,
         )
     )
-    driver = SpeechDriver(queue, AvatarOverrides(), Path.cwd(), emit_mouth=True)
+    driver = SpeechDriver(queue, AvatarOverrides(), Path.cwd())
     mouth: list[float] = []
     sampled_rms: list[float] = []
     for index in range(sample_count):

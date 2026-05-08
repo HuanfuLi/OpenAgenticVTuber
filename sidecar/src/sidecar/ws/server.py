@@ -94,7 +94,7 @@ def _user_plugins_dir() -> Path | None:
     return Path(user_data) / "plugins"
 
 
-def _active_plugin_name() -> str:
+def _active_plugin_id() -> str:
     return os.environ.get("AGENTICLLMVTUBER_ACTIVE_PLUGIN") or "default"
 
 
@@ -204,7 +204,7 @@ async def lifespan(app: FastAPI):
             plugin = NullPlugin()
             try:
                 manifests = discover_manifests(_repo_root() / "plugins", _user_plugins_dir())
-                manifest_path = manifests.get(_active_plugin_name())
+                manifest_path = manifests.get(_active_plugin_id())
                 if manifest_path is not None:
                     plugin_manifest = load_manifest(manifest_path)
                     plugin_manifest_watcher = start_manifest_change_watcher(
@@ -213,7 +213,7 @@ async def lifespan(app: FastAPI):
                     )
                     plugin = _load_plugin_instance(manifest_path, plugin_manifest.entrypoint)
                 else:
-                    loguru_logger.warning("[PLUGIN] active plugin not found: {}", _active_plugin_name())
+                    loguru_logger.warning("[PLUGIN] active plugin not found: {}", _active_plugin_id())
             except Exception:
                 loguru_logger.exception("[PLUGIN] discovery/load failed; using NullPlugin")
             plugin_supervisor = await PluginSupervisor.load_or_null(plugin, capabilities, overrides)

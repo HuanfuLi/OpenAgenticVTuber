@@ -46,7 +46,6 @@ def extract_olvt(
                     expression_index=int(expression_index),
                     expression_name="",
                     source="olvt_emotionMap",
-                    plugin_name="default",
                 )
             )
         break
