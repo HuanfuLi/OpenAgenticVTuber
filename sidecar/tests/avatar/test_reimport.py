@@ -9,9 +9,14 @@ test_app.include_router(avatar_router)
 client = TestClient(test_app)
 
 
-def test_preserves_carryover(tmp_path) -> None:
-    (tmp_path / "existing.model3.json").write_text("{}", encoding="utf-8")
-    (tmp_path / "_avatar_overrides.yaml").write_text(
+def test_preserves_carryover(tmp_path, monkeypatch) -> None:
+    repo_root = tmp_path / "repo"
+    external_source = tmp_path / "external_source"
+    runtime_avatar_dir = repo_root / "avatars" / "teto"
+    external_source.mkdir()
+    runtime_avatar_dir.mkdir(parents=True)
+    monkeypatch.setenv("AGENTICLLMVTUBER_REPO_ROOT", str(repo_root))
+    (runtime_avatar_dir / "_avatar_overrides.yaml").write_text(
         "body_sway_strategy: proxy_param\n"
         "proxy_body_param: ParamBodyAngleX\n"
         "exp3_body_pose: body.exp3.json\n"
@@ -25,11 +30,11 @@ def test_preserves_carryover(tmp_path) -> None:
         "voice: {backend: piper, model: en_US-amy-medium, lipsync_mode: our-rms}\n"
         "variants: []\n"
         "events: []\n"
-        f"source_rig_path: {tmp_path}\n",
+        f"source_rig_path: {external_source}\n",
         encoding="utf-8",
     )
 
-    import_resp = client.post("/admin/avatar/import", json={"folder": str(tmp_path)})
+    import_resp = client.get("/admin/avatar/import/current?avatar_id=teto")
     assert import_resp.status_code == 200
     plan = import_resp.json()
     plan["variants"] = [{"code": "new-joy", "hotkey_id": "", "source_name": "New Joy"}]
@@ -37,7 +42,10 @@ def test_preserves_carryover(tmp_path) -> None:
     commit_resp = client.post("/admin/avatar/import/commit", json=plan)
 
     assert commit_resp.status_code == 200
-    data = yaml.safe_load((tmp_path / "_avatar_overrides.yaml").read_text(encoding="utf-8"))
+    assert commit_resp.json()["path"] == str(runtime_avatar_dir / "_avatar_overrides.yaml")
+    assert not (external_source / "_avatar_overrides.yaml").exists()
+    data = yaml.safe_load((runtime_avatar_dir / "_avatar_overrides.yaml").read_text(encoding="utf-8"))
+    assert data["source_rig_path"] == str(external_source)
     assert data["variants"] == [{"code": "new-joy", "hotkey_id": "", "source_name": "New Joy"}]
     assert data["body_sway_strategy"] == "proxy_param"
     assert data["proxy_body_param"] == "ParamBodyAngleX"

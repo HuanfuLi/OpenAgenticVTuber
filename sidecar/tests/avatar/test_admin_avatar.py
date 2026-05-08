@@ -61,12 +61,19 @@ def test_import_invalid_folder() -> None:
     assert resp.status_code == 400
 
 
-def test_commit_writes_yaml(tmp_path) -> None:
+def test_commit_writes_yaml(tmp_path, monkeypatch) -> None:
+    repo_root = tmp_path / "repo"
+    runtime_avatar_dir = repo_root / "avatars" / "teto"
+    runtime_avatar_dir.mkdir(parents=True)
+    external_source = tmp_path / "external_source"
+    external_source.mkdir()
+    monkeypatch.setenv("AGENTICLLMVTUBER_REPO_ROOT", str(repo_root))
+
     plan = {
         "detected_type": "vts_standard",
-        "avatar_id": "test",
-        "avatar_name": "test",
-        "source_rig_path": str(tmp_path),
+        "avatar_id": "teto",
+        "avatar_name": "teto",
+        "source_rig_path": str(external_source),
         "variants": [
             {"code": "joy", "hotkey_id": "a" * 32, "source_name": "Joy", "is_placeholder": False}
         ],
@@ -88,7 +95,12 @@ def test_commit_writes_yaml(tmp_path) -> None:
     resp = client.post("/admin/avatar/import/commit", json=plan)
 
     assert resp.status_code == 200
-    data = yaml.safe_load((tmp_path / "_avatar_overrides.yaml").read_text(encoding="utf-8"))
+    assert resp.json()["path"] == str(runtime_avatar_dir / "_avatar_overrides.yaml")
+    assert (runtime_avatar_dir / "_avatar_overrides.yaml").exists()
+    assert not (external_source / "_avatar_overrides.yaml").exists()
+    assert not (external_source / "_avatar_overrides.yaml.tmp").exists()
+    data = yaml.safe_load((runtime_avatar_dir / "_avatar_overrides.yaml").read_text(encoding="utf-8"))
+    assert data["source_rig_path"] == str(external_source)
     assert data["variants"] == [{"code": "joy", "hotkey_id": "a" * 32, "source_name": "Joy"}]
     assert data["default_plugin_action_bindings"] == [
         {
@@ -102,12 +114,18 @@ def test_commit_writes_yaml(tmp_path) -> None:
     assert "is_placeholder" not in str(data)
 
 
-def test_commit_validation_failure(tmp_path) -> None:
+def test_commit_validation_failure(tmp_path, monkeypatch) -> None:
+    repo_root = tmp_path / "repo"
+    runtime_avatar_dir = repo_root / "avatars" / "teto"
+    external_source = tmp_path / "external_source"
+    external_source.mkdir()
+    monkeypatch.setenv("AGENTICLLMVTUBER_REPO_ROOT", str(repo_root))
+
     plan = {
         "detected_type": "vts_standard",
-        "avatar_id": "test",
-        "avatar_name": "test",
-        "source_rig_path": str(tmp_path),
+        "avatar_id": "teto",
+        "avatar_name": "teto",
+        "source_rig_path": str(external_source),
         "variants": [{"code": "think", "hotkey_id": "", "source_name": "X", "is_placeholder": False}],
         "events": [],
         "voice": None,
@@ -118,8 +136,10 @@ def test_commit_validation_failure(tmp_path) -> None:
     resp = client.post("/admin/avatar/import/commit", json=plan)
 
     assert resp.status_code == 400
-    assert not (tmp_path / "_avatar_overrides.yaml").exists()
-    assert not (tmp_path / "_avatar_overrides.yaml.tmp").exists()
+    assert not (runtime_avatar_dir / "_avatar_overrides.yaml").exists()
+    assert not (runtime_avatar_dir / "_avatar_overrides.yaml.tmp").exists()
+    assert not (external_source / "_avatar_overrides.yaml").exists()
+    assert not (external_source / "_avatar_overrides.yaml.tmp").exists()
 
 
 def test_get_current(tmp_path, monkeypatch) -> None:
