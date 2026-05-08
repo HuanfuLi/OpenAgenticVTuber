@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: executing
-stopped_at: Completed 06-06-PLAN.md
-last_updated: "2026-05-08T11:54:14.380Z"
+stopped_at: Phase 6 code-complete (06-06 done; SC #2/#3 visual deferred to Phase 10 ceremony per 06-VERIFICATION human_needed)
+last_updated: "2026-05-08T13:00:00.000Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
   completed_phases: 7
-  total_plans: 35
+  total_plans: 38
   completed_plans: 28
 ---
 
@@ -20,14 +20,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon — v2.0 is infrastructure prep on the way there)
-**Current focus:** Phase 06 — plugin-runtime-default-plugin
+**Current focus:** Phase 07 — three-category-code-parsing-dispatch (next; not started). RESEARCH.md drafted but uncommitted.
 
 ## Current Position
 
-Phase: 06 (plugin-runtime-default-plugin) — EXECUTING
-Plan: 2 of 6
-Status: Ready to execute
+Phase: 06 (plugin-runtime-default-plugin) — CODE-COMPLETE (visual SC #2/#3 deferred to Phase 10 ceremony)
+Plan: 6 of 6 — all SUMMARY.md committed; VERIFICATION 8/8 automated must-haves; 3 human verification items (active plugin swap, [joy] visual ramp, 30s utterance lipsync+body) intentionally deferred per 06-VERIFICATION human_needed status to Phase 10 operator ceremony
 Last activity: 2026-05-08
+
+**Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
 
 **Note on v1.0:** Phase 4 body-sway investigation and Phase 5 codegen are complete. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
 
