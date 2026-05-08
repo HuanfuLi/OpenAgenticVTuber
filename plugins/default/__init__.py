@@ -17,16 +17,10 @@ from sidecar.plugins.api import BodyMotionPlugin
 
 
 SUPPORTED_ACTION_CODES = frozenset(
-    {"anger", "disgust", "fear", "joy", "neutral", "sadness", "smirk", "surprise"}
+    {"anger", "disgust", "fear", "neutral", "sadness", "smirk", "surprise"}
 )
 
 EMOTION_COMPOSITIONS = {
-    "joy": {
-        "FaceAngleZ": (0.10, 0.65),
-        "FaceAngleY": (0.04, 0.45),
-        "EyeOpenLeft": (0.06, 0.35),
-        "EyeOpenRight": (0.06, 0.35),
-    },
     "anger": {"FaceAngleZ": (-0.08, 0.60), "FaceAngleY": (-0.03, 0.45)},
     "disgust": {"FaceAngleZ": (-0.06, 0.50), "FaceAngleY": (0.06, 0.35)},
     "fear": {"FaceAngleZ": (0.04, 0.55), "FacePositionZ": (-0.04, 0.40)},

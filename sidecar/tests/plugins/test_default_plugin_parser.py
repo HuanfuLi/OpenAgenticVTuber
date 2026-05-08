@@ -27,10 +27,10 @@ async def test_extracts_supported_action_codes_case_insensitively() -> None:
     plugin = _load_plugin_class()(clock=lambda: 0.0)
     plugin.on_load(RigCapabilities(writable_param_ids=["FaceAngleZ"]), AvatarOverrides())
 
-    frames = [frame async for frame in plugin.on_token_stream("Hi [SURPRISE] there [unknown].")]
+    frames = [frame async for frame in plugin.on_token_stream("Hi [SMIRK] there [unknown].")]
 
     assert len(frames) == 1
-    assert frames[0].add_params == {}
+    assert frames[0].add_params == {"FaceAngleZ": pytest.approx(0.0)}
 
 
 @pytest.mark.asyncio
@@ -38,11 +38,11 @@ async def test_parser_buffers_split_action_tokens_across_sentence_chunks() -> No
     plugin = _load_plugin_class()(clock=lambda: 0.0)
     plugin.on_load(RigCapabilities(writable_param_ids=["FaceAngleZ"]), AvatarOverrides())
 
-    assert [frame async for frame in plugin.on_token_stream("start [sur")] == []
-    frames = [frame async for frame in plugin.on_token_stream("prise] done")]
+    assert [frame async for frame in plugin.on_token_stream("start [smi")] == []
+    frames = [frame async for frame in plugin.on_token_stream("rk] done")]
 
     assert len(frames) == 1
-    assert frames[0].add_params == {}
+    assert frames[0].add_params["FaceAngleZ"] == pytest.approx(0.0)
 
 
 @pytest.mark.asyncio

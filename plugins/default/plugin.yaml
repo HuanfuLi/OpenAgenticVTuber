@@ -10,8 +10,6 @@ action_codes:
     description: "Show disgust through head, eye, and face motion."
   - code: fear
     description: "Show fear through head, eye, and face motion."
-  - code: joy
-    description: "Show joy through head, eye, and face motion."
   - code: neutral
     description: "Return to neutral body motion."
   - code: sadness

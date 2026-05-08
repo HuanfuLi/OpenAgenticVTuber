@@ -57,7 +57,7 @@ def test_enqueue_sentence_feeds_plugin_input() -> None:
     asyncio.run(run())
 
 
-def test_enqueue_joy_renders_nonzero_timed_frames() -> None:
+def test_enqueue_smirk_renders_nonzero_timed_frames() -> None:
     async def run() -> None:
         clock = _FakeClock()
         plugin = DefaultPlugin(clock=clock)
@@ -74,7 +74,7 @@ def test_enqueue_joy_renders_nonzero_timed_frames() -> None:
         )
         adapter = PluginAdapter(plugin)
 
-        adapter.enqueue_sentence("[joy]")
+        adapter.enqueue_sentence("[smirk]")
         await asyncio.sleep(0)
         await asyncio.sleep(0)
 
@@ -100,7 +100,7 @@ def test_enqueue_joy_renders_nonzero_timed_frames() -> None:
     asyncio.run(run())
 
 
-def test_supervised_default_plugin_render_frame_drives_joy_ramp() -> None:
+def test_supervised_default_plugin_render_frame_drives_smirk_ramp() -> None:
     async def run() -> None:
         clock = _FakeClock()
         plugin = DefaultPlugin(clock=clock)
@@ -119,7 +119,7 @@ def test_supervised_default_plugin_render_frame_drives_joy_ramp() -> None:
         )
         adapter = PluginAdapter(supervisor)
 
-        adapter.enqueue_sentence("[joy]")
+        adapter.enqueue_sentence("[smirk]")
         await asyncio.sleep(0)
         await asyncio.sleep(0)
 

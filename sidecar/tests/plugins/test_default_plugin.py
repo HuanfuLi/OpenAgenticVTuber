@@ -42,7 +42,7 @@ async def _collect(plugin, sentence: str):
 @pytest.mark.asyncio
 async def test_emits_param_frame_for_each_supported_non_neutral_emotion() -> None:
     plugin_class = _load_plugin_class()
-    for action_code in ("anger", "disgust", "fear", "joy", "sadness", "smirk", "surprise"):
+    for action_code in ("anger", "disgust", "fear", "sadness", "smirk", "surprise"):
         plugin = plugin_class(clock=lambda: 0.3)
         plugin.on_load(
             RigCapabilities(writable_param_ids=["FaceAngleZ", "FaceAngleY", "FacePositionZ", "EyeOpenLeft", "EyeOpenRight"]),
@@ -67,12 +67,12 @@ async def test_neutral_action_emits_empty_reset_frame() -> None:
 
 
 @pytest.mark.asyncio
-async def test_joy_ramps_in_and_out_over_expected_windows() -> None:
+async def test_smirk_ramps_in_and_out_over_expected_windows() -> None:
     clock = FakeClock()
     plugin = _load_plugin_class()(clock=clock)
     plugin.on_load(RigCapabilities(writable_param_ids=["FaceAngleZ"]), AvatarOverrides())
 
-    frame_0 = (await _collect(plugin, "[joy]"))[0]
+    frame_0 = (await _collect(plugin, "[smirk]"))[0]
     clock.now = 0.15
     frame_150 = (await _collect(plugin, "continue"))[0]
     clock.now = 0.3
@@ -81,8 +81,8 @@ async def test_joy_ramps_in_and_out_over_expected_windows() -> None:
     frame_900 = (await _collect(plugin, "continue"))[0]
 
     assert frame_0.add_params["FaceAngleZ"] == pytest.approx(0.0)
-    assert frame_150.add_params["FaceAngleZ"] == pytest.approx(0.05)
-    assert frame_300.add_params["FaceAngleZ"] == pytest.approx(0.10)
+    assert frame_150.add_params["FaceAngleZ"] == pytest.approx(0.035)
+    assert frame_300.add_params["FaceAngleZ"] == pytest.approx(0.07)
     assert frame_900.add_params["FaceAngleZ"] == pytest.approx(0.0)
     assert plugin.active_action is None
 
@@ -95,17 +95,17 @@ async def test_avatar_override_binding_selects_composition_source_without_exp3_o
         RigCapabilities(writable_param_ids=["FaceAngleZ"]),
         AvatarOverrides(
             default_plugin_action_bindings=[
-                DefaultPluginActionBinding(action_code="joy", expression_index=0, expression_name="Joy", source="manual")
+                DefaultPluginActionBinding(action_code="smirk", expression_index=0, expression_name="Smirk", source="manual")
             ]
         ),
     )
 
-    assert await _collect(plugin, "[joy]")
+    assert await _collect(plugin, "[smirk]")
     clock.now = 0.3
     frames = await _collect(plugin, "continue")
 
-    assert frames[0].add_params == {"FaceAngleZ": pytest.approx(0.10)}
-    assert plugin.composition_sources["joy"] == "manual:Joy"
+    assert frames[0].add_params == {"FaceAngleZ": pytest.approx(0.07)}
+    assert plugin.composition_sources["smirk"] == "manual:Smirk"
 
 
 def test_body_sway_registry_exposes_only_head_only() -> None:

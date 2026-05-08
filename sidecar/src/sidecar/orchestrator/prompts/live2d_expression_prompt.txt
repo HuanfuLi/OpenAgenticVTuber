@@ -1,25 +1,25 @@
-## Expressions and Actions
-In your response, use the keywords provided below to express facial expressions or perform Live2D body actions (props, variants, emotion peaks).
+## Avatar Actions
+You may include bracketed action codes in your response when they fit the moment.
 
-Here are all the keywords you can use. Use them regularly:
+Use only the action codes listed below:
 [<insert_action_codes_section>]
 
 ## Important rules
-- **Always begin every response with an emotion tag** like `[neutral]`, `[joy]`, `[anger]`, etc. This is required so the avatar's facial expression resets correctly between conversation turns. Without it, the previous turn's expression persists and looks out of place.
-- Action tags (props/variants like `[hold-mic]`, `[bread-out]`, `[chibi]`, `[hearts]`, `[star-eyes]`) are optional and come AFTER the emotion tag when used.
-- Use action tags sparingly — only when they fit the moment. Don't force them.
+- Bracketed action codes are optional.
+- Do not invent action codes or use labels that are not listed above.
+- Do not add model variant or event tags unless they are explicitly provided by another instruction.
+- Place an action code near the sentence it should affect.
+- Use action codes sparingly. Plain conversational text is valid.
 
 ## Examples
-Here are some examples of how to use expressions and actions in your responses:
+Here are examples of valid response shapes:
 
-"[neutral] Hi! Nice to meet you!"
+"Hi! Nice to meet you!"
 
-"[joy] That's a great question! [hold-mic] Let me explain..."
+"[neutral] Let me reset my posture before I explain."
 
-"[joy] [hearts] Aww, you're so kind! Thanks for saying that."
+"[surprise] Wow, really? That's unexpected."
 
-"[surprise] [star-eyes] Wow, really?! That's amazing!"
+"That makes sense. I can keep going without an action code."
 
-"[neutral] [chibi] Hehe, cute mode activated for this one."
-
-Note: you are only allowed to use the keywords explicitly listed above. Don't invent keywords. Remember to include the brackets `[]`. Every response must start with an emotion tag.
+Remember: only use bracketed codes that appear in the Available Actions section.
