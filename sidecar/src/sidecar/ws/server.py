@@ -33,7 +33,6 @@ from sidecar.plugins.loader import (
 )
 from sidecar.plugins.supervisor import NullPlugin, PluginSupervisor
 from sidecar.tts import TTSGateway, TTSTaskManager
-from sidecar.vts import LoggingParameterWriter, PyVTSParameterWriter, SpeechMouthDriver
 from sidecar.vts.handshake import connect_and_authenticate
 from sidecar.vts.discrete_dispatcher import DiscreteDispatcher
 from sidecar.vts.pyvts_writer import PyvtsSafeWriter
@@ -140,36 +139,14 @@ async def _warmup_ping(gateway: LLMGateway) -> None:
         )
 
 
-def _playback_now(stream) -> float:
-    return float(stream.time) + float(stream.latency)
-
-
-async def _build_mouth_writer(capabilities):
-    param_ids = set(capabilities.writable_param_ids)
-    if "ParamMouthOpenY" not in param_ids:
-        loguru_logger.warning("[VTS-MOUTH] degraded missing ParamMouthOpenY")
-        return LoggingParameterWriter()
-
-    writer = PyVTSParameterWriter()
-    try:
-        await writer.connect_and_authenticate()
-        return writer
-    except Exception:
-        loguru_logger.exception("[VTS-MOUTH] degraded")
-        await writer.close()
-        return LoggingParameterWriter()
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Build Orchestrator at startup; tear down (no-op for now) at shutdown."""
-    mouth_task: asyncio.Task | None = None
     turn_loop_task: asyncio.Task | None = None
     compositor_task: asyncio.Task | None = None
     handshake_task: asyncio.Task | None = None
     writer: PyvtsSafeWriter | None = None
     tts_gateway: TTSGateway | None = None
-    mouth_writer = None
     plugin_manifest_watcher = None
     app.state.startup_error_message = None
 
@@ -185,9 +162,7 @@ async def lifespan(app: FastAPI):
         )
         app.state.orchestrator = None
         app.state.tts_gateway = None
-        app.state.mouth_driver_task = None
         app.state.turn_loop_task = None
-        app.state.mouth_writer = None
         app.state.startup_error_message = (
             "Sidecar started without LLM configuration. "
             "Restart from the LLM Setup screen."
@@ -223,7 +198,6 @@ async def lifespan(app: FastAPI):
             await _warmup_ping(gateway)
 
             compositor_speech_queue: asyncio.Queue = asyncio.Queue()
-            mouth_speech_queue: asyncio.Queue = asyncio.Queue()
             compositor_sentence_complete_queue: asyncio.Queue = asyncio.Queue()
             pending_inputs: asyncio.Queue[str] = asyncio.Queue()
             plugin_manifest = None
@@ -251,7 +225,6 @@ async def lifespan(app: FastAPI):
                 stream=tts_gateway.stream,
                 voice=tts_gateway.voice,
                 compositor_speech_queue=compositor_speech_queue,
-                extra_speech_queues=[mouth_speech_queue],
                 compositor_sentence_complete_queue=compositor_sentence_complete_queue,
             )
             app.state.orchestrator = Orchestrator(
@@ -265,14 +238,6 @@ async def lifespan(app: FastAPI):
                 plugin_adapter=plugin_adapter,
             )
             app.state.tts_gateway = tts_gateway
-            mouth_writer = await _build_mouth_writer(capabilities)
-            mouth_driver = SpeechMouthDriver(
-                writer=mouth_writer,
-                now=lambda: _playback_now(tts_gateway.stream),
-            )
-            mouth_task = asyncio.create_task(
-                mouth_driver.consume_forever(mouth_speech_queue)
-            )
             turn_loop_task = asyncio.create_task(app.state.orchestrator._turn_loop())
 
             writer = PyvtsSafeWriter()
@@ -285,7 +250,6 @@ async def lifespan(app: FastAPI):
                 compositor_speech_queue,
                 overrides,
                 teto_dir,
-                emit_mouth=False,
             )
             cursor_drv = CursorDriver()
             discrete_dispatcher = DiscreteDispatcher(writer)
@@ -308,17 +272,13 @@ async def lifespan(app: FastAPI):
             app.state.plugin_manifest_watcher = plugin_manifest_watcher
             app.state.plugin_adapter = plugin_adapter
             app.state.plugin_supervisor = plugin_supervisor
-            app.state.mouth_driver_task = mouth_task
             app.state.turn_loop_task = turn_loop_task
-            app.state.mouth_writer = mouth_writer
             loguru_logger.info("[READY] orchestrator + TTS initialized.")
         except Exception:
             loguru_logger.exception("Orchestrator construction failed.")
             app.state.orchestrator = None
             app.state.tts_gateway = None
-            app.state.mouth_driver_task = None
             app.state.turn_loop_task = None
-            app.state.mouth_writer = None
             app.state.startup_error_message = (
                 "TTS failed to initialize. Check the Piper model and audio output, then restart."
             )
@@ -328,12 +288,6 @@ async def lifespan(app: FastAPI):
         turn_loop_task.cancel()
         try:
             await turn_loop_task
-        except asyncio.CancelledError:
-            pass
-    if mouth_task is not None:
-        mouth_task.cancel()
-        try:
-            await mouth_task
         except asyncio.CancelledError:
             pass
     if compositor_task is not None:
@@ -356,8 +310,6 @@ async def lifespan(app: FastAPI):
         await plugin_supervisor.close()
     if plugin_manifest_watcher is not None:
         plugin_manifest_watcher.stop()
-    if mouth_writer is not None:
-        await mouth_writer.close()
     if tts_gateway is not None:
         tts_gateway.shutdown()
 

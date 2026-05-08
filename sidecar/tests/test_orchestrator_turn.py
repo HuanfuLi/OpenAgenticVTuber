@@ -11,7 +11,6 @@ from typing import AsyncIterator
 import pytest
 from litellm.exceptions import ContextWindowExceededError
 
-from sidecar.avatar.capabilities import AvatarCapabilities, Expression as LegacyExpression, Parameter
 from sidecar.orchestrator.orchestrator import Orchestrator
 from sidecar.orchestrator.output_types import DisplayText, SentenceOutput
 from sidecar.orchestrator.tts_preprocessor import TTSPreprocessorConfig
@@ -650,63 +649,15 @@ async def test_warmup_ping_does_not_raise_on_gateway_error(fake_gateway):
     await _warmup_ping(gw)
 
 
-def test_server_broadcasts_speech_to_dedicated_mouth_queue():
+def test_server_routes_speech_only_to_compositor_queue():
     from sidecar.ws import server
 
     src = inspect.getsource(server)
     assert "_drain_speech_queue_until_phase4" not in src
-    assert "SpeechMouthDriver" in src
-    assert "mouth_speech_queue: asyncio.Queue = asyncio.Queue()" in src
     assert "speech_drv = SpeechDriver(" in src
     assert "compositor_speech_queue," in src
-    assert "mouth_driver.consume_forever(mouth_speech_queue)" in src
-    assert "emit_mouth=False" in src
-
-
-def test_playback_now_uses_stream_time_plus_latency():
-    from sidecar.ws.server import _playback_now
-
-    stream = SimpleNamespace(time=12.5, latency=0.125)
-    assert _playback_now(stream) == pytest.approx(12.625)
-
-
-@pytest.mark.asyncio
-async def test_build_mouth_writer_degrades_when_param_missing(monkeypatch):
-    from sidecar.vts import LoggingParameterWriter
-    from sidecar.ws import server
-
-    class _ShouldNotConnect:
-        def __init__(self):
-            raise AssertionError("VTS writer must not be constructed without ParamMouthOpenY")
-
-    monkeypatch.setattr(server, "PyVTSParameterWriter", _ShouldNotConnect)
-    caps = AvatarCapabilities(expressions=[LegacyExpression(name="joy", file="joy.exp3.json")])
-
-    writer = await server._build_mouth_writer(caps)
-
-    assert isinstance(writer, LoggingParameterWriter)
-
-
-@pytest.mark.asyncio
-async def test_build_mouth_writer_degrades_when_vts_auth_fails(monkeypatch):
-    from sidecar.vts import LoggingParameterWriter
-    from sidecar.ws import server
-
-    class _FailingWriter:
-        closed = False
-
-        async def connect_and_authenticate(self):
-            raise RuntimeError("auth failed")
-
-        async def close(self):
-            self.closed = True
-
-    monkeypatch.setattr(server, "PyVTSParameterWriter", _FailingWriter)
-    caps = AvatarCapabilities(
-        expressions=[LegacyExpression(name="joy", file="joy.exp3.json")],
-        parameters=[Parameter(id="ParamMouthOpenY")],
-    )
-
-    writer = await server._build_mouth_writer(caps)
-
-    assert isinstance(writer, LoggingParameterWriter)
+    assert "SpeechMouthDriver" not in src
+    assert "PyVTSParameterWriter" not in src
+    assert "mouth_speech_queue" not in src
+    assert "mouth_task" not in src
+    assert "emit_mouth" not in src
