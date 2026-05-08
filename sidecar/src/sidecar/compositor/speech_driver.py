@@ -22,6 +22,10 @@ MOUTH_ATTACK_ALPHA = 0.55
 MOUTH_RELEASE_ALPHA = 0.45
 
 
+def _format_body_params(params: dict[str, float]) -> str:
+    return ",".join(f"{key}={value:.3f}" for key, value in sorted(params.items()))
+
+
 class SpeechDriver:
     def __init__(
         self,
@@ -48,15 +52,17 @@ class SpeechDriver:
         rms = self._current_rms(now)
         self._rms_smooth = EMA_ALPHA * rms + (1.0 - EMA_ALPHA) * self._rms_smooth
         mouth = self._smooth_mouth(self._mouth_target(rms))
+        body_params = self._strategy.tick(self._rms_smooth, now)
         out = {MOUTH_PARAM: mouth} if self._emit_mouth else {}
-        out.update(self._strategy.tick(self._rms_smooth, now))
+        out.update(body_params)
         if self._current is not None:
             logger.debug(
-                "[SPEECH-DRIVER] sentence_id={} rms={:.3f} mouth={:.3f} strategy={}",
+                "[SPEECH-DRIVER] sentence_id={} strategy={} rms={:.3f} mouth={:.3f} body_params=[{}]",
                 self._current.sentence_id,
+                self._overrides.body_sway_strategy,
                 rms,
                 mouth,
-                self._overrides.body_sway_strategy,
+                _format_body_params(body_params),
             )
         return out
 

@@ -20,19 +20,24 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
-LOG_PATTERN = re.compile(
-    r"\[SPEECH-DRIVER strategy=(?P<strat>\w+) "
-    r"rms=(?P<rms>[\d.]+) mouth=(?P<mouth>[\d.]+) "
+REAL_LOG_PATTERN = re.compile(
+    r"\[SPEECH-DRIVER\]\s+sentence_id=(?P<sentence_id>\d+)\s+strategy=(?P<strat>\w+)\s+"
+    r"rms=(?P<rms>-?[\d.]+)\s+mouth=(?P<mouth>-?[\d.]+)\s+"
     r"body_params=\[(?P<body_params>[^\]]*)\]"
 )
-PARAM_PATTERN = re.compile(r"(?P<key>[^=,\s]+)=(?P<value>-?[\d.]+)")
+LEGACY_LOG_PATTERN = re.compile(
+    r"\[SPEECH-DRIVER strategy=(?P<strat>\w+)\s+"
+    r"rms=(?P<rms>-?[\d.]+)\s+mouth=(?P<mouth>-?[\d.]+)\s+"
+    r"body_params=\[(?P<body_params>[^\]]*)\]"
+)
+PARAM_PATTERN = re.compile(r"(?P<key>[^=,]+)=(?P<value>-?[\d.]+)")
 
 
 def parse_body_params(raw: str) -> dict[str, float]:
     """Parse body_params entries formatted as key=value pairs."""
     parsed: dict[str, float] = {}
     for match in PARAM_PATTERN.finditer(raw):
-        parsed[match.group("key")] = float(match.group("value"))
+        parsed[match.group("key").strip()] = float(match.group("value"))
     return parsed
 
 
@@ -42,7 +47,7 @@ def parse_log(path: Path) -> tuple[list[float], list[float], list[dict[str, floa
     body_series: list[dict[str, float]] = []
     with path.open(encoding="utf-8") as handle:
         for line in handle:
-            match = LOG_PATTERN.search(line)
+            match = REAL_LOG_PATTERN.search(line) or LEGACY_LOG_PATTERN.search(line)
             if match is None:
                 continue
             rms_series.append(float(match.group("rms")))

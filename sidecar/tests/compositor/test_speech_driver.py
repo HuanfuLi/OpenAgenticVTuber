@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+from loguru import logger
 
 from contracts import SpeechEnvelopePayload
 from sidecar.avatar.overrides import TetoOverrides
@@ -50,6 +51,33 @@ async def test_speech_driver_applies_ema_to_body_strategy(tmp_path):
 
     out = driver.tick(0.0)
     assert out["Lean Forward"] == pytest.approx(EMA_ALPHA)
+
+
+@pytest.mark.asyncio
+async def test_speech_driver_logs_strategy_body_params_without_mouth(tmp_path):
+    queue: asyncio.Queue = asyncio.Queue()
+    await queue.put(
+        SpeechEnvelopePayload(
+            sentence_id=1,
+            volumes=[1.0],
+            slice_length=20,
+            started_at=0.0,
+        )
+    )
+    overrides = TetoOverrides(body_sway_strategy="proxy_param", proxy_body_param="Lean Forward")
+    driver = SpeechDriver(queue, overrides, tmp_path)
+    messages: list[str] = []
+    sink_id = logger.add(messages.append, format="{message}")
+    try:
+        driver.tick(0.0)
+    finally:
+        logger.remove(sink_id)
+
+    speech_logs = [message for message in messages if "[SPEECH-DRIVER]" in message]
+    assert speech_logs
+    assert "strategy=proxy_param" in speech_logs[0]
+    assert "body_params=[Lean Forward=0.200]" in speech_logs[0]
+    assert "MouthOpen=" not in speech_logs[0].split("body_params=[", 1)[1]
 
 
 def test_speech_driver_swap_strategy(tmp_path):
