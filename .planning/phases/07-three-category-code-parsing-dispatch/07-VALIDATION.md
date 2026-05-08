@@ -20,8 +20,8 @@ Per-phase validation contract for feedback sampling during execution.
 |----------|-------|
 | **Framework** | pytest via `uv` for sidecar Python, npm contract check for generated contracts, renderer vitest via npm |
 | **Config file** | `sidecar/pyproject.toml`, `package.json`, `apps/renderer/package.json` |
-| **Quick run command** | `cd sidecar && uv run pytest tests/orchestrator/test_code_extractor.py tests/parser/test_reserved.py -x --no-header` |
-| **Full suite command** | `npm run check:contracts; cd sidecar && uv run pytest tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py tests/parser/test_reserved.py tests/vts/test_variant_state_manager.py tests/vts/test_event_completion_tracker.py tests/compositor/test_plugin_adapter.py tests/orchestrator/test_dispatch_routing.py tests/test_sidecar_boot.py tests/test_tts_manager.py tests/test_audio_payload_helpers.py -q; cd ../apps/renderer && npm test -- --run logs-drawer-intent` |
+| **Quick run command** | `cd sidecar && uv run pytest tests/avatar/test_extract_vts.py::test_trigger_animation_uses_motion3_duration tests/orchestrator/test_code_extractor.py tests/parser/test_reserved.py -x --no-header` |
+| **Full suite command** | `npm run check:contracts; cd sidecar && uv run pytest tests/avatar/test_extract_vts.py tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py tests/parser/test_reserved.py tests/vts/test_variant_state_manager.py tests/vts/test_event_completion_tracker.py tests/compositor/test_plugin_adapter.py tests/orchestrator/test_dispatch_routing.py tests/test_sidecar_boot.py tests/test_tts_manager.py tests/test_audio_payload_helpers.py -q; cd ../apps/renderer && npm test -- --run logs-drawer-intent` |
 | **Estimated runtime** | ~60-120 seconds depending on contract generation and renderer test startup |
 
 ---
@@ -39,7 +39,7 @@ Per-phase validation contract for feedback sampling during execution.
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 07-01-01 | 01 | 1 | PARSE-03, PARSE-06 | contract smoke | `uv run --project sidecar python -c "from contracts import ActionCode, VariantToggle, EventFire, Dispatch; print(ActionCode(name='joy').kind, VariantToggle(name='hold-mic', hotkey_id='hk').kind, EventFire(name='wave', hotkey_id='hk', duration_ms=2833).duration_ms)"` | Existing infra | pending |
+| 07-01-01 | 01 | 1 | PARSE-03, PARSE-06 | contract smoke + VTS TriggerAnimation duration unit | `uv run --project sidecar python -c "from contracts import ActionCode, VariantToggle, EventFire, Dispatch; print(ActionCode(name='joy').kind, VariantToggle(name='hold-mic', hotkey_id='hk').kind, EventFire(name='wave', hotkey_id='hk', duration_ms=2833).duration_ms)"; cd sidecar && uv run pytest tests/avatar/test_extract_vts.py::test_trigger_animation_uses_motion3_duration -x --no-header` | Extends existing `tests/avatar/test_extract_vts.py` | pending |
 | 07-02-01 | 02 | 2 | PARSE-03, PARSE-06 | contract drift | `npm run check:contracts` | Existing infra | pending |
 | 07-03-01 | 03 | 2 | PARSE-01, PARSE-02, PARSE-04, PARSE-08 | unit | `cd sidecar && uv run pytest tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py -x --no-header` | Task creates tests | pending |
 | 07-04-01 | 04 | 2 | PARSE-04, PARSE-07 | unit | `cd sidecar && uv run pytest tests/parser/test_reserved.py -x --no-header` | Task creates tests | pending |
@@ -61,7 +61,7 @@ Per-phase validation contract for feedback sampling during execution.
 | PARSE-03 | 07-01, 07-02, 07-06, 07-07 | `tests/compositor/test_plugin_adapter.py::test_action_code_delivered_to_active_plugin`, `tests/orchestrator/test_dispatch_routing.py`, `npm run check:contracts` |
 | PARSE-04 | 07-03, 07-04, 07-07 | `<think>` unknown-event drop fixture plus `validate_reserved_names` reserved-name tests |
 | PARSE-05 | 07-05, 07-06, 07-07 | `tests/vts/test_variant_state_manager.py` and dispatch routing tests |
-| PARSE-06 | 07-01, 07-02, 07-05, 07-06, 07-07 | `tests/vts/test_event_completion_tracker.py`, contract check for EventEntry/Dispatch |
+| PARSE-06 | 07-01, 07-02, 07-05, 07-06, 07-07 | `tests/avatar/test_extract_vts.py::test_trigger_animation_uses_motion3_duration` proving `Meta.Duration=1.833` maps through to `EventFire.duration_ms == 2833` after the +1000ms blend pad, `tests/vts/test_event_completion_tracker.py`, contract check for EventEntry/Dispatch |
 | PARSE-07 | 07-04, 07-07 | `tests/parser/test_reserved.py`, `tests/test_sidecar_boot.py` |
 | PARSE-08 | 07-03 | `tests/orchestrator/test_code_extractor.py::test_code_extractor_split_token` |
 
@@ -71,8 +71,8 @@ Per-phase validation contract for feedback sampling during execution.
 
 | Wave | Plans | Command |
 |------|-------|---------|
-| 1 | 07-01 | `uv run --project sidecar python -c "from contracts import ActionCode, VariantToggle, EventFire; print('dispatch-ok')"` |
-| 2 | 07-02, 07-03, 07-04, 07-05 | `npm run check:contracts; cd sidecar && uv run pytest tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py tests/parser/test_reserved.py tests/vts/test_variant_state_manager.py tests/vts/test_event_completion_tracker.py -q` |
+| 1 | 07-01 | `uv run --project sidecar python -c "from contracts import ActionCode, VariantToggle, EventFire; print('dispatch-ok')"; cd sidecar && uv run pytest tests/avatar/test_extract_vts.py::test_trigger_animation_uses_motion3_duration -x --no-header` |
+| 2 | 07-02, 07-03, 07-04, 07-05 | `npm run check:contracts; cd sidecar && uv run pytest tests/avatar/test_extract_vts.py tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py tests/parser/test_reserved.py tests/vts/test_variant_state_manager.py tests/vts/test_event_completion_tracker.py -q` |
 | 3 | 07-06 | `cd sidecar && uv run pytest tests/plugins/test_api.py tests/compositor/test_plugin_adapter.py tests/orchestrator/test_dispatch_routing.py tests/test_tts_manager.py tests/test_audio_payload_helpers.py -q` |
 | 4 | 07-07 | `cd sidecar && uv run pytest tests/test_sidecar_boot.py tests/orchestrator/test_dispatch_routing.py -q; cd ../apps/renderer && npm test -- --run logs-drawer-intent` |
 
@@ -84,6 +84,7 @@ Existing infrastructure covers all phase requirements. Phase tasks create or
 extend the specific test files they verify:
 
 - `sidecar/tests/orchestrator/test_code_extractor.py`
+- `sidecar/tests/avatar/test_extract_vts.py`
 - `sidecar/tests/orchestrator/test_tts_preprocessor.py`
 - `sidecar/tests/parser/test_reserved.py`
 - `sidecar/tests/vts/test_variant_state_manager.py`
