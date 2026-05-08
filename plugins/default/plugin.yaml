@@ -1,0 +1,22 @@
+name: default
+version: 1.0.0
+entrypoint: __init__.py:DefaultPlugin
+api_version: "1.0"
+description: "Default AgenticLLMVTuber body-motion plugin."
+action_codes:
+  - code: anger
+    description: "Show anger through head, eye, and face motion."
+  - code: disgust
+    description: "Show disgust through head, eye, and face motion."
+  - code: fear
+    description: "Show fear through head, eye, and face motion."
+  - code: joy
+    description: "Show joy through head, eye, and face motion."
+  - code: neutral
+    description: "Return to neutral body motion."
+  - code: sadness
+    description: "Show sadness through head, eye, and face motion."
+  - code: smirk
+    description: "Show a smirk through head, eye, and face motion."
+  - code: surprise
+    description: "Show surprise through head, eye, and face motion."
