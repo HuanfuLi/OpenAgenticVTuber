@@ -97,10 +97,10 @@ Plans:
 - [x] 04-03-PLAN.md — Cursor tracker (Win32-poll → ParamAngle deflection with 80px dead-zone + cubic ease-back) + DiscreteEvent demo target lock (Star Eye [7]) + sidecar lifespan integration (AVT-09 demo, AVT-10) [Wave 3 — depends on 04-02 ws/server.py edits]
 - [x] 04-04-PLAN.md — Body-sway investigation execution + per-strategy evidence (operator-driven A/B via dev-panel hot-switch, RESEARCH §Open-Q2 closure, ship-default locked in teto_overrides.yaml) (AVT-06 execution) [Wave 3 — operator-driven, runs in parallel with 04-03]
 - [ ] 04-05-PLAN.md — Gap closure: replace expression hotkey-pop path with exp3-backed weighted ParamFrame set_params and no HotkeyTriggerRequest for expression intents (AVT-03, AVT-08) [Wave 1 gap]
-- [ ] 04-06-PLAN.md — Gap closure: implement renderer cursor overlay → cursor-reaction WS contract → ActionIntent(kind="reaction") CursorDriver path, preserving Win32 fallback (AVT-10) [Wave 1 gap]
+- [ ] 04-06-PLAN.md — Gap closure: lock AVT-10 to the accepted D-09/D-11 sidecar Win32 window-bounds + cursor-polling contract; no renderer overlay or renderer cursor WS path (AVT-10) [Wave 1 gap]
 - [ ] 04-07-PLAN.md — Gap closure: align SpeechDriver body_params runtime logs with plot_speech_evidence.py parser for Phase 5 live evidence re-runs (AVT-06) [Wave 1 gap]
 
-**UI hint**: yes  <!-- Cursor tracker is a transparent React overlay; the avatar canvas region's UX is part of this phase -->
+**UI hint**: no  <!-- Cursor tracking is sidecar Win32 polling per D-09/D-11; renderer overlay work is explicitly deferred. -->
 
 **Open questions to resolve at plan-time:**
 - **Body-sway investigation scope** (AVT-06): minimum N strategy-pattern implementations tried on Teto before head-only fallback ships. Default: ≥2 (per AVT-06). Candidates: `head_only` (guaranteed fallback), `physics_chain` (OLVT IN-twin reference, known broken on Teto, kept as runnable evidence), `exp3_modulation` (new — modulating an `.exp3.json` body-pose expression's strength curves by RMS), `proxy_param` (smoke-pass-discovered non-orphan body param). The strategy registry pattern means the investigation produces *runnable evidence* not prose footnotes — this satisfies the "investigation IS the deliverable" framing.
@@ -168,7 +168,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | AVT-07 | 4 | `teto_overrides.yaml` schema stub (populated by smoke-pass in 04-00) |
 | AVT-08 | 4 | `[joy]` 300ms smooth fade — §14 success criterion #2 (the headline demo) |
 | AVT-09 | 4 | One DiscreteEvent prop hotkey |
-| AVT-10 | 4 | Cursor-in-canvas → ActionIntent reaction → eye/head tracking |
+| AVT-10 | 4 | Sidecar Win32 VTS-window cursor polling → eye/head tracking |
 | SC-01 | 5 | All six §14 criteria formally verified in `.planning/skeleton-verification.md` |
 | SC-02 | 5 | Codegen replaces hand-written TS contracts |
 

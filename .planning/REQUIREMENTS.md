@@ -32,7 +32,7 @@ The walking-skeleton scope validates the layered architecture (Electron + Python
 
 ### Action Compositor & VTS Bridge
 
-- [x] **AVT-01**: 60 Hz action compositor merges three drivers (idle baseline, speech driver, intent overlay) into a single `ParamFrame` stream sent **sidecar-direct to VTS via pyvts** — NOT through the Electron renderer (which only forwards UI events like cursor-in-canvas back to the sidecar)
+- [x] **AVT-01**: 60 Hz action compositor merges three drivers (idle baseline, speech driver, intent overlay) into a single `ParamFrame` stream sent **sidecar-direct to VTS via pyvts** — NOT through the Electron renderer
 - [x] **AVT-02**: Idle baseline driver runs continuously even when no other driver is active, writing rest-state values at least every second to comply with the VTS lower-bound rate limit; if no parameter is re-sent within 1s, VTS reverts that parameter to the face tracker
 - [x] **AVT-03**: Speech driver writes additive (`mode:"add"`) updates so it does not conflict with VTS's internal face tracker on machines where a webcam is active; intent overlay uses `mode:"set"` only with an explicit `weight` fade for smooth blends
 - [x] **AVT-04**: pyvts is wrapped behind a single-writer asyncio task (one coroutine owns the WebSocket) so concurrent producers don't trigger pyvts open issue #51 (`recv()` race during concurrent `asyncio.gather`)
@@ -41,7 +41,7 @@ The walking-skeleton scope validates the layered architecture (Electron + Python
 - [x] **AVT-07**: Skeleton ships a stub `teto_overrides.yaml` (or `.json`) checked into the repo even though import + smoke-pass tooling is deferred — empty orphan-params list, physics-chain proxy slots, sign-inversion slots — establishing the per-avatar override file schema for the future avatar-import milestone
 - [x] **AVT-08**: LLM emits `[joy]` → expression smoothly blends in over ~300ms and decays after the sentence ends — **not a hotkey pop**. This is §14 success criterion #2 and the skeleton's headline differentiator demo.
 - [x] **AVT-09**: One `DiscreteEvent` (e.g., prop visibility toggle) maps to a VTS hotkey via the discrete-event path, demonstrating the rare-discrete-trigger contract alongside the dominant continuous-param contract
-- [x] **AVT-10**: Cursor-in-canvas (React transparent overlay div over the VTS window) emits `ActionIntent(kind="reaction", ...)` events to the sidecar; compositor produces visible avatar eye/head tracking on the cursor
+- [x] **AVT-10**: Sidecar Win32 cursor polling detects VTube Studio window bounds and cursor position; compositor produces visible avatar eye/head tracking on the cursor and eases back when the cursor leaves
 
 ### Skeleton Verification & Contracts
 
