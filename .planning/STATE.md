@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Phases
-status: verifying
+status: ready
 stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-05-08T06:29:10.174Z"
+last_updated: "2026-05-08T06:36:15.627Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon — v2.0 is infrastructure prep on the way there)
-**Current focus:** Phase 05 — polish-contracts-codegen-14-verification
+**Current focus:** Phase 08 — avatar-import-+-catalogs
 
 ## Current Position
 
-Phase: 05 (polish-contracts-codegen-14-verification) — EXECUTING
-Plan: 1 of 1
-Status: Phase complete — ready for verification
+Phase: 8
+Plan: Not started
+Status: Phase 05 complete — ready to discuss Phase 8
 Last activity: 2026-05-08
 
 **Note on v1.0:** 04-04 (body-sway investigation) is complete. 05-01 (codegen pipeline) remains pending from v1.0 and will execute on the way to v2.0 phase work. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
