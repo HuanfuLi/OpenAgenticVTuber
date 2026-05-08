@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 04-07-PLAN.md
-last_updated: "2026-05-08T05:37:26.174Z"
+last_updated: "2026-05-08T05:38:06.181Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 5
@@ -69,6 +69,7 @@ Last activity: 2026-05-08
 | Phase 04 P03 | 45min | 3 tasks | 7 files |
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P04 | 7min | 3 tasks | 15 files |
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P07 | 4min | 3 tasks | 6 files |
+| Phase 04-action-compositor-vts-bridge-body-sway-investigation P06 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -107,7 +108,9 @@ Recent decisions affecting current work:
 - [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: SpeechDriver logs body strategy output separately as body_params and excludes MouthOpen from that evidence field.
 - [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: plot_speech_evidence.py keeps compatibility with legacy deferred stubs while preferring the real runtime [SPEECH-DRIVER] sentence_id format.
 - [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: CursorDriver emits ParamAngle/ParamEyeBall IDs for AVT-10 cursor output while preserving the 80px dead zone and 800ms cubic ease-back.
+- [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: Stale renderer-overlay verification wording is superseded by the locked D-09/D-11 sidecar Win32 cursor contract.
 - [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: Expression intents no longer use VTS hotkeys; HotkeyTriggerRequest remains reserved for DiscreteEvent AVT-09 in sidecar/src/sidecar/vts/discrete_dispatcher.py.
+- [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: IntentDriver resolves expression files from AvatarCapabilities plus avatar_dir, with a Teto Live2D fallback for checked-in dev assets.
 
 ### Pending Todos
 
