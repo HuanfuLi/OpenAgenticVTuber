@@ -130,22 +130,22 @@ Plans:
 
 Five additional phases (6, 7, 8, 9, 10) refactoring the milestone-1 animation layer from compositor-internal to plugin-driven, formalizing a three-category LLM emit code system (`[action]` / `{variant}` / `<event>`), adding a user-facing avatar import flow with mandatory review screen, exposing a slider HUD with per-param locks for parameter discovery, and re-running the §14 success-criteria ceremony against the refactored architecture (the SC-01 milestone-1 deferred). Source: `PROJECT_DESIGN.md` §14B + `.planning/research/v2.0/SUMMARY.md`.
 
-**Execution order is gating-derived (LOCKED 2026-05-08): 6 → 8 → 7 → 9 → 10.** Numerically the phases are 6, 7, 8, 9, 10 — but Phase 8 (avatar import + variant/event catalogs) executes before Phase 7 (three-category parser + dispatch) because Phase 7's variant/event parsers need catalogs to validate against. Documented in `REQUIREMENTS.md` v2.0 header.
+**Execution order: 8 → 6 → 7 → 9 → 10 (REVISED 2026-05-08).** Originally locked as 6 → 8 → 7 → 9 → 10 (research-recommended) but swapped to 8 → 6 after analysis showed Phase 6's RigCapabilities + AvatarOverrides contracts depend on data Phase 8 produces (import-time introspection + variant/event/emotion-binding catalog separation). With Phase 8 first, Phase 6's plugin runtime builds against the cleaner schema instead of compatibility-shimming the milestone-1 flat `expressions` list. Phase 8 is the largest phase (1.5–2 weeks) and putting it first delays plug-and-play deliverables, but the contract-cleanliness gain is judged worth it.
 
-**Granularity:** coarse (5 phases — 53 v2.0 requirements partitioned across distinct delivery boundaries: plugin runtime → catalogs → parser → HUD → verification). Phase 6 carries 5 critical pitfalls and is recommended to run an internal plumbing-week sub-phase that lands ABC + manifest + supervisor + clamp + rate-limiter + writer-pattern + side-by-side baseline harness BEFORE the default-plugin behavior gets debugged.
+**Granularity:** coarse (5 phases — 53 v2.0 requirements partitioned across distinct delivery boundaries: catalogs → plugin runtime → parser → HUD → verification). Phase 6 carries 5 critical pitfalls and is recommended to run an internal plumbing-week sub-phase that lands ABC + manifest + supervisor + clamp + rate-limiter + writer-pattern + side-by-side baseline harness BEFORE the default-plugin behavior gets debugged.
 
 ### v2.0 Phases Summary
 
-- [ ] **Phase 6: Plugin Runtime + Default Plugin** — Plugin contracts (ABC, manifest, RigCapabilities), in-sidecar loader with supervisor + clamp + rate-limiter, default plugin absorbing milestone-1 IntentDriver + body-sway logic — first in execution order
-- [ ] **Phase 8: Avatar Import + Catalogs** — Type-detected auto-extraction (VTS / Cubism w-exp / Cubism bare / OLVT) + mandatory React review screen + `_avatar_overrides.yaml` writes — second in execution order (catalogs feed Phase 7)
+- [ ] **Phase 8: Avatar Import + Catalogs** — Type-detected auto-extraction (VTS / Cubism w-exp / Cubism bare / OLVT) + mandatory React review screen + `_avatar_overrides.yaml` writes + `RigCapabilities` + `AvatarOverrides` contract definition — **first in execution order (REVISED — produces schema Phase 6 builds against)**
+- [ ] **Phase 6: Plugin Runtime + Default Plugin** — Plugin contracts (ABC, manifest), in-sidecar loader with supervisor + clamp + rate-limiter, default plugin absorbing milestone-1 IntentDriver + body-sway logic; consumes Phase 8's `RigCapabilities` + `AvatarOverrides` — **second in execution order**
 - [ ] **Phase 7: Three-Category Code Parsing + Dispatch** — `code_extractor` decorator dispatching `[xxx]` / `{xxx}` / `<xxx>` to plugin / variant-toggle / event-fire paths — third in execution order
 - [ ] **Phase 9: Slider HUD + Per-Param Lock** — Sidecar 15 Hz HUD-mode IPC tap + dedicated React route + per-param lock with auto-engage on drag — fourth in execution order
 - [ ] **Phase 10: Cursor Polish + §14 SC Re-Verification** — Optional cursor-driver in-canvas-gate drop + side-by-side §14 SC harness against milestone-1 baselines + skeleton-verification.md commit — last in execution order
 
 ### Phase 6: Plugin Runtime + Default Plugin
 **Goal**: The animation layer becomes plug-and-play. A developer can swap the body-motion strategy by changing one config line, restarting the sidecar, and observing the avatar move differently — without touching idle / lipsync / cursor / pyvts-writer code. The default plugin ships with the system and absorbs the milestone-1 `IntentDriver` + `compositor/body_sway/*` logic verbatim, so the [joy] 300ms blend regression baseline holds.
-**Depends on**: Milestone-1 Phase 4 + Phase 5 (compositor + codegen pipeline)
-**Requirements**: PLG-01, PLG-02, PLG-03, PLG-04, PLG-05, PLG-06, PLG-07, PLG-08, PLG-09, PLG-10, ARCH-01, ARCH-02, ARCH-03, ARCH-04, ARCH-05, ARCH-06, ARCH-07, ARCH-08, ARCH-09, ARCH-10, ARCH-11, ARCH-12
+**Depends on**: Phase 8 (`RigCapabilities` + `AvatarOverrides` contracts; `_avatar_overrides.yaml` schema with explicit variant/event/emotion-binding catalogs) + Milestone-1 Phase 4 + Phase 5 (compositor + codegen pipeline)
+**Requirements**: PLG-01, PLG-02, PLG-03, PLG-04, PLG-05, PLG-06, PLG-07, PLG-08, PLG-09, PLG-10, ARCH-01, ARCH-03, ARCH-04, ARCH-05, ARCH-06, ARCH-07, ARCH-08, ARCH-09, ARCH-10, ARCH-11, ARCH-12 *(ARCH-02 moved to Phase 8 — Phase 6 consumes the contract Phase 8 defines)*
 **Success Criteria** (what must be TRUE):
   1. Developer changes the active-plugin name in config-file, restarts the sidecar, and the avatar's body-motion behavior visibly changes — without editing idle / lipsync / cursor / pyvts-writer source
   2. With the default plugin loaded, an LLM reply containing `[joy]` produces a smooth ~300ms expression blend identical to the milestone-1 Phase-4 baseline within tolerance (regression-locked via the side-by-side harness; AVT-08 / SC #2 still passes)
@@ -166,9 +166,9 @@ Plans:
 - **Plugin API versioning policy** (ARCH-11): `api_version: "1.0"` floor. Plan-time decides the major-version-bump rule and the migration path for the default plugin.
 
 ### Phase 8: Avatar Import + Catalogs
-**Goal**: A user can import a new avatar via the Electron file dialog, walk through a mandatory review screen (NOT modal — dedicated React route), edit auto-extracted variant + event names away from placeholders (`exp_01` → `smile`), and commit a working `_avatar_overrides.yaml` that Phase 7's parser will validate against. OLVT `model_dict.json` drop-in works; mandatory Save-disabled friction prevents placeholder commits.
-**Depends on**: Phase 6 (plugin contracts cement here; `RigCapabilities` shape known)
-**Requirements**: IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07, IMP-08, IMP-09, IMP-10
+**Goal**: A user can import a new avatar via the Electron file dialog, walk through a mandatory review screen (NOT modal — dedicated React route), edit auto-extracted variant + event names away from placeholders (`exp_01` → `smile`), and commit a working `_avatar_overrides.yaml` that Phase 7's parser will validate against. OLVT `model_dict.json` drop-in works; mandatory Save-disabled friction prevents placeholder commits. **Phase 8 also defines the `RigCapabilities` + `AvatarOverrides` Pydantic contracts** (ARCH-02) since this phase produces the data they hold and runs first in v2.0 execution order — Phase 6 plugin runtime + Phase 9 HUD both consume them.
+**Depends on**: Milestone-1 Phase 4 (avatar.yaml + teto_overrides.yaml are the upgrade source) + Phase 5 (codegen pipeline)
+**Requirements**: IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07, IMP-08, IMP-09, IMP-10, ARCH-02 *(ARCH-02 added — `RigCapabilities` contract definition moved here from Phase 6 because Phase 8 produces the data and now executes first)*
 **Success Criteria** (what must be TRUE):
   1. User imports a VTS-shape avatar via file dialog; sidecar auto-detects type, parses `*.vtube.json` `Hotkeys[]` filtered to `Action: "ToggleExpression"`, derives variant codes (strip `[N]` keybind suffix and `【】` decorations, lowercase, hyphenate), and presents the draft catalog on a dedicated React route
   2. User imports a Cubism-with-expressions avatar; `model3.json` `FileReferences.Expressions[].Name` produces placeholder names; review screen REQUIRES user to relabel placeholders before Save is enabled (placeholder-density friction prevents `exp_01` from reaching the YAML)
@@ -258,7 +258,7 @@ Plans:
 
 **Execution Order:**
 Milestone-1 phases execute in numeric order: 1 → 2 → 3 → 4 → 5
-Milestone v2.0 phases execute in gating-derived order: 6 → 8 → 7 → 9 → 10 (NOT numeric — locked 2026-05-08)
+Milestone v2.0 phases execute in REVISED order: 8 → 6 → 7 → 9 → 10 (revised 2026-05-08; Phase 8 first to define `RigCapabilities` + `AvatarOverrides` contracts before Phase 6 plugin runtime consumes them)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -267,8 +267,8 @@ Milestone v2.0 phases execute in gating-derived order: 6 → 8 → 7 → 9 → 1
 | 3. TTS & Sentence-Buffered Audio | 3/3 | Ready for verification | - |
 | 4. Action Compositor + VTS Bridge + Body-Sway Investigation | 5/5 | Complete | 2026-05-08 |
 | 5. Polish, Contracts Codegen (scope reduced) | 0/1 | Not started — 05-02 deferred to M2 | - |
-| 6. Plugin Runtime + Default Plugin | 0/2 (TBD) | Not started — first in v2.0 order | - |
-| 8. Avatar Import + Catalogs | 0/3 (TBD) | Not started — second in v2.0 order | - |
+| 8. Avatar Import + Catalogs | 0/3 (TBD) | Not started — **first in v2.0 order (REVISED 2026-05-08)** | - |
+| 6. Plugin Runtime + Default Plugin | 0/2 (TBD) | Not started — second in v2.0 order | - |
 | 7. Three-Category Code Parsing + Dispatch | 0/2 (TBD) | Not started — third in v2.0 order | - |
 | 9. Slider HUD + Per-Param Lock | 0/2 (TBD) | Not started — fourth in v2.0 order | - |
 | 10. Cursor Polish + §14 SC Re-Verification | 0/1 (TBD) | Not started — last in v2.0 order | - |
@@ -309,7 +309,7 @@ Milestone v2.0 phases execute in gating-derived order: 6 → 8 → 7 → 9 → 1
 | SC-01 | 5 → 10 | Migrated: §14 verification ceremony deferred from Phase 5; lands as Phase 10's exit criterion under refactored architecture |
 | SC-02 | 5 | Codegen replaces hand-written TS contracts |
 | ARCH-01 | 6 | System owns LLM+VTS contracts; plugin owns motion contract; plugin MUST NOT call pyvts/FS/network directly |
-| ARCH-02 | 6 | `RigCapabilities` rig-introspection contract — single source for plugin `on_load` AND HUD `GET /admin/rig-capabilities` |
+| ARCH-02 | 8 | `RigCapabilities` rig-introspection contract — single source for plugin `on_load` AND HUD `GET /admin/rig-capabilities` (MOVED to Phase 8 with 2026-05-08 order swap; Phase 8 defines + populates, Phase 6 + 9 consume) |
 | ARCH-03 | 6 | Plugin token-stream input is orchestrator-decorated (post-sentence_divider, pre-code_extractor) |
 | ARCH-04 | 6 | Plugin output is `AsyncIterator[ParamFrame]` ≤ 60 Hz; `PluginAdapter(TickDriver)` buffers/holds-last-frame |
 | ARCH-05 | 6 | Compositor merge order is fixed and load-bearing (Idle → Speech → Plugin → Cursor → primitive-overrides → lock_filter → clamp → pyvts) |
@@ -382,10 +382,10 @@ These constraints are derived from the architecture research and must be honored
 4. **Phase 4 entry gate**: 04-00 (Teto smoke-pass) runs as the **first task of Phase 4**. The smoke-pass output (which body params are non-orphan / writable on the Teto rig) determines which speech-driver strategy is the shipping default and populates `teto_overrides.yaml`.
 5. **Phase 5 prerequisites**: §14 verification (SC-01) requires Phases 1–4 deliverables present and demo-able on a clean clone. (SC-01 deferred 2026-05-08 — migrates to Phase 10.)
 
-### Milestone v2.0 build-order (6 → 8 → 7 → 9 → 10 — gating-derived, NOT numeric)
+### Milestone v2.0 build-order (8 → 6 → 7 → 9 → 10 — REVISED 2026-05-08, NOT numeric)
 
-1. **Phase 6 first**: Plugin contracts (ABC, manifest, RigCapabilities, PluginAdapter, supervisor, clamp, rate-limiter, writer rule, system-prompt assembly) cement here. Every subsequent phase honors these contracts. Phase 6 is recommended to run an internal plumbing-week sub-phase that lands the contracts BEFORE the default-plugin behavior gets debugged. Plumbing-week deliverables include the side-by-side §14 SC baseline harness (consumed by Phase 10).
-2. **Phase 8 second (NOT Phase 7)**: Phase 7's variant/event parsers need catalogs to validate against. Phase 8's auto-extracted catalogs feed Phase 7's validation. The §14B.7 numeric-table ordering (6 → 7 → 8) is overruled by the gating-language interpretation.
+1. **Phase 8 first (REVISED)**: Avatar import + catalogs land here, AND the `RigCapabilities` + `AvatarOverrides` Pydantic contracts get their canonical definitions (since Phase 8 produces the data they describe). Schema cleanliness for Phase 6's plugin contract is the swap rationale: Phase 6's `BodyMotionPlugin.on_load(capabilities)` would otherwise have to compatibility-shim against milestone-1's flat `expressions` list and the unsplit OLVT 8-emotion → expression mapping. Phase 8 also handles `TetoOverrides` → `AvatarOverrides` rename + variant/event/emotion-binding catalog separation. Largest phase (1.5–2 weeks); the swap accepts a delay before plug-and-play deliverables in exchange for contract correctness.
+2. **Phase 6 second**: Plugin runtime (ABC, manifest, loader with reserved-name guard, supervisor, clamp, rate-limiter, `PluginAdapter`, system-prompt assembly with action-code section) cements against the contracts Phase 8 defined. Default plugin absorbs milestone-1 `IntentDriver` + body-sway logic; reads emotion-bindings from Phase 8's curated `_avatar_overrides.yaml` for Teto. Plumbing-week sub-phase lands the contract plumbing + side-by-side §14 SC baseline harness BEFORE default-plugin behavior gets debugged. Plumbing-week deliverables include the harness consumed by Phase 10.
 3. **Phase 7 third**: Catalogs from Phase 8 are inputs; default plugin from Phase 6 is the action-code consumer. Least parallelizable phase (decorator chain is sequential by nature).
 4. **Phase 9 fourth**: HUD lock-aware merge depends on plugin output (Phase 6) + variant/event dispatch (Phase 7) + `RigCapabilities` populated from import (Phase 8).
 5. **Phase 10 last**: Verification re-run is by definition last. Side-by-side baselines from Phase 6's plumbing-week consumed here.

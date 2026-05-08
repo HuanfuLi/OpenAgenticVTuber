@@ -51,7 +51,7 @@ The walking-skeleton scope validates the layered architecture (Electron + Python
 ## v2.0 Milestone Requirements: Plugin + Animation Control
 
 **Defined:** 2026-05-08
-**Phases:** 6, 8, 7, 9, 10 (gating-derived order — Phase 8 catalogs feed Phase 7 parsers; locked 2026-05-08)
+**Phases:** 8, 6, 7, 9, 10 (REVISED 2026-05-08 — Phase 8 first to define `RigCapabilities` + `AvatarOverrides` contracts before Phase 6 plugin runtime consumes them; Phase 8 catalogs also feed Phase 7 parsers)
 **Source:** `PROJECT_DESIGN.md` §14B + `.planning/research/v2.0/SUMMARY.md`
 
 This milestone refactors the animation layer from compositor-internal to plugin-driven, adds an in-app slider HUD with per-param locks, formalizes a three-category LLM emit code system (action / variant / event), and lands a user-facing avatar import flow. Agent system development (PROJECT_DESIGN.md §9) is deferred in favor of this animation-architecture pivot.
@@ -61,7 +61,7 @@ This milestone refactors the animation layer from compositor-internal to plugin-
 These are the load-bearing architectural invariants that make plug-and-play possible. Every concrete requirement in PLG/IMP/PARSE/HUD/VFY below must honor these. Violating any of these breaks the plug-and-play property.
 
 - [ ] **ARCH-01**: **Strict separation: system owns the LLM contract and the VTS contract; plugin owns the motion contract.** System routes LLM token stream into plugin's `on_token_stream`; system receives `ParamFrame` stream from plugin and dispatches to VTS via the single `PyvtsSafeWriter`. Plugin MUST NOT call pyvts, the filesystem, the network, or other side-effects directly outside its declared lifecycle hooks. The system is the intermediary; plugins are pure motion-functions.
-- [ ] **ARCH-02**: **`RigCapabilities` is the rig-introspection contract** — single Pydantic model fed to BOTH plugin's `on_load(capabilities)` AND renderer's HUD via `GET /admin/rig-capabilities`. Fields: writable param IDs (Cubism-standard names), per-param ranges (when known), expressions list (per-rig), hotkeys list with VTS hotkey IDs, `cdi3.json` display-name map (when present), per-rig sign inversions from `_avatar_overrides.yaml`, plugin-default emotion bindings from `_avatar_overrides.yaml`. Frozen at sidecar boot. Plugin authors target this contract; plugins are rig-agnostic by design and adapt at `on_load` based on what `capabilities` reports.
+- [ ] **ARCH-02**: **`RigCapabilities` is the rig-introspection contract** — single Pydantic model fed to BOTH plugin's `on_load(capabilities)` AND renderer's HUD via `GET /admin/rig-capabilities`. Fields: writable param IDs (Cubism-standard names), per-param ranges (when known), expressions list (per-rig), hotkeys list with VTS hotkey IDs, `cdi3.json` display-name map (when present), per-rig sign inversions from `_avatar_overrides.yaml`, plugin-default emotion bindings from `_avatar_overrides.yaml`. Frozen at sidecar boot. Plugin authors target this contract; plugins are rig-agnostic by design and adapt at `on_load` based on what `capabilities` reports. **MOVED to Phase 8 with 2026-05-08 order swap** (Phase 8 produces the data + defines the Pydantic model; Phase 6 plugin runtime + Phase 9 HUD both consume).
 - [ ] **ARCH-03**: **Plugin's token-stream input is the orchestrator-decorated stream, NOT raw LLM tokens.** Plugin sees per-sentence text deltas (post `sentence_divider`, pre `code_extractor`) so plugin sees its action codes IN context with surrounding text — plugin can use semantic context, not just bare codes. Action-code dispatch is in-band: plugin receives the sentence containing `[joy]` and emits ParamFrames in response. Plugin chooses its own parser strategy for its own action codes.
 - [ ] **ARCH-04**: **Plugin's output is `AsyncIterator[ParamFrame]` at any cadence ≤ 60 Hz.** Compositor's `PluginAdapter(TickDriver)` buffers the most recent ParamFrame; `tick(now)` returns it (with stale-decay pattern matching milestone-1's `IntentDriver`). Plugin under-rate falls back to hold-last-frame (preserves AVT-02 1-second re-injection rule). Plugin over-rate is coalesced by rate-limiter at the loader boundary. Plugins are pull-rate-limited at the compositor edge — the plugin author cannot accidentally flood VTS.
 - [ ] **ARCH-05**: **Compositor merge order is fixed and load-bearing:** `IdleDriver → SpeechDriver (lipsync only) → PluginAdapter (output from active plugin) → CursorDriver → system-primitive override list → lock_filter → clamp_and_validate → pyvts.inject_params`. Plugin output enters the merge in the third slot; lock filter applies last among contributors; system-primitive overrides (e.g., lipsync on `MouthOpenY` overrides user lock) apply BEFORE lock filter. This ordering is not a planner choice — Phase 6 implements it as written.
@@ -278,7 +278,7 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | SC-01 | Phase 5 → Phase 10 | Migrated 2026-05-08 (skeleton-verification.md ceremony lands as v2.0 Phase 10 exit criterion) |
 | SC-02 | Phase 5 | Pending |
 | ARCH-01 | Phase 6 | Pending — strict system/plugin separation invariant |
-| ARCH-02 | Phase 6 | Pending — `RigCapabilities` shared with Phase 9 HUD |
+| ARCH-02 | Phase 8 | Pending — `RigCapabilities` contract defined here (MOVED from Phase 6 with 2026-05-08 order swap); Phase 6 plugin + Phase 9 HUD consume |
 | ARCH-03 | Phase 6 | Pending — orchestrator-decorated token stream feed |
 | ARCH-04 | Phase 6 | Pending — `AsyncIterator[ParamFrame]` ≤ 60 Hz contract |
 | ARCH-05 | Phase 6 | Pending — fixed compositor merge order |
@@ -344,8 +344,8 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 - v1 requirements: 25 total — Mapped to phases: 25 ✓
 - v2.0 requirements: 53 total — Mapped to phases: 53 ✓
 - Total: 78 — Mapped: 78 ✓ — Unmapped: 0
-- Distribution: Phase 1 = 5, Phase 2 = 4, Phase 3 = 4, Phase 4 = 10, Phase 5 = 2 (SC-01 migrated to 10), Phase 6 = 22 (12 ARCH + 10 PLG), Phase 8 = 10, Phase 7 = 8, Phase 9 = 8, Phase 10 = 5
+- Distribution: Phase 1 = 5, Phase 2 = 4, Phase 3 = 4, Phase 4 = 10, Phase 5 = 2 (SC-01 migrated to 10), Phase 8 = 11 (10 IMP + ARCH-02), Phase 6 = 21 (11 ARCH excluding ARCH-02 + 10 PLG), Phase 7 = 8, Phase 9 = 8, Phase 10 = 5 *(REVISED 2026-05-08: ARCH-02 moved Phase 6 → Phase 8 with order swap)*
 
 ---
 *Requirements defined: 2026-05-06*
-*Last updated: 2026-05-08 — v2.0 traceability appended by roadmapper (5 v2.0 phases, 53 requirements; gating-derived order 6 → 8 → 7 → 9 → 10)*
+*Last updated: 2026-05-08 — v2.0 traceability appended by roadmapper (5 v2.0 phases, 53 requirements); v2.0 execution order REVISED 2026-05-08 from 6→8→7→9→10 to 8→6→7→9→10 with ARCH-02 moved Phase 6 → Phase 8*

@@ -31,6 +31,8 @@ Last activity: 2026-05-08
 
 **Note on v1.0:** 04-04 (body-sway investigation) is complete. 05-01 (codegen pipeline) remains pending from v1.0 and will execute on the way to v2.0 phase work. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
 
+**Note on v2.0 order (REVISED 2026-05-08):** v2.0 execution order changed from 6→8→7→9→10 to **8→6→7→9→10**. Phase 8 now runs first because it produces the data + defines the `RigCapabilities` and `AvatarOverrides` Pydantic contracts that Phase 6 plugin runtime consumes. ARCH-02 requirement moved from Phase 6 → Phase 8. Decision recorded in ROADMAP.md "Overview (v2.0)" + REQUIREMENTS.md v2.0 header. Discovered during /gsd:discuss-phase 6 — the discussion was paused; user runs /gsd:discuss-phase 8 next.
+
 ## Performance Metrics
 
 **Velocity:**
