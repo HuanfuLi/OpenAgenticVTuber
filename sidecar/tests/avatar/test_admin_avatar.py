@@ -21,7 +21,26 @@ def test_import_teto() -> None:
     assert data["detected_type"] == "vts_standard"
     assert len(data["variants"]) == 14
     assert data["events"] == []
+    assert data["default_plugin_action_bindings"] == []
     assert data["avatar_name"] == "重音テト"
+
+
+def test_import_olvt_includes_default_plugin_action_bindings(olvt_model_dict_path) -> None:
+    resp = client.post("/admin/avatar/import", json={"folder": str(olvt_model_dict_path.parent)})
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["detected_type"] == "olvt"
+    assert [(item["action_code"], item["expression_index"]) for item in data["default_plugin_action_bindings"]] == [
+        ("neutral", 0),
+        ("anger", 2),
+        ("disgust", 2),
+        ("fear", 1),
+        ("joy", 3),
+        ("smirk", 3),
+        ("sadness", 1),
+        ("surprise", 3),
+    ]
 
 
 def test_import_unsupported_5_3(tmp_path) -> None:
@@ -52,6 +71,15 @@ def test_commit_writes_yaml(tmp_path) -> None:
             {"code": "joy", "hotkey_id": "a" * 32, "source_name": "Joy", "is_placeholder": False}
         ],
         "events": [],
+        "default_plugin_action_bindings": [
+            {
+                "plugin_name": "default",
+                "action_code": "joy",
+                "expression_index": 3,
+                "expression_name": "",
+                "source": "olvt_emotionMap",
+            }
+        ],
         "voice": {"backend": "piper", "model": "en_US-amy-medium", "lipsync_mode": "our-rms"},
         "warnings": [],
         "existing_overrides": None,
@@ -62,6 +90,16 @@ def test_commit_writes_yaml(tmp_path) -> None:
     assert resp.status_code == 200
     data = yaml.safe_load((tmp_path / "_avatar_overrides.yaml").read_text(encoding="utf-8"))
     assert data["variants"] == [{"code": "joy", "hotkey_id": "a" * 32, "source_name": "Joy"}]
+    assert data["default_plugin_action_bindings"] == [
+        {
+            "plugin_name": "default",
+            "action_code": "joy",
+            "expression_index": 3,
+            "expression_name": "",
+            "source": "olvt_emotionMap",
+        }
+    ]
+    assert "is_placeholder" not in str(data)
 
 
 def test_commit_validation_failure(tmp_path) -> None:
@@ -102,6 +140,7 @@ def test_get_current(tmp_path, monkeypatch) -> None:
     body = resp.json()
     assert body["detected_type"] == "reedit"
     assert body["existing_overrides"]["source_rig_path"] == "Live2D/重音テト"
+    assert body["default_plugin_action_bindings"] == []
 
 
 def test_get_current_404(tmp_path, monkeypatch) -> None:

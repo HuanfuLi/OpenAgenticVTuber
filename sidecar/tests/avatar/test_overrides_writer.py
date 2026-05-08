@@ -23,6 +23,15 @@ def _valid_overrides() -> dict:
         },
         "variants": [{"code": "joy", "hotkey_id": "", "source_name": "Joy"}],
         "events": [],
+        "default_plugin_action_bindings": [
+            {
+                "plugin_name": "default",
+                "action_code": "joy",
+                "expression_index": 3,
+                "expression_name": "",
+                "source": "olvt_emotionMap",
+            }
+        ],
         "source_rig_path": "Live2D/test",
     }
 
@@ -34,6 +43,7 @@ def test_atomic_write(tmp_path) -> None:
     assert target.exists()
     assert not (tmp_path / "_avatar_overrides.yaml.tmp").exists()
     assert yaml.safe_load(target.read_text(encoding="utf-8"))["variants"][0]["code"] == "joy"
+    assert yaml.safe_load(target.read_text(encoding="utf-8"))["default_plugin_action_bindings"][0]["action_code"] == "joy"
 
 
 def test_validation_failure_leaves_no_tmp(tmp_path) -> None:

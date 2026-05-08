@@ -15,3 +15,20 @@ def test_build_from_teto(teto_dir) -> None:
     assert "ParamMouthOpenY" in caps.writable_param_ids
     assert all(isinstance(r, type(None)) or isinstance(r, tuple) for r in caps.param_ranges.values())
     assert caps.sign_inversions == overrides.sign_inversions
+    assert caps.default_plugin_action_bindings == overrides.default_plugin_action_bindings
+
+
+def test_build_copies_default_plugin_action_bindings(teto_dir) -> None:
+    from contracts.action_binding import DefaultPluginActionBinding
+    from sidecar.avatar.overrides import AvatarOverrides
+    from sidecar.avatar.rig_capabilities import build_rig_capabilities
+
+    overrides = AvatarOverrides(
+        default_plugin_action_bindings=[
+            DefaultPluginActionBinding(action_code="joy", expression_index=3)
+        ]
+    )
+
+    caps = build_rig_capabilities(overrides, teto_dir)
+
+    assert caps.default_plugin_action_bindings == overrides.default_plugin_action_bindings
