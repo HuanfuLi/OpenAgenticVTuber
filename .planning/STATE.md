@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
-status: verifying
-stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-05-08T11:41:44.742Z"
+status: executing
+stopped_at: Completed 06-06-PLAN.md
+last_updated: "2026-05-08T11:54:14.380Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
   completed_phases: 7
-  total_plans: 34
-  completed_plans: 27
+  total_plans: 35
+  completed_plans: 28
 ---
 
 # Project State
@@ -24,9 +24,9 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 ## Current Position
 
-Phase: 9
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 06 (plugin-runtime-default-plugin) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
 Last activity: 2026-05-08
 
 **Note on v1.0:** Phase 4 body-sway investigation and Phase 5 codegen are complete. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
@@ -85,6 +85,7 @@ Last activity: 2026-05-08
 | Phase 06-plugin-runtime-default-plugin P03 | 7min | 4 tasks | 6 files |
 | Phase 06-plugin-runtime-default-plugin P05 | 9min | 2 tasks | 5 files |
 | Phase 06-plugin-runtime-default-plugin P04 | 5min | 2 tasks | 8 files |
+| Phase 06-plugin-runtime-default-plugin P06 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -150,6 +151,8 @@ Recent decisions affecting current work:
 - [Phase 06-plugin-runtime-default-plugin]: Plugin action codes are preserved on SentenceOutput.plugin_text while display_text and tts_text remain bracket-stripped.
 - [Phase 06-plugin-runtime-default-plugin]: DefaultPlugin action parsing remains plugin-owned; PluginAdapter.tick() is the authoritative runtime ramp renderer.
 - [Phase 06-plugin-runtime-default-plugin]: Timed default-plugin frames remain ParamFrame-only with no pyvts, exp3, or requestExpressionActivation path.
+- [Phase 06-plugin-runtime-default-plugin]: PluginSupervisor is the production render-capable surface: it proxies render_frame(now) to the active wrapped plugin when available.
+- [Phase 06-plugin-runtime-default-plugin]: Supervisor render failures fail closed to ParamFrame() and count toward the existing circuit breaker only when an event loop is available.
 
 ### Pending Todos
 
@@ -172,6 +175,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-08T11:02:17.191Z
-Stopped at: Completed 06-04-PLAN.md
+Last session: 2026-05-08T11:54:14.373Z
+Stopped at: Completed 06-06-PLAN.md
 Resume file: None
