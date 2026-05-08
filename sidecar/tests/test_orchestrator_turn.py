@@ -383,6 +383,42 @@ async def test_handle_text_input_empty_text_returns_silently():
 
 
 @pytest.mark.asyncio
+async def test_handle_control_refuses_unavailable_body_sway_strategy():
+    from sidecar.avatar.overrides import TetoOverrides
+    from sidecar.ws.handlers import handle_control
+
+    class _Compositor:
+        def __init__(self):
+            self.swaps: list[str] = []
+
+        def request_strategy_swap(self, name: str) -> None:
+            self.swaps.append(name)
+
+    class _FakeApp:
+        def __init__(self):
+            class _State:
+                pass
+
+            self._state = _State()
+            self._state.compositor = _Compositor()
+            self._state.teto_overrides = TetoOverrides()
+
+        @property
+        def state(self):
+            return self._state
+
+    class _FakeWS:
+        def __init__(self):
+            self.app = _FakeApp()
+
+    ws = _FakeWS()
+    await handle_control(ws, {"type": "control", "text": "set-body-sway-strategy:proxy_param"})
+    await handle_control(ws, {"type": "control", "text": "set-body-sway-strategy:head_only"})
+
+    assert ws.app.state.compositor.swaps == ["head_only"]
+
+
+@pytest.mark.asyncio
 async def test_turn_waits_for_audio_complete_before_chain_end(monkeypatch):
     tts_manager = _FakeTTSManager()
     orch = _build_phase3_orch(tts_manager)

@@ -8,6 +8,7 @@ from sidecar.compositor.body_sway import (
     HeadOnlyStrategy,
     ProxyParamStrategy,
     STRATEGY_NAMES,
+    available_strategy_names,
     build_strategy,
 )
 from sidecar.compositor.body_sway import exp3_modulation
@@ -28,6 +29,18 @@ def test_build_strategy_variants(tmp_path):
 def test_build_strategy_unknown_raises(tmp_path):
     with pytest.raises(ValueError):
         build_strategy("unknown", TetoOverrides(), tmp_path)
+
+
+def test_available_strategy_names_only_exposes_configured_strategies():
+    assert available_strategy_names(TetoOverrides()) == ("head_only",)
+    assert available_strategy_names(TetoOverrides(proxy_body_param="Lean Forward")) == (
+        "head_only",
+        "proxy_param",
+    )
+    assert available_strategy_names(TetoOverrides(exp3_body_pose="body.exp3.json")) == (
+        "head_only",
+        "exp3_modulation",
+    )
 
 
 def test_proxy_param_uses_overrides_param(tmp_path):

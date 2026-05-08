@@ -169,9 +169,7 @@ export function DevPanel() {
       <h4>{COPY['dev.bodySway.title']}</h4>
       <div className="dev-grid">
         {[
-          ['head_only', COPY['dev.bodySway.headOnly']],
-          ['proxy_param', COPY['dev.bodySway.proxyParam']],
-          ['exp3_modulation', COPY['dev.bodySway.exp3Modulation']]
+          ['head_only', COPY['dev.bodySway.headOnly']]
         ].map(([value, label]) => (
           <label key={value} className="row" style={{ gap: 6 }}>
             <input

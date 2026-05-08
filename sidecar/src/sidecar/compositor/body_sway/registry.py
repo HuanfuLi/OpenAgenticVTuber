@@ -14,6 +14,15 @@ from .proxy_param import ProxyParamStrategy
 STRATEGY_NAMES = ("head_only", "proxy_param", "exp3_modulation")
 
 
+def available_strategy_names(overrides: TetoOverrides) -> tuple[str, ...]:
+    names = ["head_only"]
+    if overrides.proxy_body_param:
+        names.append("proxy_param")
+    if overrides.exp3_body_pose:
+        names.append("exp3_modulation")
+    return tuple(names)
+
+
 def build_strategy(name: str, overrides: TetoOverrides, avatar_dir: Path):
     if name == "head_only":
         return HeadOnlyStrategy()

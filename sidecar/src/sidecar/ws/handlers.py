@@ -53,10 +53,14 @@ async def handle_control(ws: WebSocket, msg: dict) -> None:
     text = msg.get("text", "")
     if text.startswith("set-body-sway-strategy:"):
         name = text[len("set-body-sway-strategy:") :]
-        from sidecar.compositor.body_sway import STRATEGY_NAMES
+        from sidecar.compositor.body_sway import STRATEGY_NAMES, available_strategy_names
 
         if name not in STRATEGY_NAMES:
             log.warning("[WS-CONTROL] unknown body-sway strategy: %r", name)
+            return
+        overrides = getattr(ws.app.state, "teto_overrides", None)
+        if overrides is not None and name not in available_strategy_names(overrides):
+            log.warning("[WS-CONTROL] unavailable body-sway strategy refused: %r", name)
             return
         compositor = getattr(ws.app.state, "compositor", None)
         if compositor is not None:
