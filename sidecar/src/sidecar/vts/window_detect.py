@@ -2,6 +2,9 @@
 
 Pitfall 20: Unity windows use generic classes; use title-prefix enumeration
 instead of FindWindow by class.
+
+The sidecar re-polls VTube Studio Win32 bounds with GetWindowRect so moving or
+resizing the VTS window remains authoritative without renderer-side input.
 """
 
 from __future__ import annotations
@@ -19,6 +22,7 @@ ENUM_REPROBE_INTERVAL_S = 30.0
 
 
 def find_vts_hwnd(force_reprobe: bool = False) -> int | None:
+    """Find and cache the VTS HWND; force_reprobe refreshes sidecar authority."""
     global _cached_hwnd, _last_enum_at
     if not _WINDOWS:
         return None
@@ -83,6 +87,7 @@ def get_cursor_pos() -> tuple[int, int]:
 
 
 def get_cursor_and_rect() -> tuple[tuple[int, int], tuple[int, int, int, int] | None]:
+    """Return the sidecar Win32 cursor sample plus current authoritative VTS rect."""
     global _cached_hwnd
     hwnd = find_vts_hwnd()
     if hwnd is None:

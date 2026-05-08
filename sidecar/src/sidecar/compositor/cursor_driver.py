@@ -1,4 +1,8 @@
-"""CursorDriver -- AVT-10 + D-10."""
+"""CursorDriver -- AVT-10 via D-09 sidecar Win32 polling.
+
+The accepted AVT-10 contract is a sidecar Win32 cursor/window sample from
+``get_cursor_and_rect()``. No renderer event or renderer hot path is involved.
+"""
 
 from __future__ import annotations
 
