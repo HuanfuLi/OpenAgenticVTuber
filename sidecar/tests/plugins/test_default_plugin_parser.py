@@ -24,26 +24,25 @@ def _load_plugin_class():
 
 @pytest.mark.asyncio
 async def test_extracts_supported_action_codes_case_insensitively() -> None:
-    plugin = _load_plugin_class()(clock=lambda: 0.3)
+    plugin = _load_plugin_class()(clock=lambda: 0.0)
     plugin.on_load(RigCapabilities(writable_param_ids=["FaceAngleZ"]), AvatarOverrides())
 
     frames = [frame async for frame in plugin.on_token_stream("Hi [JOY] there [unknown].")]
 
     assert len(frames) == 1
-    assert frames[0].add_params == {"FaceAngleZ": pytest.approx(0.10)}
+    assert frames[0].add_params == {"FaceAngleZ": pytest.approx(0.0)}
 
 
 @pytest.mark.asyncio
 async def test_parser_buffers_split_action_tokens_across_sentence_chunks() -> None:
-    clock_value = 0.3
-    plugin = _load_plugin_class()(clock=lambda: clock_value)
+    plugin = _load_plugin_class()(clock=lambda: 0.0)
     plugin.on_load(RigCapabilities(writable_param_ids=["FaceAngleZ"]), AvatarOverrides())
 
     assert [frame async for frame in plugin.on_token_stream("start [jo")] == []
     frames = [frame async for frame in plugin.on_token_stream("y] done")]
 
     assert len(frames) == 1
-    assert frames[0].add_params["FaceAngleZ"] == pytest.approx(0.10)
+    assert frames[0].add_params["FaceAngleZ"] == pytest.approx(0.0)
 
 
 @pytest.mark.asyncio

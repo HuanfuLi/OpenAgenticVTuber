@@ -85,7 +85,8 @@ async def test_joy_ramps_in_and_out_over_expected_windows() -> None:
 
 @pytest.mark.asyncio
 async def test_avatar_override_binding_selects_composition_source_without_exp3_output() -> None:
-    plugin = _load_plugin_class()(clock=lambda: 0.3)
+    clock = FakeClock()
+    plugin = _load_plugin_class()(clock=clock)
     plugin.on_load(
         RigCapabilities(writable_param_ids=["FaceAngleZ"]),
         AvatarOverrides(
@@ -95,7 +96,9 @@ async def test_avatar_override_binding_selects_composition_source_without_exp3_o
         ),
     )
 
-    frames = await _collect(plugin, "[joy]")
+    assert await _collect(plugin, "[joy]")
+    clock.now = 0.3
+    frames = await _collect(plugin, "continue")
 
     assert frames[0].add_params == {"FaceAngleZ": pytest.approx(0.10)}
     assert plugin.composition_sources["joy"] == "manual:Joy"
