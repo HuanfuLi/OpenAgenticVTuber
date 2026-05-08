@@ -1,15 +1,18 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-05-07T23:18:14.086Z"
+milestone: v2.0
+milestone_name: Plugin + Animation Control
+status: Defining requirements
+stopped_at: Milestone v2.0 started — gathering requirements and roadmap
+last_updated: "2026-05-08T04:43:12.515Z"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 15
+  total_plans: 14
   completed_plans: 12
+v1_pending:
+  - .planning/phases/04-action-compositor-vts-bridge-body-sway-investigation/04-04-PLAN.md
+  - .planning/phases/05-polish-contracts-codegen-14-verification/05-01-PLAN.md
 ---
 
 # Project State
@@ -18,13 +21,17 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-05-06)
 
-**Core value:** Multi-avatar identity persistence (v1 horizon — skeleton lays foundation, doesn't deliver it yet)
-**Current focus:** Phase 04 — action-compositor-vts-bridge-body-sway-investigation
+**Core value:** Multi-avatar identity persistence (v1 horizon — v2.0 is infrastructure prep on the way there)
+**Current focus:** Milestone v2.0 setup — Plugin + Animation Control
 
 ## Current Position
 
-Phase: 04 (action-compositor-vts-bridge-body-sway-investigation) — EXECUTING
-Plan: 5 of 5
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for milestone v2.0
+Last activity: 2026-05-08 — Milestone v2.0 (Plugin + Animation Control) started
+
+**Note on v1.0:** 04-04 (body-sway investigation) and 05-01 (codegen pipeline) remain pending from v1.0 and will execute on the way to v2.0 phase work. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
 
 ## Performance Metrics
 

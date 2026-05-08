@@ -10,6 +10,24 @@ Multi-avatar identity persistence — the same user can have meaningfully *disti
 
 This is the **v1-horizon** core value. The current milestone (walking skeleton, §14 of `PROJECT_DESIGN.md`) is single-avatar / in-memory only — it lays the architectural foundation that makes multi-avatar identity achievable in the milestone after.
 
+## Current Milestone: v2.0 Plugin + Animation Control
+
+**Goal:** Separate animation control from the system core so body-motion strategies are swappable, expose the rig's full parameter surface via an in-app slider HUD with per-param locks for parameter discovery, and formalize a three-category LLM code system (action / variant / event) so plugin authors can extend the LLM system prompt cleanly.
+
+**Target features (per `PROJECT_DESIGN.md` §14B):**
+- Plugin runtime — single-active body-motion plugin, `plugin.yaml` manifest + `BodyMotionPlugin` ABC, default plugin ships with system (OLVT emotion vocabulary, rig-adaptive)
+- Three-category code system — `[action]` plugin-domain, `{variant}` system-domain (persistent state), `<event>` system-domain (one-shot motion); reserved-name guard; cross-category uniqueness check
+- Avatar import flow — type-detected auto-extraction from VTS `.vtube.json` hotkeys / Cubism `.model3.json` expressions / `.motion3.json` files; OLVT `model_dict.json` drop-in support; mandatory user review screen
+- Slider HUD — sidecar tap of compositor output at 15 Hz on HUD-mode IPC channel; per-param lock with auto-engage on drag; session-only persistence
+- Cursor tracking rewrite — sidecar-side OS-level global capture (replaces renderer-canvas-relative reads)
+- Milestone-close §14 verification — re-run all six §14 SCs against the refactored architecture (the SC-01 milestone-1 deferred)
+
+**Key context:**
+- Phase numbering continues from milestone-1's last phase (5) → this milestone covers Phases 6–10 per §14B.7.
+- Agent system development (entire §9 of PROJECT_DESIGN.md, originally the planned next milestone) is **deferred** in favor of this animation-architecture pivot.
+- Milestone-1's 05-02 (`skeleton-verification.md` ceremony) was deferred 2026-05-08; SC-01 migrates to Phase 10's exit criterion under the refactored architecture.
+- Default plugin must adapt to rig (Teto's body params are orphaned per Phase 4 investigation → plugin emulates body sway via head/face params; plugin reads `RigCapabilities` at `on_load` and adapts).
+
 ## Requirements
 
 ### Validated
@@ -129,4 +147,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-07 after Phase 2 complete*
+*Last updated: 2026-05-08 — milestone v2.0 (Plugin + Animation Control) started*
