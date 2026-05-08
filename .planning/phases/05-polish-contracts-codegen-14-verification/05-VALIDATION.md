@@ -1,91 +1,95 @@
 ---
 phase: 5
 slug: polish-contracts-codegen-14-verification
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-07
+updated: 2026-05-08
 ---
 
-# Phase 5 — Validation Strategy
+# Phase 5 - Validation Strategy
 
-> Per-phase validation contract for feedback sampling during execution.
+Retroactive Nyquist audit after Phase 5 execution.
 
----
+Phase 5 scope was reduced on 2026-05-08: SC-02 remains in scope, while SC-01 / the skeleton verification ceremony is deferred to Phase 10. This validation file therefore covers the executed `05-01` plan only.
 
 ## Test Infrastructure
 
 | Property | Value |
 |----------|-------|
-| **Framework** | pytest 8.x (Python contracts + verification scripts) + node (TS compile-check via `tsc --noEmit`) |
-| **Config file** | `pyproject.toml` (pytest config), `apps/renderer/tsconfig.json` (TS check) |
-| **Quick run command** | `uv run pytest packages/contracts/tests/ -x` (~5s) |
-| **Full suite command** | `bash scripts/verify-skeleton.sh` (~3-5min including manual SC clip review) |
-| **Estimated runtime** | Auto subset: ~30s. Full incl. operator-driven visible SCs: ~10-15min. |
-
----
+| Framework | pytest 8.x for contract codegen tests; TypeScript compiler for renderer consumer check; npm script for drift guard |
+| Config file | `sidecar/pyproject.toml`, `packages/contracts/py/pyproject.toml`, `apps/renderer/tsconfig.json`, `package.json` |
+| Quick run command | `sidecar/.venv/Scripts/python.exe -m pytest packages/contracts/tests -q` |
+| Full phase command | `npm run check:contracts && npm --workspace apps/renderer run typecheck && sidecar/.venv/Scripts/python.exe -m pytest packages/contracts/tests -q` |
+| Estimated runtime | ~35 seconds on the current Windows workstation |
 
 ## Sampling Rate
 
-- **After every task commit:** Run `uv run pytest packages/contracts/tests/ -x` (codegen tests) OR `bash scripts/verify-skeleton.sh --auto-only` (verification tests)
-- **After every plan wave:** Run full `bash scripts/verify-skeleton.sh` including operator-driven visible SCs
-- **Before `/gsd:verify-work`:** Full suite must be green; all six §14 SCs recorded in skeleton-verification.md with PASS/PARTIAL/FAIL verdicts
-- **Max feedback latency:** ~30s for auto subset; visible-SC clips are reviewed once per phase
-
----
+- After any Pydantic contract edit: run `npm run check:contracts`.
+- After any codegen wrapper edit: run `sidecar/.venv/Scripts/python.exe -m pytest packages/contracts/tests -q` and `npm run check:contracts`.
+- After generated TypeScript changes: run `npm --workspace apps/renderer run typecheck`.
+- Before phase verification: run the full phase command above.
+- Max feedback latency: under 1 minute for the automated phase scope.
 
 ## Per-Task Verification Map
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 05-01-01 | 01 | 1 | SC-02 | integration | `bash packages/contracts/codegen.sh && git diff --exit-code packages/contracts/ts/` | ❌ W0 | ⬜ pending |
-| 05-01-02 | 01 | 1 | SC-02 | unit | `uv run pytest packages/contracts/tests/test_codegen_schema_mutation.py` | ❌ W0 | ⬜ pending |
-| 05-01-03 | 01 | 1 | SC-02 | type-check | `cd apps/renderer && npx tsc --noEmit` | ✅ | ⬜ pending |
-| 05-02-01 | 02 | 2 | SC-01 | scripted | `bash scripts/verify-skeleton.sh --auto-only` | ❌ W0 | ⬜ pending |
-| 05-02-02 | 02 | 2 | SC-01 | manual | Operator reviews 4 visible-SC clips per skeleton-verification.md §A | n/a | ⬜ pending |
-| 05-02-03 | 02 | 2 | SC-01 | adversarial | `uv run pytest tests/pitfalls/test_token_boundary.py tests/pitfalls/test_deepseek_reasoning.py tests/pitfalls/test_vts_auth_reprompt.py tests/pitfalls/test_port_collision.py` | ❌ W0 | ⬜ pending |
-| 05-02-04 | 02 | 2 | SC-01 | scripted-diff | `python scripts/olvt_protocol_diff.py > .planning/skeleton-verification-evidence/05/olvt-diff.txt` | ❌ W0 | ⬜ pending |
-| 05-02-05 | 02 | 2 | SC-01 | clean-clone | `bash scripts/verify-skeleton.sh --fresh-clone` (operator runs in fresh checkout) | ❌ W0 | ⬜ pending |
+| 05-01-01 | 01 | 1 | SC-02 | schema mutation unit | `sidecar/.venv/Scripts/python.exe -m pytest packages/contracts/tests/test_codegen_schema_mutation.py -q` | yes | green |
+| 05-01-02 | 01 | 1 | SC-02 | drift idempotence unit | `sidecar/.venv/Scripts/python.exe -m pytest packages/contracts/tests/test_codegen_drift.py -q` | yes | green |
+| 05-01-03 | 01 | 1 | SC-02 | codegen drift integration | `npm run check:contracts` | yes | green |
+| 05-01-04 | 01 | 1 | SC-02 | renderer consumer typecheck | `npm --workspace apps/renderer run typecheck` | yes | green |
+| 05-01-05 | 01 | 1 | SC-02 | generated artifact shape | `rg "^// GENERATED FROM" packages/contracts/ts` plus guard/dedup greps | yes | green |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+## Requirement Coverage
 
----
+| Requirement | Coverage | Evidence |
+|-------------|----------|----------|
+| SC-02 | COVERED | Pydantic-to-JSON-Schema-to-TypeScript pipeline exists; six TS mirrors and six JSON Schema intermediates are generated; drift guard passes; renderer typecheck passes; seven contract tests pass. |
+| SC-01 | DEFERRED | Removed from Phase 5 scope by the 2026-05-08 pivot. It is tracked as the Phase 10 milestone-close verification criterion, not as a Phase 5 Nyquist gap. |
 
 ## Wave 0 Requirements
 
-- [ ] `packages/contracts/tests/test_codegen_schema_mutation.py` — verify the schema-mutation rule produces parity with current TS (asserts `type` field is in `required` after mutation)
-- [ ] `packages/contracts/tests/test_codegen_drift.py` — verify `codegen.sh` is idempotent (run twice, no diff)
-- [ ] `tests/pitfalls/test_token_boundary.py` — adversarial split-bracket test (Pitfall 5)
-- [ ] `tests/pitfalls/test_deepseek_reasoning.py` — `<think>` tag stripping (Pitfall 6)
-- [ ] `tests/pitfalls/test_vts_auth_reprompt.py` — VTS auth-token-rotation behavior (Pitfall 10)
-- [ ] `tests/pitfalls/test_port_collision.py` — port:0 robustness when 12393 is bound
-- [ ] `tests/conftest.py` — shared fixtures (mock LLM stream, mock VTS WS endpoint)
-- [ ] `scripts/verify-skeleton.sh` — orchestrator (Bash; runs auto subset by default; `--fresh-clone` and `--auto-only` flags)
-- [ ] `scripts/olvt_protocol_diff.py` — emits the protocol-diff artifact for skeleton-verification.md §B
-- [ ] `packages/contracts/codegen.sh` — bash entry point invoking the Python wrapper + json-schema-to-typescript
-
----
+- [x] `packages/contracts/tests/test_codegen_schema_mutation.py` verifies `force_required()` covers discriminator literals, Optional-null fields, defaulted fields, nested union variants, and idempotence.
+- [x] `packages/contracts/tests/test_codegen_drift.py` verifies the codegen output is byte-stable across repeated runs.
+- [x] `packages/contracts/codegen.sh` is the canonical bash entry point.
+- [x] `packages/contracts/scripts/run-codegen.cjs` makes the npm drift guard reliable on this Windows environment while still invoking `codegen.sh`.
+- [x] `packages/contracts/generated/json-schema/*.schema.json` are committed intermediates.
+- [x] `packages/contracts/ts/*.ts` are generated mirrors with source banners.
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| Idle micro-motion (§14 SC-1) | SC-01 | Visual; rendered by VTS | Boot fresh app, observe Teto for 30s with no input. Record 5-10s clip. Verify subtle ambient sway/breath. |
-| `[joy]` 300ms smooth blend (§14 SC-2) | SC-01 | Visual; observable on Teto rig | Send "tell me a joke!" prompt, await `[joy]` action, record 5-10s clip showing smooth fade-in/fade-out. |
-| Speech-driven body/head sway (§14 SC-3) | SC-01 | Visual + audible; OBS clip with audio | Trigger 10s+ utterance, record clip showing body/head movement synchronized to RMS envelope. PARTIAL acceptable for AVT-06 head-only allowance. |
-| Cursor-in-canvas eye/head tracking (§14 SC-4) | SC-01 | Visual; observable on Teto | Move cursor across canvas in 4 directions, record clip showing eye and head follow. |
-| Synced lipsync (§14 SC-5) | SC-01 | Audio+visual sync | 10s utterance with mouth-on-syllable correlation. Record clip; visually verify mouth opens with audio peaks. |
-| README Quickstart end-to-end (§14 SC-6) | SC-01 | Real fresh-clone test | Clone repo to fresh dir, follow README "Quickstart Demo" verbatim, verify all six §14 SCs reproduce. Record session timing. |
+None for the executed Phase 5 scope. Phase 5 is contract/codegen infrastructure and is fully covered by automated checks.
 
----
+The visual/live §14 checks previously listed here belong to deferred SC-01 and will be validated in Phase 10 after the v2.0 animation refactor.
+
+## Validation Audit 2026-05-08
+
+| Metric | Count |
+|--------|-------|
+| Executed requirements audited | 1 |
+| Gaps found | 0 |
+| Resolved by existing tests | 5 |
+| Escalated/manual-only | 0 |
+| Deferred out-of-phase items removed from Phase 5 map | 1 |
+
+## Commands Run During Audit
+
+| Command | Result |
+|---------|--------|
+| `sidecar/.venv/Scripts/python.exe -m pytest packages/contracts/tests -q` | passed, 7 tests |
+| `npm run check:contracts` | passed, regenerated six TS files with no generated diff |
+| `npm --workspace apps/renderer run typecheck` | passed |
+| Generated artifact shape checks | passed: six banners, six schemas, nine WS guards, no duplicated `ActionIntent` / `AudioPayloadMessage` in `ws-message.ts`, required nullable fields preserved |
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s for auto subset
-- [ ] `nyquist_compliant: true` set in frontmatter (after planner verifies above)
+- [x] All executed tasks have automated verification.
+- [x] Sampling continuity is satisfied for the executed one-plan phase.
+- [x] Wave 0 references for SC-02 exist and pass.
+- [x] No watch-mode flags are used.
+- [x] Feedback latency is under 1 minute.
+- [x] `nyquist_compliant: true` is set in frontmatter.
 
-**Approval:** pending
+**Approval:** validated
