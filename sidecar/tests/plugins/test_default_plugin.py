@@ -22,13 +22,17 @@ class FakeClock:
 
 
 def _load_plugin_class():
+    return _load_plugin_module().DefaultPlugin
+
+
+def _load_plugin_module():
     plugin_path = REPO_ROOT / "plugins" / "default" / "__init__.py"
     spec = importlib.util.spec_from_file_location("test_default_plugin_entrypoint", plugin_path)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.DefaultPlugin
+    return module
 
 
 async def _collect(plugin, sentence: str):
@@ -102,3 +106,35 @@ async def test_avatar_override_binding_selects_composition_source_without_exp3_o
 
     assert frames[0].add_params == {"FaceAngleZ": pytest.approx(0.10)}
     assert plugin.composition_sources["joy"] == "manual:Joy"
+
+
+def test_body_sway_registry_exposes_only_head_only() -> None:
+    from plugins.default.body_sway.registry import available_strategy_names, build_strategy
+
+    assert available_strategy_names() == ("head_only",)
+    assert build_strategy("head_only").name == "head_only"
+    with pytest.raises(ValueError, match="Only head_only"):
+        build_strategy("proxy_param")
+    with pytest.raises(ValueError, match="Only head_only"):
+        build_strategy("exp3_modulation")
+
+
+def test_on_load_warns_and_uses_head_only_for_unsupported_body_sway(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_plugin_module()
+    warnings: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        module.logger,
+        "warning",
+        lambda message, strategy: warnings.append((message, strategy)),
+    )
+    plugin = module.DefaultPlugin()
+
+    plugin.on_load(RigCapabilities(), AvatarOverrides(body_sway_strategy="proxy_param"))
+
+    assert plugin.body_sway_strategy.name == "head_only"
+    assert warnings == [
+        (
+            "[DEFAULT-PLUGIN] unsupported body_sway_strategy=%s; using head_only",
+            "proxy_param",
+        )
+    ]
