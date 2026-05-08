@@ -1,60 +1,55 @@
-"""Avatar capabilities loader -- D-07/D-08.
+"""DEPRECATED - milestone-1 import shim; deleted after Phase 6 rewrites callers.
 
-Loads avatars/<avatar_id>/avatar.yaml at sidecar boot via PyYAML; validates
-against an AvatarCapabilities Pydantic model; exposes expressions, hotkeys,
-parameters, voice. Used by:
-  - actions_extractor (kind classification -- D-13)
-  - construct_system_prompt (LLM tag-vocabulary string -- D-06)
+Per CONTEXT D-A1-1, AvatarCapabilities is replaced by RigCapabilities. This
+shim exists only during the 08-01 -> 08-02/Phase 6 handoff.
 """
-from pathlib import Path
-from typing import List, Optional
-import yaml
+
+# TODO(Phase 6): delete this file after IntentDriver/actions_extractor/orchestrator.py rewrites land
+
+from contracts.avatar_overrides import Voice
+from contracts.rig_capabilities import RigCapabilities
 from pydantic import BaseModel
+from sidecar.avatar.overrides import load_avatar_overrides
 
 
 class Expression(BaseModel):
     name: str
-    file: str  # e.g. "joy.exp3.json"
+    file: str
 
 
 class Hotkey(BaseModel):
-    name: str          # e.g. "cry", "bread-out"
-    type: str          # VTS hotkey type: "TriggerAnimation" | "ToggleExpression" | ...
+    name: str
+    type: str
 
 
 class Parameter(BaseModel):
-    id: str            # e.g. "ParamMouthOpenY"
+    id: str
 
 
-class Voice(BaseModel):
-    backend: str = "piper"
-    model: str = "en_US-amy-medium"
-    lipsync_mode: str = "our-rms"
+class AvatarCapabilities:
+    """DEPRECATED - empty shim. Replaced by RigCapabilities."""
 
-
-class AvatarCapabilities(BaseModel):
-    expressions: List[Expression]
-    hotkeys: List[Hotkey] = []
-    parameters: List[Parameter] = []
-    voice: Optional[Voice] = None
+    def __init__(self, expressions=None, hotkeys=None, parameters=None, voice=None):
+        self.expressions = expressions or []
+        self.hotkeys = hotkeys or []
+        self.parameters = parameters or []
+        self.voice = voice
 
     def tag_vocabulary(self) -> str:
-        """Return the LLM-emittable tag list as a space-separated string of
-        bracket-wrapped names: '[joy], [surprise], [cry],' -- used by D-06's
-        live2d_expression_prompt.txt [<insert_action_keys>] substitution."""
-        names = [e.name for e in self.expressions] + [h.name for h in self.hotkeys]
-        return " ".join(f"[{n}]," for n in names)
+        return ""
 
 
-def load_capabilities(avatar_dir: Path) -> AvatarCapabilities:
-    """Load and validate avatar.yaml. Raises pydantic.ValidationError on
-    schema drift; raises FileNotFoundError if avatar.yaml is missing.
+def load_capabilities(avatar_dir) -> AvatarCapabilities:
+    load_avatar_overrides(avatar_dir)
+    return AvatarCapabilities(expressions=[])
 
-    Loud failure is intentional -- boot must abort with a clear message rather
-    than run with a silently-empty capabilities list (which would yield zero
-    extractable tags and mask the bug).
-    """
-    yaml_path = avatar_dir / "avatar.yaml"
-    with yaml_path.open(encoding="utf-8") as f:
-        raw = yaml.safe_load(f)
-    return AvatarCapabilities.model_validate(raw)
+
+__all__ = [
+    "AvatarCapabilities",
+    "Expression",
+    "Hotkey",
+    "Parameter",
+    "RigCapabilities",
+    "Voice",
+    "load_capabilities",
+]

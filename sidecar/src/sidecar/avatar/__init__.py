@@ -1,26 +1,20 @@
-"""Avatar capabilities subsystem."""
+"""avatar package — overrides + extractors + rig capabilities (v2.0).
 
-from .capabilities import AvatarCapabilities, Expression, Hotkey, Parameter, Voice, load_capabilities
-from .overrides import (
-    BodySwayStrategyName,
-    DiscoveredHotkey,
-    ParamProbeResult,
-    TetoOverrides,
-    load_overrides,
-    save_overrides,
-)
+Backward-compat shims: capabilities.py is reduced to a stub through Phase 6;
+TetoOverrides remains aliased to AvatarOverrides for the milestone-1 -> v2.0
+transitional window.
+"""
+
+from . import extractors
+from .overrides import AvatarOverrides, TetoOverrides, load_avatar_overrides, save_avatar_overrides
+from .rig_capabilities import RigCapabilities, build_rig_capabilities
 
 __all__ = [
-    "AvatarCapabilities",
-    "Expression",
-    "Hotkey",
-    "Parameter",
-    "Voice",
-    "load_capabilities",
-    "BodySwayStrategyName",
-    "DiscoveredHotkey",
-    "ParamProbeResult",
+    "AvatarOverrides",
     "TetoOverrides",
-    "load_overrides",
-    "save_overrides",
+    "load_avatar_overrides",
+    "save_avatar_overrides",
+    "RigCapabilities",
+    "build_rig_capabilities",
+    "extractors",
 ]

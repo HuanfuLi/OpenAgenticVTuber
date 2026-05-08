@@ -1,11 +1,9 @@
-import pytest
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-@pytest.mark.xfail(reason="Wave 0 stub -- implemented in Task 4", strict=False)
 def test_build_from_teto(teto_dir) -> None:
     from sidecar.avatar.overrides import load_avatar_overrides
     from sidecar.avatar.rig_capabilities import build_rig_capabilities
