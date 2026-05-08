@@ -101,6 +101,8 @@ export const COPY = {
     CONN_RETEST: 'Re-test',
     CONN_CHANGE: 'Change provider →',
     CONN_CHANGE_DISABLED_TT: 'Re-configure provider lands in v1.',
+    AVATAR_CATALOGS_HEADER: 'Avatar catalogs',
+    AVATAR_CATALOGS_HELP: 'Import or edit avatar variant and event catalogs.',
     APPEARANCE_HEADER: 'Appearance',
     MODE_LABEL: 'Mode',
     MODE_OPTIONS: [
@@ -186,6 +188,41 @@ export const COPY = {
     BODY: 'This clears your provider configuration, appearance preferences, window settings, and any other saved preferences. The next launch will start at the LLM setup screen. This cannot be undone.',
     CANCEL: 'Cancel',
     CONFIRM: 'Reset everything'
+  },
+  AVATAR_IMPORT: {
+    PAGE_TITLE: 'Import Avatar',
+    PAGE_SUBTITLE: 'Review the auto-detected variants + events from your rig and Save when ready.',
+    IMPORT_BUTTON_LABEL: 'Choose folder...',
+    SETTINGS_BUTTON_LABEL: 'Edit avatar catalogs',
+    SAVE_BUTTON_LABEL: 'Save catalogs',
+    SAVE_DISABLED_PLACEHOLDER: (n: number) =>
+      `Save disabled - ${n} placeholder name${n === 1 ? '' : 's'} remain. Click here to scroll to the first.`,
+    VARIANTS_HEADING: 'Variants (toggle expressions)',
+    VARIANTS_EMPTY: 'This rig exposes no toggle expressions.',
+    EVENTS_HEADING: 'Events (one-shot motions)',
+    EVENTS_EMPTY: 'This rig exposes no motion events.',
+    SOURCE_NAME_HEADING: 'Source name (rig-side)',
+    CODE_HEADING: 'Code (LLM-facing)',
+    PREVIEW_HEADING: 'Preview',
+    DELETE_LABEL: 'Delete row',
+    SUCCESS_TOAST: 'Avatar imported successfully',
+    ERROR_CUBISM_5_3:
+      "This avatar uses Cubism 5.3 features that VTube Studio doesn't support yet. " +
+      'Please re-export the rig from Cubism Editor with target version 5.2 or earlier.',
+    ERROR_NO_MODEL3:
+      "This folder doesn't look like a runtime Live2D export. " +
+      'If you have a .cmo3 Cubism Editor project, export it first ' +
+      '(File -> Export to .moc3 in Cubism Editor).',
+    NEW_BADGE: 'NEW',
+    EDITED_BADGE: 'edited',
+    CANCEL_BUTTON_LABEL: 'Cancel',
+    VALIDATION_ERROR_RESERVED: (code: string) => `'${code}' is a reserved LLM-protocol name`,
+    VALIDATION_ERROR_DUPLICATE: (code: string) => `'${code}' is already used by another row`,
+    VALIDATION_ERROR_SLUG: 'Code must match a-z 0-9 hyphens, start with a letter, max 31 chars',
+    DETECTED_TYPE_LABEL: 'Detected type',
+    SOURCE_PATH_LABEL: 'Source path',
+    WARNINGS_HEADING: 'Import warnings',
+    SAVE_ERROR_FALLBACK: 'Could not save avatar catalogs.'
   },
   LOGS: {
     COLLAPSED: 'Logs',

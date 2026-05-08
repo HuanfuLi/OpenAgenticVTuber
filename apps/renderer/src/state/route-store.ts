@@ -3,12 +3,12 @@
 // kept as a standalone hook for any caller that needs to read/set the route
 // without entering the full store context (e.g., dev-panel direct injection).
 //
-// Both surfaces stay consistent because both sides treat the four-state
-// 'chat' | 'agent' | 'settings' enum identically.
+// Both surfaces stay consistent because both sides treat the route enum
+// identically.
 
 import { useEffect, useState } from 'react'
 
-export type Route = 'chat' | 'agent' | 'settings'
+export type Route = 'chat' | 'agent' | 'settings' | 'avatar-import'
 
 let current: Route = 'chat'
 const subs = new Set<(r: Route) => void>()

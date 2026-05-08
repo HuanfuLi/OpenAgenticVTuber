@@ -40,7 +40,7 @@ export interface ChatMessage {
   text: string
 }
 
-export type View = 'chat' | 'agent' | 'settings'
+export type View = 'chat' | 'agent' | 'settings' | 'avatar-import'
 
 export interface LLMConfig {
   provider: string

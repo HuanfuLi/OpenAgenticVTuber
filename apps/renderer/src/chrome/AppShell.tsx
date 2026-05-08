@@ -13,6 +13,7 @@ import { LogsDrawer } from './LogsDrawer'
 import { Chat } from '@/screens/Chat/Chat'
 import { Agent } from '@/screens/Agent/Agent'
 import { Settings } from '@/screens/Settings/Settings'
+import { AvatarImport } from '@/screens/AvatarImport/AvatarImport'
 import { ToastStack } from './ToastStack'
 import { subscribeWSLog } from '@/ws/store'
 
@@ -70,6 +71,7 @@ export function AppShell() {
         {view === 'chat' && <Chat />}
         {view === 'agent' && <Agent />}
         {view === 'settings' && <Settings />}
+        {view === 'avatar-import' && <AvatarImport />}
         <HistorySheet />
         <ToastStack />
       </div>

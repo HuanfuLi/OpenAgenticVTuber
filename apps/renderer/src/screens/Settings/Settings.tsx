@@ -474,7 +474,7 @@ function ResetDialog({
 // -------- Settings root --------------------------------------------------
 export function Settings() {
   const C = COPY.SETTINGS
-  const { resetAll } = useStore()
+  const { resetAll, setView } = useStore()
   const [resetOpen, setResetOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
@@ -533,6 +533,16 @@ export function Settings() {
         </div>
 
         <ConnectionSection />
+
+        <section className="section" id="sec-avatar-catalogs">
+          <h2>{C.AVATAR_CATALOGS_HEADER}</h2>
+          <div className="tx-sm muted mt-2">{C.AVATAR_CATALOGS_HELP}</div>
+          <div className="row mt-2" style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-secondary" onClick={() => setView('avatar-import')}>
+              {COPY.AVATAR_IMPORT.SETTINGS_BUTTON_LABEL}
+            </button>
+          </div>
+        </section>
 
         {C.PLACEHOLDERS.filter((p) => p.num < 5).map((p) => (
           <PlaceholderSection
