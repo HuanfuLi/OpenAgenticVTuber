@@ -1,60 +1,49 @@
 ---
 phase: 04-action-compositor-vts-bridge-body-sway-investigation
-verified: 2026-05-08T04:56:11Z
+verified: 2026-05-08T05:55:08Z
 status: gaps_found
-score: 2/6 must-haves verified
+score: 5/6 must-haves code-supported; 1/6 blocked by code/data gap
+re_verification:
+  previous_status: gaps_found
+  previous_score: 2/6
+  gaps_closed:
+    - "Sidecar Win32 cursor polling detects the VTS window bounds and compositor uses those samples for avatar eye/head tracking"
+    - "Phase 5 can re-run body-sway evidence capture using the committed plotter against real [SPEECH-DRIVER] logs"
+  gaps_remaining:
+    - "An LLM reply containing [joy] makes Teto's joy expression smoothly blend in over ~300ms via weight fade and decay after the sentence ends, not a hotkey pop"
+  regressions: []
 gaps:
   - truth: "An LLM reply containing [joy] makes Teto's joy expression smoothly blend in over ~300ms via weight fade and decay after the sentence ends, not a hotkey pop"
     status: failed
-    reason: "IntentDriver stores active intents but returns no set-param output; it triggers VTS hotkeys on intent start/end, which is explicitly the hotkey-pop path AVT-08 forbids."
+    reason: "The IntentDriver now emits weighted set_params correctly, but the real Teto capabilities do not declare a joy expression. The orchestrator builds expression_names from avatars/teto/avatar.yaml, so [joy] is silently dropped before it reaches IntentDriver."
     artifacts:
+      - path: "avatars/teto/avatar.yaml"
+        issue: "Expression list contains Blush/chibi/Cry/Dark Eye/Dark Face/Dizzy/Exp eye/Love/Star Eye/Sweat/etc., but no joy entry or alias."
+      - path: "sidecar/src/sidecar/orchestrator/transformers.py"
+        issue: "actions_extractor only emits expression ActionIntent when bracket name is in capabilities.expressions; unknown tags are silently dropped."
       - path: "sidecar/src/sidecar/compositor/intent_driver.py"
-        issue: "tick() returns {}, never emits weighted expression params; _fire_hotkey uses requestTriggerHotKey."
-      - path: "sidecar/tests/compositor/test_intent_driver.py"
-        issue: "Tests assert hotkey triggering rather than smooth 300ms parameter-weight ramp behavior."
+        issue: "Smooth blend implementation is present, but it only runs for ActionIntents that reach the queue."
     missing:
-      - "Implement expression intent as weighted ParamFrame set_params with 300ms ramp-in and sentence-end decay."
-      - "Add tests proving [joy] produces non-empty weighted set_params over time and does not call HotkeyTriggerRequest."
-  - truth: "Sidecar Win32 cursor polling detects the VTS window bounds and compositor uses those samples for avatar eye/head tracking"
-    status: failed
-    reason: "Original verification used stale renderer-overlay wording. Locked decisions D-09/D-11 supersede that contract: sidecar Win32 window-bounds detection plus cursor polling is authoritative. The remaining gap is to document and regression-test that accepted equivalent contract."
-    artifacts:
-      - path: "sidecar/src/sidecar/compositor/cursor_driver.py"
-        issue: "Polls get_cursor_and_rect() directly and returns param deltas; no ActionIntent input path."
-      - path: "sidecar/src/sidecar/vts/window_detect.py"
-        issue: "Needs explicit regression coverage for cached VTS HWND reuse and force-reprobe window-bounds behavior."
-    missing:
-      - "Update requirements/roadmap to state that sidecar Win32 polling intentionally supersedes the stale renderer-overlay AVT-10 wording."
-      - "Add tests proving sidecar Win32 cursor/window samples drive CursorDriver tracking and ease-back without renderer events."
-  - truth: "Phase 5 can re-run body-sway evidence capture using the committed plotter against real [SPEECH-DRIVER] logs"
-    status: failed
-    reason: "The plotter expects '[SPEECH-DRIVER strategy=... body_params=[...]]', but SpeechDriver logs '[SPEECH-DRIVER] sentence_id=... strategy=...' and omits body_params, so live logs will not parse."
-    artifacts:
-      - path: "sidecar/src/sidecar/compositor/speech_driver.py"
-        issue: "Log format does not match plot_speech_evidence.py and does not include body strategy output values."
-      - path: "sidecar/scripts/plot_speech_evidence.py"
-        issue: "Regex matches only the deferred stub format, not actual runtime logs."
-    missing:
-      - "Align SpeechDriver log format with the evidence parser or make the parser accept the actual runtime format."
-      - "Log body_params emitted by the active strategy for evidence plots."
+      - "Add a real joy capability mapping/alias for Teto, e.g. map [joy] to an existing expression file such as Love.exp3.json or Star Eye.exp3.json, or change the extractor/plugin vocabulary so [joy] resolves before compositor dispatch."
+      - "Add an integration test using the committed avatars/teto/avatar.yaml proving [joy] produces an expression ActionIntent and non-empty weighted set_params."
 human_verification:
   - test: "Live VTS idle and speech motion"
-    expected: "With VTS+Teto loaded, idle Perlin/blink motion is visible, mouth tracks TTS RMS, and speech-driven head/body motion has no flat moments."
-    why_human: "Visual avatar motion and VTS/plugin interaction cannot be confirmed from static code; 04-04 explicitly used the deferred path."
+    expected: "With VTS+Teto loaded, idle head/eye/blink motion is visible; mouth tracks TTS; speech-driven head/body motion continues through the utterance with no flat moments."
+    why_human: "Visual VTS rendering, audio sync, and webcam-additive behavior require a running rig/operator."
   - test: "Live body-sway A/B re-run"
-    expected: "Use the dev-panel body-sway radio to compare head_only and proxy_param on the same TTS prompt, capture logs, plots, and 5-10s clips, then update ratings."
-    why_human: "The committed evidence is deferred stubs and placeholder plots because live VTS/operator verification was unavailable."
+    expected: "Use the dev-panel body-sway radio to compare head_only and proxy_param, capture runtime logs/plots/clips, and replace deferred ratings."
+    why_human: "The committed evidence package intentionally contains deferred stubs because live VTS was unavailable."
   - test: "Live discrete event demo"
-    expected: "Sending control text fire-discrete-event:Star Eye [7] toggles the Star Eye VTS hotkey on the running Teto rig."
-    why_human: "The dispatcher and hotkey inventory are present, but VTS hotkey visibility requires a running rig."
+    expected: "Sending fire-discrete-event:Star Eye [7] toggles the Star Eye VTS hotkey on the loaded Teto rig."
+    why_human: "The dispatcher can be verified statically, but visible hotkey effect requires VTS."
 ---
 
 # Phase 4: Action Compositor + VTS Bridge + Body-Sway Investigation Verification Report
 
-**Phase Goal:** Action compositor + VTS bridge + body-sway investigation for avatar control, including VTS infrastructure, compositor/body-sway strategies, cursor tracking, discrete demo path, and body-sway evidence/deferred re-run path.
-**Verified:** 2026-05-08T04:56:11Z
+**Phase Goal:** The §14 deliverable. Teto running in VTube Studio idles with visible micro-motion, speaks with synced lipsync, blends `[joy]` smoothly over ~300ms, sways head/body through utterances, tracks cursor per locked D-09/D-11 sidecar Win32 VTS-window contract, and demonstrates one discrete-event prop hotkey. Body-sway investigation is the deliverable.
+**Verified:** 2026-05-08T05:55:08Z
 **Status:** gaps_found
-**Re-verification:** No - initial verification
+**Re-verification:** Yes - after gap-closure execution
 
 ## Goal Achievement
 
@@ -62,118 +51,121 @@ human_verification:
 
 | # | Truth | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | With VTS+Teto running, the avatar produces visible idle micro-motion continuously when idle. | ? HUMAN | `IdleDriver.tick()` emits head/eye/blink values continuously; `Compositor.run()` ticks at 60Hz and injects frames. Visual confirmation deferred. |
-| 2 | During TTS, mouth tracks RMS and speech driver produces continuous body or head motion with no flat moments. | ? HUMAN | Phase 3 mouth driver remains wired; `SpeechDriver` consumes `SpeechEnvelopePayload` and `head_only` emits head/position values. Live VTS evidence was deferred. |
-| 3 | `[joy]` blends smoothly over ~300ms via weight fade and decays after sentence end, not hotkey pop. | X FAILED | `IntentDriver.tick()` returns `{}` and `_fire_hotkey()` calls `requestTriggerHotKey`; tests assert hotkey calls. |
-| 4 | Moving cursor over the detected VTS window makes eyes/head track and exiting eases back to center. | X FAILED | Sidecar Win32 polling implementation can produce tracking values; gap closure must lock this as the D-09/D-11 AVT-10 contract with explicit tests and docs. |
-| 5 | Pressing the test hotkey toggles one VTS prop/visibility event. | ? HUMAN | `DiscreteDispatcher.fire_by_name()` resolves `Star Eye [7]` from `teto_overrides.yaml` and calls VTS hotkey trigger; live rig confirmation still needed. |
-| 6 | With active webcam feed, ambient/speech stay additive and intent uses set+weight only. | X FAILED | Ambient/speech add path exists, but intent is a hotkey trigger rather than set+weight ParamFrame output. |
+| 1 | With VTS+Teto running, the avatar produces visible idle micro-motion continuously when idle. | ? HUMAN | `IdleDriver.tick()` emits continuous head/eye/blink values; `Compositor.run()` injects frames at 60 Hz. Live visual confirmation remains required. |
+| 2 | During TTS, mouth tracks RMS and speech driver produces continuous body or head motion with no flat moments. | ? HUMAN | `SpeechMouthDriver` remains wired for lipsync, `SpeechDriver` consumes RMS envelopes and emits body strategy output. Live sync/motion quality remains operator verification. |
+| 3 | `[joy]` blends smoothly over ~300ms via weight fade and decays after sentence end, not hotkey pop. | X FAILED | The hotkey-pop implementation was removed, but committed Teto capabilities do not include `joy`; `has_joy False` in the real tag vocabulary, so `[joy]` is dropped before `IntentDriver`. |
+| 4 | Moving cursor over the detected VTS window makes eyes/head track and exiting eases back to center. | ? HUMAN | Code gap closed: `CursorDriver` uses sidecar Win32 samples and tests prove `ParamAngle*`/`ParamEyeBall*` output plus ease-back. Live VTS visibility still needs observation. |
+| 5 | Pressing the test hotkey toggles one VTS prop/visibility event. | ? HUMAN | `DiscreteDispatcher.fire_by_name()` resolves `Star Eye [7]` from `teto_overrides.yaml` and calls `requestTriggerHotKey`; live rig toggle needs operator verification. |
+| 6 | With active webcam feed, ambient/speech stay additive and intent uses set+weight only. | VERIFIED CODE | `Compositor` separates additive params from `set_params`; `IntentDriver` returns weighted set tuples. Webcam interaction still benefits from live spot-check. |
 
-**Score:** 2/6 truths verified or code-supported without blockers. Remaining items are failed or require live VTS verification.
+**Score:** 5/6 must-haves are code-supported; 1/6 has a blocking code/data gap.
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 | --- | --- | --- | --- |
-| `sidecar/src/sidecar/avatar/overrides.py` | TetoOverrides schema/loader | VERIFIED | Loads missing/default files, validates YAML, enforces meta hotkey exclusion. |
-| `avatars/teto/teto_overrides.yaml` | Hotkey inventory and body-sway default | VERIFIED | Contains `body_sway_strategy: head_only`, 15 hotkeys, 2 meta entries, and deferred investigation note. |
-| `sidecar/scripts/teto_smoke_pass.py` | Live VTS smoke-pass CLI | VERIFIED | Probes Lean Forward/Auto Breath, discovers hotkeys, writes overrides. Live run remains operator work. |
-| `packages/contracts/py/contracts/param_frame.py` and `packages/contracts/ts/param-frame.ts` | ParamFrame contracts | VERIFIED | Python and TS mirrors exist for add/set params. |
-| `packages/contracts/py/contracts/discrete_event.py` and `packages/contracts/ts/discrete-event.ts` | DiscreteEvent contracts | VERIFIED | Python and TS mirrors exist. |
-| `sidecar/src/sidecar/vts/pyvts_writer.py` | Single recv-loop VTS writer | VERIFIED | One websocket recv loop dispatches by requestID; `inject_params()` sends add and set requests. |
-| `sidecar/src/sidecar/compositor/compositor.py` | 60Hz merge loop | VERIFIED | Merges idle, speech, intent, cursor and injects ParamFrame. |
-| `sidecar/src/sidecar/compositor/intent_driver.py` | Smooth expression overlay | X STUB/WRONG BEHAVIOR | Defines ramp constants but emits no weighted params and uses VTS hotkeys. |
-| `sidecar/src/sidecar/compositor/cursor_driver.py` | Cursor tracking | PARTIAL | Implements Win32 VTS-window polling and ease-back; needs tests/docs proving this is the D-09/D-11 AVT-10 contract. |
-| `.planning/skeleton-verification-evidence/04/` | Body-sway evidence/deferred path | PARTIAL | README, ratings, audit, stubs, and placeholder plots exist; live evidence absent by design. |
-| `sidecar/scripts/plot_speech_evidence.py` | Re-run plotter | X BROKEN LINK | Imports, but regex does not match actual `SpeechDriver` log format. |
+| `sidecar/src/sidecar/avatar/overrides.py` | TetoOverrides schema/loader | VERIFIED | Loads override YAML; missing file falls back to safe `head_only`. |
+| `avatars/teto/teto_overrides.yaml` | Hotkey inventory and body-sway default | VERIFIED | `body_sway_strategy: head_only`; 15 hotkeys; 2 meta entries; `Star Eye [7]` demo target. |
+| `sidecar/scripts/teto_smoke_pass.py` | Live smoke-pass CLI | VERIFIED/HUMAN | CLI exists; live operator run remains deferred by the committed notes. |
+| `sidecar/src/sidecar/vts/pyvts_writer.py` | Single recv-loop writer for compositor/discrete path | VERIFIED | `_recv_loop()` is the only recv loop in this writer; compositor uses `inject_params()`. |
+| `sidecar/src/sidecar/compositor/compositor.py` | 60 Hz merge loop | VERIFIED | Merges idle/speech/intent/cursor into `ParamFrame` add/set buckets. |
+| `sidecar/src/sidecar/compositor/intent_driver.py` | Smooth expression overlay | PARTIAL | Emits weighted set params with 300ms in/600ms out, but real `[joy]` never reaches it without a Teto `joy` capability mapping. |
+| `sidecar/src/sidecar/compositor/cursor_driver.py` | Cursor tracking | VERIFIED/HUMAN | Sidecar Win32 contract documented; tests cover tracking, dead-zone, and cubic ease-back. |
+| `sidecar/src/sidecar/vts/window_detect.py` | VTS HWND and rect detection | VERIFIED/HUMAN | Tests cover cached HWND reuse and `force_reprobe=True`; real window behavior remains live check. |
+| `sidecar/scripts/plot_speech_evidence.py` | Runtime log plotter | VERIFIED | Parses both runtime and legacy `[SPEECH-DRIVER]` formats, including `body_params`. |
+| `.planning/skeleton-verification-evidence/04/` | Body-sway evidence package | PARTIAL/HUMAN | README, ratings, audit, stubs, and placeholder plots exist; live logs/clips must replace deferred artifacts. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 | --- | --- | --- | --- | --- |
-| `ws/server.py` | `PyvtsSafeWriter` | lifespan creates writer + background handshake | WIRED | `Compositor` receives the writer and calls `inject_params()`. |
-| `Compositor` | VTS parameter injection | `writer.inject_params(ParamFrame)` | WIRED | Add params use multi-parameter add; set params use single set request with weight. |
-| `TTSTaskManager` | `SpeechDriver` | `compositor_speech_queue.put(SpeechEnvelopePayload)` | WIRED | Speech envelopes are queued before audio write. |
-| Orchestrator extracted actions | `IntentDriver` | `compositor_intent_queue.put(intent)` | WIRED BUT WRONG BEHAVIOR | Queue is wired, but driver turns expressions into hotkey triggers. |
-| DevPanel | body-sway strategy swap | `control` message `set-body-sway-strategy:<name>` | WIRED | Handler requests compositor strategy swap. |
-| DevPanel/UI | discrete event demo | `fire-discrete-event:<name>` | PARTIAL | Sidecar handler exists, but no visible UI control was added; manual WS message can trigger it. |
-| VTS window detection | cursor-derived tracking | sidecar Win32 `GetCursorPos` + `GetWindowRect` | PARTIAL | Implemented, but gap closure must add explicit contract documentation and regression tests for cached HWND/force-reprobe behavior. |
-| Evidence plotter | runtime speech logs | regex matching | NOT WIRED | Actual log format differs from parser expectation. |
+| `ws/server.py` | `PyvtsSafeWriter` | lifespan creates writer + handshake task | WIRED | Compositor and discrete dispatcher share the Phase 4 writer path. |
+| `Compositor` | VTS parameter injection | `writer.inject_params(ParamFrame)` | WIRED | Add params use multi-parameter add; set params use value+weight. |
+| `TTSTaskManager` | `SpeechDriver` | `compositor_speech_queue` | WIRED | Speech envelopes feed body strategy output. |
+| `TTSTaskManager` | `SpeechMouthDriver` | dedicated `mouth_speech_queue` | WIRED | Existing Phase 3 lipsync path remains the live mouth driver; compositor speech is `emit_mouth=False` in server wiring. |
+| `Orchestrator` | `IntentDriver` | `compositor_intent_queue` | PARTIAL | Queue is wired, but real `[joy]` is not extracted from committed Teto capabilities. |
+| `AvatarCapabilities` | LLM/system tag vocabulary | `tag_vocabulary()` | NOT WIRED FOR JOY | Runtime check printed `has_joy False`; prompt examples mention `[joy]`, but actual vocabulary omits it. |
+| `CursorDriver` | Win32 VTS window samples | `get_cursor_and_rect()` | WIRED | Gap closed by 04-06 tests/docs. |
+| `SpeechDriver` | `plot_speech_evidence.py` | `[SPEECH-DRIVER] sentence_id=... body_params=[...]` | WIRED | Gap closed by 04-07 parser/tests. |
+| WS control | discrete hotkey | `fire-discrete-event:Star Eye [7]` | WIRED/HUMAN | Code path present; live visible effect still requires VTS. |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 | --- | --- | --- | --- | --- |
-| `Compositor` | `ParamFrame.add_params/set_params` | Driver ticks plus queued speech/intents | Yes | FLOWING for idle/speech/cursor; intent contributes no data. |
-| `SpeechDriver` | `_current` / RMS / strategy output | `TTSTaskManager` speech envelope queue | Yes | FLOWING; live visual effect still unverified. |
-| `IntentDriver` | `_active` expressions | Orchestrator `ActionIntent` queue | Partial | HOLLOW for smooth blend: state exists, but rendered output is `{}` and only hotkeys are fired. |
-| `CursorDriver` | cursor-derived param deltas | Win32 `GetCursorPos` + VTS window rect | Yes on Windows | FLOWING for the accepted D-09/D-11 sidecar polling path; needs explicit gap-closure tests. |
-| `plot_speech_evidence.py` | RMS/body series | `log_capture.txt` | No for real logs | HOLLOW: parser matches deferred stub format, not runtime `SpeechDriver` logs. |
+| `IdleDriver` | add params | time/noise/blink scheduler | Yes | FLOWING |
+| `SpeechDriver` | RMS/body params | `SpeechEnvelopePayload` queue | Yes | FLOWING; live visual effect unverified |
+| `SpeechMouthDriver` | mouth parameter | same speech payload on mouth queue | Yes | FLOWING; live sync unverified |
+| `actions_extractor` | expression `ActionIntent` for `[joy]` | `AvatarCapabilities.expressions` | No | DISCONNECTED for `[joy]`; real Teto capability list has no `joy` |
+| `IntentDriver` | weighted set params | expression ActionIntent + exp3 file | Yes when intent exists | HOLLOW for required `[joy]` because upstream extractor drops it |
+| `CursorDriver` | cursor-derived param deltas | Win32 cursor + VTS rect | Yes on Windows | FLOWING |
+| `plot_speech_evidence.py` | RMS/body series | runtime SpeechDriver logs | Yes | FLOWING |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 | --- | --- | --- | --- |
-| Phase 4 targeted tests | `cd sidecar; uv run pytest tests/avatar/test_overrides.py tests/vts/ tests/compositor/ tests/test_phase4_bootstrap.py -q` | `52 passed` | PASS |
-| Regression gate supplied by user | `cd sidecar; uv run pytest tests/test_sidecar_boot.py ... tests/test_speech_mouth_driver.py -q` | `46 passed, 1 skipped` | PASS |
-| Overrides load with expected inventory | `cd sidecar; uv run python -c "...load_overrides(...)"` | `head_only 15 2` | PASS |
-| Evidence plotter import | `cd sidecar; uv run python -c "import scripts.plot_speech_evidence as p; ..."` | Import passed | PASS, but parser/log format mismatch remains |
-| Live VTS avatar behavior | Not run | Requires VTS+Teto/operator | SKIP/HUMAN |
+| Gap-closure targeted tests | `cd sidecar; uv run pytest tests/compositor/test_intent_driver.py tests/compositor/test_cursor_driver.py tests/vts/test_window_detect.py tests/scripts/test_plot_speech_evidence.py -q` | `19 passed` | PASS |
+| Orchestrator-supplied Phase 4 suite | `cd sidecar; uv run pytest tests/avatar/test_overrides.py tests/vts/ tests/compositor/ tests/test_phase4_bootstrap.py tests/scripts/test_plot_speech_evidence.py -q` | `59 passed` | PASS |
+| Orchestrator-supplied regression suite | `cd sidecar; uv run pytest tests/test_sidecar_boot.py ... tests/test_speech_mouth_driver.py -q` | `46 passed, 1 skipped` | PASS |
+| Teto override inventory | `load_overrides('../avatars/teto')` | `strategy head_only`; `hotkeys 15 meta 2` | PASS |
+| Runtime evidence parser | `parse_log(head_only/log_capture.txt)` | returned one timestamp/RMS/body sample from deferred stub | PASS |
+| Real Teto `[joy]` vocabulary | `load_capabilities('../avatars/teto').tag_vocabulary()` | `has_joy False` | FAIL |
+| Pre-commit hook | `git hook run pre-commit` | no hook named `pre-commit` exists | SKIP |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| AVT-01 | 04-02 | 60Hz compositor sidecar-direct to VTS | SATISFIED | `Compositor.run()` + `PyvtsSafeWriter.inject_params()` in sidecar lifespan. |
-| AVT-02 | 04-02 | Idle baseline continuous writes | SATISFIED | `IdleDriver.tick()` emits continuous add params; compositor ticks at 60Hz. |
-| AVT-03 | 04-02 | Speech additive; intent set+weight fade | BLOCKED | Speech/add path exists, but intent uses hotkeys and no weighted set output. |
-| AVT-04 | 04-01 | pyvts single-writer task | SATISFIED | `_recv_loop()` is the only recv loop and request futures are keyed by requestID. |
-| AVT-05 | 04-01 | Renderer-aware ParamID resolver | SATISFIED | VTS maps standard Live2D IDs to input-layer names; non-VTS raises `NotImplementedError`. |
-| AVT-06 | 04-00, 04-02, 04-04 | Body-sway investigation | HUMAN_NEEDED | Strategies and deferred evidence package exist; live VTS A/B was not run. |
-| AVT-07 | 04-00 | `teto_overrides.yaml` schema stub | SATISFIED | Override file exists with schema fields, hotkeys, and notes. |
-| AVT-08 | 04-02 | `[joy]` smooth expression blend, not hotkey pop | BLOCKED | Actual implementation uses `requestTriggerHotKey`; no smooth param output. |
-| AVT-09 | 04-01, 04-03 | One DiscreteEvent maps to VTS hotkey | SATISFIED/HUMAN | Dispatcher and `Star Eye [7]` inventory exist; live rig toggle needs operator. |
-| AVT-10 | 04-03 | Sidecar Win32 cursor polling drives eye/head tracking | BLOCKED | Implemented as sidecar Win32 polling; gap closure must update stale docs and add focused regression coverage for the accepted contract. |
+| AVT-01 | 04-02 | 60 Hz compositor sidecar-direct to VTS | SATISFIED | `Compositor` and `PyvtsSafeWriter.inject_params()` are wired in sidecar lifespan. |
+| AVT-02 | 04-02 | Idle baseline continuous writes | SATISFIED/HUMAN | `IdleDriver` emits continuous params; live micro-motion still visual. |
+| AVT-03 | 04-02, 04-05 | Speech additive; intent set+weight fade | SATISFIED CODE | Intent hotkey path removed; compositor uses set bucket for intent values. |
+| AVT-04 | 04-01 | pyvts single-writer task | SATISFIED FOR PHASE 4 PATH | Compositor/discrete path uses `PyvtsSafeWriter`; Phase 3 mouth writer remains a separate legacy lipsync path. |
+| AVT-05 | 04-01 | Renderer-aware ParamID resolver | SATISFIED | VTS branch maps standard IDs to VTS input names; non-VTS raises. |
+| AVT-06 | 04-00, 04-02, 04-04, 04-07 | Body-sway investigation | HUMAN_NEEDED | Strategies/evidence package/tooling exist; live A/B still deferred. |
+| AVT-07 | 04-00 | `teto_overrides.yaml` schema stub | SATISFIED | Override YAML exists with strategy, probes, hotkeys, notes. |
+| AVT-08 | 04-02, 04-05 | `[joy]` smooth expression blend | BLOCKED | Smooth driver exists, but real Teto capability vocabulary omits `joy`; `[joy]` is not extracted. |
+| AVT-09 | 04-01, 04-03 | One DiscreteEvent maps to VTS hotkey | SATISFIED/HUMAN | `Star Eye [7]` resolves to a VTS hotkey; live visual toggle unverified. |
+| AVT-10 | 04-03, 04-06 | Sidecar Win32 cursor polling drives tracking | SATISFIED/HUMAN | D-09/D-11 contract is tested/documented; live visible tracking unverified. |
 
-No additional Phase 4 requirement IDs were found in `REQUIREMENTS.md` beyond AVT-01 through AVT-10.
+All requested Phase 4 IDs AVT-01 through AVT-10 are accounted for. No additional Phase 4 requirement IDs were found in `REQUIREMENTS.md`.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 | --- | --- | --- | --- | --- |
-| `sidecar/src/sidecar/compositor/intent_driver.py` | 54 | `return {}` from tick | Blocker | Smooth expression output is hollow; active intents never become weighted params. |
-| `sidecar/src/sidecar/compositor/intent_driver.py` | 103 | `requestTriggerHotKey` | Blocker | Violates AVT-08 "not a hotkey pop". |
-| `.planning/skeleton-verification-evidence/04/*/log_capture.txt` | 1 | `# DEFERRED` | Warning | Live body-sway evidence is intentionally absent and must be re-run. |
-| `sidecar/scripts/plot_speech_evidence.py` | 23 | parser expects stub log shape | Blocker for evidence path | Phase 5 re-run logs from current code will not parse. |
-| `sidecar/src/sidecar/ws/server.py` | 37 | `TODO Phase 5` | Info | Pre-existing LLM config handoff TODO, not a Phase 4 blocker. |
+| `avatars/teto/avatar.yaml` | 10-32 | Missing `joy` expression/alias | Blocker | Required `[joy]` path is dropped by extractor and cannot blend. |
+| `.planning/skeleton-verification-evidence/04/*/log_capture.txt` | 1 | `# DEFERRED` | Warning | Live body-sway evidence still must be captured before §14 sign-off. |
+| `.planning/skeleton-verification-evidence/04/*/rating.md` | varies | deferred live ratings | Warning | Acceptable as investigation handoff, but not final live proof. |
+| `sidecar/src/sidecar/ws/server.py` | 213 | `emit_mouth=False` | Info | Lipsync is still handled by the Phase 3 `SpeechMouthDriver`; compositor speech driver is body-only in current server wiring. |
 
 ### Human Verification Required
 
 ### 1. Live VTS Idle And Speech Motion
 
-**Test:** Start renderer + sidecar with VTS+Teto loaded; send a multi-sentence TTS prompt.
-**Expected:** Idle head/eye/blink motion continues when silent; mouth tracks speech; head/body motion continues through the utterance with no flat moments.
-**Why human:** Visual VTS motion and speech synchronization require a running rig and operator observation.
+**Test:** Start the app with VTS+Teto loaded; send a multi-sentence TTS prompt.
+**Expected:** Idle Perlin/blink motion is visible when silent; mouth tracks speech; head/body motion continues through the full utterance.
+**Why human:** Static code cannot confirm rendered avatar motion, audio sync, or visual smoothness.
 
 ### 2. Body-Sway A/B Re-Run
 
 **Test:** Use the dev-panel body-sway radio to compare `head_only` and `proxy_param`, capture `[SPEECH-DRIVER]` logs, regenerate plots, record 5-10s clips, and update ratings.
-**Expected:** Either a non-fallback strategy is accepted with evidence or explicitly rejected after live observation; `head_only` remains the documented fallback if none succeeds.
+**Expected:** Either a non-fallback strategy is accepted with evidence or explicitly rejected after live observation; `head_only` remains documented fallback if none succeeds.
 **Why human:** 04-04 used the documented deferred path because live VTS/operator verification was unavailable.
 
 ### 3. Discrete Event Demo
 
 **Test:** Send `{"type":"control","text":"fire-discrete-event:Star Eye [7]"}` through the WS control path while VTS+Teto is running.
 **Expected:** Teto toggles the Star Eye hotkey.
-**Why human:** Code can verify request dispatch, not the visible rig effect.
+**Why human:** Code verifies dispatch; the visible rig effect requires a running VTS model.
 
-## Gaps Summary
+### Gaps Summary
 
-Phase 4 delivered a substantive compositor/VTS foundation, override schema, strategy registry, discrete dispatcher, and deferred body-sway evidence package. It does not yet achieve the full phase goal because the `[joy]` expression path is a hotkey trigger rather than a smooth weighted blend, the accepted D-09/D-11 sidecar Win32 cursor contract needs explicit gap-closure tests/docs, and the body-sway evidence re-run tooling is not aligned with actual speech-driver logs.
+The prior gap-closure execution fixed the implementation-level hotkey-pop behavior in `IntentDriver`, locked the cursor implementation to the accepted D-09/D-11 sidecar Win32 contract, and aligned body-sway evidence tooling with real runtime speech-driver logs.
 
-The deferred live VTS body-sway path is documented and should be treated as human verification before any final §14 sign-off.
+One code/data gap still blocks the phase goal: the real Teto capability vocabulary does not include `joy`, while AVT-08 and the phase goal require `[joy]` to produce the smooth expression blend. Until `[joy]` resolves to a real expression/alias in the committed avatar data and an integration test proves the actual pipeline, the phase remains `gaps_found`.
 
 ---
 
-_Verified: 2026-05-08T04:56:11Z_
+_Verified: 2026-05-08T05:55:08Z_
 _Verifier: Claude (gsd-verifier)_
