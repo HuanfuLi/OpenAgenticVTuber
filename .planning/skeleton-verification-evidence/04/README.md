@@ -39,6 +39,14 @@ Procedure for the Phase 5 live re-run:
 11. Run `uv run python -m scripts.plot_speech_evidence` from `sidecar/` to regenerate each `rms_vs_output.png`.
 12. Replace each deferred `rating.md` paragraph with live observations.
 
+Expected runtime log example:
+
+```text
+[SPEECH-DRIVER] sentence_id=1 strategy=head_only rms=0.500 mouth=0.315 body_params=[FaceAngleX=0.050,FaceAngleY=-0.010]
+```
+
+`plot_speech_evidence.py` accepts both the new runtime format above and the older deferred-stub format, but Phase 5 live captures should use the new runtime format emitted by SpeechDriver.
+
 ## Deferred Path
 
 This 04-04 execution used the deferred path because live VTS/operator verification was unavailable.
@@ -53,10 +61,10 @@ The committed `rms_vs_output.png` files are placeholders generated from those st
 
 | Artifact | Purpose |
 |----------|---------|
-| `head_only/log_capture.txt` | Deferred capture stub for `[SPEECH-DRIVER strategy=head_only ...]` lines |
+| `head_only/log_capture.txt` | Deferred capture stub; replace with `[SPEECH-DRIVER] sentence_id=... body_params=[...]` runtime lines |
 | `head_only/rms_vs_output.png` | Placeholder plot; regenerate from live log |
 | `head_only/rating.md` | Deferred rating and Phase 5 re-run requirement |
-| `proxy_param/log_capture.txt` | Deferred capture stub for `[SPEECH-DRIVER strategy=proxy_param ...]` lines |
+| `proxy_param/log_capture.txt` | Deferred capture stub; replace with `[SPEECH-DRIVER] sentence_id=... body_params=[...]` runtime lines |
 | `proxy_param/rms_vs_output.png` | Placeholder plot; regenerate from live log |
 | `proxy_param/rating.md` | Deferred rating and Phase 5 re-run requirement |
 | `exp3_modulation/candidate_audit.md` | Closure of RESEARCH Open-Q2 |
