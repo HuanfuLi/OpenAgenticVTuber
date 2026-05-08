@@ -154,7 +154,7 @@ export function AvatarImport({ _testInitialPlan }: AvatarImportProps = {}) {
 
         {errorMsg && <p className={styles.error}>{errorMsg}</p>}
 
-        <footer className={styles.footer}>
+        <footer className={styles.footer} data-testid="avatar-import-footer">
           <div>
             {isDisabled && (
               <button type="button" className={styles.saveDisabledMsg} onClick={scrollToFirstPlaceholder}>
@@ -162,7 +162,7 @@ export function AvatarImport({ _testInitialPlan }: AvatarImportProps = {}) {
               </button>
             )}
           </div>
-          <div className={styles.footerActions}>
+          <div className={styles.footerActions} data-testid="avatar-import-footer-actions">
             <button
               type="button"
               className="btn btn-secondary"

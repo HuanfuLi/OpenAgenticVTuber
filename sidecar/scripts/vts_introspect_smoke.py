@@ -10,6 +10,7 @@ import pyvts
 
 
 TOKEN_PATH = Path(__file__).resolve().parents[1] / ".vts_token.txt"
+PLUGIN_NAME = "AgenticLLMVTuber"
 
 
 class SmokeAssertionError(AssertionError):
@@ -21,9 +22,26 @@ def _assert(condition: bool, message: str, payload) -> None:
         raise SmokeAssertionError(f"{message}: {payload!r}")
 
 
+def _auth_failure_message() -> str:
+    return (
+        "VTube Studio authentication failed. Close the app/smoke, delete the token file "
+        f"{TOKEN_PATH}, open VTube Studio settings > Plugins, remove/revoke the stale "
+        "AgenticLLMVTuber plugin entry if present, rerun the smoke/app, and approve the "
+        "VTS plugin permission prompt."
+    )
+
+
+def _is_authenticated(auth_result) -> bool:
+    if isinstance(auth_result, bool):
+        return auth_result
+    if isinstance(auth_result, dict):
+        return bool(auth_result.get("data", {}).get("authenticated"))
+    return False
+
+
 async def main() -> int:
     plugin_info = {
-        "plugin_name": "AgenticLLMVTuber Phase 8 Introspection Smoke",
+        "plugin_name": PLUGIN_NAME,
         "developer": "AgenticLLMVTuber",
         "authentication_token_path": str(TOKEN_PATH),
     }
@@ -31,7 +49,9 @@ async def main() -> int:
     try:
         await client.connect()
         await client.request_authenticate_token()
-        await client.request_authenticate()
+        authenticated = await client.request_authenticate()
+        if not _is_authenticated(authenticated):
+            raise SmokeAssertionError(_auth_failure_message())
 
         api_state = await client.request(client.vts_request.BaseRequest("APIStateRequest"))
         _assert("data" in api_state, "APIStateRequest missing data", api_state)

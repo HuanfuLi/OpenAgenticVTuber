@@ -41,6 +41,17 @@ Record:
 - output containing `Is VTube Studio running?`
 - reason:
 
+## Authentication Reset
+
+If the smoke exits `2` with `VTube Studio authentication failed`, reset the stale token before recording final evidence:
+
+- close the app/smoke
+- delete the token file `sidecar/.vts_token.txt`
+- open VTube Studio settings > Plugins
+- remove/revoke the stale AgenticLLMVTuber plugin entry if present
+- rerun `cd sidecar && uv run python scripts/vts_introspect_smoke.py`
+- approve the VTS plugin permission prompt
+
 ## FAIL Evidence
 
 Use this when VTube Studio is available but the introspection shape does not match.

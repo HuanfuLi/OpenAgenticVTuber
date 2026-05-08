@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
 import type { VariantEntry } from '@contracts/variant-entry'
 import { AppStoreProvider } from '@/state/app-store'
@@ -112,7 +113,7 @@ describe('AvatarImport review route', () => {
     expect(footer).toContainElement(screen.getByRole('button', { name: /save catalogs/i }))
     expect(screen.getByTestId('avatar-import-footer-actions')).toBeInTheDocument()
 
-    const css = readFileSync(new URL('../src/screens/AvatarImport/AvatarImport.module.css', import.meta.url), 'utf-8')
+    const css = readFileSync(resolve(process.cwd(), 'src/screens/AvatarImport/AvatarImport.module.css'), 'utf-8')
     const footerCss = css.match(/\.footer\s*\{[\s\S]*?\}/)?.[0] ?? ''
     expect(footerCss).not.toMatch(/position\s*:\s*sticky/)
     expect(footerCss).not.toMatch(/bottom\s*:\s*0/)
