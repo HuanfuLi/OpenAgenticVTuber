@@ -1,6 +1,8 @@
 import yaml
+from pathlib import Path
 
-from sidecar.tests.avatar.conftest import REPO_ROOT
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_round_trip() -> None:

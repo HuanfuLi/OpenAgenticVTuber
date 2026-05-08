@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agenticllmvtuber.local/schemas/avatar_overrides.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "orphan_params": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "physics_chain_proxies": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    },
+    "sign_inversions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "body_sway_strategy": {
+      "type": "string",
+      "enum": ["head_only", "proxy_param", "exp3_modulation"],
+      "default": "head_only"
+    },
+    "proxy_body_param": {
+      "type": ["string", "null"],
+      "default": null
+    },
+    "exp3_body_pose": {
+      "type": ["string", "null"],
+      "default": null
+    },
+    "param_probes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "wrote", "readback", "visible", "orphan_face_tracker", "blend_partial"],
+        "properties": {
+          "name": { "type": "string" },
+          "wrote": { "type": "number" },
+          "readback": { "type": "number" },
+          "visible": { "type": "boolean" },
+          "orphan_face_tracker": { "type": "boolean" },
+          "blend_partial": { "type": "boolean" }
+        }
+      },
+      "default": []
+    },
+    "discovered_hotkeys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["hotkey_id", "name", "type"],
+        "properties": {
+          "hotkey_id": { "type": "string", "pattern": "^([0-9a-f]{32})?$" },
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "file": { "type": "string", "default": "" },
+          "is_meta": { "type": "boolean", "default": false },
+          "llm_emittable": { "type": "boolean", "default": true }
+        }
+      },
+      "default": []
+    },
+    "notes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    },
+    "voice": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "backend": { "type": "string", "default": "piper" },
+        "model": { "type": "string", "default": "en_US-amy-medium" },
+        "lipsync_mode": { "type": "string", "default": "our-rms" }
+      },
+      "default": {}
+    },
+    "variants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "hotkey_id", "source_name"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,30}$",
+            "not": {
+              "enum": ["think", "thinking", "function_call", "function_calls", "tool_call", "tool_calls", "system"]
+            }
+          },
+          "hotkey_id": { "type": "string", "pattern": "^([0-9a-f]{32})?$" },
+          "source_name": { "type": "string" }
+        }
+      },
+      "default": []
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "motion_file", "duration_seconds"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,30}$",
+            "not": {
+              "enum": ["think", "thinking", "function_call", "function_calls", "tool_call", "tool_calls", "system"]
+            }
+          },
+          "motion_file": { "type": "string" },
+          "duration_seconds": { "type": "number", "minimum": 0, "maximum": 60 },
+          "is_loop": { "type": "boolean", "default": false }
+        }
+      },
+      "default": []
+    },
+    "source_rig_path": { "type": "string", "default": "" }
+  }
+}

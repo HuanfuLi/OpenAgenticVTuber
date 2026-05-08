@@ -22,6 +22,7 @@ dependencies = [
     "opensimplex==0.4.5.1",
     "numpy>=1.26",
     "matplotlib>=3.8",
+    "jsonschema==4.26.0",
     "contracts",
 ]
 
@@ -33,6 +34,9 @@ pyvts = { path = "vendor/pyvts" }
 contracts = { path = "../packages/contracts/py", editable = true }
 
 [tool.uv]
+override-dependencies = [
+    "jsonschema==4.26.0",
+]
 dev-dependencies = [
     "ruff",
     "pytest>=8",
