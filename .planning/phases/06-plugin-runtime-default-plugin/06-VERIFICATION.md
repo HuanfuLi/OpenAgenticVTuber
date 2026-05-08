@@ -1,8 +1,8 @@
 ---
 phase: 06-plugin-runtime-default-plugin
 verified: 2026-05-08T11:57:55Z
-status: human_needed
-score: 8/8 automated must-haves verified; F-1/F-2 closed by 06-07; F-3 remains runtime UAT observation
+status: passed
+score: 8/8 automated must-haves verified; F-1/F-2 closed by 06-07; F-3 closed by runtime UAT and tracking-range fix
 re_verification:
   previous_status: gaps_found
   previous_score: 7/8
@@ -31,6 +31,18 @@ re_verification_2:
   boot_smoke:
     status: "human_needed"
     reason: "Requires live sidecar + VTube Studio session. Automated code path now constructs one PyvtsSafeWriter and one connect_and_authenticate(writer) task; live log confirmation remains UAT."
+re_verification_3:
+  verified: 2026-05-08T18:35:00-04:00
+  status: passed
+  gaps_closed:
+    - "F-3 closed: operator UAT confirmed lipsync restored and body sway visible after preserving VTS tracking input ranges."
+    - "Nyquist validation refreshed: 06-VALIDATION.md now maps Phase 6 plans 06-01 through 06-07 to automated tests and manual-only checks."
+  gaps_remaining: []
+  evidence:
+    - "Commit 4e2ff12 fix(06): preserve VTS tracking input ranges."
+    - "Phase validation gate passed: cd sidecar && uv run pytest tests/plugins tests/compositor tests/architecture/test_pyvts_writer_singleton.py tests/test_arch06_single_writer.py tests/scripts/test_plumbing_harness.py tests/test_orchestrator_turn.py tests/test_phase4_bootstrap.py tests/vts/test_pyvts_writer.py -q -> 119 passed."
+    - "Contract gate passed: npm run check:contracts."
+    - "Renderer typecheck passed: npm --workspace apps/renderer run typecheck."
 post_verification_findings:
   discovered_at: 2026-05-08T13:30:00Z
   trigger: "Operator UAT — lipsync absent + body sway only along one axis"
