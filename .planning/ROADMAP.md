@@ -180,12 +180,12 @@ Plans:
   3. User imports an OLVT-shape avatar with `model_dict.json`; `emotionMap` becomes default-plugin per-rig action-code → expression binding, `actionMap` becomes the variant catalog with semantic names (no placeholder relabeling required)
   4. Review screen is re-openable from Settings at any time for catalog re-edit; commits write `_avatar_overrides.yaml` (sibling to `avatar.yaml`); writes are jsonschema-validated at write-time
   5. VTS API introspection smoke-test (`sidecar/scripts/vts_introspect_smoke.py`) confirms `pyvts 0.3.3` produces expected fields against the actual Teto rig — pyvts vendor-patch lands here if introspection fails
-**Plans**: ~3 plans (TBD at /gsd:plan-phase 8)
+**Plans**: 3 plans
 
 Plans:
-- [ ] 08-01-PLAN.md (TBD) — Four extractors (VTS / Cubism w-exp / Cubism bare / OLVT) + naming-normalization heuristics + `motion3.json.Meta.Duration` event-timeout extraction + reserved-name validators + `TetoOverrides` → `AvatarOverrides` rename
-- [ ] 08-02-PLAN.md (TBD) — Type detector (`import_detect.py`) + Electron `ipc:avatar:import-pick` IPC + sidecar `POST /admin/avatar/import` returning `AvatarImportPlan` + atomic-write commit endpoint (`POST /admin/avatar/import/commit`) + `_avatar_overrides.yaml` schema codegen pipeline addition
-- [ ] 08-03-PLAN.md (TBD) — Mandatory review React route (NOT modal) + multi-row catalog editor + placeholder-density Save-disabled friction + Settings re-open path + Cubism 5.3 reject-with-helpful-error gate
+- [ ] 08-01-PLAN.md — Wave 0 test scaffolds + Pydantic contracts (RigCapabilities, AvatarOverrides, VariantEntry, EventEntry, AvatarImportPlan) + 4 extractors (VTS / Cubism w-exp / Cubism bare / OLVT) + naming-normalization (verified against 15 Teto names) + motion3 meta + cdi3 reader + IMP-09 TetoOverrides→AvatarOverrides rename + IMP-10 vts_introspect_smoke.py — Wave 1 (IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-09, IMP-10, ARCH-02)
+- [ ] 08-02-PLAN.md — Type detector (5-shape ladder + Cubism 5.3 moc3 header check) + atomic overrides_writer (.tmp → fsync → os.replace, jsonschema pre-validate) + sidecar admin/avatar.py FastAPI router (POST /import + /import/commit + GET /import/current) + Electron IPC handlers (avatar:pickFolder, avatar:requestImportPlan, avatar:commitOverrides) + 5 hand-written TS contract mirrors — Wave 2 (IMP-01, IMP-08)
+- [ ] 08-03-PLAN.md — Dedicated React AvatarImport route (single-page scrollable per D-A3-1, NOT modal) + VariantTable/EventTable with 4 per-row controls + usePlaceholderGate (^exp_?\d+$/i regex) + Save-disabled friction with scroll-to-first-placeholder UX + AppShell + route-store wiring + Settings "Edit avatar catalogs" entrypoint + Cubism 5.3 reject UX + 9+ vitest assertions — Wave 3 (IMP-07)
 
 **UI hint**: yes  <!-- Dedicated React route for the review screen; multi-row catalog editor is core UI surface. -->
 
@@ -272,7 +272,7 @@ Milestone v2.0 phases execute in REVISED order: 8 → 6 → 7 → 9 → 10 (revi
 | 3. TTS & Sentence-Buffered Audio | 3/3 | Complete | 2026-05-07 |
 | 4. Action Compositor + VTS Bridge + Body-Sway Investigation | 8/8 | Complete | 2026-05-08 |
 | 5. Polish, Contracts Codegen (scope reduced) | 1/1 | Complete — 05-02 deferred to M2 | 2026-05-08 |
-| 8. Avatar Import + Catalogs | 0/3 (TBD) | Not started — **first in v2.0 order (REVISED 2026-05-08)** | - |
+| 8. Avatar Import + Catalogs | 0/3 | Not started — **first in v2.0 order (REVISED 2026-05-08); plans land 2026-05-08** | - |
 | 6. Plugin Runtime + Default Plugin | 0/2 (TBD) | Not started — second in v2.0 order | - |
 | 7. Three-Category Code Parsing + Dispatch | 0/2 (TBD) | Not started — third in v2.0 order | - |
 | 9. Slider HUD + Per-Param Lock | 0/2 (TBD) | Not started — fourth in v2.0 order | - |
