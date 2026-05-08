@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: Phases
-status: completed
-stopped_at: Phase 8 context gathered
-last_updated: "2026-05-08T08:00:00.000Z"
+milestone_name: Plugin + Animation Control
+status: executing
+stopped_at: Completed 08-avatar-import-catalogs-01-PLAN.md
+last_updated: "2026-05-08T08:35:06.240Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
   completed_phases: 5
-  total_plans: 17
-  completed_plans: 17
+  total_plans: 20
+  completed_plans: 18
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon — v2.0 is infrastructure prep on the way there)
-**Current focus:** v2.0 Phase 08 — avatar-import-+-catalogs
+**Current focus:** Phase 08 — avatar-import-catalogs
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
-Status: v1.0 archived — ready to discuss Phase 8
+Phase: 08 (avatar-import-catalogs) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-05-08
 
 **Note on v1.0:** Phase 4 body-sway investigation and Phase 5 codegen are complete. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
@@ -76,6 +76,7 @@ Last activity: 2026-05-08
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P07 | 4min | 3 tasks | 6 files |
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P06 | 4min | 2 tasks | 4 files |
 | Phase 05-polish-contracts-codegen-14-verification P01 | 9min | 2 tasks | 21 files |
+| Phase 08-avatar-import-catalogs P01 | 13min | 4 tasks | 31 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,9 @@ Recent decisions affecting current work:
 - [Phase 05-polish-contracts-codegen-14-verification]: force_required marks const, anyOf-null, and defaulted Pydantic fields required before TypeScript generation.
 - [Phase 05-polish-contracts-codegen-14-verification]: Cross-file duplicate declarations are removed by OWNER_FILE mapping and replaced with import type statements.
 - [Phase 05-polish-contracts-codegen-14-verification]: Generated contract drift is guarded by npm run check:contracts.
+- [Phase 08-avatar-import-catalogs]: Plan 08-01 kept capabilities.py as a temporary empty compatibility shim until Phase 6 rewrites legacy AvatarCapabilities callers.
+- [Phase 08-avatar-import-catalogs]: Plan 08-01 forces jsonschema==4.26.0 through uv override-dependencies because litellm==1.83.14 pins jsonschema==4.23.0.
+- [Phase 08-avatar-import-catalogs]: Plan 08-01 includes cdi3 parameter IDs in RigCapabilities.writable_param_ids so HUD/plugin consumers see the full Teto rig surface.
 
 ### Pending Todos
 
@@ -142,6 +146,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-08T07:12:04.225Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-avatar-import-catalogs/08-CONTEXT.md
+Last session: 2026-05-08T08:35:06.233Z
+Stopped at: Completed 08-avatar-import-catalogs-01-PLAN.md
+Resume file: None
