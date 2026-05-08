@@ -203,15 +203,15 @@ Plans:
 **Requirements**: PARSE-01, PARSE-02, PARSE-03, PARSE-04, PARSE-05, PARSE-06, PARSE-07, PARSE-08
 **Success Criteria** (what must be TRUE):
   1. LLM reply containing `[joy] {hold-mic} <wave>` in a single sentence triggers all three dispatch paths in correct order — `joy` action reaches the plugin's input queue, `hold-mic` toggles the registered VTS expression hotkey via `PyvtsSafeWriter`, `wave` fires the registered motion hotkey with auto-completion timeout from `motion3.json.Meta.Duration + 1s` blend pad
-  2. Adversarial split-token-boundary test fixtures pass for ALL three syntaxes — `[`/`joy]` → ActionIntent, `{`/`hold-mic}` → VariantToggle, `<`/`wave>` → EventFire (extends the milestone-1 SC #3 BLOCKER fix to `{` and `<`)
+  2. Adversarial split-token-boundary test fixtures pass for ALL three syntaxes — `[`/`joy]` → ActionCode, `{`/`hold-mic}` → VariantToggle, `<`/`wave>` → EventFire (extends the milestone-1 SC #3 BLOCKER fix to `{` and `<`)
   3. Cross-category collision check: at sidecar boot, `plugin_action_codes ∩ variant_codes ∩ event_codes` is empty; a manufactured collision (e.g., adding `joy` to the variant catalog while the plugin already registers `[joy]`) produces a loud boot-blocking exception with a clear error message naming both sources
   4. Variant collision policy is radio-button single-active — emitting a new variant code while another variant is already toggled turns the new ON and the previous OFF deterministically (no additive layering); chat display + TTS strips all three syntaxes cleanly (no bracket character ever leaks)
-  5. Parser ordering is load-bearing and verified: `<think>...</think>` reasoning-strip runs FIRST (before sentence-buffer, before three-category extractor) — DeepSeek-R1 reasoning never leaks into event-code dispatch even when the model emits `<think>foo</think>` in the same response as `<wave>`
-**Plans**: ~2 plans (TBD at /gsd:plan-phase 7)
+  5. Parser policy is load-bearing and verified per Phase 7 CONTEXT D-A1: no parse-time `<think>` strip is added; API-level reasoning disable remains the defense, `<think>` is reserved at boot, and leaked `<think>` is treated as an unknown event dispatch rather than a valid `<event>` code.
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md (TBD) — `code_extractor` decorator (single-pass bracket walker; replaces `actions_extractor`) + `display_processor.filter_brackets` extension to all three syntaxes + reserved-name guard sweep + cross-category uniqueness check at orchestrator construction + adversarial split-token test fixtures
-- [ ] 07-02-PLAN.md (TBD) — Dispatch routing (action → plugin queue; variant → `PyvtsSafeWriter` toggle hotkey with radio-button policy; event → motion hotkey with `motion3.json.Meta.Duration + 1s` auto-untoggle; 10s ceiling fallback for missing/oversized Duration) + `VariantToggle` + `EventFire` contract codegen
+- [ ] 07-01-PLAN.md — Dispatch contract/codegen, `code_extractor`, all-syntax chat/TTS stripping, reserved-name validation, and adversarial split-token fixtures
+- [ ] 07-02-PLAN.md — Runtime dispatch routing: action queue, radio-button variant manager, event hotkey fire/completion tracker, boot validation wiring, and `[DISPATCH]` logs
 
 **UI hint**: no  <!-- Parser + dispatch lives in sidecar; renderer changes are limited to bracket-strip continuation, no new UI surface. -->
 
