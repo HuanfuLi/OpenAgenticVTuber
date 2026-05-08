@@ -11,7 +11,7 @@ from typing import AsyncIterator
 import pytest
 from litellm.exceptions import ContextWindowExceededError
 
-from sidecar.avatar.capabilities import AvatarCapabilities, Expression, Hotkey, Parameter
+from sidecar.avatar.capabilities import AvatarCapabilities, Expression as LegacyExpression, Parameter
 from sidecar.orchestrator.orchestrator import Orchestrator
 from sidecar.orchestrator.output_types import DisplayText, SentenceOutput
 from sidecar.orchestrator.tts_preprocessor import TTSPreprocessorConfig
@@ -20,19 +20,16 @@ from sidecar.orchestrator.tts_preprocessor import TTSPreprocessorConfig
 from tests.conftest import _FakeGateway, _WSRecorder
 
 
-def _caps() -> AvatarCapabilities:
-    return AvatarCapabilities(
-        expressions=[Expression(name="joy", file="joy.exp3.json")],
-        hotkeys=[Hotkey(name="cry", type="ToggleExpression")],
-    )
+ACTION_CODES_SECTION = "## Available Actions (plugin: default v1.0.0)\n[joy] - Show joy."
 
 
 def _build_orch(gateway, persona="You are Teto.") -> Orchestrator:
     return Orchestrator(
         gateway=gateway,
-        capabilities=_caps(),
         persona_text=persona,
+        action_codes_section=ACTION_CODES_SECTION,
         tts_preprocessor_config=TTSPreprocessorConfig(),
+        valid_expression_names={"joy"},
     )
 
 
@@ -67,8 +64,8 @@ async def _fake_sentence_stream(*sentences: str) -> AsyncIterator[SentenceOutput
 def _build_phase3_orch(tts_manager: _FakeTTSManager | None = None) -> Orchestrator:
     return Orchestrator(
         gateway=_FakeGateway(chunks=[]),
-        capabilities=_caps(),
         persona_text="You are Teto.",
+        action_codes_section=ACTION_CODES_SECTION,
         tts_preprocessor_config=TTSPreprocessorConfig(),
         tts_manager=tts_manager,
         compositor_speech_queue=asyncio.Queue(),
@@ -232,17 +229,36 @@ async def test_generic_exception_emits_stream_error():
 
 @pytest.mark.asyncio
 async def test_system_prompt_built_once():
-    """Mutating capabilities post-init must NOT change system_prompt sent
-    to the gateway -- proves bytes-identical-at-boot (Pitfall 6)."""
+    """Mutating expression names post-init must NOT change system_prompt."""
     gw = _FakeGateway(chunks=["ok."])
     orch = _build_orch(gw)
     prompt_at_init = orch._system_prompt
-    # Mutate capabilities -- should NOT affect future turns.
-    orch._capabilities.expressions[0].name = "JOY_MUTATED_AFTER_INIT"
+    orch._valid_expression_names.add("JOY_MUTATED_AFTER_INIT")
     ws = _WSRecorder()
     await orch.turn("hi", ws)
     assert "JOY_MUTATED_AFTER_INIT" not in gw.calls_received_system_prompt[0]
     assert gw.calls_received_system_prompt[0] == prompt_at_init
+
+
+def test_system_prompt_freezes_manifest_action_section() -> None:
+    first = Orchestrator(
+        gateway=_FakeGateway(chunks=[]),
+        persona_text="You are Teto.",
+        action_codes_section=ACTION_CODES_SECTION,
+    )
+    second = Orchestrator(
+        gateway=_FakeGateway(chunks=[]),
+        persona_text="You are Teto.",
+        action_codes_section=ACTION_CODES_SECTION,
+    )
+    changed = Orchestrator(
+        gateway=_FakeGateway(chunks=[]),
+        persona_text="You are Teto.",
+        action_codes_section=ACTION_CODES_SECTION + "\n[anger] - Show anger.",
+    )
+
+    assert first._system_prompt.encode() == second._system_prompt.encode()
+    assert changed._system_prompt != first._system_prompt
 
 
 @pytest.mark.asyncio
@@ -621,7 +637,7 @@ async def test_build_mouth_writer_degrades_when_param_missing(monkeypatch):
             raise AssertionError("VTS writer must not be constructed without ParamMouthOpenY")
 
     monkeypatch.setattr(server, "PyVTSParameterWriter", _ShouldNotConnect)
-    caps = AvatarCapabilities(expressions=[Expression(name="joy", file="joy.exp3.json")])
+    caps = AvatarCapabilities(expressions=[LegacyExpression(name="joy", file="joy.exp3.json")])
 
     writer = await server._build_mouth_writer(caps)
 
@@ -644,7 +660,7 @@ async def test_build_mouth_writer_degrades_when_vts_auth_fails(monkeypatch):
 
     monkeypatch.setattr(server, "PyVTSParameterWriter", _FailingWriter)
     caps = AvatarCapabilities(
-        expressions=[Expression(name="joy", file="joy.exp3.json")],
+        expressions=[LegacyExpression(name="joy", file="joy.exp3.json")],
         parameters=[Parameter(id="ParamMouthOpenY")],
     )
 

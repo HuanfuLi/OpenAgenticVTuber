@@ -4,8 +4,8 @@ Adaptations vs OLVT:
   - sentence_divider, display_processor, tts_filter ported VERBATIM (only
     imports adjusted).
   - actions_extractor adapted (CONTEXT.md D-13 + RESEARCH Example 4):
-      * Signature: actions_extractor(capabilities: AvatarCapabilities) instead
-        of actions_extractor(live2d_model: Live2dModel).
+      * Signature: actions_extractor(valid_expression_names: set[str] | None)
+        instead of actions_extractor(live2d_model: Live2dModel).
       * Yields tuple[SentenceWithTags, list[ActionIntent]] instead of
         tuple[SentenceWithTags, Actions].
       * Uses _extract_intents() bracket-walker (RESEARCH Example 4) keyed on
@@ -20,7 +20,6 @@ from functools import wraps
 from loguru import logger
 
 from contracts import ActionIntent
-from sidecar.avatar.capabilities import AvatarCapabilities
 
 from .output_types import DisplayText, SentenceOutput
 from .sentence_divider import SentenceDivider, SentenceWithTags, TagState
@@ -72,16 +71,16 @@ def sentence_divider(
     return decorator
 
 
-def actions_extractor(capabilities: AvatarCapabilities):
+def actions_extractor(valid_expression_names: set[str] | None = None):
     """
     Decorator that extracts ActionIntents from sentences (skeleton adaptation
     of OLVT's actions_extractor; see file docstring).
 
-    Searches expressions[].name first (kind="expression") -> falls through to
-    hotkeys[].name (kind="action"). Unknown tags silently dropped (D-13).
+    Extracts only system-owned expression intents. Plugin action codes remain
+    raw bracketed sentence text for the plugin adapter and are not emitted as
+    ActionIntent values.
     """
-    expression_names = {e.name.lower() for e in capabilities.expressions}
-    hotkey_names = {h.name.lower() for h in capabilities.hotkeys}
+    expression_names = {name.lower() for name in (valid_expression_names or set())}
 
     def decorator(
         func: Callable[
@@ -107,7 +106,7 @@ def actions_extractor(capabilities: AvatarCapabilities):
                         for t in sentence.tags
                     ):
                         intents = _extract_intents(
-                            sentence.text, expression_names, hotkey_names
+                            sentence.text, expression_names
                         )
                     yield sentence, intents
                 elif isinstance(item, dict):
@@ -123,14 +122,13 @@ def actions_extractor(capabilities: AvatarCapabilities):
 
 
 def _extract_intents(
-    text: str, expression_names: set, hotkey_names: set
+    text: str, expression_names: set
 ) -> List[ActionIntent]:
     """Single-pass left-to-right bracket scan. Case-insensitive name match.
 
     Mirrors OLVT live2d_model.extract_emotion + extract_action shape but emits
     structured ActionIntents instead of string lists. Per D-13:
-      - expression match first (kind="expression")
-      - hotkey match second (kind="action")
+      - expression match only (kind="expression")
       - unknown tags silently dropped
     """
     intents: List[ActionIntent] = []
@@ -148,11 +146,7 @@ def _extract_intents(
             intents.append(
                 ActionIntent(kind="expression", name=name, avatar_id="teto")
             )
-        elif name in hotkey_names:
-            intents.append(
-                ActionIntent(kind="action", name=name, avatar_id="teto")
-            )
-        # else: silently drop (D-13)
+        # else: silently drop (D-13); plugin actions are handled by plugins.
         i = end + 1
     return intents
 

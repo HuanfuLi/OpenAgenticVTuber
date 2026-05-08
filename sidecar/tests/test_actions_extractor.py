@@ -2,16 +2,14 @@
 
 Test 8 in particular is the SC #3 headline: drive the FULL 4-decorator
 chain with the split-bracket adversarial fixture and assert that no
-`[`/`]` character leaks to display_text or tts_text, AND that two
-ActionIntents (joy=expression, hold-mic=action) are produced.
+`[`/`]` character leaks to display_text or tts_text, and that plugin action
+codes are not emitted as system ActionIntents.
 """
 from typing import AsyncIterator
-from pathlib import Path
 
 import pytest
 
 from contracts import ActionIntent
-from sidecar.avatar.capabilities import AvatarCapabilities, Expression, Hotkey, load_capabilities
 from sidecar.orchestrator.output_types import SentenceOutput
 from sidecar.orchestrator.sentence_divider import SentenceWithTags
 from sidecar.orchestrator.transformers import (
@@ -23,18 +21,13 @@ from sidecar.orchestrator.transformers import (
 from sidecar.orchestrator.tts_preprocessor import TTSPreprocessorConfig
 
 
-def _caps(expressions=("joy", "smile"), hotkeys=("cry", "hold-mic")) -> AvatarCapabilities:
-    return AvatarCapabilities(
-        expressions=[Expression(name=n, file=f"{n}.exp3.json") for n in expressions],
-        hotkeys=[Hotkey(name=n, type="ToggleExpression") for n in hotkeys],
-    )
+def _names(expressions=("joy", "smile")) -> set[str]:
+    return set(expressions)
 
 
 @pytest.mark.asyncio
 async def test_extract_intents_split_bracket():
-    caps = _caps()
-
-    @actions_extractor(caps)
+    @actions_extractor(_names())
     async def fake() -> AsyncIterator:
         yield SentenceWithTags(text=" hello [joy] world", tags=[])
 
@@ -49,9 +42,7 @@ async def test_extract_intents_split_bracket():
 
 @pytest.mark.asyncio
 async def test_unknown_tag_silently_dropped():
-    caps = _caps()
-
-    @actions_extractor(caps)
+    @actions_extractor(_names())
     async def fake() -> AsyncIterator:
         yield SentenceWithTags(text=" foo [unknown] bar", tags=[])
 
@@ -61,29 +52,19 @@ async def test_unknown_tag_silently_dropped():
 
 
 @pytest.mark.asyncio
-async def test_hotkey_classified_as_action():
-    caps = _caps()
-
-    @actions_extractor(caps)
+async def test_plugin_action_code_not_emitted_as_action_intent():
+    @actions_extractor(_names())
     async def fake() -> AsyncIterator:
         yield SentenceWithTags(text=" cry [cry] now", tags=[])
 
     items = [x async for x in fake()]
     sentence, intents = items[0]
-    assert len(intents) == 1
-    assert intents[0].kind == "action"
-    assert intents[0].name == "cry"
+    assert intents == []
 
 
 @pytest.mark.asyncio
 async def test_expression_takes_priority_over_hotkey():
-    # Both lists contain "smile" -- expression-first per D-13
-    caps = AvatarCapabilities(
-        expressions=[Expression(name="smile", file="smile.exp3.json")],
-        hotkeys=[Hotkey(name="smile", type="ToggleExpression")],
-    )
-
-    @actions_extractor(caps)
+    @actions_extractor({"smile"})
     async def fake() -> AsyncIterator:
         yield SentenceWithTags(text=" [smile]", tags=[])
 
@@ -95,15 +76,13 @@ async def test_expression_takes_priority_over_hotkey():
 @pytest.mark.asyncio
 async def test_full_decorator_chain_strips_brackets():
     """SC #3 headline test -- drive the full pipeline with split-bracket
-    deltas and assert: display_text contains hello/world but NO [/]; two
-    intents emitted (joy=expression, hold-mic=action); tts_text also
+    deltas and assert: display_text contains hello/world but NO [/]; plugin
+    action tags are not emitted as system intents; tts_text also
     bracket-free (ignore_brackets=True default).
     """
-    caps = _caps()
-
     @tts_filter(TTSPreprocessorConfig())
     @display_processor()
-    @actions_extractor(caps)
+    @actions_extractor({"joy"})
     @sentence_divider(faster_first_response=False, segment_method="pysbd", valid_tags=[])
     async def chat_stream() -> AsyncIterator[str]:
         for delta in [
@@ -145,16 +124,13 @@ async def test_full_decorator_chain_strips_brackets():
 
     names = sorted(i.name for i in all_intents)
     kinds = sorted(i.kind for i in all_intents)
-    assert names == ["hold-mic", "joy"], f"got names={names}, intents={all_intents}"
-    assert kinds == ["action", "expression"], f"got kinds={kinds}"
+    assert names == ["joy"], f"got names={names}, intents={all_intents}"
+    assert kinds == ["expression"], f"got kinds={kinds}"
 
 
 @pytest.mark.asyncio
 async def test_real_teto_avatar_yaml_extracts_joy_intent():
-    repo_root = Path(__file__).resolve().parents[2]
-    caps = load_capabilities(repo_root / "avatars" / "teto")
-
-    @actions_extractor(caps)
+    @actions_extractor({"joy"})
     async def fake() -> AsyncIterator:
         yield SentenceWithTags(text="[joy] Got it!", tags=[])
 

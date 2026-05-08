@@ -26,8 +26,7 @@ from fastapi import WebSocket
 from litellm.exceptions import ContextWindowExceededError
 from loguru import logger
 
-from contracts import ActionIntent, AudioPayloadMessage, DisplayTextField, SpeechEnvelopePayload
-from sidecar.avatar.capabilities import AvatarCapabilities
+from contracts import AudioPayloadMessage, DisplayTextField, SpeechEnvelopePayload
 from sidecar.llm.gateway import LLMGateway
 from sidecar.tts.tts_manager import TTSTaskManager
 from sidecar.ws.emit import (
@@ -59,16 +58,13 @@ _CONTEXT_OVERFLOW_COPY = (
 )
 
 
-def _build_system_prompt(
-    persona_text: str, capabilities: AvatarCapabilities
-) -> str:
+def _build_system_prompt(persona_text: str, action_codes_section: str) -> str:
     """Persona + utility-prompt append (CONTEXT D-06; OLVT
     service_context.py:436-477 pattern). Bytes-identical at boot per Pitfall 6.
     """
     expression_prompt = load_util("live2d_expression_prompt")
-    full_action_str = capabilities.tag_vocabulary()  # "[joy], [cry], ..."
     expression_prompt = expression_prompt.replace(
-        "[<insert_action_keys>]", full_action_str
+        "[<insert_action_codes_section>]", action_codes_section
     )
     return persona_text + "\n\n" + expression_prompt
 
@@ -77,20 +73,22 @@ class Orchestrator:
     def __init__(
         self,
         gateway: LLMGateway,
-        capabilities: AvatarCapabilities,
         persona_text: str,
+        action_codes_section: str = "",
         tts_preprocessor_config: TTSPreprocessorConfig | None = None,
         tts_manager: TTSTaskManager | None = None,
         compositor_speech_queue: asyncio.Queue[SpeechEnvelopePayload] | None = None,
-        compositor_intent_queue: asyncio.Queue[ActionIntent] | None = None,
         compositor_sentence_complete_queue: asyncio.Queue[int] | None = None,
         pending_inputs: asyncio.Queue[str] | None = None,
+        plugin_adapter=None,
+        valid_expression_names: set[str] | None = None,
     ):
         self._gateway = gateway
-        self._capabilities = capabilities
         # SYSTEM PROMPT FROZEN AT BOOT -- D-17, D-19, Pitfall 6.
         # Bytes-identical across all turns of this orchestrator's lifetime.
-        self._system_prompt: str = _build_system_prompt(persona_text, capabilities)
+        self._system_prompt: str = _build_system_prompt(persona_text, action_codes_section)
+        self._valid_expression_names = valid_expression_names or set()
+        self._plugin_adapter = plugin_adapter
         self._memory: list[dict] = []           # APPEND-ONLY -- D-19
         self._head_idx: int = 0                 # FORWARD-ONLY -- D-19
         self._tts_pp = tts_preprocessor_config or TTSPreprocessorConfig()
@@ -98,9 +96,6 @@ class Orchestrator:
         self._tts_manager = tts_manager
         self.compositor_speech_queue = (
             compositor_speech_queue or asyncio.Queue()
-        )
-        self.compositor_intent_queue = (
-            compositor_intent_queue or asyncio.Queue()
         )
         self.compositor_sentence_complete_queue = (
             compositor_sentence_complete_queue or asyncio.Queue()
@@ -202,11 +197,12 @@ class Orchestrator:
 
         # ActionIntent log lines -- D-14, surfaces in Logs drawer.
         for intent in sentence_output.actions:
-            await self.compositor_intent_queue.put(intent)
             logger.info(
                 f"[INTENT] kind={intent.kind} name={intent.name} "
                 f"strength={intent.strength} avatar={intent.avatar_id}"
             )
+        if self._plugin_adapter is not None:
+            self._plugin_adapter.enqueue_sentence(sentence_output.tts_text)
 
     def _run_pipeline(
         self, send_window: list[dict]
@@ -214,12 +210,11 @@ class Orchestrator:
         """Build and run the OLVT 4-decorator chain over a token stream."""
         gateway = self._gateway
         system_prompt = self._system_prompt
-        capabilities = self._capabilities
         tts_pp = self._tts_pp
 
         @tts_filter(tts_pp)
         @display_processor()
-        @actions_extractor(capabilities)
+        @actions_extractor(self._valid_expression_names)
         @sentence_divider(
             faster_first_response=True,
             segment_method="pysbd",

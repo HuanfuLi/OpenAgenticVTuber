@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import asyncio
+import importlib.util
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -18,10 +19,13 @@ from sidecar.avatar.rig_capabilities import build_rig_capabilities, resolve_sour
 from sidecar.compositor import Compositor
 from sidecar.compositor.cursor_driver import CursorDriver
 from sidecar.compositor.idle_driver import IdleDriver
-from sidecar.compositor.intent_driver import IntentDriver
+from sidecar.compositor.plugin_adapter import PluginAdapter
 from sidecar.compositor.speech_driver import SpeechDriver
 from sidecar.llm.gateway import LLMGateway, ProviderConfig
 from sidecar.orchestrator.orchestrator import Orchestrator
+from sidecar.plugins.api import BodyMotionPlugin
+from sidecar.plugins.loader import build_action_codes_section, discover_manifests, load_manifest, resolve_entrypoint
+from sidecar.plugins.supervisor import NullPlugin, PluginSupervisor
 from sidecar.tts import TTSGateway, TTSTaskManager
 from sidecar.vts import LoggingParameterWriter, PyVTSParameterWriter, SpeechMouthDriver
 from sidecar.vts.handshake import connect_and_authenticate
@@ -72,6 +76,38 @@ def _avatars_root() -> Path:
     parents[3]=sidecar(project), parents[4]=repo root.
     """
     return Path(__file__).resolve().parents[4] / "avatars"
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[4]
+
+
+def _user_plugins_dir() -> Path | None:
+    user_data = os.environ.get("AGENTICLLMVTUBER_USER_DATA")
+    if not user_data:
+        return None
+    return Path(user_data) / "plugins"
+
+
+def _active_plugin_name() -> str:
+    return os.environ.get("AGENTICLLMVTUBER_ACTIVE_PLUGIN") or "default"
+
+
+def _load_plugin_instance(manifest_path: Path, entrypoint: str) -> BodyMotionPlugin:
+    module_path, class_name = resolve_entrypoint(manifest_path, entrypoint)
+    spec = importlib.util.spec_from_file_location(
+        f"agenticllmvtuber_plugin_{manifest_path.parent.name}",
+        module_path,
+    )
+    if spec is None or spec.loader is None:
+        raise ValueError(f"cannot load plugin module: {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    plugin_cls = getattr(module, class_name)
+    plugin = plugin_cls()
+    if not isinstance(plugin, BodyMotionPlugin):
+        raise TypeError(f"plugin entrypoint is not a BodyMotionPlugin: {entrypoint}")
+    return plugin
 
 
 async def _warmup_ping(gateway: LLMGateway) -> None:
@@ -181,9 +217,25 @@ async def lifespan(app: FastAPI):
 
             compositor_speech_queue: asyncio.Queue = asyncio.Queue()
             mouth_speech_queue: asyncio.Queue = asyncio.Queue()
-            compositor_intent_queue: asyncio.Queue = asyncio.Queue()
             compositor_sentence_complete_queue: asyncio.Queue = asyncio.Queue()
             pending_inputs: asyncio.Queue[str] = asyncio.Queue()
+            plugin_manifest = None
+            plugin = NullPlugin()
+            try:
+                manifests = discover_manifests(_repo_root() / "plugins", _user_plugins_dir())
+                manifest_path = manifests.get(_active_plugin_name())
+                if manifest_path is not None:
+                    plugin_manifest = load_manifest(manifest_path)
+                    plugin = _load_plugin_instance(manifest_path, plugin_manifest.entrypoint)
+                else:
+                    loguru_logger.warning("[PLUGIN] active plugin not found: {}", _active_plugin_name())
+            except Exception:
+                loguru_logger.exception("[PLUGIN] discovery/load failed; using NullPlugin")
+            plugin_supervisor = await PluginSupervisor.load_or_null(plugin, capabilities, overrides)
+            plugin_adapter = PluginAdapter(plugin_supervisor)
+            action_codes_section = (
+                build_action_codes_section(plugin_manifest) if plugin_manifest is not None else ""
+            )
             tts_manager = TTSTaskManager(
                 stream=tts_gateway.stream,
                 voice=tts_gateway.voice,
@@ -193,13 +245,13 @@ async def lifespan(app: FastAPI):
             )
             app.state.orchestrator = Orchestrator(
                 gateway=gateway,
-                capabilities=capabilities,
                 persona_text=persona,
+                action_codes_section=action_codes_section,
                 tts_manager=tts_manager,
                 compositor_speech_queue=compositor_speech_queue,
-                compositor_intent_queue=compositor_intent_queue,
                 compositor_sentence_complete_queue=compositor_sentence_complete_queue,
                 pending_inputs=pending_inputs,
+                plugin_adapter=plugin_adapter,
             )
             app.state.tts_gateway = tts_gateway
             mouth_writer = await _build_mouth_writer(capabilities)
@@ -226,18 +278,12 @@ async def lifespan(app: FastAPI):
             )
             cursor_drv = CursorDriver()
             discrete_dispatcher = DiscreteDispatcher(writer)
-            intent_drv = IntentDriver(
-                intent_queue=compositor_intent_queue,
-                sentence_complete_queue=compositor_sentence_complete_queue,
-                writer=writer,
-                capabilities=capabilities,
-                avatar_dir=teto_dir,
-            )
             compositor = Compositor(
                 writer=writer,
                 idle_driver=idle_drv,
                 speech_driver=speech_drv,
-                intent_driver=intent_drv,
+                plugin_driver=plugin_adapter,
+                capabilities=capabilities,
                 cursor_driver=cursor_drv,
             )
             compositor_task = asyncio.create_task(compositor.run())
@@ -247,6 +293,9 @@ async def lifespan(app: FastAPI):
             app.state.compositor_task = compositor_task
             app.state.teto_overrides = overrides
             app.state.discrete_dispatcher = discrete_dispatcher
+            app.state.plugin_manifest = plugin_manifest
+            app.state.plugin_adapter = plugin_adapter
+            app.state.plugin_supervisor = plugin_supervisor
             app.state.mouth_driver_task = mouth_task
             app.state.turn_loop_task = turn_loop_task
             app.state.mouth_writer = mouth_writer
@@ -290,6 +339,9 @@ async def lifespan(app: FastAPI):
             pass
     if writer is not None:
         await writer.close()
+    plugin_supervisor = getattr(app.state, "plugin_supervisor", None)
+    if plugin_supervisor is not None:
+        await plugin_supervisor.close()
     if mouth_writer is not None:
         await mouth_writer.close()
     if tts_gateway is not None:
