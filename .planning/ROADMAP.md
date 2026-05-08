@@ -105,24 +105,21 @@ Plans:
 
 **Cross-phase note on PLUMB-05**: pyvts is *vendored* in Phase 1 (PLUMB-05) but only *exercised* here in Phase 4. The single-writer-task wrapper that prevents pyvts issue #51 deadlock is implemented in 04-01 — Phase 1's PLUMB-05 deliverable is the vendor checkout + import, not the wrapper. Plan-time check: confirm Phase 1's PLUMB-05 closed before Phase 4 starts.
 
-### Phase 5: Polish, Contracts Codegen, §14 Verification
-**Goal**: Demo-able end-to-end run on a clean clone. The hand-written TS in `apps/renderer/src/types/control.ts` is replaced by codegen output (Pydantic → JSON Schema → TS). The body-sway investigation report is committed to `.planning/skeleton-verification.md`. All six §14 success criteria are formally verified against the running system and recorded in the handoff document.
+### Phase 5: Polish, Contracts Codegen (scope reduced 2026-05-08)
+**Goal**: Land the codegen pipeline that closes SC-02. Pivot decision 2026-05-08: §14 verification ceremony (originally 05-02) is **dropped** because the animation layer Phase 4 produced is being refactored in Milestone 2 (see `PROJECT_DESIGN.md` §14B), making formal verification of the about-to-be-rebuilt animation behavior wasted effort. Codegen infrastructure (05-01) stays — milestone-2 will add several new contracts (BodyMotionPlugin ABC, plugin manifest, HUD-mode IPC envelope), and the codegen pipeline pays compound returns there.
 **Depends on**: Phase 4
-**Requirements**: SC-01, SC-02
+**Requirements**: SC-02 (SC-01 deferred — see note below)
 **Success Criteria** (what must be TRUE):
-  1. `.planning/skeleton-verification.md` exists and records pass/fail for all six §14 success criteria with concrete observations (text-reply with synced lipsync, `[joy]` smooth blend, idle micro-motion, speech-driven body/head sway, cursor tracking, OLVT-shape WS protocol diff)
-  2. `packages/contracts/codegen.sh` runs successfully on a clean clone and produces TS types in `packages/contracts/generated/ts/control.ts` that the renderer imports without modification (replacing the hand-written mirror)
-  3. The "Looks Done But Isn't" checklist from PITFALLS.md is run end-to-end with results recorded — adversarial `[joy]` token boundary test, DeepSeek-R1 reasoning smoke test, VTS auth-reprompt test, port-collision test, OLVT protocol-shape parity diff against OLVT's `_route_message()`
-  4. The body-sway investigation report (committed under `.planning/skeleton-verification.md` or linked from it) documents which speech-driver strategies were tried, what was observed on Teto, and the rationale for the shipping default
-  5. `avatars/teto/teto_overrides.yaml` is committed with the schema established (orphan-params list, physics-chain proxy slots, sign-inversion slots) and Teto-specific values populated from the Phase 4 smoke-pass
-**Plans**: 2 plans
+  1. `packages/contracts/codegen.sh` runs successfully on a clean clone and regenerates the six TS files at `packages/contracts/ts/*.ts` from Pydantic source
+  2. `npm run check:contracts` passes (drift guard: regenerate + `git diff --exit-code`)
+  3. Renderer typechecks (`tsc --noEmit`) cleanly against generated TS
+**Plans**: 1 plan (was 2; 05-02 deferred to Milestone 2 close)
 
 Plans:
 - [ ] 05-01-PLAN.md — Hand-rolled Pydantic -> JSON Schema -> TS codegen pipeline replacing six packages/contracts/ts/*.ts files (SC-02)
-- [ ] 05-02-PLAN.md — skeleton-verification.md (six §14 SCs + five PITFALLS e2e + body-sway report) + scripts/verify-skeleton.sh + README Quickstart Demo + fresh-clone validation (SC-01)
+- ~~05-02-PLAN.md~~ — **Deferred**: skeleton-verification.md ceremony does not justify itself when the verified animation layer is being refactored. The 5 PITFALLS plumbing tests it would have run (token-boundary, DeepSeek-R1, VTS auth-reprompt, port-collision, OLVT protocol diff) are absorbed into Milestone-2 phase plans where they regression-test against ongoing changes. SC-01 re-emerges as the milestone-2 close criterion (final §14 verification under refactored architecture). Original plan preserved as `05-02-PLAN.md.deferred-m2-pivot` for future reference.
 
-**Open questions to resolve at plan-time:**
-- **Codegen tool choice** (SC-02): `datamodel-code-generator` (wrong direction — JSON Schema → Pydantic, not the reverse) vs. `pydantic2ts` vs. hand-rolled (Pydantic `model_json_schema()` → `json-schema-to-typescript` chain). Default: hand-rolled per ARCHITECTURE.md §4.
+**Note on SC-01:** SC-01 ("six §14 SCs formally verified in skeleton-verification.md") is **not abandoned** — it migrates to Milestone 2 Phase 10's exit criterion. The verification will be performed once the animation layer is refactored, capturing the architecture that ships rather than the architecture being torn out.
 
 ## Progress
 
@@ -135,7 +132,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Conversation Pipeline | 0/3 | Not started | - |
 | 3. TTS & Sentence-Buffered Audio | 3/3 | Ready for verification | - |
 | 4. Action Compositor + VTS Bridge + Body-Sway Investigation | 0/5 | Not started | - |
-| 5. Polish, Contracts Codegen, §14 Verification | 0/2 | Not started | - |
+| 5. Polish, Contracts Codegen (scope reduced) | 0/1 | Not started — 05-02 deferred to M2 | - |
 
 ## Coverage
 
