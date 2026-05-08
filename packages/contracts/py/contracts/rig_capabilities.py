@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from .action_binding import DefaultPluginActionBinding
+
 
 class Expression(BaseModel):
     name: str
@@ -21,3 +23,4 @@ class RigCapabilities(BaseModel):
     hotkeys: list[Hotkey] = Field(default_factory=list)
     cdi3_display_names: dict[str, str] = Field(default_factory=dict)
     sign_inversions: list[str] = Field(default_factory=list)
+    default_plugin_action_bindings: list[DefaultPluginActionBinding] = Field(default_factory=list)

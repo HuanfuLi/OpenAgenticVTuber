@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from .action_binding import DefaultPluginActionBinding
 from .event_entry import EventEntry
 from .variant_entry import VariantEntry
 
@@ -57,4 +58,5 @@ class AvatarOverrides(BaseModel):
     voice: Voice = Field(default_factory=Voice)
     variants: list[VariantEntry] = Field(default_factory=list)
     events: list[EventEntry] = Field(default_factory=list)
+    default_plugin_action_bindings: list[DefaultPluginActionBinding] = Field(default_factory=list)
     source_rig_path: str = ""

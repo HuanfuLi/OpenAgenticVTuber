@@ -1,4 +1,5 @@
 """contracts package -- Pydantic source-of-truth for cross-language WS envelopes."""
+from .action_binding import DefaultPluginActionBinding
 from .action_intent import ActionIntent
 from .speech_envelope import SpeechEnvelopePayload
 from .audio_payload import AudioPayloadMessage, DisplayTextField
@@ -29,6 +30,7 @@ from .ws_message import (
 
 __all__ = [
     "ActionIntent",
+    "DefaultPluginActionBinding",
     "SpeechEnvelopePayload",
     "AudioPayloadMessage",
     "DisplayTextField",
