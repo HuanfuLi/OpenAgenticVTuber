@@ -1,7 +1,7 @@
 # PROJECT_DESIGN.md
 
-**Status:** Brainstorm / pre-implementation
-**Last updated:** 2026-05-06
+**Status:** Milestone-1 in execution; milestone-2 outline drafted
+**Last updated:** 2026-05-08
 **Working title:** TBD (placeholder: *Companion-Agent*)
 **Origin:** Successor concept inspired by Open-LLM-VTuber's Vivid Actions phase.
 
@@ -381,6 +381,12 @@ a single `ParamFrame` stream sent to the renderer:
 binding is active. The compositor is the *only* component aware of
 multiple drivers; the renderer just consumes the stream.
 
+> **Milestone-2 evolution:** the `Intent overlay` and body-sway portion
+> of the Speech driver migrate out of the compositor into a swappable
+> `BodyMotionPlugin` (see §14B). Idle, lipsync, cursor reaction, and
+> Discrete trigger stay in the compositor. The compositor gains a
+> per-param lock filter (see §14B.5).
+
 ### 5.3 Renderer binding
 Translates `ParamFrame` and `DiscreteEvent` to live model calls. Stateless
 w.r.t. the compositor — just executes whatever frame arrives.
@@ -408,6 +414,12 @@ current mode so it can pause hover/drag handlers.
 The contract guarantee: any of these three rendering backends can be
 swapped in without touching the compositor, the LLM prompts, or the
 conversation pipeline.
+
+> **Milestone-2 evolution:** cursor sensor moves out of the renderer
+> into the sidecar (OS-level global capture) so cursor-follow works
+> regardless of VTS window state. The renderer gains a slider HUD
+> (see §14B.5) on a separate HUD-mode IPC channel; the main
+> ParamFrame path stays sidecar→VTS-direct.
 
 ### 5.3.1 VTS rig architecture realities (lessons from OLVT Phase 4)
 
@@ -1588,6 +1600,137 @@ on top — each phase a 1–3 week chunk.
 
 ---
 
+## 14B. Milestone 2: Animation Architecture Refactor
+
+**Goal:** Separate animation control from the system core so body-motion
+strategies are swappable, expose the rig's full parameter surface via an
+in-app slider HUD with per-param locks for parameter discovery, and
+formalize a three-category LLM code system (action / variant / event)
+that lets plugin authors extend the LLM system prompt cleanly.
+
+This milestone executes after §14 walking skeleton ships. It does not
+re-architect the conversation pipeline, TTS layer, or VTS integration —
+those stay as walking-skeleton built. It refactors the animation layer
+that Phase 4 surfaced as rig-coupled.
+
+### 14B.1 Motivation
+
+Three Phase-4 deliverables surfaced architectural gaps the walking
+skeleton cannot fix in place:
+
+1. **Body sway not real on Teto** (R-OPEN-1). Teto's rig exposes
+   face/head inputs, not direct `ParamBodyAngle*` mappings. The
+   compositor's body-sway driver writes to params with no deformer
+   binding, producing no visible motion. The Phase 4 investigation
+   confirmed there is no rig-agnostic system-level fix — body-sway
+   shape is rig-specific and must be a strategy decision, not a
+   hardcoded driver.
+2. **Cursor tracking only fires inside the VTS window.** The
+   renderer-side cursor tracker reads canvas-relative coordinates
+   that go silent when the cursor leaves the canvas. Global
+   cursor-follow needs OS-level capture, not renderer-canvas events.
+3. **`[joy]` not in Teto's capability list.** Phase 4's
+   hotkey-expression-resolver only fires for tags that exist as
+   hotkeys/expressions on the rig. Teto exposes Cry / Star Eye /
+   chibi but not joy. The headline §14 SC #2 demo can't be staged on
+   Teto without a rig-aware fallback.
+
+Common root cause: **the system tries to make rig-specific motion
+decisions on behalf of the user**. The fix is to invert — system
+exposes the rig's full surface, a swappable plugin (or the user, via
+sliders) decides what motion looks like.
+
+### 14B.2 Architectural Deltas vs Milestone-1
+
+| Surface | Milestone-1 | Milestone-2 |
+|---|---|---|
+| LLM tag system | Single `[xxx]` namespace | Three: `[action]`, `{variant}`, `<event>` |
+| Body-motion strategy | Hardcoded compositor drivers (`Intent overlay`, body-sway) | Swappable plugin (single-active, startup-pinned) |
+| Compositor responsibilities | Idle + Speech (full) + Reaction + Intent + Discrete | Idle + Speech (lipsync only) + Reaction (cursor) + plugin-output ingest + lock filter |
+| Cursor sensor | Renderer-side, canvas-relative | Sidecar-side, OS-level global capture |
+| Rig parameter access | Curated list via tag → ParamID resolver | Full rig surface exposed via slider HUD with per-param locks |
+| Avatar import | Engineer commits override yaml | User-facing import flow with auto-extracted catalogs + mandatory review screen |
+| OLVT compatibility | Protocol-shape parity | OLVT `model_dict.json` directly importable |
+
+### 14B.3 Three-Category Code System
+
+| Category | Syntax | Domain | Persistence | Catalog source |
+|---|---|---|---|---|
+| **Action** | `[joy]`, `[wave]`, `[nod]` | Plugin | Continuous param flow | Plugin's `plugin.yaml` declares the vocabulary |
+| **Variant** | `{hold-mic}`, `{bread-out}`, `{dark-face}` | System | Toggle (on until next change) | Auto-extracted from rig file or per-avatar override |
+| **Event** | `<wave>`, `<flick>`, `<tap>` | System | One-shot motion (auto-completes) | Auto-extracted from `.motion3.json` files |
+
+**Disambiguation rules:**
+- Different syntax per category — zero collision possibility (Plan A,
+  locked in design discussion 2026-05-08).
+- Reserved names (`<think>`, `<tool_call>`, `<function_call>`) blocked
+  at registration time — they collide with LLM-protocol semantics.
+- Catalog uniqueness within a category enforced at avatar+plugin load.
+
+### 14B.4 Plugin Runtime
+
+- **Discovery:** `plugins/` (in-tree, ships defaults) + `app.getPath('userData')/plugins/` (user-installed).
+- **Manifest:** `plugin.yaml` per plugin: `name`, `version`, `entrypoint` (`module:class`), `api_version`, `action_codes` (with descriptions for system-prompt assembly).
+- **Entrypoint:** Python class implementing `BodyMotionPlugin` ABC with `on_load(capabilities)`, `on_token_stream(tokens)` (async generator yielding `ParamFrame`), `on_unload()`.
+- **Lifecycle:** Single-active, switched at startup (developer config); no runtime hot-swap in milestone-2 (deferred to milestone-3 if demand surfaces).
+- **System prompt assembly:** plugin's action codes + descriptions appended to base prompt under a fixed delimiter so the LLM knows the vocabulary it can emit.
+- **Default plugin** ships with the system, absorbs current Phase-4 `[joy]` and body-sway logic, uses OLVT's `emotionMap` as its action-code vocabulary (8 entries: neutral / anger / disgust / fear / joy / smirk / sadness / surprise). Default plugin reads `RigCapabilities` and adapts: if `ParamBodyAngleX` is orphaned (Teto), emulates body sway via head/face params instead.
+
+### 14B.5 Slider HUD with Per-Param Locks
+
+- **Sidecar tap:** compositor output stream tapped before `pyvts` send, throttled to 15 Hz, forwarded to renderer as a HUD-mode IPC channel (separate from main protocol; only active when HUD open — preserves AVT-01's "renderer never sees 60 Hz traffic" rule for non-HUD operation).
+- **Renderer HUD:** scrollable list of all writable params (per `RigCapabilities`), each row: param name, slider, lock toggle.
+- **Lock semantics:** per-param boolean. When locked, compositor skips writes from plugin and built-in drivers for that param. Lock auto-engages on slider drag; user clicks lock toggle to release.
+- **System-primitive override:** lipsync still wins on `MouthOpenY` even when locked (system primitives override locks for safety — speech without mouth movement looks broken). Documented exception, not silent.
+- **Filters:** "show writable" / "show currently animating" / "show locked".
+- **Persistence:** session-only; cleared on app restart (locks are a discovery tool, persisting them across sessions surprises users).
+
+### 14B.6 Avatar Import Flow
+
+- **Type detection:** from file shape — VTS standard (has `.vtube.json`), Cubism with named expressions (`model3.json` `FileReferences.Expressions` populated), Cubism bare (no expressions, motions only).
+- **Auto-extraction draft per shape:**
+  - VTS → variants from hotkeys with `Action: "ToggleExpression"`, names derived (strip `[N]` keybind suffix, strip `【】` decorative brackets, lowercase, hyphenate).
+  - Cubism w/ expressions → variants list named after `Expressions[].Name` (often generic like `exp_01`).
+  - Cubism bare → empty variant catalog (avatar is plugin-only).
+  - All shapes → events from `.motion3.json` files, named after `Motions` group keys + filenames.
+- **Review screen (mandatory):** user always sees the auto-extracted catalogs and edits names, deletes irrelevant entries, or skips. No silent automation — the system can't guarantee correct semantic naming, and `exp_01`-style placeholders are useless to LLMs without human relabeling.
+- **OLVT `model_dict.json` import:** drop-in support — system reads OLVT's existing `model_dict.json` and pre-populates the review screen. OLVT users migrate without retyping vocabulary.
+- **Persistence:** decisions write to `_avatar_overrides.yaml` (per-avatar, sibling to `avatar.yaml`).
+- **Re-open:** review screen accessible from settings at any time for catalog edits.
+
+### 14B.7 Phase Breakdown
+
+Five phases, sequential. Phase 4's body-sway gap and Phase 5's verification land in milestone-1 first; milestone-2 does not block on a perfectly clean §14 verification record but inherits the body-sway investigation report as its starting context.
+
+| Phase | Goal | Headline Deliverable |
+|---|---|---|
+| **6. Plugin Runtime + Default Plugin** | Plugin API + manifest loader + system-prompt assembly + default-plugin port | Developer can swap plugin via config and see different motion behavior |
+| **7. Three-Category Code Parsing** | `{xxx}` and `<xxx>` parsers + reserved-name guard + uniqueness check + system dispatch (variants → VTS items/expressions, events → motions) | LLM emits `[joy] {hold-mic} <wave>` in one response and three distinct paths fire |
+| **8. Avatar Import + Catalog Auto-Extraction** | Type detection + per-shape extractors + OLVT `model_dict.json` reader + review UI | New avatar imported via UI yields working variant + event catalogs after user review |
+| **9. Slider HUD + Per-Param Lock** | Sidecar compositor tap + HUD-mode IPC + renderer slider grid + lock filter | User opens HUD, drags any param, lock auto-engages; releasing returns control to plugin/system |
+| **10. Cursor Rewrite + Milestone Verification** | Sidecar OS-level cursor capture → head/eye angles, delete renderer tracker; re-run §14 SCs against refactored architecture | Cursor outside VTS window still tracked; six §14 SCs pass under new architecture |
+
+**Gating:** each phase has an exit criterion the next relies on. Phase 6 must produce a working default plugin before Phase 7's parsers have something to dispatch action codes to. Phase 8 must produce variant/event catalogs before Phase 7's variant/event parsers have anything to validate against.
+
+### 14B.8 Estimated Effort
+
+~5–8 weeks single engineer. More than walking skeleton's ~2 weeks because:
+
+- Plugin runtime + manifest + system-prompt assembly is fresh code (no OLVT analog).
+- Avatar import flow is greenfield UI work (review screen, catalog editor).
+- Slider HUD is a new IPC channel + new renderer surface.
+- Cursor rewrite is small but the §14 verification re-run is the integration point that can surface latent regressions in the refactor.
+
+### 14B.9 Open Questions Deferred to Plan-Phase
+
+- Plugin dependency story when plugin authors want extra Python packages (milestone-2 default: no isolation, plugins use host venv; revisit if friction).
+- HUD-mode IPC throttle exact rate (15 Hz proposed; benchmark against dropped-frame perception during fast-changing params).
+- Lock arbitration when user grabs slider on `MouthOpenY` while lipsync is writing (proposed: lipsync still wins — system primitives override locks for safety).
+- `motion3.json`-based event auto-completion timeout (motion files have a duration; system uses that vs hardcoded ceiling).
+- Multi-language LLM system prompts: when user's chat language is non-English, are the action-code descriptions translated or kept English-LLM-canonical?
+
+---
+
 ## 15. Risks & Unknowns
 
 ### R-1: VTS API rate limits / instability
@@ -1698,6 +1841,16 @@ First sentence's synth time gates everything else. With piper that's
 ~200-500ms; with GPT-SoVITS it can be 1-3s. Mitigation: warmup synth
 at app launch (cache one-token render); show TTS-buffering indicator
 in chat after sentence appears so user knows audio is coming.
+
+### R-19: Plugin runtime trust + API stability (milestone-2)
+Plugins are Python code loaded into the sidecar process — no sandbox.
+Malicious or buggy plugins can crash the sidecar, leak memory, or
+write unbounded ParamFrames. Two mitigations: (a) plugin manifest
+declares `api_version`, system refuses to load incompatible plugins;
+(b) ParamFrame values clamped to `[0, 1]` before pyvts send (compositor
+safety pass). No plugin signing or sandboxing in milestone-2 — same
+trust model as skills system (§13.122). Revisit if plugin marketplace
+becomes a goal.
 
 ---
 
@@ -1841,6 +1994,27 @@ in chat after sentence appears so user knows audio is coming.
 - **Schema migration** — auto-applied forward migrators for profile/
   manifest/contract files declaring `manifest_version: N`. Snapshot
   before run; rollback offered on errors.
+- **Action code (milestone-2)** — `[xxx]` LLM-emitted token, plugin-domain.
+  Drives continuous param flow. Plugin's `plugin.yaml` declares the vocabulary.
+- **Variant code (milestone-2)** — `{xxx}` LLM-emitted token, system-domain.
+  Toggles persistent avatar state (props, costume, dark face). Catalog
+  auto-extracted from rig file, user-reviewed at avatar import.
+- **Event code (milestone-2)** — `<xxx>` LLM-emitted token, system-domain.
+  Triggers a one-shot motion (auto-completes by motion file duration).
+  Catalog auto-extracted from `.motion3.json` files.
+- **BodyMotionPlugin (milestone-2)** — Python class implementing the
+  plugin ABC. Consumes LLM token stream, emits `ParamFrame` stream.
+  Single-active per app launch; switched via developer config.
+- **plugin.yaml (milestone-2)** — plugin manifest declaring `name`,
+  `version`, `entrypoint`, `api_version`, and `action_codes` map.
+  System reads this to assemble LLM system prompt.
+- **Slider HUD (milestone-2)** — in-app debug panel exposing all
+  writable rig params with sliders + per-param lock toggles. Sidecar
+  taps compositor output at 15 Hz to update slider positions; user
+  drags sliders to override params; lock auto-engages on drag.
+- **`_avatar_overrides.yaml` (milestone-2)** — per-avatar override file
+  sibling to `avatar.yaml`. Holds user-reviewed variant + event catalog
+  names. OLVT `model_dict.json` can be imported into this format.
 
 ---
 
