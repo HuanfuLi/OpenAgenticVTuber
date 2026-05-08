@@ -4,7 +4,21 @@ import pytest
 
 from sidecar.compositor import Compositor
 
-from .conftest import StubDriver, StubIntentDriver
+from contracts import ParamFrame
+from contracts.rig_capabilities import RigCapabilities
+
+from .conftest import StubDriver, StubPluginDriver
+
+
+def _caps() -> RigCapabilities:
+    return RigCapabilities(
+        writable_param_ids=[
+            "FaceAngleX",
+            "FacePositionZ",
+            "MouthOpen",
+            "ParamJoy",
+        ]
+    )
 
 
 @pytest.mark.asyncio
@@ -13,7 +27,8 @@ async def test_merge_modes_separates_add_and_set(recording_writer) -> None:
         writer=recording_writer,
         idle_driver=StubDriver({"FaceAngleX": 0.2}),
         speech_driver=StubDriver({"MouthOpen": 0.7, "FacePositionZ": -0.2}),
-        intent_driver=StubIntentDriver({"ParamJoy": (0.9, 0.5)}),
+        plugin_driver=StubPluginDriver(ParamFrame(set_params={"ParamJoy": (0.9, 0.5)})),
+        capabilities=_caps(),
     )
 
     await compositor._tick(0.0)
@@ -33,7 +48,8 @@ async def test_idle_runs_continuously_when_no_other_driver(recording_writer) -> 
         writer=recording_writer,
         idle_driver=StubDriver({"FaceAngleX": 0.15}),
         speech_driver=StubDriver(),
-        intent_driver=StubIntentDriver(),
+        plugin_driver=StubPluginDriver(),
+        capabilities=_caps(),
     )
 
     await compositor._tick(0.0)

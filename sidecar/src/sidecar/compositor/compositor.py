@@ -8,7 +8,9 @@ from typing import Protocol
 from loguru import logger
 
 from contracts import ParamFrame
+from contracts.rig_capabilities import RigCapabilities
 from sidecar.avatar.overrides import BodySwayStrategyName
+from sidecar.compositor.clamp import clamp_and_validate
 
 MOUTH_PARAM = "MouthOpen"
 
@@ -21,13 +23,17 @@ class IntentTickDriver(Protocol):
     def tick(self, now: float) -> dict[str, tuple[float, float]]: ...
 
 
+class PluginTickDriver(Protocol):
+    def tick(self, now: float) -> ParamFrame: ...
+
+
 class Compositor:
     """Deadline-driven 60Hz merge loop.
 
-    Merge order is idle -> speech -> intent -> cursor. Idle/speech/cursor write
+    Merge order is idle -> speech -> plugin -> cursor. Idle/speech/cursor write
     additive values except MouthOpen, which must be set to avoid over-opening
-    when VTS blends it with face-tracking inputs. Intent is isolated to
-    set_params for AVT-03.
+    when VTS blends it with face-tracking inputs. Plugin frames preserve their
+    explicit add/set modes and are clamped before the VTS writer.
     """
 
     TICK_HZ = 60
@@ -39,13 +45,15 @@ class Compositor:
         writer,
         idle_driver: TickDriver,
         speech_driver: TickDriver,
-        intent_driver: IntentTickDriver,
+        plugin_driver: PluginTickDriver,
+        capabilities: RigCapabilities,
         cursor_driver: TickDriver | None = None,
     ) -> None:
         self._writer = writer
         self._idle = idle_driver
         self._speech = speech_driver
-        self._intent = intent_driver
+        self._plugin = plugin_driver
+        self._capabilities = capabilities
         self._cursor = cursor_driver
         self._stop = False
         self._tick_count = 0
@@ -91,19 +99,21 @@ class Compositor:
             else:
                 add_acc[key] = add_acc.get(key, 0.0) + value
 
-        for key, value_weight in self._intent.tick(now).items():
-            set_acc[key] = value_weight
+        plugin_frame = self._plugin.tick(now)
+        for key, value in plugin_frame.add_params.items():
+            add_acc[key] = add_acc.get(key, 0.0) + value
+        set_acc.update(plugin_frame.set_params)
 
         if self._cursor is not None:
             for key, value in self._cursor.tick(now).items():
                 add_acc[key] = add_acc.get(key, 0.0) + value
 
-        frame = ParamFrame(
+        frame = clamp_and_validate(ParamFrame(
             add_params=add_acc,
             set_params=set_acc,
             tick_n=self._tick_count,
             emitted_at_monotonic=now,
-        )
+        ), self._capabilities)
         try:
             await self._writer.inject_params(frame)
         except Exception as exc:  # noqa: BLE001 - degraded until VTS handshake completes

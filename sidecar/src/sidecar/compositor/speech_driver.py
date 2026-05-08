@@ -11,7 +11,7 @@ from loguru import logger
 from contracts import SpeechEnvelopePayload
 from sidecar.avatar.overrides import BodySwayStrategyName, TetoOverrides
 
-from .body_sway import build_strategy
+from plugins.default.body_sway import build_strategy
 
 
 EMA_ALPHA = 0.2

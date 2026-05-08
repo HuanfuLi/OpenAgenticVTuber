@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Protocol
 
 from loguru import logger
-import pyvts
+
+from sidecar.vts.pyvts_writer import PyvtsSafeWriter
 
 
 class ParameterWriter(Protocol):
@@ -27,7 +28,7 @@ class PyVTSParameterWriter:
     def __init__(self, token_path: Path | None = None) -> None:
         if token_path is None:
             token_path = Path(__file__).resolve().parents[3] / ".vts_token.txt"
-        self._client = pyvts.vts(
+        self._writer = PyvtsSafeWriter(
             plugin_info={
                 "plugin_name": "AgenticLLMVTuber Phase3 Mouth Driver",
                 "developer": "AgenticLLMVTuber",
@@ -36,9 +37,9 @@ class PyVTSParameterWriter:
         )
 
     async def connect_and_authenticate(self) -> None:
-        await self._client.connect()
-        await self._client.request_authenticate_token()
-        authenticated = await self._client.request_authenticate()
+        await self._writer.connect()
+        await self._writer._client.request_authenticate_token()
+        authenticated = await self._writer._client.request_authenticate()
         if authenticated is not True:
             raise RuntimeError("VTube Studio authentication failed")
 
@@ -51,19 +52,17 @@ class PyVTSParameterWriter:
         mode: str = "set",
         face_found: bool = False,
     ) -> None:
-        request_msg = self._client.vts_request.requestSetParameterValue(
+        request_msg = self._writer.vts_request.requestSetParameterValue(
             parameter=param_id,
             value=value,
             weight=weight,
             mode=mode,
             face_found=face_found,
         )
-        await self._client.request(request_msg)
+        await self._writer.request(request_msg)
 
     async def close(self) -> None:
-        websocket = getattr(self._client, "websocket", None)
-        if websocket is not None:
-            await self._client.close()
+        await self._writer.close()
 
 
 class LoggingParameterWriter:

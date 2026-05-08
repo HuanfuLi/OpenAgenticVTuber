@@ -47,11 +47,10 @@ async def test_speech_driver_applies_ema_to_body_strategy(tmp_path):
             started_at=0.0,
         )
     )
-    overrides = TetoOverrides(body_sway_strategy="proxy_param", proxy_body_param="Lean Forward")
-    driver = SpeechDriver(queue, overrides, tmp_path)
+    driver = SpeechDriver(queue, TetoOverrides(), tmp_path)
 
     out = driver.tick(0.0)
-    assert out["Lean Forward"] == pytest.approx(EMA_ALPHA)
+    assert out["FaceAngleZ"] == pytest.approx(EMA_ALPHA * 2.0)
 
 
 @pytest.mark.asyncio
@@ -65,8 +64,7 @@ async def test_speech_driver_does_not_log_evidence_by_default(tmp_path):
             started_at=0.0,
         )
     )
-    overrides = TetoOverrides(body_sway_strategy="proxy_param", proxy_body_param="Lean Forward")
-    driver = SpeechDriver(queue, overrides, tmp_path)
+    driver = SpeechDriver(queue, TetoOverrides(), tmp_path)
     messages: list[str] = []
     sink_id = logger.add(messages.append, format="{message}")
     try:
@@ -90,8 +88,7 @@ async def test_speech_driver_logs_strategy_body_params_when_evidence_enabled(tmp
             started_at=0.0,
         )
     )
-    overrides = TetoOverrides(body_sway_strategy="proxy_param", proxy_body_param="Lean Forward")
-    driver = SpeechDriver(queue, overrides, tmp_path)
+    driver = SpeechDriver(queue, TetoOverrides(), tmp_path)
     messages: list[str] = []
     sink_id = logger.add(messages.append, format="{message}")
     try:
@@ -101,8 +98,8 @@ async def test_speech_driver_logs_strategy_body_params_when_evidence_enabled(tmp
 
     speech_logs = [message for message in messages if "[SPEECH-DRIVER]" in message]
     assert speech_logs
-    assert "strategy=proxy_param" in speech_logs[0]
-    assert "body_params=[Lean Forward=0.200]" in speech_logs[0]
+    assert "strategy=head_only" in speech_logs[0]
+    assert "FaceAngleZ=0.400" in speech_logs[0]
     assert "MouthOpen=" not in speech_logs[0].split("body_params=[", 1)[1]
 
 
@@ -134,8 +131,8 @@ async def test_speech_driver_throttles_evidence_logs(tmp_path, monkeypatch):
 
 def test_speech_driver_swap_strategy(tmp_path):
     driver = SpeechDriver(asyncio.Queue(), TetoOverrides(), tmp_path)
-    driver.swap_strategy("proxy_param")
-    assert driver._overrides.body_sway_strategy == "proxy_param"
+    driver.swap_strategy("head_only")
+    assert driver._overrides.body_sway_strategy == "head_only"
 
 
 @pytest.mark.asyncio

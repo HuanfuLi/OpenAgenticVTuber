@@ -5,7 +5,7 @@ tests and callers still load avatar.yaml until Phase 6 rewrites them, so this
 module preserves the old AvatarCapabilities contract during the handoff.
 """
 
-# TODO(Phase 6): delete this file after IntentDriver/actions_extractor/orchestrator.py rewrites land
+# TODO(Phase 6): delete this file after legacy actions_extractor/orchestrator.py rewrites land
 
 from pathlib import Path
 

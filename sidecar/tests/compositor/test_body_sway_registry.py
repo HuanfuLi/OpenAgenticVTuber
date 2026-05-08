@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from sidecar.avatar.overrides import TetoOverrides
-from sidecar.compositor.body_sway import (
+from plugins.default.body_sway import (
     Exp3ModulationStrategy,
     HeadOnlyStrategy,
     ProxyParamStrategy,
@@ -11,19 +11,17 @@ from sidecar.compositor.body_sway import (
     available_strategy_names,
     build_strategy,
 )
-from sidecar.compositor.body_sway import exp3_modulation
+from plugins.default.body_sway import exp3_modulation
 
 
 def test_strategy_names_exclude_physics_chain():
-    assert STRATEGY_NAMES == ("head_only", "proxy_param", "exp3_modulation")
+    assert STRATEGY_NAMES == ("head_only",)
     assert "physics_chain" not in STRATEGY_NAMES
 
 
 def test_build_strategy_variants(tmp_path):
     overrides = TetoOverrides(proxy_body_param="Lean Forward")
     assert isinstance(build_strategy("head_only", overrides, tmp_path), HeadOnlyStrategy)
-    assert isinstance(build_strategy("proxy_param", overrides, tmp_path), ProxyParamStrategy)
-    assert isinstance(build_strategy("exp3_modulation", overrides, tmp_path), Exp3ModulationStrategy)
 
 
 def test_build_strategy_unknown_raises(tmp_path):
@@ -33,23 +31,12 @@ def test_build_strategy_unknown_raises(tmp_path):
 
 def test_available_strategy_names_only_exposes_configured_strategies():
     assert available_strategy_names(TetoOverrides()) == ("head_only",)
-    assert available_strategy_names(TetoOverrides(proxy_body_param="Lean Forward")) == (
-        "head_only",
-        "proxy_param",
-    )
-    assert available_strategy_names(TetoOverrides(exp3_body_pose="body.exp3.json")) == (
-        "head_only",
-        "exp3_modulation",
-    )
+    assert available_strategy_names(TetoOverrides(proxy_body_param="Lean Forward")) == ("head_only",)
 
 
 def test_proxy_param_uses_overrides_param(tmp_path):
-    strategy = build_strategy(
-        "proxy_param",
-        TetoOverrides(proxy_body_param="Lean Forward"),
-        tmp_path,
-    )
-    assert strategy.tick(0.5, 0.0) == {"Lean Forward": 0.5}
+    with pytest.raises(ValueError, match="Only head_only is selectable"):
+        build_strategy("proxy_param", TetoOverrides(proxy_body_param="Lean Forward"), tmp_path)
 
 
 def test_head_only_fallback_uses_vts_input_params(tmp_path):

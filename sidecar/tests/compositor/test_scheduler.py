@@ -5,8 +5,9 @@ import asyncio
 import pytest
 
 from sidecar.compositor import Compositor
+from contracts.rig_capabilities import RigCapabilities
 
-from .conftest import StubDriver, StubIntentDriver
+from .conftest import StubDriver, StubPluginDriver
 
 
 @pytest.mark.asyncio
@@ -15,7 +16,8 @@ async def test_60hz_tick_count(recording_writer) -> None:
         writer=recording_writer,
         idle_driver=StubDriver({"FaceAngleX": 0.1}),
         speech_driver=StubDriver(),
-        intent_driver=StubIntentDriver(),
+        plugin_driver=StubPluginDriver(),
+        capabilities=RigCapabilities(writable_param_ids=["FaceAngleX"]),
     )
     task = asyncio.create_task(compositor.run())
 
@@ -38,7 +40,8 @@ async def test_strategy_swap_gates_at_tick_boundary(recording_writer) -> None:
         writer=recording_writer,
         idle_driver=StubDriver({"FaceAngleX": 0.1}),
         speech_driver=TrackingSpeechDriver(),
-        intent_driver=StubIntentDriver(),
+        plugin_driver=StubPluginDriver(),
+        capabilities=RigCapabilities(writable_param_ids=["FaceAngleX"]),
     )
 
     await compositor._tick(0.0)

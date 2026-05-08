@@ -1,8 +1,8 @@
 """AgenticLLMVTuber Python sidecar package.
 
-Side-effect on import: prepend `<repo>/sidecar/vendor/` to sys.path so
-`import pyvts` resolves to the vendored copy at sidecar/vendor/pyvts/
-rather than the wheel that uv installed into .venv/Lib/site-packages/.
+Side-effect on import: prepend `<repo>/sidecar/vendor/` to sys.path so the
+VTube Studio client resolves to the vendored copy at sidecar/vendor/pyvts/
+instead of the wheel that uv installed into .venv/Lib/site-packages/.
 
 Why: per CONTEXT.md D-01..D-05 + must_haves.truths, the vendored pyvts is
 the canonical source — patches under sidecar/vendor/pyvts/ must be picked
@@ -23,3 +23,7 @@ _VENDOR_DIR = (Path(__file__).resolve().parent.parent.parent / "vendor").resolve
 if _VENDOR_DIR.is_dir() and str(_VENDOR_DIR) not in sys.path:
     # Prepend so vendor/pyvts wins over any site-packages install.
     sys.path.insert(0, str(_VENDOR_DIR))
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if (_REPO_ROOT / "plugins").is_dir() and str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))

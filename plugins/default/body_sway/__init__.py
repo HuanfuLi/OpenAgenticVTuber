@@ -1,4 +1,4 @@
-"""Body-sway strategy registry exports."""
+"""Default plugin body-sway strategy exports."""
 
 from .exp3_modulation import Exp3ModulationStrategy
 from .head_only import HeadOnlyStrategy

@@ -53,7 +53,7 @@ async def handle_control(ws: WebSocket, msg: dict) -> None:
     text = msg.get("text", "")
     if text.startswith("set-body-sway-strategy:"):
         name = text[len("set-body-sway-strategy:") :]
-        from sidecar.compositor.body_sway import STRATEGY_NAMES, available_strategy_names
+        from plugins.default.body_sway import STRATEGY_NAMES, available_strategy_names
 
         if name not in STRATEGY_NAMES:
             log.warning("[WS-CONTROL] unknown body-sway strategy: %r", name)

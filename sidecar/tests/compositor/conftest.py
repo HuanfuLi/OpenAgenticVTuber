@@ -32,6 +32,14 @@ class StubIntentDriver:
         return dict(self.output)
 
 
+@dataclass
+class StubPluginDriver:
+    output: ParamFrame = field(default_factory=ParamFrame)
+
+    def tick(self, now: float) -> ParamFrame:
+        return self.output
+
+
 @pytest.fixture
 def recording_writer() -> RecordingWriter:
     return RecordingWriter()
@@ -42,5 +50,5 @@ def stub_drivers() -> dict[str, object]:
     return {
         "idle": StubDriver({"FaceAngleX": 0.25}),
         "speech": StubDriver({"ParamMouthOpenY": 0.5}),
-        "intent": StubIntentDriver({"ParamJoy": (0.8, 1.0)}),
+        "plugin": StubPluginDriver(ParamFrame(set_params={"ParamJoy": (0.8, 1.0)})),
     }
