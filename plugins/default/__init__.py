@@ -75,9 +75,8 @@ class DefaultPlugin(BodyMotionPlugin):
         for action_code in action_codes:
             self._activate(action_code)
 
-        frame = self._render_active_frame()
-        if frame is not None:
-            yield frame
+        if self._active_action is not None:
+            yield self.render_frame()
 
     def on_unload(self) -> None:
         self.capabilities = None
@@ -143,11 +142,12 @@ class DefaultPlugin(BodyMotionPlugin):
         self._active_action = action_code
         self._active_started_at = self._clock()
 
-    def _render_active_frame(self) -> ParamFrame | None:
+    def render_frame(self, now: float | None = None) -> ParamFrame:
+        current = self._clock() if now is None else now
         if self._active_action is None:
-            return None
+            return ParamFrame(emitted_at_monotonic=current)
 
-        elapsed = max(0.0, self._clock() - self._active_started_at)
+        elapsed = max(0.0, current - self._active_started_at)
         weight = self._ramp_weight(elapsed)
         composition = EMOTION_COMPOSITIONS[self._active_action]
         writable = set(self.capabilities.writable_param_ids) if self.capabilities else set()
@@ -160,7 +160,7 @@ class DefaultPlugin(BodyMotionPlugin):
         if elapsed >= RAMP_IN_SECONDS + RAMP_OUT_SECONDS:
             self._active_action = None
 
-        return ParamFrame(add_params=add_params, emitted_at_monotonic=self._clock())
+        return ParamFrame(add_params=add_params, emitted_at_monotonic=current)
 
     def _ramp_weight(self, elapsed: float) -> float:
         if elapsed <= RAMP_IN_SECONDS:

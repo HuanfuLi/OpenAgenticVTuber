@@ -24,9 +24,15 @@ class PluginAdapter:
 
     def tick(self, now: float) -> ParamFrame:
         if self._latest_frame is None or self._latest_at is None:
+            render_frame = getattr(self._plugin, "render_frame", None)
+            if callable(render_frame):
+                return render_frame(now).model_copy(update={"emitted_at_monotonic": now})
             return ParamFrame()
         if now - self._latest_at > self.STALE_AFTER_SECONDS:
             return ParamFrame()
+        render_frame = getattr(self._plugin, "render_frame", None)
+        if callable(render_frame):
+            return render_frame(now).model_copy(update={"emitted_at_monotonic": now})
         return self._latest_frame.model_copy(
             update={"tick_n": self._latest_frame.tick_n, "emitted_at_monotonic": now}
         )
