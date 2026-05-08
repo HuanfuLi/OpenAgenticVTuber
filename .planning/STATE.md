@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: executing
-stopped_at: Phase 6 code-complete (06-06 done; SC #2/#3 visual deferred to Phase 10 ceremony per 06-VERIFICATION human_needed)
-last_updated: "2026-05-08T13:00:00.000Z"
+stopped_at: Phase 6 complete — re_verification_3 passed 2026-05-08T18:35; 06-07 closed F-1/F-2 (writer consolidation), follow-on fixes 946abd7 + 4e2ff12 closed F-3 (head_only lateral sway + VTS tracking input ranges)
+last_updated: "2026-05-08T19:00:00.000Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
   completed_phases: 7
-  total_plans: 38
-  completed_plans: 28
+  total_plans: 39
+  completed_plans: 29
 ---
 
 # Project State
@@ -24,11 +24,20 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 ## Current Position
 
-Phase: 06 (plugin-runtime-default-plugin) — CODE-COMPLETE (visual SC #2/#3 deferred to Phase 10 ceremony)
-Plan: 6 of 6 — all SUMMARY.md committed; VERIFICATION 8/8 automated must-haves; 3 human verification items (active plugin swap, [joy] visual ramp, 30s utterance lipsync+body) intentionally deferred per 06-VERIFICATION human_needed status to Phase 10 operator ceremony
+Phase: 06 (plugin-runtime-default-plugin) — COMPLETE 2026-05-08 PM
+Plan: 7 of 7 — 06-01..06-07 all SUMMARY.md / status: completed
+Status:
+  - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
+  - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
+  - F-2 closed by `tests/test_arch06_single_writer.py` (asserts requestSetParameterValue / requestInjectParameterData / plugin_name ownership single-file)
+  - F-3 closed by follow-on commits: 946abd7 (head_only lateral sway) + 4e2ff12 (preserve VTS tracking input ranges)
+  - Phase validation gate: 119 passed (pytest tests/plugins tests/compositor tests/architecture/... etc.)
+  - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
 Last activity: 2026-05-08
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
+
+**Anti-pattern flag (recorded 2026-05-08 PM, RESOLVED):** External agent analyzing F-1 proposed pivoting away from VTS+pyvts to live2d-py and creating "Phase 6.5 mocap pipeline" with new MotionCaptureFrame contract. This proposal was rejected — it conflated "implementation violates documented architecture" with "documented architecture is wrong." ARCH-05/06 are correct as written; the fix is consolidate-to-match-spec, not pivot. PROJECT.md / REQUIREMENTS.md / ROADMAP architectural intent remained unchanged. 06-07 took the narrow path: delete split writer, harden CI assertion. Outcome confirms the diagnosis was correct — implementation alignment was the right fix. Keep this flag here as a reference for future agents who hit similar "should we re-architect?" temptations.
 
 **Note on v1.0:** Phase 4 body-sway investigation and Phase 5 codegen are complete. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
 

@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Walking Skeleton** — Phases 1-5 shipped 2026-05-08. Archive: `.planning/milestones/v1.0-ROADMAP.md`
-- 🚧 **v2.0 Plugin + Animation Control** — Phase 8 ✅, Phase 6 code-complete (Phase 10 ceremony pending), Phases 7/9/10 not started.
+- 🚧 **v2.0 Plugin + Animation Control** — Phase 8 ✅, Phase 6 ✅ (re_verification_3 passed 2026-05-08 PM after 06-07 writer consolidation + F-3 tracking-range fix), Phases 7/9/10 not started.
 
 ## Overview
 
@@ -142,7 +142,7 @@ Five additional phases (6, 7, 8, 9, 10) refactoring the milestone-1 animation la
 ### v2.0 Phases Summary
 
 - [x] **Phase 8: Avatar Import + Catalogs** — Type-detected auto-extraction (VTS / Cubism w-exp / Cubism bare / OLVT) + mandatory React review screen + `_avatar_overrides.yaml` writes + `RigCapabilities` + `AvatarOverrides` contract definition — **first in execution order (REVISED — produces schema Phase 6 builds against)** (2026-05-08)
-- [ ] **Phase 6: Plugin Runtime + Default Plugin** — Plugin contracts (ABC, manifest), in-sidecar loader with supervisor + clamp + rate-limiter, default plugin absorbing milestone-1 IntentDriver + body-sway logic; consumes Phase 8's `RigCapabilities` + `AvatarOverrides` — **second in execution order** *(code-complete 2026-05-08; SC #2/SC #3 visual quality deferred to Phase 10 operator ceremony per 06-VERIFICATION human_needed)*
+- [x] **Phase 6: Plugin Runtime + Default Plugin** — Plugin contracts (ABC, manifest), in-sidecar loader with supervisor + clamp + rate-limiter, default plugin absorbing milestone-1 IntentDriver + body-sway logic; consumes Phase 8's `RigCapabilities` + `AvatarOverrides` — **second in execution order** *(2026-05-08 PM passed re_verification_3 after 06-07 closed ARCH-05/06 split-writer violation + tracking-range fix closed F-3)*
 - [ ] **Phase 7: Three-Category Code Parsing + Dispatch** — `code_extractor` decorator dispatching `[xxx]` / `{xxx}` / `<xxx>` to plugin / variant-toggle / event-fire paths — third in execution order
 - [ ] **Phase 9: Slider HUD + Per-Param Lock** — Sidecar 15 Hz HUD-mode IPC tap + dedicated React route + per-param lock with auto-engage on drag — fourth in execution order
 - [ ] **Phase 10: Cursor Polish + §14 SC Re-Verification** — Optional cursor-driver in-canvas-gate drop + side-by-side §14 SC harness against milestone-1 baselines + skeleton-verification.md commit — last in execution order
@@ -157,7 +157,7 @@ Five additional phases (6, 7, 8, 9, 10) refactoring the milestone-1 animation la
   3. A deliberately broken plugin (raises in `__init__` / blocks 30s in `on_load` / yields `NaN` ParamFrames / declares a reserved-name action code) fails loud with a clear log line and falls back to a null plugin emitting rest-state ParamFrames at 60 Hz; the sidecar process does NOT crash and AVT-02's 1-second re-injection rule is preserved
   4. CI grep-test confirms exactly one `import pyvts` in `sidecar/src/` (the `PyvtsSafeWriter` file); plugin code cannot import or instantiate pyvts directly
   5. System prompt assembled from plugin's `action_codes` is bytes-identical across two consecutive boots with the same plugin (KV-cache prefix-stability per milestone-1 D-17); switching plugins requires sidecar restart (no mid-conversation rebuild)
-**Plans**: 6 plans (3 original + 3 gap closures landed 2026-05-08; original "3 plans" structure REVISED from ~2 per Phase 6 discuss-phase Area 2 decision; gap closures 06-04/05/06 surfaced during execution + UAT)
+**Plans**: 7 plans (3 original + 4 gap closures; original "3 plans" structure REVISED from ~2 per Phase 6 discuss-phase Area 2 decision; gap closures 06-04/05/06 landed 2026-05-08 AM; 06-07 added 2026-05-08 PM after post-verification finding — split mouth writer violates ARCH-05/06)
 
 Plans:
 - [x] 06-01-PLAN.md — **Contracts**: `BodyMotionPlugin` ABC (`api.py`, `api_version: "1.0"` enum) + `PluginManifest` Pydantic (`manifest.py`) + jsonschema 4.26.0 manifest validator + reserved-name guard + manifest loader + `clamp_and_validate(frame, capabilities)` boundary stage + system-prompt action-code section assembly (per-action one-line-with-description format, code-key lex-sorted, KV-cache prefix-stable). Phase 6 SC #5 closes here; sidecar boots with null plugin if loader fails.
@@ -166,6 +166,7 @@ Plans:
 - [x] 06-04-PLAN.md — **Gap closure: plugin sentence-text routing**: `Orchestrator.turn()` routes plugin-visible sentence text (containing `[joy]`) through `SentenceOutput.plugin_text` while display + TTS outputs remain bracket-stripped; DefaultPlugin owns action parsing (system does not emit plugin actions as VTS writes / exp3 activations); `enqueue_sentence('[joy]')` → adapter ticks at +150ms / +300ms return nonzero joy params then decay. Closes PLG-07, ARCH-01, ARCH-03, ARCH-04 sentence-routing path. (Wave 4)
 - [x] 06-05-PLAN.md — **Gap closure: production manifest watcher**: `watchdog`-backed file watcher observes the active plugin's `plugin.yaml` after sidecar boot, triggers manifest re-parse + WARN log on change without reloading behavior (PLG-10) + plugin discovery precedence respects `userData/plugins/` overlay (PLG-09) + KV-cache prefix-stability preserved across re-parse (ARCH-09). (Wave 4)
 - [x] 06-06-PLAN.md — **Gap closure: supervised render proxy**: `PluginSupervisor.render_frame(now)` safely proxies render-capable wrapped plugins, returning empty ParamFrame for missing-hook / circuit-open / failure cases; production-style `PluginAdapter(PluginSupervisor(DefaultPlugin))` receives `[joy]`, emits nonzero timed params at +150ms / +300ms, decays by +950ms (regression test added). (Wave 5; depends on 06-04 + 06-05)
+- [x] 06-07-PLAN.md — **Gap closure: writer consolidation (ARCH-05/06 enforcement)**: DELETED `vts/speech_mouth_driver.py` + `vts/parameter_writer.py` (separate VTS plugin identity for lipsync, M1 leftover not consolidated by 06-02) + flipped `SpeechDriver.emit_mouth=True` (flag removed entirely) so MouthOpen flows through compositor → single `PyvtsSafeWriter` per ARCH-05 merge order + removed `mouth_speech_queue` and `mouth_task` from `ws/server.py` lifespan + new CI test `test_arch06_single_writer.py` asserts `requestSetParameterValue` / `requestInjectParameterData` / `plugin_name` ownership stays in `pyvts_writer.py` only. Closed F-1 + F-2 in re_verification_2 (2026-05-08T18:09Z). F-3 closed by follow-on commits 946abd7 (lateral head_only sway) + 4e2ff12 (preserve VTS tracking input ranges) in re_verification_3 (2026-05-08T18:35Z). (Wave 6)
 
 **UI hint**: no  <!-- Plugin runtime is sidecar-internal; no renderer surface in this phase. -->
 
@@ -285,7 +286,7 @@ Milestone v2.0 phases execute in REVISED order: 8 → 6 → 7 → 9 → 10 (revi
 | 4. Action Compositor + VTS Bridge + Body-Sway Investigation | 8/8 | Complete | 2026-05-08 |
 | 5. Polish, Contracts Codegen (scope reduced) | 1/1 | Complete — 05-02 deferred to M2 | 2026-05-08 |
 | 8. Avatar Import + Catalogs | 5/5 | Complete — VERIFICATION passed 5/5 must-haves | 2026-05-08 |
-| 6. Plugin Runtime + Default Plugin | 6/6 | Code-complete — VERIFICATION 8/8 automated, human SC #2/#3 deferred to Phase 10 ceremony | 2026-05-08 |
+| 6. Plugin Runtime + Default Plugin | 7/7 | Complete — re_verification_3 passed; F-1/F-2 closed by 06-07 writer consolidation; F-3 closed by tracking-range fix | 2026-05-08 |
 | 7. Three-Category Code Parsing + Dispatch | 0/7 | Not started — third in v2.0 order; RESEARCH.md drafted | - |
 | 9. Slider HUD + Per-Param Lock | 0/2 (TBD) | Not started — fourth in v2.0 order | - |
 | 10. Cursor Polish + §14 SC Re-Verification | 0/1 (TBD) | Not started — last in v2.0 order | - |
