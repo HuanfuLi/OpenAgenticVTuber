@@ -62,7 +62,8 @@ def resolve_source_rig_path(overrides: AvatarOverrides, repo_root: Path) -> Path
 
 
 def _rig_capabilities_tag_vocabulary(self: RigCapabilities) -> str:
-    return ""
+    names = [item.name for item in [*self.expressions, *self.hotkeys]]
+    return f"{', '.join(f'[{name}]' for name in names)}," if names else ""
 
 
 RigCapabilities.tag_vocabulary = _rig_capabilities_tag_vocabulary  # type: ignore[attr-defined]
