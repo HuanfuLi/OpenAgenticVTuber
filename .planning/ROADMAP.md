@@ -207,11 +207,16 @@ Plans:
   3. Cross-category collision check: at sidecar boot, `plugin_action_codes ∩ variant_codes ∩ event_codes` is empty; a manufactured collision (e.g., adding `joy` to the variant catalog while the plugin already registers `[joy]`) produces a loud boot-blocking exception with a clear error message naming both sources
   4. Variant collision policy is radio-button single-active — emitting a new variant code while another variant is already toggled turns the new ON and the previous OFF deterministically (no additive layering); chat display + TTS strips all three syntaxes cleanly (no bracket character ever leaks)
   5. Parser policy is load-bearing and verified per Phase 7 CONTEXT D-A1: no parse-time `<think>` strip is added; API-level reasoning disable remains the defense, `<think>` is reserved at boot, and leaked `<think>` is treated as an unknown event dispatch rather than a valid `<event>` code.
-**Plans**: 2 plans
+**Plans**: 7 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Dispatch contract/codegen, `code_extractor`, all-syntax chat/TTS stripping, reserved-name validation, and adversarial split-token fixtures
-- [ ] 07-02-PLAN.md — Runtime dispatch routing: action queue, radio-button variant manager, event hotkey fire/completion tracker, boot validation wiring, and `[DISPATCH]` logs
+- [ ] 07-01-PLAN.md — Python Dispatch contract, EventEntry hotkey_id, VTS event extraction, and Python output model updates
+- [ ] 07-02-PLAN.md — Generated Dispatch/EventEntry/AudioPayload TS and JSON Schema mirrors with ActionIntent mirrors removed
+- [ ] 07-03-PLAN.md — `code_extractor`, all-syntax chat/TTS stripping, no parse-time think strip, and adversarial split-token fixtures
+- [ ] 07-04-PLAN.md — Reserved-name and cross-category validation module with parser tests
+- [ ] 07-05-PLAN.md — VariantStateManager and EventCompletionTracker with radio-button and duration-pad tests
+- [ ] 07-06-PLAN.md — Runtime Dispatch routing, including active PluginAdapter/plugin ActionCode delivery and TTS payload dispatches
+- [ ] 07-07-PLAN.md — Boot validation/runtime manager wiring, shutdown cleanup, pyvts import guard, and `[DISPATCH]` renderer logs
 
 **UI hint**: no  <!-- Parser + dispatch lives in sidecar; renderer changes are limited to bracket-strip continuation, no new UI surface. -->
 

@@ -1,15 +1,16 @@
 ---
 phase: 07
 slug: three-category-code-parsing-dispatch
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: ready
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-08
+updated: 2026-05-08
 ---
 
 # Phase 07 - Validation Strategy
 
-> Per-phase validation contract for feedback sampling during execution.
+Per-phase validation contract for feedback sampling during execution.
 
 ---
 
@@ -17,20 +18,20 @@ created: 2026-05-08
 
 | Property | Value |
 |----------|-------|
-| **Framework** | {pytest 7.x / jest 29.x / vitest / go test / other} |
-| **Config file** | {path or "none - Wave 0 installs"} |
-| **Quick run command** | `{quick command}` |
-| **Full suite command** | `{full command}` |
-| **Estimated runtime** | ~{N} seconds |
+| **Framework** | pytest via `uv` for sidecar Python, npm contract check for generated contracts, renderer vitest via npm |
+| **Config file** | `sidecar/pyproject.toml`, `package.json`, `apps/renderer/package.json` |
+| **Quick run command** | `cd sidecar && uv run pytest tests/orchestrator/test_code_extractor.py tests/parser/test_reserved.py -x --no-header` |
+| **Full suite command** | `npm run check:contracts; cd sidecar && uv run pytest tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py tests/parser/test_reserved.py tests/vts/test_variant_state_manager.py tests/vts/test_event_completion_tracker.py tests/compositor/test_plugin_adapter.py tests/orchestrator/test_dispatch_routing.py tests/test_sidecar_boot.py tests/test_tts_manager.py tests/test_audio_payload_helpers.py -q; cd ../apps/renderer && npm test -- --run logs-drawer-intent` |
+| **Estimated runtime** | ~60-120 seconds depending on contract generation and renderer test startup |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `{quick run command}`
-- **After every plan wave:** Run `{full suite command}`
-- **Before `$gsd-verify-work`:** Full suite must be green
-- **Max feedback latency:** {N} seconds
+- **After every task commit:** Run the task's `<verify><automated>` command.
+- **After every plan wave:** Run the commands listed for all completed plans in that wave.
+- **Before `$gsd-verify-work`:** Run the full suite command above plus the `pyvts` import-site grep from Plan 07-07.
+- **Max feedback latency:** 120 seconds.
 
 ---
 
@@ -38,19 +39,61 @@ created: 2026-05-08
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| {N}-01-01 | 01 | 1 | REQ-{XX} | unit | `{command}` | ✅ / ❌ W0 | ⬜ pending |
+| 07-01-01 | 01 | 1 | PARSE-03, PARSE-06 | contract smoke | `uv run --project sidecar python -c "from contracts import ActionCode, VariantToggle, EventFire, Dispatch; print(ActionCode(name='joy').kind, VariantToggle(name='hold-mic', hotkey_id='hk').kind, EventFire(name='wave', hotkey_id='hk', duration_ms=2833).duration_ms)"` | Existing infra | pending |
+| 07-02-01 | 02 | 2 | PARSE-03, PARSE-06 | contract drift | `npm run check:contracts` | Existing infra | pending |
+| 07-03-01 | 03 | 2 | PARSE-01, PARSE-02, PARSE-04, PARSE-08 | unit | `cd sidecar && uv run pytest tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py -x --no-header` | Task creates tests | pending |
+| 07-04-01 | 04 | 2 | PARSE-04, PARSE-07 | unit | `cd sidecar && uv run pytest tests/parser/test_reserved.py -x --no-header` | Task creates tests | pending |
+| 07-05-01 | 05 | 2 | PARSE-05, PARSE-06 | unit | `cd sidecar && uv run pytest tests/vts/test_variant_state_manager.py tests/vts/test_event_completion_tracker.py -x --no-header` | Task creates tests | pending |
+| 07-06-01 | 06 | 3 | PARSE-03 | unit | `cd sidecar && uv run pytest tests/plugins/test_api.py tests/compositor/test_plugin_adapter.py -x --no-header` | Extends existing Phase 6 tests | pending |
+| 07-06-02 | 06 | 3 | PARSE-03, PARSE-05, PARSE-06 | unit/integration | `cd sidecar && uv run pytest tests/orchestrator/test_dispatch_routing.py tests/test_tts_manager.py tests/test_audio_payload_helpers.py -x --no-header` | Task creates/updates tests | pending |
+| 07-07-01 | 07 | 4 | PARSE-01, PARSE-03, PARSE-04, PARSE-05, PARSE-06, PARSE-07 | integration | `cd sidecar && uv run pytest tests/test_sidecar_boot.py tests/orchestrator/test_dispatch_routing.py -x --no-header` | Task creates/updates tests | pending |
+| 07-07-01b | 07 | 4 | PARSE-03 | architecture guard | `powershell -NoProfile -Command "$matches = rg 'import pyvts' sidecar/src; if (($matches | Measure-Object).Count -ne 1) { $matches; exit 1 }; if ($matches -notmatch 'sidecar/src/sidecar/vts/pyvts_writer.py') { $matches; exit 1 }"` | Existing rg dependency | pending |
+| 07-07-02 | 07 | 4 | PARSE-03 | renderer unit | `cd apps/renderer && npm test -- --run logs-drawer-intent` | Existing renderer test infra | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+---
+
+## Requirement Coverage Map
+
+| Requirement | Primary Plan(s) | Automated Evidence |
+|-------------|-----------------|--------------------|
+| PARSE-01 | 07-03, 07-07 | `tests/orchestrator/test_code_extractor.py`, `tests/orchestrator/test_dispatch_routing.py` |
+| PARSE-02 | 07-03, 07-07 | `tests/orchestrator/test_tts_preprocessor.py`, renderer/display pipeline assertions |
+| PARSE-03 | 07-01, 07-02, 07-06, 07-07 | `tests/compositor/test_plugin_adapter.py::test_action_code_delivered_to_active_plugin`, `tests/orchestrator/test_dispatch_routing.py`, `npm run check:contracts` |
+| PARSE-04 | 07-03, 07-04, 07-07 | `<think>` unknown-event drop fixture plus `validate_reserved_names` reserved-name tests |
+| PARSE-05 | 07-05, 07-06, 07-07 | `tests/vts/test_variant_state_manager.py` and dispatch routing tests |
+| PARSE-06 | 07-01, 07-02, 07-05, 07-06, 07-07 | `tests/vts/test_event_completion_tracker.py`, contract check for EventEntry/Dispatch |
+| PARSE-07 | 07-04, 07-07 | `tests/parser/test_reserved.py`, `tests/test_sidecar_boot.py` |
+| PARSE-08 | 07-03 | `tests/orchestrator/test_code_extractor.py::test_code_extractor_split_token` |
+
+---
+
+## Wave Verification
+
+| Wave | Plans | Command |
+|------|-------|---------|
+| 1 | 07-01 | `uv run --project sidecar python -c "from contracts import ActionCode, VariantToggle, EventFire; print('dispatch-ok')"` |
+| 2 | 07-02, 07-03, 07-04, 07-05 | `npm run check:contracts; cd sidecar && uv run pytest tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py tests/parser/test_reserved.py tests/vts/test_variant_state_manager.py tests/vts/test_event_completion_tracker.py -q` |
+| 3 | 07-06 | `cd sidecar && uv run pytest tests/plugins/test_api.py tests/compositor/test_plugin_adapter.py tests/orchestrator/test_dispatch_routing.py tests/test_tts_manager.py tests/test_audio_payload_helpers.py -q` |
+| 4 | 07-07 | `cd sidecar && uv run pytest tests/test_sidecar_boot.py tests/orchestrator/test_dispatch_routing.py -q; cd ../apps/renderer && npm test -- --run logs-drawer-intent` |
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `{tests/test_file.py}` - stubs for REQ-{XX}
-- [ ] `{tests/conftest.py}` - shared fixtures
-- [ ] `{framework install}` - if no framework detected
+Existing infrastructure covers all phase requirements. Phase tasks create or
+extend the specific test files they verify:
 
-*If none: "Existing infrastructure covers all phase requirements."*
+- `sidecar/tests/orchestrator/test_code_extractor.py`
+- `sidecar/tests/orchestrator/test_tts_preprocessor.py`
+- `sidecar/tests/parser/test_reserved.py`
+- `sidecar/tests/vts/test_variant_state_manager.py`
+- `sidecar/tests/vts/test_event_completion_tracker.py`
+- `sidecar/tests/compositor/test_plugin_adapter.py`
+- `sidecar/tests/orchestrator/test_dispatch_routing.py`
+- `sidecar/tests/test_sidecar_boot.py`
+- `sidecar/tests/test_tts_manager.py`
+- `sidecar/tests/test_audio_payload_helpers.py`
+- `apps/renderer/tests/logs-drawer-intent.test.tsx`
 
 ---
 
@@ -58,19 +101,17 @@ created: 2026-05-08
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| {behavior} | REQ-{XX} | {reason} | {steps} |
-
-*If none: "All phase behaviors have automated verification."*
+| Live VTS visual confirmation that `{hold-mic}` toggles the avatar expression and `<wave>` fires the motion hotkey | PARSE-05, PARSE-06 | Requires VTube Studio running with a real loaded rig and visible avatar | After automated tests pass, run the app with VTS, type `[joy] {hold-mic} <wave>` into chat, confirm `[DISPATCH]` logs for all three kinds, confirm the active plugin receives `joy`, confirm the variant changes, and confirm `[EVENT-COMPLETE]` appears after duration plus the 1s pad. |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < {N}s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify commands.
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify.
+- [x] Wave 0 covers all required test infrastructure through existing frameworks and task-created test files.
+- [x] No watch-mode flags are used.
+- [x] Feedback latency target is less than 120 seconds for the focused suite.
+- [x] `nyquist_compliant: true` set in frontmatter.
 
-**Approval:** {pending / approved YYYY-MM-DD}
+**Approval:** approved 2026-05-08
