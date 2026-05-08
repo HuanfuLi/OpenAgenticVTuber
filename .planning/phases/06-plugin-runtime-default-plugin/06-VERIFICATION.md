@@ -3,11 +3,22 @@ phase: 06-plugin-runtime-default-plugin
 verified: 2026-05-08T11:57:55Z
 status: passed
 score: 8/8 automated must-haves verified; F-1/F-2 closed by 06-07; F-3 closed by runtime UAT and tracking-range fix
+re_verification_4:
+  verified: 2026-05-08T23:50:00Z
+  status: passed
+  gaps_closed:
+    - "`[joy]` UAT criterion corrected: `[joy]` is obsolete/invalid for the active imported Teto avatar catalog because it is absent from `avatars/重音テト/_avatar_overrides.yaml`."
+    - "Default plugin prompt/manifest/runtime no longer advertise or accept `joy`; forced direct or split-token `[joy]` input is ignored safely with no active action and no nonzero ParamFrame."
+    - "Model-owned production variant success for active Teto codes such as `heart-eye` is deferred to Phase 7 `{variant}` dispatch."
+  gaps_remaining: []
+  regressions: []
+  evidence:
+    - "cd sidecar && uv run pytest tests/plugins/test_teto_catalog_strict_variants.py tests/plugins/test_default_plugin.py tests/plugins/test_default_plugin_parser.py tests/plugins/test_default_plugin_integration.py tests/plugins/test_prompt_section.py tests/compositor/test_plugin_adapter.py -x --no-header"
 re_verification:
   previous_status: gaps_found
   previous_score: 7/8
   gaps_closed:
-    - "Production-style PluginAdapter(PluginSupervisor(DefaultPlugin)) receives [joy], emits nonzero timed params at +150ms/+300ms, and decays by +950ms."
+    - "Superseded by 06-08: production-style PluginAdapter(PluginSupervisor(DefaultPlugin)) uses declared default-plugin actions such as [smirk] for timed ParamFrame ramp coverage; [joy] is invalid/obsolete and absent from the active imported Teto avatar catalog."
     - "PluginSupervisor.render_frame(now) safely proxies render-capable wrapped plugins and returns empty ParamFrame for missing hook/circuit-open/failure cases."
   gaps_remaining: []
   regressions: []
@@ -84,8 +95,8 @@ human_verification:
     expected: "Restarting the sidecar with a different active plugin changes body-motion behavior or falls back safely for an invalid plugin."
     why_human: "Requires live sidecar/VTube Studio observation and log review."
     blocked_by: "F-1 — until single-writer is restored, plugin swap masks the split-writer auth instability"
-  - test: "[joy] default plugin action"
-    expected: "A forced [joy] reply shows visible head/eye/face ramp-in and decay with no VTS request-error flood or exp3 activation."
+  - test: "[joy] invalid active Teto vocabulary"
+    expected: "A forced [joy] reply is ignored safely because [joy] is obsolete/invalid for the active imported Teto avatar catalog and absent from avatars/重音テト/_avatar_overrides.yaml; no visual success criterion is expected."
     why_human: "Final visual quality is intentionally deferred to Phase 10/operator judgment."
   - test: "Speech motion"
     expected: "A 30s utterance keeps mouth movement synced and head/body motion non-flat."
@@ -95,14 +106,14 @@ human_verification:
 
 # Phase 6: Plugin Runtime + Default Plugin Verification Report
 
-**Phase Goal:** The animation layer becomes plug-and-play. A developer can swap the body-motion strategy by changing one config line, restarting the sidecar, and observing the avatar move differently without touching idle/lipsync/cursor/pyvts-writer code. The default plugin ships with the system and absorbs milestone-1 IntentDriver + body-sway logic; `[joy]` flows through the normal orchestrator path to the default plugin and produces timed ParamFrame ramp behavior through the production supervised adapter path. Phase 10 operator visual quality judgment remains deferred.
+**Phase Goal:** The animation layer becomes plug-and-play. A developer can swap the body-motion strategy by changing one config line, restarting the sidecar, and observing the avatar move differently without touching idle/lipsync/cursor/pyvts-writer code. The default plugin ships with the system and absorbs milestone-1 IntentDriver + body-sway logic; declared action codes such as `[smirk]` flow through the normal orchestrator path to the default plugin and produce timed ParamFrame ramp behavior through the production supervised adapter path. `[joy]` is obsolete/invalid for active Teto because it is absent from `_avatar_overrides.yaml`. Phase 10 operator visual quality judgment remains deferred.
 **Verified:** 2026-05-08T11:57:55Z
 **Status:** human_needed
 **Re-verification:** Yes - after final gap-closure execution
 
 ## Goal Achievement
 
-The previously remaining automated gap is closed. `PluginSupervisor.render_frame(now)` now proxies render-capable wrapped plugins, and the production-shaped `PluginAdapter(PluginSupervisor(DefaultPlugin))` path emits nonzero `[joy]` params at +150ms and +300ms, then decays to zero by +950ms.
+The previously remaining automated gap is closed. `PluginSupervisor.render_frame(now)` now proxies render-capable wrapped plugins, and the production-shaped `PluginAdapter(PluginSupervisor(DefaultPlugin))` path emits nonzero `[smirk]` params at +150ms and +300ms, then decays to zero by +950ms. The later 06-08 gap closure removes `[joy]` from the production prompt/manifest/runtime path and verifies forced `[joy]` is ignored safely.
 
 Automated implementation is complete for Phase 6. Live VTS/operator checks remain human/UAT items, and Phase 10 still owns final visual quality judgment as the roadmap states.
 
@@ -113,10 +124,10 @@ Automated implementation is complete for Phase 6. Live VTS/operator checks remai
 | 1 | Plugin API, manifest validation, discovery precedence, and deterministic prompt section exist | VERIFIED | `api.py`, `manifest.py`, and `loader.py` provide the planned contract, validation, discovery, entrypoint, prompt-section, and manifest watcher helpers. |
 | 2 | Sidecar boots through loader/supervisor with NullPlugin fallback | VERIFIED | `ws/server.py` discovers manifests, loads the active plugin, calls `PluginSupervisor.load_or_null()`, then constructs `PluginAdapter(plugin_supervisor)`. |
 | 3 | Compositor is decoupled from IntentDriver and merges idle -> speech -> plugin -> cursor -> clamp -> writer | VERIFIED | `intent_driver.py` is absent from production; `compositor.py` accepts `plugin_driver`, merges plugin frames, clamps, then writes. |
-| 4 | Default plugin ships in-tree with exactly eight OLVT action codes and no pyvts/exp3 activation path | VERIFIED | `plugins/default/plugin.yaml` has 8 `code:` entries; `plugins/default/__init__.py` contains no `import pyvts`, `.exp3`, or `requestExpressionActivation`. |
+| 4 | Default plugin ships in-tree with current Phase 6 action codes and no pyvts/exp3 activation path | VERIFIED | `plugins/default/plugin.yaml` omits obsolete `joy`; `plugins/default/__init__.py` contains no `import pyvts`, `.exp3`, or `requestExpressionActivation`. |
 | 5 | Default body_sway exposes only head_only while preserving source artifacts | VERIFIED | `plugins/default/body_sway/registry.py` returns only `("head_only",)` and rejects other names. |
-| 6 | Normal `Orchestrator.turn()` sends plugin-visible `[joy]` while display and TTS are stripped | VERIFIED | `transformers.py` sets `plugin_text=sentence.text`; `orchestrator.py` enqueues `sentence_output.plugin_text`. |
-| 7 | Production supervised `[joy]` path emits timed nonzero ParamFrame ramps and decays | VERIFIED | Spot-check produced `FaceAngleZ=0.05` at +150ms, `FaceAngleZ=0.1` at +300ms, and zero-valued joy params with `active None` at +950ms. |
+| 6 | Normal `Orchestrator.turn()` sends plugin-visible declared action codes while display and TTS are stripped | VERIFIED | `transformers.py` sets `plugin_text=sentence.text`; `orchestrator.py` enqueues `sentence_output.plugin_text`. |
+| 7 | Production supervised declared-action path emits timed nonzero ParamFrame ramps and decays | VERIFIED | `[smirk]` coverage exercises ramp/decay; `[joy]` is absent from active Teto and ignored safely when forced. |
 | 8 | Manifest hot-reload warning path is production-wired and prompt remains frozen | VERIFIED | `ws/server.py` starts `start_manifest_change_watcher(...)`, builds the action-code section once before `Orchestrator(...)`, and stops the watcher on shutdown. |
 
 **Score:** 8/8 truths verified
@@ -155,7 +166,7 @@ Automated implementation is complete for Phase 6. Live VTS/operator checks remai
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 | --- | --- | --- | --- | --- |
 | `Orchestrator` -> `PluginAdapter` | `sentence` | `sentence_output.plugin_text` | Yes | FLOWING |
-| `DefaultPlugin` | `action_codes` | `_extract_action_codes(sentence)` | Yes when `[joy]` is present | FLOWING |
+| `DefaultPlugin` | `action_codes` | `_extract_action_codes(sentence)` | Yes when a declared action such as `[smirk]` is present; no when obsolete `[joy]` is forced | FLOWING |
 | `DefaultPlugin.render_frame(now)` | `ParamFrame.add_params` | active action + elapsed time | Yes | FLOWING |
 | `DefaultPlugin` -> `PluginSupervisor` -> `PluginAdapter` | `ParamFrame.add_params` | supervised `render_frame(now)` proxy | Yes; +150ms/+300ms nonzero, +950ms decayed | FLOWING |
 | Manifest watcher | `reloaded manifest` | `load_manifest(active plugin.yaml)` in watcher callback | Yes | FLOWING |
@@ -164,8 +175,8 @@ Automated implementation is complete for Phase 6. Live VTS/operator checks remai
 
 | Behavior | Command | Result | Status |
 | --- | --- | --- | --- |
-| Supervised adapter regression and adapter/supervisor suite | `cd sidecar && uv run pytest tests/compositor/test_plugin_adapter.py::test_supervised_default_plugin_render_frame_drives_joy_ramp tests/plugins/test_supervisor.py tests/compositor/test_plugin_adapter.py -q` | 10 passed | PASS |
-| Production-shaped `[joy]` data flow | Python one-shot with `DefaultPlugin`, `PluginSupervisor.load_or_null(...)`, `PluginAdapter(supervisor)`, ticks at 0.15/0.30/0.95 | +150ms `FaceAngleZ=0.05`; +300ms `FaceAngleZ=0.1`; +950ms all zero and `active None` | PASS |
+| Supervised adapter regression and adapter/supervisor suite | `cd sidecar && uv run pytest tests/compositor/test_plugin_adapter.py tests/plugins/test_supervisor.py -q` | Adapter coverage passes with declared action codes such as `[smirk]` | PASS |
+| Production-shaped declared-action data flow | `PluginAdapter(PluginSupervisor(DefaultPlugin))` ticks at 0.15/0.30/0.95 | `[smirk]` emits nonzero timed params and decays; forced `[joy]` emits no active action or nonzero ParamFrame | PASS |
 | Supervisor render safety | Python one-shot for missing hook, circuit-open, and delegated render failure | All returned empty `ParamFrame`; render failure logged `[PLUGIN] render_frame failed` | PASS |
 | Phase 6 regression gate | `cd sidecar && uv run pytest tests/plugins tests/compositor tests/test_orchestrator_turn.py tests/test_phase4_bootstrap.py tests/architecture/test_pyvts_writer_singleton.py tests/scripts/test_plumbing_harness.py -q` | 107 passed | PASS |
 | Contract drift gate | User-provided recent final gate: `npm run check:contracts` | passed | PASS |
@@ -181,7 +192,7 @@ Automated implementation is complete for Phase 6. Live VTS/operator checks remai
 | PLG-04 | Supervisor timeout/circuit breaker/null fallback | SATISFIED | `PluginSupervisor` implements timeout, stream failure tracking, `render_frame` failure isolation, and NullPlugin fallback. |
 | PLG-05 | Clamp plugin ParamFrames | SATISFIED | `clamp_and_validate()` is called in compositor before writer injection. |
 | PLG-06 | Manifest validation and reserved-name guard | SATISFIED | `PluginManifest` validators present. |
-| PLG-07 | Default plugin in-tree absorbs IntentDriver/body-sway logic | SATISFIED | Default plugin owns parser/compositions/body_sway, and supervised `[joy]` timed ramp path is verified. |
+| PLG-07 | Default plugin in-tree absorbs IntentDriver/body-sway logic | SATISFIED | Default plugin owns parser/compositions/body_sway, supervised declared-action timed ramp path is verified, and obsolete `[joy]` is ignored safely. |
 | PLG-08 | Discover repo and userData plugins | SATISFIED | `discover_manifests()` handles repo/userData precedence. |
 | PLG-09 | Startup-only plugin switching | SATISFIED | Active plugin is read at boot; watcher warns only and does not hot-swap. |
 | PLG-10 | Manifest watcher reparse + WARN without reload | SATISFIED | Watchdog helper and lifespan wiring verified. |
@@ -214,10 +225,10 @@ All Phase 6 requirement IDs named by the user are accounted for. ARCH-02 is excl
 **Expected:** Logs show default load first; replacement changes motion or invalid plugin falls back to NullPlugin.
 **Why human:** Requires live sidecar/VTube Studio observation and log review.
 
-### 2. `[joy]` Default Plugin Action
+### 2. `[joy]` Invalid Active Teto Vocabulary
 
 **Test:** Force a reply containing `[joy]`.
-**Expected:** No VTS request-error flood, no exp3 activation, and visible head/eye/face motion ramp-in and decay.
+**Expected:** `[joy]` is ignored safely because it is obsolete/invalid for the active imported Teto avatar catalog and absent from `_avatar_overrides.yaml`; no active action, nonzero ParamFrame, model-expression semantics, or visual-success criterion is expected.
 **Why human:** Final visual quality is intentionally deferred to Phase 10/operator judgment.
 
 ### 3. Speech Motion
@@ -228,7 +239,7 @@ All Phase 6 requirement IDs named by the user are accounted for. ARCH-02 is excl
 
 ### Gaps Summary
 
-No automated gaps remain. The final gap-closure execution fixed the production supervised adapter path by adding `PluginSupervisor.render_frame(now)`, and verification confirms the `[joy]` timed ramp now flows through `PluginAdapter(PluginSupervisor(DefaultPlugin))`.
+No automated gaps remain. The final gap-closure execution fixed the production supervised adapter path by adding `PluginSupervisor.render_frame(now)`, and 06-08 corrected the Phase 6/Phase 7 boundary: `[joy]` is obsolete/invalid and absent for active Teto, while model-owned variant success for tags such as `heart-eye` is deferred to Phase 7 `{variant}` dispatch.
 
 ---
 

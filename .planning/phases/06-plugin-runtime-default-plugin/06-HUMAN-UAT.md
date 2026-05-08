@@ -3,7 +3,7 @@ status: diagnosed
 phase: 06-plugin-runtime-default-plugin
 source: [06-VERIFICATION.md]
 started: 2026-05-08T11:57:55Z
-updated: 2026-05-08T19:10:00-04:00
+updated: 2026-05-08T23:50:00Z
 ---
 
 # Phase 06 Human UAT
@@ -21,10 +21,10 @@ result: issue
 reported: "Fail with BLOCK: There is no plugin configuration at all. I cannot select plugin. Also a critical regression, I see the VTS seems only connected to one VTS plugin named AgenticLLMVtuber Mouth v3, and there used to be 2 VTS plugins, I guess another one is body motion control, but that VTS plugin seems broken after phase 8 execution. Is that deprecated by design?"
 severity: blocker
 
-### 2. [joy] default plugin action
+### 2. [joy] invalid active Teto vocabulary
 
-expected: A forced [joy] reply shows visible head/eye/face ramp-in and decay with no VTS request-error flood or exp3 activation.
-result: issue
+expected: A forced [joy] reply is ignored safely because [joy] is obsolete/invalid for the active imported Teto avatar catalog and absent from avatars/重音テト/_avatar_overrides.yaml; no active action, nonzero ParamFrame, model-expression semantics, or visual-success criterion is expected.
+result: resolved_by_06_08
 reported: "问题：1. 我在设计和文档中已经明确要求不使用joy标签了，因为这个标签并不存在于teto模型中，而variant code必须完全严格地只使用模型自带的expressions。很显然joy不在此类。2. 我要求LLM输出了这个joy标签，log显示捕捉了，但无事发生。"
 severity: major
 
@@ -76,23 +76,25 @@ blocked: 0
   debug_session: "retest_needed"
 
 - truth: "Variant/action tags must be strictly limited to expressions discovered from the active Teto model; nonexistent tags such as [joy] must not be treated as valid model actions or UAT success criteria."
-  status: failed
+  status: resolved
   reason: "User reported: 问题：1. 我在设计和文档中已经明确要求不使用joy标签了，因为这个标签并不存在于teto模型中，而variant code必须完全严格地只使用模型自带的expressions。很显然joy不在此类。2. 我要求LLM输出了这个joy标签，log显示捕捉了，但无事发生。"
   severity: major
   test: 2
-  root_cause: "Phase 6 carried forward the OLVT/M1 default-plugin emotion vocabulary and UAT language (`[joy]`, `[anger]`, etc.) even though the active imported Teto avatar runtime catalog in `avatars/重音テト/_avatar_overrides.yaml` has no `joy` variant/expression and no `default_plugin_action_bindings`. The prompt template still instructs the LLM to start every response with an emotion tag like `[joy]`, while the orchestrator/plugin path can preserve/capture `[joy]` text but has no model-owned expression/variant to activate for this avatar. This makes `[joy]` an invalid production test target rather than a valid failed expression trigger."
+  root_cause: "Phase 6 carried forward the OLVT/M1 default-plugin emotion vocabulary and UAT language (`[joy]`, `[anger]`, etc.) even though the active imported Teto avatar runtime catalog in `avatars/重音テト/_avatar_overrides.yaml` has no `joy` variant/expression and no `default_plugin_action_bindings`. This made `[joy]` an invalid production test target rather than a valid failed expression trigger."
   artifacts:
     - path: "avatars/重音テト/_avatar_overrides.yaml"
       issue: "Canonical imported-avatar runtime file lists model-derived variants such as `heart-eye`, `star-eye`, `chibi`, and `cry`; it does not list `joy`, and `default_plugin_action_bindings` is empty."
     - path: "plugins/default/plugin.yaml"
-      issue: "Default plugin still declares OLVT-style action codes including `joy`, independent of the active avatar's discovered expression/variant catalog."
+      issue: "Resolved by 06-08: default plugin no longer declares `joy`; forced `[joy]` is ignored safely."
     - path: "sidecar/src/sidecar/orchestrator/prompts/live2d_expression_prompt.txt"
-      issue: "Prompt explicitly tells the LLM to always begin with emotion tags like `[neutral]`, `[joy]`, `[anger]`, which contradicts strict model-owned variant-code emission."
+      issue: "Resolved by 06-08: prompt no longer requires mandatory emotion tags or examples `[joy]`/`[anger]`; bracketed actions are optional and limited to inserted action codes."
     - path: ".planning/phases/06-plugin-runtime-default-plugin/06-VERIFICATION.md"
-      issue: "Phase 6 verification/UAT criteria still use `[joy]` as the default plugin action test despite the active Teto model not owning that expression."
+      issue: "Resolved by 06-08: Phase 6 verification/UAT criteria now state `[joy]` is obsolete/invalid and absent from the active imported Teto avatar catalog."
   missing:
-    - "Replace Phase 6 UAT/verification's `[joy]` criterion with a model-owned production tag from `avatars/<activeAvatarId>/_avatar_overrides.yaml`, or mark `[joy]` as obsolete M1-only vocabulary for this avatar."
-    - "Stop advertising nonexistent emotion tags in the LLM prompt for imported avatars; prompt vocabulary must be derived from active plugin action codes plus active avatar variant/event catalogs without inventing labels."
-    - "Add regression coverage that the active imported Teto catalog does not expose or accept `joy` as a model-owned variant/expression when it is absent from `_avatar_overrides.yaml`."
-    - "Clarify the Phase 6/Phase 7 boundary: Phase 6 default plugin may own internal body-motion action codes, but production variant codes must come strictly from the imported avatar's own catalog."
+    - "None for Phase 6: `[joy]` is obsolete/invalid for active Teto, absent from `_avatar_overrides.yaml`, removed from the default plugin prompt/manifest/runtime path, and ignored safely when forced."
+    - "Phase 7 remains responsible for model-owned variant dispatch such as `{heart-eye}`; 06-08 intentionally does not implement `{variant}` or `<event>` dispatch."
+  fix_attempted:
+    - "06-08 added regression coverage that active Teto variants include `heart-eye`/`star-eye` and exclude `joy`."
+    - "06-08 removed `joy` from the default plugin action vocabulary and prompt examples."
+    - "06-08 verifies direct and split-token `[joy]` input yields no ParamFrame and leaves the active action empty."
   debug_session: "inline-diagnosis-2026-05-08T19:10:00-04:00"
