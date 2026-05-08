@@ -31,11 +31,14 @@ class DisplayText:
 class SentenceOutput:
     """Output type for text-based responses.
 
-    Contains a single sentence pair (display and TTS) with associated actions.
+    Contains a single sentence triple (display, TTS, and plugin-visible raw text)
+    with associated actions.
 
     Attributes:
         display_text: Text to be displayed in UI.
         tts_text: Text to be sent to TTS engine.
+        plugin_text: Post-sentence_divider, pre-display/pre-TTS text delivered
+            to body-motion plugins.
         actions: list[ActionIntent] -- Phase 2 D-12 divergence from OLVT
             Actions{expressions,pictures,sounds} dataclass; preserves
             kind/name/strength/duration_ms/avatar_id for Phase 4 compositor.
@@ -43,4 +46,5 @@ class SentenceOutput:
 
     display_text: DisplayText
     tts_text: str
+    plugin_text: str
     actions: List[ActionIntent] = field(default_factory=list)

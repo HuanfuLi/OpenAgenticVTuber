@@ -66,7 +66,12 @@ class _FakePluginAdapter:
 
 async def _fake_sentence_stream(*sentences: str) -> AsyncIterator[SentenceOutput]:
     for text in sentences:
-        yield SentenceOutput(display_text=DisplayText(text=text), tts_text=text, actions=[])
+        yield SentenceOutput(
+            display_text=DisplayText(text=text),
+            tts_text=text,
+            plugin_text=text,
+            actions=[],
+        )
 
 
 def _build_phase3_orch(tts_manager: _FakeTTSManager | None = None) -> Orchestrator:

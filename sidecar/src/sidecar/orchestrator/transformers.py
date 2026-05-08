@@ -273,6 +273,7 @@ def tts_filter(
                     yield SentenceOutput(
                         display_text=display,
                         tts_text=tts,
+                        plugin_text=sentence.text,
                         actions=intents,
                     )
                 elif isinstance(item, dict):

@@ -202,7 +202,7 @@ class Orchestrator:
                 f"strength={intent.strength} avatar={intent.avatar_id}"
             )
         if self._plugin_adapter is not None:
-            self._plugin_adapter.enqueue_sentence(sentence_output.tts_text)
+            self._plugin_adapter.enqueue_sentence(sentence_output.plugin_text)
 
     def _run_pipeline(
         self, send_window: list[dict]
