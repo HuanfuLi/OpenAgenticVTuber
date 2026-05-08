@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
-stopped_at: Completed 04-07-PLAN.md
-last_updated: "2026-05-08T05:38:06.181Z"
+milestone: v2.0
+milestone_name: Phases
+status: verifying
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-05-08T06:29:10.174Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 10
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 17
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon — v2.0 is infrastructure prep on the way there)
-**Current focus:** Phase 04 — action-compositor-vts-bridge-body-sway-investigation
+**Current focus:** Phase 05 — polish-contracts-codegen-14-verification
 
 ## Current Position
 
-Phase: 04 (action-compositor-vts-bridge-body-sway-investigation) — EXECUTING
-Plan: 2 of 8
-Status: Ready to execute
+Phase: 05 (polish-contracts-codegen-14-verification) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
 Last activity: 2026-05-08
 
 **Note on v1.0:** 04-04 (body-sway investigation) is complete. 05-01 (codegen pipeline) remains pending from v1.0 and will execute on the way to v2.0 phase work. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
@@ -73,6 +73,7 @@ Last activity: 2026-05-08
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P05 | 4min | 2 tasks | 3 files |
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P07 | 4min | 3 tasks | 6 files |
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P06 | 4min | 2 tasks | 4 files |
+| Phase 05-polish-contracts-codegen-14-verification P01 | 9min | 2 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,9 @@ Recent decisions affecting current work:
 - [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: Stale renderer-overlay verification wording is superseded by the locked D-09/D-11 sidecar Win32 cursor contract.
 - [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: Expression intents no longer use VTS hotkeys; HotkeyTriggerRequest remains reserved for DiscreteEvent AVT-09 in sidecar/src/sidecar/vts/discrete_dispatcher.py.
 - [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: IntentDriver resolves expression files from AvatarCapabilities plus avatar_dir, with a Teto Live2D fallback for checked-in dev assets.
+- [Phase 05-polish-contracts-codegen-14-verification]: force_required marks const, anyOf-null, and defaulted Pydantic fields required before TypeScript generation.
+- [Phase 05-polish-contracts-codegen-14-verification]: Cross-file duplicate declarations are removed by OWNER_FILE mapping and replaced with import type statements.
+- [Phase 05-polish-contracts-codegen-14-verification]: Generated contract drift is guarded by npm run check:contracts.
 
 ### Pending Todos
 
@@ -136,6 +140,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-08T05:37:13.877Z
-Stopped at: Completed 04-07-PLAN.md
+Last session: 2026-05-08T06:29:10.168Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

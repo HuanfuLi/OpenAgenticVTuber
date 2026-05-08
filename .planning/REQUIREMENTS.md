@@ -46,7 +46,7 @@ The walking-skeleton scope validates the layered architecture (Electron + Python
 ### Skeleton Verification & Contracts
 
 - [ ] **SC-01**: All six §14 success criteria are formally verified against the running system and recorded in a `.planning/skeleton-verification.md` handoff document (1. text→reply with synced lipsync, 2. `[joy]` smooth blend, 3. visible idle micro-motion, 4. visible speech-driven body/head sway, 5. cursor tracking, 6. WS protocol matches OLVT shape)
-- [ ] **SC-02**: `packages/contracts/` initially ships hand-written TypeScript mirroring the Pydantic models in Python; final phase replaces hand-written TS with codegen (`datamodel-code-generator` or `pydantic2ts`); Pydantic models are the source of truth
+- [x] **SC-02**: `packages/contracts/` initially ships hand-written TypeScript mirroring the Pydantic models in Python; final phase replaces hand-written TS with codegen (`datamodel-code-generator` or `pydantic2ts`); Pydantic models are the source of truth
 
 ## v2.0 Milestone Requirements: Plugin + Animation Control
 
@@ -276,7 +276,7 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | AVT-09 | Phase 4 | Complete |
 | AVT-10 | Phase 4 | Complete |
 | SC-01 | Phase 5 → Phase 10 | Migrated 2026-05-08 (skeleton-verification.md ceremony lands as v2.0 Phase 10 exit criterion) |
-| SC-02 | Phase 5 | Pending |
+| SC-02 | Phase 5 | Complete |
 | ARCH-01 | Phase 6 | Pending — strict system/plugin separation invariant |
 | ARCH-02 | Phase 8 | Pending — `RigCapabilities` contract defined here (MOVED from Phase 6 with 2026-05-08 order swap); Phase 6 plugin + Phase 9 HUD consume |
 | ARCH-03 | Phase 6 | Pending — orchestrator-decorated token stream feed |

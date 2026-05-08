@@ -119,7 +119,7 @@ Plans:
 **Plans**: 1 plan (was 2; 05-02 deferred to Milestone 2 close)
 
 Plans:
-- [ ] 05-01-PLAN.md — Hand-rolled Pydantic -> JSON Schema -> TS codegen pipeline replacing six packages/contracts/ts/*.ts files (SC-02)
+- [x] 05-01-PLAN.md — Hand-rolled Pydantic -> JSON Schema -> TS codegen pipeline replacing six packages/contracts/ts/*.ts files (SC-02)
 - ~~05-02-PLAN.md~~ — **Deferred**: skeleton-verification.md ceremony does not justify itself when the verified animation layer is being refactored. The 5 PITFALLS plumbing tests it would have run (token-boundary, DeepSeek-R1, VTS auth-reprompt, port-collision, OLVT protocol diff) are absorbed into Milestone-2 phase plans where they regression-test against ongoing changes. SC-01 re-emerges as the milestone-2 close criterion (final §14 verification under refactored architecture). Original plan preserved as `05-02-PLAN.md.deferred-m2-pivot` for future reference.
 
 **Note on SC-01:** SC-01 ("six §14 SCs formally verified in skeleton-verification.md") is **not abandoned** — it migrates to Milestone 2 Phase 10's exit criterion. The verification will be performed once the animation layer is refactored, capturing the architecture that ships rather than the architecture being torn out.
