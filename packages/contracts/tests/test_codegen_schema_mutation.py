@@ -48,7 +48,11 @@ def test_wsmessage_recurses_into_defs() -> None:
 
     force_required(schema)
 
-    for variant in schema["$defs"].values():
+    variants = [
+        schema["$defs"][choice["$ref"].rsplit("/", 1)[-1]]
+        for choice in schema["oneOf"]
+    ]
+    for variant in variants:
         assert "type" in variant["required"]
 
 

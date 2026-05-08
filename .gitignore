@@ -56,3 +56,6 @@ user-data/
 cache/
 chat_history/
 audit_logs/
+
+# Phase 5 codegen - committed intermediates live under packages/contracts/generated/json-schema/
+# Nothing new to ignore (we COMMIT the intermediates per Claude's Discretion default).
