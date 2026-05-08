@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Defining requirements for milestone v2.0
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-05-08T04:51:14.124Z"
-last_activity: 2026-05-08 — Milestone v2.0 (Plugin + Animation Control) started
+status: executing
+stopped_at: Completed 04-07-PLAN.md
+last_updated: "2026-05-08T05:37:26.174Z"
+last_activity: 2026-05-08
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 14
-  completed_plans: 13
+  total_plans: 17
+  completed_plans: 16
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon — v2.0 is infrastructure prep on the way there)
-**Current focus:** Milestone v2.0 setup — Plugin + Animation Control
+**Current focus:** Phase 04 — action-compositor-vts-bridge-body-sway-investigation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements for milestone v2.0
-Last activity: 2026-05-08 — Milestone v2.0 (Plugin + Animation Control) started
+Phase: 04 (action-compositor-vts-bridge-body-sway-investigation) — EXECUTING
+Plan: 2 of 8
+Status: Ready to execute
+Last activity: 2026-05-08
 
 **Note on v1.0:** 04-04 (body-sway investigation) is complete. 05-01 (codegen pipeline) remains pending from v1.0 and will execute on the way to v2.0 phase work. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
 
@@ -68,6 +68,7 @@ Last activity: 2026-05-08 — Milestone v2.0 (Plugin + Animation Control) starte
 | Phase 04 P02 | 2h | 4 tasks | 25 files |
 | Phase 04 P03 | 45min | 3 tasks | 7 files |
 | Phase 04-action-compositor-vts-bridge-body-sway-investigation P04 | 7min | 3 tasks | 15 files |
+| Phase 04-action-compositor-vts-bridge-body-sway-investigation P07 | 4min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,10 @@ Recent decisions affecting current work:
 - [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: head_only remains the ship default because live VTS/operator verification was unavailable and proxy_param is still unproven.
 - [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: exp3_modulation is not viable with Teto's current expression inventory; only ParamBHandIN appears and it is tied to prop/hand toggles, not body sway.
 - [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: Phase 5 SC-01 must re-run live A/B and replace deferred logs, plots, ratings, and missing clip.mp4 files before sign-off.
+- [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: SpeechDriver logs body strategy output separately as body_params and excludes MouthOpen from that evidence field.
+- [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: plot_speech_evidence.py keeps compatibility with legacy deferred stubs while preferring the real runtime [SPEECH-DRIVER] sentence_id format.
+- [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: CursorDriver emits ParamAngle/ParamEyeBall IDs for AVT-10 cursor output while preserving the 80px dead zone and 800ms cubic ease-back.
+- [Phase 04-action-compositor-vts-bridge-body-sway-investigation]: Expression intents no longer use VTS hotkeys; HotkeyTriggerRequest remains reserved for DiscreteEvent AVT-09 in sidecar/src/sidecar/vts/discrete_dispatcher.py.
 
 ### Pending Todos
 
@@ -125,6 +130,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-08T04:51:14.120Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-05-08T05:37:13.877Z
+Stopped at: Completed 04-07-PLAN.md
 Resume file: None
