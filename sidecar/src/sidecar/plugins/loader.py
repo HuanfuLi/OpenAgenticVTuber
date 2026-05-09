@@ -8,6 +8,7 @@ from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.api import BaseObserver
 
+from contracts import AvatarOverrides
 from sidecar.plugins.manifest import PluginManifest
 
 
@@ -61,6 +62,41 @@ def build_action_codes_section(manifest: PluginManifest) -> str:
     lines = [f"## Available Actions (plugin: {manifest.name} v{manifest.version})"]
     for action_code in sorted(manifest.action_codes, key=lambda item: item.code):
         lines.append(f"[{action_code.code}] - {action_code.description}")
+    return "\n".join(lines)
+
+
+def build_dispatch_codes_section(
+    manifest: PluginManifest | None,
+    overrides: AvatarOverrides | None,
+) -> str:
+    lines = ["## Available Dispatch Codes", "### Plugin Actions"]
+    action_codes = manifest.action_codes if manifest is not None else []
+    if action_codes:
+        for action_code in sorted(action_codes, key=lambda item: item.code):
+            lines.append(f"[{action_code.code}] - {action_code.description}")
+    else:
+        lines.append("No plugin action codes are declared for the active plugin.")
+
+    lines.append("### Avatar Variants")
+    variants = overrides.variants if overrides is not None else []
+    if variants:
+        for variant in sorted(variants, key=lambda item: item.code):
+            lines.append(f"{{{variant.code}}} - {variant.source_name}")
+    else:
+        lines.append("No avatar variant codes are declared for the active avatar.")
+
+    lines.append("### Avatar Events")
+    events = overrides.events if overrides is not None else []
+    if events:
+        for event in sorted(events, key=lambda item: item.code):
+            event_name = getattr(event, "source_name", None) or event.motion_file or event.code
+            lines.append(
+                f"<{event.code}> - {event_name} "
+                f"(duration: {event.duration_seconds:g}s)"
+            )
+    else:
+        lines.append("No avatar event codes are declared for the active avatar.")
+
     return "\n".join(lines)
 
 

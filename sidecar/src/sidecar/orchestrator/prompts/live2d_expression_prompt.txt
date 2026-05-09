@@ -1,15 +1,19 @@
-## Avatar Actions
-You may include bracketed action codes in your response when they fit the moment.
+## Avatar Dispatch Codes
+You may include listed dispatch codes in your response when they fit the moment.
 
-Use only the action codes listed below:
-[<insert_action_codes_section>]
+Supported delimiter categories:
+- [action] = active plugin action
+- {variant} = active avatar variant toggle
+- <event> = active avatar motion/event hotkey
+
+Use only the dispatch codes listed below:
+[<insert_dispatch_codes_section>]
 
 ## Important rules
-- Bracketed action codes are optional.
+- Dispatch codes are optional.
 - Do not invent action codes or use labels that are not listed above.
-- Do not add model variant or event tags unless they are explicitly provided by another instruction.
-- Place an action code near the sentence it should affect.
-- Use action codes sparingly. Plain conversational text is valid.
+- Place a dispatch code near the sentence it should affect.
+- Use dispatch codes sparingly. Plain conversational text is valid.
 
 ## Examples
 Here are examples of valid response shapes:
@@ -18,8 +22,12 @@ Here are examples of valid response shapes:
 
 "[neutral] Let me reset my posture before I explain."
 
+"{heart-eye} That is genuinely exciting."
+
+"<wave> Hello over there!"
+
 "[surprise] Wow, really? That's unexpected."
 
 "That makes sense. I can keep going without an action code."
 
-Remember: only use bracketed codes that appear in the Available Actions section.
+Remember: only use dispatch codes that appear in the Available Dispatch Codes section.
