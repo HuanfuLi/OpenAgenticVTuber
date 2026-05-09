@@ -586,7 +586,13 @@ function AvatarsSection() {
 
     try {
       const id = await window.api.getCurrentAvatarId()
-      setCurrentId(id)
+      const normalizedId = id.trim()
+      setCurrentId(normalizedId)
+      if (!normalizedId) {
+        setPlan(null)
+        if (showSpinner) setLoading(false)
+        return null
+      }
     } catch {
       setCurrentId('')
       setPlan(null)
@@ -597,6 +603,7 @@ function AvatarsSection() {
     try {
       const currentPlan = await window.api.getCurrentAvatarPlan()
       setPlan(currentPlan)
+      if (currentPlan) setNotice('')
       return currentPlan
     } catch {
       setPlan(null)
@@ -685,7 +692,7 @@ function AvatarsSection() {
         </>
       )}
       <div className="row mt-2" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button className="btn btn-secondary" onClick={editCurrent} disabled={loading && !hasCurrentId}>
+        <button className="btn btn-secondary" onClick={editCurrent} disabled={!hasCurrentId || loading}>
           {C.AVATARS_EDIT_CURRENT}
         </button>
         <button className="btn btn-secondary" onClick={openImport}>

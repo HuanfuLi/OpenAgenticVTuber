@@ -214,7 +214,7 @@ export const COPY = {
     MEMORY_HELP: 'Memory ships with v4.0 agentic system plus memory. No shared facts, retrieval index, or remember-this controls are active yet.',
     ABOUT_HEADER: 'About',
     ABOUT_VERSION: 'Version',
-    ABOUT_VERSION_VAL: '0.1.0-skeleton',
+    ABOUT_VERSION_VAL: 'v2.1 Mock/Reality Cleanup',
     ABOUT_CHANNEL: 'Update channel',
     ABOUT_CHANNEL_VAL: 'Coming in milestone-5.',
     ABOUT_LINKS: 'Docs · License · Third-party notices',

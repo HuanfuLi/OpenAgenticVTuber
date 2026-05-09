@@ -2,7 +2,8 @@
 // declared in apps/electron-main/preload/index.ts. Returns a cleanup callback
 // that unregisters all listeners (called when the window is destroyed).
 
-import { dialog, ipcMain, type BrowserWindow } from 'electron'
+import { app, dialog, ipcMain, type BrowserWindow } from 'electron'
+import path from 'node:path'
 import {
   getReadyUrl,
   getSidecarHttpUrl,
@@ -17,6 +18,7 @@ import {
   getChromeState,
   getLogLevel,
   getThemePreference,
+  resolveCurrentAvatarId,
   saveChromeState,
   saveLogLevel,
   saveThemePreference,
@@ -25,6 +27,10 @@ import {
 import { loadConfig, saveConfig, clearConfig, type StoredConfig } from './safe-storage'
 import { createHudWindow } from './hud-window'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
+
+function resolveRepoRoot(): string {
+  return path.resolve(app.getAppPath(), '..', '..')
+}
 
 export function registerIpc(window: BrowserWindow): () => void {
   // Existing from 01-01:
@@ -90,9 +96,10 @@ export function registerIpc(window: BrowserWindow): () => void {
   })
   ipcMain.handle('config:clear', () => clearConfig())
   ipcMain.handle('plugin:listBodyMotionPlugins', () => listBodyMotionPlugins())
-  ipcMain.handle('avatar:getCurrentId', () => store.get('currentAvatarId') || 'teto')
+  ipcMain.handle('avatar:getCurrentId', () => resolveCurrentAvatarId(resolveRepoRoot()))
   ipcMain.handle('avatar:getCurrentPlan', async (): Promise<AvatarImportPlan | null> => {
-    const currentAvatarId = store.get('currentAvatarId') || 'teto'
+    const currentAvatarId = resolveCurrentAvatarId(resolveRepoRoot())
+    if (!currentAvatarId) return null
     try {
       const resp = await fetch(
         `${getSidecarHttpUrl()}/admin/avatar/import/current?avatar_id=${encodeURIComponent(currentAvatarId)}`
@@ -135,7 +142,7 @@ export function registerIpc(window: BrowserWindow): () => void {
         const text = await resp.text()
         throw new Error(`Commit failed: HTTP ${resp.status} - ${text}`)
       }
-      store.set('currentAvatarId', plan.avatar_id || 'teto')
+      if (plan.avatar_id) store.set('currentAvatarId', plan.avatar_id)
       const body = (await resp.json()) as { status: string; path: string }
       await restartSidecar()
       return body

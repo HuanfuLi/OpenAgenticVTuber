@@ -12,7 +12,7 @@ import { app } from 'electron'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { loadConfig, type StoredConfig } from './safe-storage'
-import { store } from './window-store'
+import { NO_ACTIVE_AVATAR_ID, resolveCurrentAvatarId, store } from './window-store'
 
 const READY_RE = /^\[READY\] (ws:\/\/127\.0\.0\.1:(\d+)\/ws)$/
 const READY_TIMEOUT_MS = 10_000
@@ -151,7 +151,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
   const storedConfig = loadConfig()
   const llmConfigJson = buildSidecarConfigEnv(storedConfig)
   const activePluginName = activeBodyMotionPluginName(storedConfig)
-  const activeAvatarId = store.get('currentAvatarId')?.trim() || 'teto'
+  const activeAvatarId = resolveCurrentAvatarId(repoRoot) || NO_ACTIVE_AVATAR_ID
   const child = spawn('uv', ['run', 'python', '-m', 'sidecar'], {
     cwd: sidecarRoot,
     env: {

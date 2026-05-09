@@ -1,4 +1,6 @@
 import Store from 'electron-store'
+import fs from 'node:fs'
+import path from 'node:path'
 
 export interface WindowState {
   width: number
@@ -22,6 +24,8 @@ export interface ThemePreference {
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug'
 
+export const NO_ACTIVE_AVATAR_ID = '__none__'
+
 export interface StoreSchema {
   window: WindowState
   chrome: ChromeState
@@ -40,10 +44,43 @@ export const store = new Store<StoreSchema>({
       logsDrawerCollapsed: true
     },
     themePreference: null,
-    currentAvatarId: 'teto',
+    currentAvatarId: '',
     logLevel: 'info'
   }
 })
+
+function safeAvatarId(value: string | undefined): string {
+  const id = value?.trim() ?? ''
+  if (!id || id === '.' || id === '..') return ''
+  if (id.includes('/') || id.includes('\\')) return ''
+  return id
+}
+
+export function avatarHasOverrides(repoRoot: string, avatarId: string): boolean {
+  const safeId = safeAvatarId(avatarId)
+  if (!safeId) return false
+  return fs.existsSync(path.join(repoRoot, 'avatars', safeId, '_avatar_overrides.yaml'))
+}
+
+export function listAvatarCatalogIds(repoRoot: string): string[] {
+  const avatarsRoot = path.join(repoRoot, 'avatars')
+  if (!fs.existsSync(avatarsRoot)) return []
+  return fs.readdirSync(avatarsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((id) => avatarHasOverrides(repoRoot, id))
+    .sort((a, b) => a.localeCompare(b, 'en'))
+}
+
+export function resolveCurrentAvatarId(repoRoot: string): string {
+  const storedId = safeAvatarId(store.get('currentAvatarId'))
+  if (avatarHasOverrides(repoRoot, storedId)) return storedId
+
+  const [firstCatalogId] = listAvatarCatalogIds(repoRoot)
+  const resolvedId = firstCatalogId ?? ''
+  if (resolvedId !== storedId) store.set('currentAvatarId', resolvedId)
+  return resolvedId
+}
 
 export function getChromeState(): ChromeState {
   return store.get('chrome')
