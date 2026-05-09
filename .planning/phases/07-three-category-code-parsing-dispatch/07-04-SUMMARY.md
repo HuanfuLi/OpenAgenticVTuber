@@ -78,6 +78,7 @@ None - plan executed exactly as written.
 
 - Initial large context reads timed out, so the plan-required sections were re-read with narrower line and pattern selection.
 - Stub scan command needed a quoting correction on PowerShell; the corrected scan found only typed defaults/local empty dict initializers, not stubs.
+- The first metadata commit accidentally included already-staged `packages/contracts` changes owned by the parallel 07-02 executor. Follow-up commit `5c36e9e` removed those files from the committed 07-04 net diff and restored them to the worktree uncommitted for the owning executor.
 
 ## Known Stubs
 
