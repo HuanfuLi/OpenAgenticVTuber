@@ -89,7 +89,7 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 | SET-05 | Phase 12 | Complete |
 | SET-06 | Phase 12 | Complete |
 | SET-07 | Phase 12 | Complete |
-| HIST-01 | Phase 13 | Gap planned: History row presentation |
+| HIST-01 | Phase 13 | Implemented; visual recheck pending |
 | HIST-02 | Phase 13 | Implemented; restart UAT pending |
 | HIST-03 | Phase 13 | UAT passed |
 | HIST-04 | Phase 13 | UAT passed |
@@ -111,4 +111,4 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after Phase 13 UAT diagnosed one History-row presentation gap*
+*Last updated: 2026-05-09 after Phase 13 gap closure implementation; visual recheck pending*

@@ -1,12 +1,12 @@
 ---
-status: diagnosed
+status: resolved
 phase: 13-conversation-history-sessions
 source:
   - 13-01-PLAN.md
   - 13-02-PLAN.md
   - 13-03-PLAN.md
 started: 2026-05-09
-updated: 2026-05-09T10:31:00-04:00
+updated: 2026-05-09T11:10:00-04:00
 ---
 
 # Phase 13 UAT: Conversation History Sessions
@@ -59,7 +59,7 @@ blocked: 0
 ## Gaps
 
 - truth: "History rows should present a standard session title derived from the conversation without making the first LLM response appear as primary history content."
-  status: failed
+  status: resolved
   reason: "User reported: Partial with issue: The new history has both original user first prompt and original LLM first response, not derived title. This is not standard way. Is this design intentional for better search/filter functionality? Or should we just use a more standard manner that only serves a derived title (LLM summarized) without showing LLM first response?"
   severity: minor
   test: 2
@@ -75,3 +75,4 @@ blocked: 0
     - "Make History rows show title plus compact metadata only, not assistant-response preview."
     - "Keep search useful by filtering title plus non-visible transcript/search text if needed."
     - "Add regression coverage that assistant response preview text is not visibly rendered in normal History rows."
+  resolved_by: "13-04-SUMMARY.md / commit 20d8333"
