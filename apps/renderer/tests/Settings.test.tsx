@@ -207,6 +207,39 @@ describe('Settings TTS section', () => {
     expect(within(section).getByRole('button', { name: COPY.SETTINGS.AVATARS_IMPORT_REPLACE })).not.toBeDisabled()
   })
 
+  it('keeps the current avatar ID when metadata loading fails', async () => {
+    vi.mocked(window.api.getCurrentAvatarId).mockResolvedValue('teto')
+    vi.mocked(window.api.getCurrentAvatarPlan).mockRejectedValue(new Error('sidecar starting'))
+
+    renderSettings()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
+      .then((heading) => heading.closest('section')!)
+    expect(await within(section).findByText('teto')).toBeInTheDocument()
+    expect(within(section).queryByText('unknown')).toBeNull()
+  })
+
+  it('retries current avatar metadata when Edit current is clicked after an initial miss', async () => {
+    vi.mocked(window.api.getCurrentAvatarId).mockResolvedValue('akari')
+    vi.mocked(window.api.getCurrentAvatarPlan)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(currentAvatarPlan)
+
+    renderSettingsWithProbe()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
+      .then((heading) => heading.closest('section')!)
+    const editButton = await within(section).findByRole('button', { name: COPY.SETTINGS.AVATARS_EDIT_CURRENT })
+    expect(editButton).not.toBeDisabled()
+    fireEvent.click(editButton)
+
+    await waitFor(() => {
+      expect(window.api.getCurrentAvatarPlan).toHaveBeenCalledTimes(2)
+      expect(screen.getByTestId('store-view')).toHaveTextContent('avatar-import')
+      expect(screen.getByTestId('store-avatar-plan')).toHaveTextContent('akari')
+    })
+  })
+
   it('renders compact VTube Studio status and troubleshooting actions', async () => {
     renderSettings()
 
@@ -255,6 +288,15 @@ describe('Settings TTS section', () => {
     })
     expect(select).toHaveValue('debug')
     expect(screen.queryByText('Coming in milestone-2.', { exact: false })).toBeNull()
+  })
+
+  it('explains what each diagnostics log level means', async () => {
+    renderSettings()
+
+    expect(await screen.findByText(/Error: only failures/i)).toBeInTheDocument()
+    expect(screen.getByText(/Warn: problems that need attention/i)).toBeInTheDocument()
+    expect(screen.getByText(/Info: normal app milestones/i)).toBeInTheDocument()
+    expect(screen.getByText(/Debug: verbose troubleshooting detail/i)).toBeInTheDocument()
   })
 
   it('renders body-motion plugin selection and persists active plugin', async () => {
