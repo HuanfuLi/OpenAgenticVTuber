@@ -54,6 +54,8 @@ key-decisions:
   - "Default body_sway keeps proxy_param.py and exp3_modulation.py as source artifacts, but registry selection exposes only head_only."
   - "The orchestrator does not emit plugin action codes as ActionIntent values; plugins receive raw sentence text separately."
 
+requirements-completed: [ARCH-10]
+
 metrics:
   duration: 12min
   completed: 2026-05-08
