@@ -13,11 +13,19 @@ sys.path.insert(0, str(REPO_ROOT / "packages/contracts/py"))
 
 from contracts import (  # noqa: E402
     AudioConfig,
+    AudioPayloadMessage,
     AudioProviderHealth,
     AvatarImportPlan,
     AvatarOverrides,
     DefaultPluginActionBinding,
+    GptSoVitsHealthRequest,
+    GptSoVitsProviderConfig,
+    GptSoVitsTestSynthesisRequest,
+    GptSoVitsTestSynthesisResult,
+    ReferenceAudioAsset,
     RigCapabilities,
+    VoicePreset,
+    VoicePresetLibrary,
 )
 
 
@@ -134,6 +142,170 @@ def test_audio_provider_generated_outputs_exist() -> None:
         path = REPO_ROOT / rel_path
         assert path.exists(), f"missing generated file: {rel_path}"
         assert pattern in path.read_text(encoding="utf-8")
+
+
+def test_gpt_sovits_provider_config_uses_one_base_url_and_activation_gates() -> None:
+    cfg = GptSoVitsProviderConfig(base_url="http://127.0.0.1:9880")
+
+    assert cfg.provider_id == "gpt_sovits"
+    assert cfg.base_url == "http://127.0.0.1:9880"
+    assert cfg.launch.command is None
+    assert cfg.launch.working_directory is None
+    assert cfg.activation.health_check_passed is False
+    assert cfg.activation.test_synthesis_passed is False
+    assert "tts_url" not in cfg.model_dump()
+    assert "health_url" not in cfg.model_dump()
+
+    health = GptSoVitsHealthRequest(config=cfg)
+    assert health.config.base_url == "http://127.0.0.1:9880"
+
+    with pytest.raises(ValidationError):
+        GptSoVitsProviderConfig(provider_id="piper", base_url="http://127.0.0.1:9880")
+
+
+def test_voice_preset_keeps_gpt_sovits_knobs_without_connection_fields() -> None:
+    preset = VoicePreset(
+        preset_id="preset_teto",
+        name="Teto bright",
+        provider_id="gpt_sovits",
+        gpt_sovits={
+            "reference_audio_id": "ref_teto",
+            "prompt_text": "今日も一緒に頑張ろうね。",
+            "prompt_lang": "ja",
+            "text_lang": "ja",
+        },
+    )
+
+    dumped = preset.model_dump()
+    assert dumped["gpt_sovits"]["top_k"] == 15
+    assert dumped["gpt_sovits"]["top_p"] == 1.0
+    assert dumped["gpt_sovits"]["temperature"] == 1.0
+    assert dumped["gpt_sovits"]["text_split_method"] == "cut5"
+    assert dumped["gpt_sovits"]["batch_size"] == 1
+    assert dumped["gpt_sovits"]["speed_factor"] == 1.0
+    assert dumped["gpt_sovits"]["repetition_penalty"] == 1.35
+    assert dumped["gpt_sovits"]["media_type"] == "wav"
+    assert dumped["gpt_sovits"]["streaming_mode"] is False
+    assert "base_url" not in str(dumped)
+    assert "launch" not in str(dumped)
+    assert "credentials" not in str(dumped)
+
+    with pytest.raises(ValidationError):
+        VoicePreset(preset_id="bad", name="Bad", provider_id="openai")
+    with pytest.raises(ValidationError):
+        VoicePreset(
+            preset_id="bad_lang",
+            name="Bad lang",
+            provider_id="gpt_sovits",
+            gpt_sovits={"prompt_lang": "klingon", "text_lang": "ja"},
+        )
+
+
+def test_reference_audio_asset_tracks_sanitized_managed_metadata() -> None:
+    asset = ReferenceAudioAsset(
+        asset_id="ref_teto_001",
+        managed_path_token="reference-audio/ref_teto_001.wav",
+        display_basename="Teto Sample.wav",
+        duration_ms=3200,
+        format="wav",
+        transcript_text="今日も一緒に頑張ろうね。",
+        language="ja",
+    )
+
+    assert asset.asset_id == "ref_teto_001"
+    assert asset.managed_path_token == "reference-audio/ref_teto_001.wav"
+    assert asset.display_basename == "Teto Sample.wav"
+    assert asset.duration_ms == 3200
+
+    with pytest.raises(ValidationError):
+        ReferenceAudioAsset(
+            asset_id="ref_bad",
+            managed_path_token="../secret.wav",
+            display_basename="secret.wav",
+            duration_ms=1000,
+            format="wav",
+            transcript_text="hello",
+            language="en",
+        )
+    with pytest.raises(ValidationError):
+        ReferenceAudioAsset(
+            asset_id="ref_bad_lang",
+            managed_path_token="reference-audio/ref_bad.wav",
+            display_basename="bad.wav",
+            duration_ms=1000,
+            format="wav",
+            transcript_text="hello",
+            language="klingon",
+        )
+
+
+def test_test_synthesis_and_failed_audio_payload_serialize() -> None:
+    cfg = GptSoVitsProviderConfig(base_url="http://127.0.0.1:9880")
+    preset = VoicePreset(preset_id="preset_teto", name="Teto", provider_id="gpt_sovits")
+    request = GptSoVitsTestSynthesisRequest(
+        config=cfg,
+        preset=preset,
+        text="Preview voice line.",
+    )
+    result = GptSoVitsTestSynthesisResult(
+        ok=True,
+        audio_base64="UklGRg==",
+        media_type="wav",
+        sample_rate_hz=48000,
+        duration_ms=420,
+        summary="Test synthesis succeeded.",
+    )
+
+    assert request.text == "Preview voice line."
+    assert result.model_dump()["audio_base64"] == "UklGRg=="
+
+    payload = AudioPayloadMessage(
+        audio=None,
+        volumes=[],
+        slice_length=20,
+        display_text={"text": "Still show this sentence."},
+        dispatches=[],
+        sentence_id=7,
+        failed_audio={
+            "provider_id": "gpt_sovits",
+            "state": "external_service_failure",
+            "summary": "GPT-SoVITS synthesis failed.",
+            "retryable": True,
+            "redacted_diagnostics": {"status": "400"},
+        },
+    )
+
+    dumped = payload.model_dump()
+    assert dumped["display_text"]["text"] == "Still show this sentence."
+    assert dumped["failed_audio"]["provider_id"] == "gpt_sovits"
+
+
+def test_voice_preset_library_serializes_active_associations() -> None:
+    library = VoicePresetLibrary(
+        presets=[VoicePreset(preset_id="preset_teto", name="Teto", provider_id="gpt_sovits")],
+        reference_audio_assets=[
+            ReferenceAudioAsset(
+                asset_id="ref_teto_001",
+                managed_path_token="reference-audio/ref_teto_001.wav",
+                display_basename="Teto Sample.wav",
+                duration_ms=3200,
+                format="wav",
+                transcript_text="今日も一緒に頑張ろうね。",
+                language="ja",
+            )
+        ],
+        active_associations=[
+            {
+                "scope": "avatar_session",
+                "avatar_id": "teto",
+                "session_id": "session-1",
+                "preset_id": "preset_teto",
+            }
+        ],
+    )
+
+    assert library.schema_version == 1
+    assert library.active_associations[0].preset_id == "preset_teto"
 
 
 def test_hud_message_pydantic_discriminator_validates() -> None:
