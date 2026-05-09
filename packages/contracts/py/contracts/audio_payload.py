@@ -8,12 +8,12 @@ OpenLLM_Vtuber/src/open_llm_vtuber/utils/stream_audio.py:50-60):
 Phase-2 extension over OLVT (documented divergence per Discrepancy 4):
     sentence_id:int -- needed for [STUB-TTS]/sentence-trace logs (UI-SPEC IP-5).
 
-Per CONTEXT.md D-02 and D-12, the `actions` field carries our ActionIntent[]
+Per Phase 7 D-A4, the `dispatches` field carries ordered Dispatch records
 instead of OLVT's Actions{expressions,pictures,sounds} dataclass.
 """
 from typing import List, Literal, Optional
 from pydantic import BaseModel
-from .action_intent import ActionIntent
+from .dispatch import Dispatch
 
 
 class DisplayTextField(BaseModel):
@@ -29,6 +29,6 @@ class AudioPayloadMessage(BaseModel):
     volumes: List[float] = []        # filled in Phase 3 from RMS envelope
     slice_length: int = 20           # OLVT default chunk_length_ms
     display_text: DisplayTextField
-    actions: List[ActionIntent] = []
+    dispatches: List[Dispatch] = []
     sentence_id: int                 # Phase-2 extension (Discrepancy 4)
     forwarded: bool = False          # OLVT broadcast flag; always False in skeleton

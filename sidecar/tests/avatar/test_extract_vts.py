@@ -104,6 +104,7 @@ def test_trigger_animation_uses_motion3_duration(tmp_path) -> None:
         ("unreadable", "directory"),
         ("invalid", "{not json"),
         ("non_numeric", {"Meta": {"Duration": "slow", "Loop": True}}),
+        ("non_finite", {"Meta": {"Duration": "NaN", "Loop": True}}),
         ("nonpositive", {"Meta": {"Duration": 0, "Loop": True}}),
         ("oversized", {"Meta": {"Duration": 10.001, "Loop": True}}),
     ],

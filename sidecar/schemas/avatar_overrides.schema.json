@@ -115,8 +115,10 @@
               "enum": ["think", "thinking", "function_call", "function_calls", "tool_call", "tool_calls", "system"]
             }
           },
+          "hotkey_id": { "type": "string", "default": "" },
           "motion_file": { "type": "string" },
           "duration_seconds": { "type": "number", "minimum": 0, "maximum": 60 },
+          "duration_is_fallback": { "type": "boolean", "default": false },
           "is_loop": { "type": "boolean", "default": false }
         }
       },

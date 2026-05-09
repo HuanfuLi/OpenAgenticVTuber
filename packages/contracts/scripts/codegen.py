@@ -23,16 +23,19 @@ sys.path.insert(0, str(REPO_ROOT / "packages/contracts/py"))
 
 from pydantic import TypeAdapter  # noqa: E402
 from contracts import (  # noqa: E402
-    ActionIntent,
+    ActionCode,
     DefaultPluginActionBinding,
     AudioPayloadMessage,
     AvatarImportPlan,
     AvatarOverrides,
+    Dispatch,
     DiscreteEvent,
+    EventFire,
     EventEntry,
     ParamFrame,
     RigCapabilities,
     SpeechEnvelopePayload,
+    VariantToggle,
     VariantEntry,
     WSMessage,
 )
@@ -42,7 +45,7 @@ TS_DIR = REPO_ROOT / "packages/contracts/ts"
 PY_SOURCE_REL = "packages/contracts/py/contracts"
 
 TARGETS = [
-    (ActionIntent, "action-intent", "action_intent", "ActionIntent"),
+    (Dispatch, "dispatch", "dispatch", "Dispatch"),
     (DefaultPluginActionBinding, "action-binding", "action_binding", "DefaultPluginActionBinding"),
     (AudioPayloadMessage, "audio-payload", "audio_payload", "AudioPayloadMessage"),
     (SpeechEnvelopePayload, "speech-envelope", "speech_envelope", "SpeechEnvelopePayload"),
@@ -57,7 +60,10 @@ TARGETS = [
 ]
 
 OWNER_FILE = {
-    "ActionIntent": "action-intent",
+    "ActionCode": "dispatch",
+    "VariantToggle": "dispatch",
+    "EventFire": "dispatch",
+    "Dispatch": "dispatch",
     "DefaultPluginActionBinding": "action-binding",
     "AudioPayloadMessage": "audio-payload",
     "DisplayTextField": "audio-payload",
@@ -290,7 +296,7 @@ def main() -> int:
         if ts_name == "param-frame" and "export type ParamMode" not in ts_by_file[ts_name]:
             ts_by_file[ts_name] = "export type ParamMode = 'add' | 'set';\n\n" + ts_by_file[ts_name]
         if ts_name == "ws-message":
-            ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "ActionIntent", "./action-intent")
+            ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "Dispatch", "./dispatch")
             ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "DisplayTextField", "./audio-payload")
         out_path = TS_DIR / f"{ts_name}.ts"
         out_path.write_text(banner(py_names[ts_name]) + ts_by_file[ts_name].strip() + "\n", encoding="utf-8")
