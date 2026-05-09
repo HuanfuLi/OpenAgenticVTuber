@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 import time
+from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
@@ -203,6 +204,16 @@ def _patch_clean_boot(monkeypatch, tmp_path, *, overrides, capabilities, plugin_
     return server, calls
 
 
+def _uat_path():
+    return (
+        Path(__file__).resolve().parents[2]
+        / ".planning"
+        / "phases"
+        / "07-three-category-code-parsing-dispatch"
+        / "07-HUMAN-UAT.md"
+    )
+
+
 @pytest.mark.asyncio
 async def test_collision_raises_before_vts_connect(monkeypatch, tmp_path):
     from contracts import VariantEntry
@@ -308,3 +319,118 @@ async def test_clean_boot_constructs_managers_resets_and_closes_tracker_before_w
         assert calls.index("handshake") < calls.index("variant.reset") < calls.index("compositor.run")
 
     assert calls.index("event_tracker.close") < calls.index("writer.close")
+
+
+@pytest.mark.asyncio
+async def test_clean_boot_passes_plugin_manifest_and_overrides_to_dispatch_prompt_builder(
+    monkeypatch,
+    tmp_path,
+):
+    from contracts import EventEntry, VariantEntry
+    from sidecar.plugins.manifest import PluginActionCode, PluginManifest
+
+    plugin_manifest = PluginManifest(
+        name="default",
+        version="1.0.0",
+        entrypoint="plugin.py:Plugin",
+        api_version="1.0",
+        action_codes=[PluginActionCode(code="smirk", description="sly smile")],
+    )
+    overrides = _avatar_overrides(
+        variants=[VariantEntry(code="heart-eye", hotkey_id="hk-v", source_name="Heart Eye")],
+        events=[
+            EventEntry(
+                code="wave",
+                hotkey_id="hk-e",
+                motion_file="wave.motion3.json",
+                duration_seconds=1.5,
+            )
+        ],
+    )
+    server, calls = _patch_clean_boot(
+        monkeypatch,
+        tmp_path,
+        overrides=overrides,
+        capabilities=_rig_capabilities(),
+        plugin_manifest=plugin_manifest,
+    )
+    builder_calls = []
+
+    def fake_build_dispatch_codes_section(manifest, loaded_overrides):
+        builder_calls.append((manifest, loaded_overrides))
+        return "COMBINED DISPATCH SECTION"
+
+    monkeypatch.setattr(
+        server,
+        "build_dispatch_codes_section",
+        fake_build_dispatch_codes_section,
+    )
+
+    app = FastAPI()
+    async with server.lifespan(app):
+        await asyncio.sleep(0)
+
+    assert builder_calls == [(plugin_manifest, overrides)]
+    assert app.state.orchestrator.kwargs["action_codes_section"] == "COMBINED DISPATCH SECTION"
+    assert calls.index("plugin_supervisor.load") < calls.index("orchestrator")
+
+
+@pytest.mark.asyncio
+async def test_clean_boot_logs_empty_event_catalog_as_uat_blocked(
+    monkeypatch,
+    tmp_path,
+):
+    from contracts import VariantEntry
+    from loguru import logger
+    from sidecar.plugins.manifest import PluginActionCode, PluginManifest
+
+    plugin_manifest = PluginManifest(
+        name="default",
+        version="1.0.0",
+        entrypoint="plugin.py:Plugin",
+        api_version="1.0",
+        action_codes=[PluginActionCode(code="smirk", description="sly smile")],
+    )
+    overrides = _avatar_overrides(
+        variants=[VariantEntry(code="heart-eye", hotkey_id="hk-v", source_name="Heart Eye")],
+        events=[],
+    )
+    server, _calls = _patch_clean_boot(
+        monkeypatch,
+        tmp_path,
+        overrides=overrides,
+        capabilities=_rig_capabilities(),
+        plugin_manifest=plugin_manifest,
+    )
+    monkeypatch.setattr(
+        server,
+        "build_dispatch_codes_section",
+        lambda *_args, **_kwargs: "COMBINED DISPATCH SECTION",
+    )
+    messages: list[str] = []
+    sink_id = logger.add(lambda msg: messages.append(msg.record["message"]), level="INFO")
+    try:
+        app = FastAPI()
+        async with server.lifespan(app):
+            await asyncio.sleep(0)
+    finally:
+        logger.remove(sink_id)
+
+    assert any(
+        "[DISPATCH-CATALOG] active_avatar=teto actions=1 variants=1 events=0" in message
+        for message in messages
+    )
+    assert any(
+        "[DISPATCH-CATALOG-BLOCKED] live event UAT requires an active avatar catalog with at least one event."
+        in message
+        for message in messages
+    )
+
+
+def test_phase_7_human_uat_marks_empty_event_catalog_as_blocked() -> None:
+    text = Path(_uat_path()).read_text(encoding="utf-8")
+
+    assert "AGENTICLLMVTUBER_ACTIVE_AVATAR=重音テト" in text
+    assert "events: []" in text
+    assert "blocked" in text.lower()
+    assert "not a parser/routing failure" in text

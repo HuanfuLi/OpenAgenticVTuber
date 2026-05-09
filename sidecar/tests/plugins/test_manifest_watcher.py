@@ -90,15 +90,22 @@ def test_manifest_watcher_helper_does_not_rebuild_prompt() -> None:
     source = inspect.getsource(loader.start_manifest_change_watcher)
 
     assert "build_action_codes_section" not in source
+    assert "build_dispatch_codes_section" not in source
     assert "warn_if_manifest_changed" in inspect.getsource(loader._ManifestFileEventHandler)
 
 
-def test_sidecar_lifespan_wires_manifest_watcher_without_prompt_rebuild() -> None:
+def test_sidecar_lifespan_builds_dispatch_prompt_before_orchestrator() -> None:
     server_path = Path(__file__).resolve().parents[2] / "src" / "sidecar" / "ws" / "server.py"
     source = server_path.read_text(encoding="utf-8")
 
     assert "start_manifest_change_watcher" in source
     assert "plugin_manifest_watcher" in source
     assert "plugin_manifest_watcher.stop()" in source
-    assert source.count("build_action_codes_section(plugin_manifest)") == 1
-    assert source.index("build_action_codes_section(plugin_manifest)") < source.index("Orchestrator(")
+    assert "build_action_codes_section(plugin_manifest)" not in source
+    assert source.count("build_dispatch_codes_section(plugin_manifest, overrides)") == 1
+    assert source.index("load_avatar_overrides(avatar_dir)") < source.index(
+        "build_dispatch_codes_section(plugin_manifest, overrides)"
+    )
+    assert source.index("build_dispatch_codes_section(plugin_manifest, overrides)") < source.index(
+        "Orchestrator("
+    )

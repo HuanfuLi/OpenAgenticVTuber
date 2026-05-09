@@ -11,7 +11,7 @@ from typing import AsyncIterator
 import pytest
 from litellm.exceptions import ContextWindowExceededError
 
-from contracts import ActionCode
+from contracts import ActionCode, AvatarOverrides, EventEntry, EventFire, VariantEntry, VariantToggle
 from sidecar.orchestrator.orchestrator import Orchestrator
 from sidecar.orchestrator.output_types import DisplayText, SentenceOutput
 from sidecar.orchestrator.tts_preprocessor import TTSPreprocessorConfig
@@ -67,6 +67,32 @@ class _FakePluginAdapter:
     def enqueue_action_code(self, action: ActionCode) -> bool:
         self.actions.append(action)
         return True
+
+
+class _FakeVariantStateManager:
+    def __init__(self) -> None:
+        self.applied: list[VariantToggle] = []
+
+    async def apply(self, toggle: VariantToggle) -> None:
+        self.applied.append(toggle)
+
+
+class _FakeDiscreteDispatcher:
+    def __init__(self) -> None:
+        self.fired: list[tuple[str, str]] = []
+
+    async def fire(self, hotkey_id: str, name: str = "", force: bool = False):
+        del force
+        self.fired.append((hotkey_id, name))
+        return {"ok": True}
+
+
+class _FakeEventCompletionTracker:
+    def __init__(self) -> None:
+        self.tracked: list[EventFire] = []
+
+    def track(self, event: EventFire) -> None:
+        self.tracked.append(event)
 
 
 async def _fake_sentence_stream(*sentences: str) -> AsyncIterator[SentenceOutput]:
@@ -307,6 +333,86 @@ def test_system_prompt_freezes_manifest_action_section() -> None:
 
     assert first._system_prompt.encode() == second._system_prompt.encode()
     assert changed._system_prompt != first._system_prompt
+
+
+@pytest.mark.asyncio
+async def test_system_prompt_freezes_combined_dispatch_section() -> None:
+    section = (
+        "## Available Dispatch Codes\n"
+        "### Plugin Actions\n"
+        "[smirk] - Show a sly smile.\n"
+        "### Avatar Variants\n"
+        "{heart-eye} - Heart Eye\n"
+        "### Avatar Events\n"
+        "<wave> - wave.motion3.json (duration: 1.5s)"
+    )
+    gw = _FakeGateway(chunks=["Hello."])
+    orch = Orchestrator(
+        gateway=gw,
+        persona_text="You are Teto.",
+        action_codes_section=section,
+    )
+    ws = _WSRecorder()
+
+    await orch.turn("hi", ws)
+
+    frozen_prompt = gw.calls_received_system_prompt[0]
+    assert "[smirk] - Show a sly smile." in frozen_prompt
+    assert "{heart-eye} - Heart Eye" in frozen_prompt
+    assert "<wave> - wave.motion3.json (duration: 1.5s)" in frozen_prompt
+
+
+@pytest.mark.asyncio
+async def test_forced_assistant_codes_produce_all_dispatch_kinds() -> None:
+    plugin_adapter = _FakePluginAdapter()
+    variant_state_manager = _FakeVariantStateManager()
+    discrete_dispatcher = _FakeDiscreteDispatcher()
+    event_completion_tracker = _FakeEventCompletionTracker()
+    orch = Orchestrator(
+        gateway=_FakeGateway(chunks=["[smirk] {heart-eye} <wave> Hello."]),
+        persona_text="You are Teto.",
+        action_codes_section="",
+        plugin_action_codes={"smirk"},
+        avatar_overrides=AvatarOverrides(
+            variants=[
+                VariantEntry(
+                    code="heart-eye",
+                    hotkey_id="hk-v",
+                    source_name="Heart Eye",
+                )
+            ],
+            events=[
+                EventEntry(
+                    code="wave",
+                    hotkey_id="hk-e",
+                    motion_file="wave.motion3.json",
+                    duration_seconds=1.5,
+                )
+            ],
+        ),
+        plugin_adapter=plugin_adapter,
+        variant_state_manager=variant_state_manager,
+        discrete_dispatcher=discrete_dispatcher,
+        event_completion_tracker=event_completion_tracker,
+    )
+    ws = _WSRecorder()
+
+    await orch.turn("hi", ws)
+
+    audio_writes = [w for w in ws.writes if w.get("type") == "audio"]
+    assert audio_writes[0]["dispatches"] == [
+        {"kind": "action", "name": "smirk"},
+        {"kind": "variant", "name": "heart-eye", "hotkey_id": "hk-v"},
+        {"kind": "event", "name": "wave", "hotkey_id": "hk-e", "duration_ms": 2500},
+    ]
+    assert plugin_adapter.actions == [ActionCode(name="smirk")]
+    assert variant_state_manager.applied == [
+        VariantToggle(name="heart-eye", hotkey_id="hk-v")
+    ]
+    assert discrete_dispatcher.fired == [("hk-e", "wave")]
+    assert event_completion_tracker.tracked == [
+        EventFire(name="wave", hotkey_id="hk-e", duration_ms=2500)
+    ]
 
 
 @pytest.mark.asyncio
