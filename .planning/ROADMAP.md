@@ -145,7 +145,7 @@ Five additional phases (6, 7, 8, 9, 10) refactoring the milestone-1 animation la
 - [x] **Phase 6: Plugin Runtime + Default Plugin** — Plugin contracts (ABC, manifest), in-sidecar loader with supervisor + clamp + rate-limiter, default plugin absorbing milestone-1 IntentDriver + body-sway logic; consumes Phase 8's `RigCapabilities` + `AvatarOverrides` — **second in execution order** *(2026-05-08 PM passed re_verification_4 after 06-08 corrected active Teto joy vocabulary; 06-07 closed ARCH-05/06 split-writer violation + tracking-range fix closed F-3)*
 - [x] **Phase 7: Three-Category Code Parsing + Dispatch** — `code_extractor` decorator dispatching `[xxx]` / `{xxx}` / `<xxx>` to plugin / variant-toggle / event-fire paths — third in execution order; complete after 07-08 prompt-catalog gap closure and live `{heart-eye}` UAT confirmation
 - [ ] **Phase 9: Slider HUD + Per-Param Lock** — Sidecar 15 Hz HUD-mode IPC tap + dedicated React route + per-param lock with auto-engage on drag — fourth in execution order
-- [ ] **Phase 10: Cursor Polish + §14 SC Re-Verification** — Optional cursor-driver in-canvas-gate drop + side-by-side §14 SC harness against milestone-1 baselines + skeleton-verification.md commit — last in execution order
+- [ ] **Phase 10: Cursor Fix + §14 SC Re-Verification** — Mandatory cursor namespace fix (per 2026-05-08 discuss-phase amendment) + drop in-VTS-window gate + synthetic-canvas fallback + side-by-side §14 SC harness replay (lipsync + idle) + operator ceremony for SC #2 [smirk] / SC #4 body sway / SC #5 cursor + skeleton-verification.md commit — last in execution order; 2 plans
 
 ### Phase 6: Plugin Runtime + Default Plugin
 **Goal**: The animation layer becomes plug-and-play. A developer can swap the body-motion strategy by changing one config line, restarting the sidecar, and observing the avatar move differently — without touching idle / lipsync / cursor / pyvts-writer code. The default plugin ships with the system and absorbs the milestone-1 `IntentDriver` + `compositor/body_sway/*` logic. As of 06-08, the active imported Teto catalog is strict: `joy` is obsolete/invalid and absent, so declared default-plugin actions such as `[smirk]` cover ParamFrame ramp behavior while model-owned variants such as `heart-eye` are deferred to Phase 7 `{variant}` dispatch.
@@ -262,10 +262,11 @@ Plans:
   2. Side-by-side §14 SC comparison harness (built in Phase 6 plumbing-week 06-02) replays current behavior against milestone-1 captured baselines for the automatable subset only — lipsync RMS-vs-MouthOpen Pearson correlation (≥0.7 threshold) + idle micro-motion non-zero variance on `ParamAngle{X,Y,Z}` / `ParamEyeOpen{L,R}` (defaults; tune at plan-time if baselines indicate). Tolerance bands ±100ms / ±0.05 only apply to these mechanism-preserved SCs
   3. If cursor polish lands (optional per VFY-01): in-VTS-window gate at `cursor_driver.py:27-28` is dropped; synthetic-canvas fallback projects against primary-monitor center when no VTS window is detected; cursor SC verdict upgrades from PARTIAL to PASS. If cursor polish does not land: cursor SC is recorded as PARTIAL with the documented future-direction rationale (later milestone may introduce native Cubism integration with better global cursor tracking)
   4. CI grep-test still confirms exactly one `import pyvts` in `sidecar/src/` (the writer); single pyvts writer rule per ARCH-06 carried through all v2.0 entry points
-**Plans**: ~1 plan (TBD at /gsd:plan-phase 10)
+**Plans**: 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md (TBD) — §14 SC re-verification ceremony (all six SCs, PASS/PARTIAL/FAIL with observations) + side-by-side baseline harness replay + optional cursor polish (drop in-canvas gate, add synthetic-canvas fallback) + `skeleton-verification.md` commit + milestone-close decision log
+- [ ] 10-01-PLAN.md — Cursor diagnose + namespace fix + drop in-VTS-window gate + synthetic-canvas fallback + regression test (VFY-01, VFY-02). Wave 1, autonomous.
+- [ ] 10-02-PLAN.md — §14 SC ceremony script + skeleton-verification.md commit + plumbing harness replay (lipsync + idle) + operator-judged SC #2 [smirk] / SC #4 body sway / SC #5 cursor verdicts + milestone v2.0 close decision (VFY-03, VFY-04, VFY-05). Wave 2, has checkpoint:human-verify task.
 
 **UI hint**: no  <!-- Verification ceremony is observational; cursor polish is sidecar-only. -->
 
@@ -291,7 +292,7 @@ Milestone v2.0 phases execute in REVISED order: 8 → 6 → 7 → 9 → 10 (revi
 | 6. Plugin Runtime + Default Plugin | 8/8 | Complete — re_verification_4 passed; F-1/F-2 closed by 06-07 writer consolidation; F-3 closed by tracking-range fix; joy vocabulary gap closed by 06-08 | 2026-05-08 |
 | 7. Three-Category Code Parsing + Dispatch | 8/8 | Complete — 07-08 gap closure exposed active dispatch codes in prompt; live `{heart-eye}` variant confirmed; event UAT prerequisite-gated by current Teto `events: []` | 2026-05-09 |
 | 9. Slider HUD + Per-Param Lock | 0/2 (TBD) | Not started — fourth in v2.0 order | - |
-| 10. Cursor Polish + §14 SC Re-Verification | 0/1 (TBD) | Not started — last in v2.0 order | - |
+| 10. Cursor Polish + §14 SC Re-Verification | 0/2 | Not started — last in v2.0 order | - |
 
 ## Coverage
 
