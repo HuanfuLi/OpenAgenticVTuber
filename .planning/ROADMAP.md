@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 Walking Skeleton** — Phases 1-5 shipped 2026-05-08. Archive: `.planning/milestones/v1.0-ROADMAP.md`
 - ✅ **v2.0 Plugin + Animation Control** — Phases 8, 6, 7, 9, 10 shipped 2026-05-09. Archive: `.planning/milestones/v2.0-ROADMAP.md`
-- 🚧 **v2.1 Mock/Reality Cleanup** — Phases 11-13 planned.
+- 🚧 **v2.1 Mock/Reality Cleanup** — Phases 11-14 planned.
 
 ## Shipped Phases
 
@@ -42,11 +42,11 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-13 | 3/4 | In Progress | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-14 | 3/5 | In Progress | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
-v2.1 replaces remaining mocked or hardcoded user-facing surfaces with truthful state before v3.0 STT/TTS work. It does not implement memory or the agentic system; memory is deferred to v4.0 with agentic workflows.
+v2.1 replaces remaining mocked or hardcoded user-facing surfaces with truthful state before v3.0 STT/TTS work, and adds first-class conversation history sessions so the Conversation surface is no longer a placeholder. It does not implement memory or the agentic system; memory is deferred to v4.0 with agentic workflows.
 
 ### Phase 11: Status & App State Reality
 
@@ -84,16 +84,34 @@ Plans:
 3. Memory is disabled/deferred with copy naming v4.0 agentic + memory scope.
 4. Log level is either functional or disabled with accurate copy; no "Coming in milestone-2" wording remains.
 
-### Phase 13: Mock Boundary Audit
+### Phase 13: Conversation History Sessions
+
+**Goal:** Add ChatGPT-style conversation history sessions and wire the real session state into Settings.
+
+**Depends on:** Phase 12
+**Requirements:** HIST-01, HIST-02, HIST-03, HIST-04, HIST-05
+**Plans:** 1 planned
+
+Plans:
+- [ ] 13-01-PLAN.md — Add persistent conversation sessions, history navigation, and Settings wiring.
+
+**Success Criteria:**
+1. Users can create, switch, rename/title, and delete conversation sessions from normal chat/history UI.
+2. Active session messages persist across app restart and restore without relying on scripted conversation fixtures.
+3. Sending a message appends to the active session while preserving the existing LLM/TTS/VTS response pipeline.
+4. Settings > Conversation reflects real session/history behavior and exposes truthful controls for retention/reset where supported.
+5. Conversation history remains transcript/session persistence only; memory and retrieval remain deferred to v4.0.
+
+### Phase 14: Mock Boundary Audit
 
 **Goal:** Normal user flows no longer depend on dev mocks, scripted fixtures, or mock alert actions; remaining mocks are isolated to dev/test surfaces.
 
-**Depends on:** Phase 12
+**Depends on:** Phase 13
 **Requirements:** MOCK-01, MOCK-02, MOCK-03, MOCK-04
 **Plans:** 1 planned
 
 Plans:
-- [ ] 13-01-PLAN.md — Audit and enforce mock boundaries with tests and production-flow cleanup.
+- [ ] 14-01-PLAN.md — Audit and enforce mock boundaries with tests and production-flow cleanup.
 
 **Success Criteria:**
 1. `mockStatus`, `mockBanners`, `mockToasts`, `mockSafeStorage`, and scripted conversation fixtures are absent from normal production chrome/user flows.
@@ -106,7 +124,7 @@ Plans:
 - v1.0 requirements archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 - v2.0 requirements archived in `.planning/milestones/v2.0-REQUIREMENTS.md`.
 - v2.0 audit result: functionally complete with tech debt, 53/53 requirements satisfied, 5/5 phases complete, Nyquist compliant.
-- v2.1 requirements live in `.planning/REQUIREMENTS.md` with 16/16 mapped to phases 11-13.
+- v2.1 requirements live in `.planning/REQUIREMENTS.md` with all active requirements mapped to phases 11-14.
 
 ## Accepted Deferred Items
 
@@ -114,4 +132,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 12 execution*
+*Last updated: 2026-05-09 after Phase 13 conversation-history insertion*

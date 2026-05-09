@@ -20,11 +20,12 @@ The §14 ceremony has been re-run under the refactored architecture. All six suc
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
-**Goal:** Replace remaining mocked or hardcoded user-facing surfaces with real app, sidecar, and configuration state before larger v3.0 feature work.
+**Goal:** Replace remaining mocked or hardcoded user-facing surfaces with real app, sidecar, and configuration state before larger v3.0 feature work, and add real conversation history sessions so the Conversation UI is no longer placeholder-only.
 
 **Target features:**
 - Status bar and popover reflect real configured provider/model, real sidecar lifecycle, and real VTube Studio reachability/auth state instead of hardcoded `qwen2.5` or `mockStatus` values.
 - Settings panel sections for Avatars, per-avatar settings, VTube Studio, Conversation, Memory, and Log level become truthful: wired to real state where v2.0 already has backend support, or explicitly disabled/deferred where the real system is not built yet.
+- Conversation history becomes real ChatGPT-style session persistence: create/switch/rename/delete sessions, restore the active transcript after restart, and wire the behavior into Settings.
 - Dev/demo mocks remain available only behind development affordances; production user flows stop depending on `mockSafeStorage`, `mockStatus`, `mockBanners`, scripted conversation history, or mock alert actions.
 - Memory is not implemented in v2.1. Its Settings surface should show a truthful disabled/deferred state because memory will ship with the agentic system.
 
@@ -58,6 +59,7 @@ The §14 ceremony has been re-run under the refactored architecture. All six suc
 
 ### Active
 
+- [ ] Conversation history sessions provide persistent ChatGPT-style transcripts and real Settings wiring.
 - [ ] Development mocks are isolated from production user flows and documented as dev-only.
 
 ### Out of Scope (this milestone — deferred to later v1 milestones)
@@ -66,7 +68,7 @@ The §14 ceremony has been re-run under the refactored architecture. All six suc
 - **Saved goals + scheduler (APScheduler)** — depends on agent runtime
 - **Skills system + auto-parser (in-app screen-control)** — depends on agent runtime
 - **Memory subsystem** — profile loading, Chroma per-avatar episodic, FTS5 chat search, shared user-facts bucket, RRF retrieval, deletion ops; deferred to v4.0 with the agentic system
-- **Multi-thread chat per avatar** — single in-memory thread for skeleton
+- **Per-avatar memory-backed conversation identity** — Phase 13 adds app-level transcript/session history, but per-avatar episodic memory and identity-backed retrieval remain deferred
 - **Multi-avatar switching** — import/catalog infrastructure exists, but relationship identity, per-avatar memory, and first-class switching remain deferred
 - **Pet mode (form-factor toggle and click-through)** — windowed mode only for skeleton
 - **Audio-to-params learned drivers (v1.5)** — rule-based DSP only
@@ -141,6 +143,7 @@ The §14 ceremony has been re-run under the refactored architecture. All six suc
 | v2.1 before v3.0 | User-facing UI still contains mocks/hardcoded state; cleanup should happen before adding larger voice or agentic features | ✓ Good |
 | Memory ships with agentic system | Memory UX depends on agentic/personality context; v2.1 should mark Memory as deferred rather than implementing it prematurely | ✓ Good |
 | v3.0 is STT/TTS; v4.0 is agentic + memory | Voice I/O is the next standalone capability, while agentic workflows and memory are a larger later milestone | ✓ Good |
+| Conversation history ships before STT/TTS | ChatGPT-style sessions are a core chat capability and should be real before voice I/O adds more conversation entry points | ✓ Good |
 
 ## Evolution
 
@@ -160,4 +163,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-09 after Phase 11 completion*
+*Last updated: 2026-05-09 after Phase 13 conversation-history insertion*

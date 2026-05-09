@@ -4,7 +4,7 @@
 **Milestone:** v2.1 Mock/Reality Cleanup
 **Core Value:** Multi-avatar identity persistence (v1 horizon; v2.1 makes the current UI truthful before larger v3/v4 features)
 
-This milestone does not add major new product capabilities. It removes misleading mocks and hardcoded user-facing state so the app accurately reflects what has shipped through v2.0 and clearly labels what remains deferred.
+This milestone removes misleading mocks and hardcoded user-facing state so the app accurately reflects what has shipped through v2.0 and clearly labels what remains deferred. It also adds first-class conversation history sessions so the Conversation surface becomes real before v3.0 voice work.
 
 ## v2.1 Requirements
 
@@ -25,6 +25,14 @@ This milestone does not add major new product capabilities. It removes misleadin
 - [x] **SET-05**: Settings > Memory is disabled/deferred with copy that states memory ships with the agentic system in v4.0.
 - [x] **SET-06**: Settings > Log level is wired to a real log-level preference/effect or is disabled with accurate copy; it must not say "Coming in milestone-2."
 - [x] **SET-07**: Settings copy references current milestone intent accurately: v3.0 for STT/TTS, v4.0 for agentic system plus memory.
+
+### Conversation History
+
+- [ ] **HIST-01**: User can create, switch, rename/title, and delete ChatGPT-style conversation sessions from normal chat/history UI.
+- [ ] **HIST-02**: Active session messages persist across app restart and restore without relying on scripted conversation fixtures.
+- [ ] **HIST-03**: Sending a message appends to the active session while preserving the existing LLM streaming, TTS, and VTS response pipeline.
+- [ ] **HIST-04**: Settings > Conversation reflects real session/history behavior and exposes truthful controls for retention/reset where supported.
+- [ ] **HIST-05**: Conversation history is transcript/session persistence only; semantic memory, retrieval, and per-avatar memory remain deferred to v4.0.
 
 ### Mock Boundary
 
@@ -73,16 +81,21 @@ This milestone does not add major new product capabilities. It removes misleadin
 | SET-05 | Phase 12 | Complete |
 | SET-06 | Phase 12 | Complete |
 | SET-07 | Phase 12 | Complete |
-| MOCK-01 | Phase 13 | Pending |
-| MOCK-02 | Phase 13 | Pending |
-| MOCK-03 | Phase 13 | Pending |
-| MOCK-04 | Phase 13 | Pending |
+| HIST-01 | Phase 13 | Pending |
+| HIST-02 | Phase 13 | Pending |
+| HIST-03 | Phase 13 | Pending |
+| HIST-04 | Phase 13 | Pending |
+| HIST-05 | Phase 13 | Pending |
+| MOCK-01 | Phase 14 | Pending |
+| MOCK-02 | Phase 14 | Pending |
+| MOCK-03 | Phase 14 | Pending |
+| MOCK-04 | Phase 14 | Pending |
 
 **Coverage:**
-- v2.1 requirements: 16 total
-- Mapped to phases: 16
+- v2.1 requirements: 21 total
+- Mapped to phases: 21
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after Phase 12 execution*
+*Last updated: 2026-05-09 after Phase 13 conversation-history insertion*
