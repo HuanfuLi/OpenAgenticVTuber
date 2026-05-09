@@ -6,6 +6,11 @@ import type { StoredConfig } from '../src/safe-storage'
 import type { ChromeState, LogLevel, ThemePreference } from '../src/window-store'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
+import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
+import type {
+  ReferenceAudioValidationInput,
+  ReferenceAudioValidationResponse
+} from '../src/reference-audio'
 import type {
   CommitConversationTurnInput,
   ConversationSession,
@@ -103,6 +108,27 @@ const api = {
     ipcRenderer.invoke('sidecar:getPluginStatus'),
   getAudioStatus: (): Promise<AudioProviderHealth> =>
     ipcRenderer.invoke('sidecar:getAudioStatus'),
+  listVoicePresets: (): Promise<VoicePreset[]> => ipcRenderer.invoke('voicePresets:list'),
+  saveVoicePreset: (preset: VoicePreset): Promise<VoicePreset[]> =>
+    ipcRenderer.invoke('voicePresets:save', preset),
+  deleteVoicePreset: (presetId: string): Promise<VoicePreset[]> =>
+    ipcRenderer.invoke('voicePresets:delete', presetId),
+  setActiveVoicePresetForAvatarSession: (
+    avatarId: string | null,
+    sessionId: string | null,
+    presetId: string
+  ): Promise<Record<string, string>> =>
+    ipcRenderer.invoke('voicePresets:setActiveForAvatarSession', avatarId, sessionId, presetId),
+  pickAndImportReferenceAudio: (input: {
+    transcriptText: string
+    language: ReferenceAudioAsset['language']
+  }): Promise<ReferenceAudioAsset | null> => ipcRenderer.invoke('referenceAudio:pickAndImport', input),
+  validateReferenceAudio: (
+    input: ReferenceAudioValidationInput
+  ): Promise<ReferenceAudioValidationResponse> =>
+    ipcRenderer.invoke('referenceAudio:validate', input),
+  deleteReferenceAudio: (assetId: string): Promise<ReferenceAudioAsset[]> =>
+    ipcRenderer.invoke('referenceAudio:delete', assetId),
   restartSidecar: (): Promise<void> => ipcRenderer.invoke('sidecar:restart'),
   resetVtsAuth: (): Promise<void> => ipcRenderer.invoke('vts:resetAuth'),
   listBodyMotionPlugins: (): Promise<BodyMotionPluginSummary[]> =>
@@ -153,6 +179,11 @@ contextBridge.exposeInMainWorld('api', api)
 
 export type RendererApi = typeof api
 export type { StoredConfig, ProviderConfig, Provider } from '../src/safe-storage'
+export type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
+export type {
+  ReferenceAudioValidationInput,
+  ReferenceAudioValidationResponse
+} from '../src/reference-audio'
 export type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 export type { ChromeState, LogLevel, ThemePreference } from '../src/window-store'
 export type {

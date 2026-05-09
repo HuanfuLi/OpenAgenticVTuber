@@ -26,9 +26,19 @@ import {
   store
 } from './window-store'
 import { loadConfig, saveConfig, clearConfig, type StoredConfig } from './safe-storage'
+import { canDeletePreset, getAvatarSessionPresetKey } from './safe-storage'
+import {
+  deleteReferenceAudioAsset,
+  getManagedReferenceAudioPath,
+  pickAndImportReferenceAudio,
+  validateReferenceAudioWithSidecar,
+  type ReferenceAudioValidationInput,
+  type ReferenceAudioValidationResponse
+} from './reference-audio'
 import { createHudWindow } from './hud-window'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
+import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
 import {
   clearConversationHistory,
   commitConversationTurn,
@@ -199,6 +209,86 @@ export function registerIpc(window: BrowserWindow): () => void {
     }
   })
   ipcMain.handle('config:clear', () => clearConfig())
+  ipcMain.handle('voicePresets:list', (): VoicePreset[] => loadConfig()?.voicePresets ?? [])
+  ipcMain.handle('voicePresets:save', (_e, preset: VoicePreset): VoicePreset[] => {
+    const cfg = loadConfig()
+    if (!cfg) throw new Error('Stored config is not initialized.')
+    const existingIndex = cfg.voicePresets.findIndex((item) => item.preset_id === preset.preset_id)
+    const voicePresets = [...cfg.voicePresets]
+    if (existingIndex >= 0) voicePresets[existingIndex] = preset
+    else voicePresets.push(preset)
+    saveConfig({ ...cfg, voicePresets })
+    return voicePresets
+  })
+  ipcMain.handle('voicePresets:delete', (_e, presetId: string): VoicePreset[] => {
+    const cfg = loadConfig()
+    if (!cfg) throw new Error('Stored config is not initialized.')
+    const guard = canDeletePreset(presetId, cfg.activePresetByAvatarSession)
+    if (!guard.ok) {
+      throw new Error(`Voice preset is active for: ${guard.activeKeys.join(', ')}`)
+    }
+    const voicePresets = cfg.voicePresets.filter((preset) => preset.preset_id !== presetId)
+    saveConfig({ ...cfg, voicePresets })
+    return voicePresets
+  })
+  ipcMain.handle(
+    'voicePresets:setActiveForAvatarSession',
+    (_e, avatarId: string | null, sessionId: string | null, presetId: string): Record<string, string> => {
+      const cfg = loadConfig()
+      if (!cfg) throw new Error('Stored config is not initialized.')
+      if (!cfg.voicePresets.some((preset) => preset.preset_id === presetId)) {
+        throw new Error('Cannot activate unknown voice preset.')
+      }
+      const key = getAvatarSessionPresetKey(avatarId, sessionId)
+      const activePresetByAvatarSession = { ...cfg.activePresetByAvatarSession, [key]: presetId }
+      saveConfig({ ...cfg, activePresetByAvatarSession })
+      return activePresetByAvatarSession
+    }
+  )
+  ipcMain.handle(
+    'referenceAudio:validate',
+    async (_e, input: ReferenceAudioValidationInput): Promise<ReferenceAudioValidationResponse> =>
+      validateReferenceAudioWithSidecar(getSidecarHttpUrl(), input)
+  )
+  ipcMain.handle(
+    'referenceAudio:pickAndImport',
+    async (
+      _e,
+      input: { transcriptText: string; language: ReferenceAudioAsset['language'] }
+    ): Promise<ReferenceAudioAsset | null> => {
+      const result = await dialog.showOpenDialog({
+        properties: ['openFile'],
+        title: 'Choose GPT-SoVITS reference audio',
+        filters: [{ name: 'Audio', extensions: ['wav', 'flac', 'mp3', 'ogg'] }]
+      })
+      if (result.canceled || result.filePaths.length === 0) return null
+      const asset = await pickAndImportReferenceAudio({
+        sourcePath: result.filePaths[0]!,
+        transcriptText: input.transcriptText,
+        language: input.language,
+        validate: (validationInput) => validateReferenceAudioWithSidecar(getSidecarHttpUrl(), validationInput)
+      })
+      const cfg = loadConfig()
+      if (!cfg) throw new Error('Stored config is not initialized.')
+      saveConfig({ ...cfg, referenceAudioAssets: [...cfg.referenceAudioAssets, asset] })
+      return asset
+    }
+  )
+  ipcMain.handle('referenceAudio:delete', (_e, assetId: string): ReferenceAudioAsset[] => {
+    const cfg = loadConfig()
+    if (!cfg) throw new Error('Stored config is not initialized.')
+    const result = deleteReferenceAudioAsset(assetId, cfg.voicePresets, cfg.referenceAudioAssets)
+    if (!result.ok) {
+      throw new Error(`Reference audio is used by presets: ${result.presetIds.join(', ')}`)
+    }
+    for (const asset of result.removedAssets) {
+      const managedPath = getManagedReferenceAudioPath(asset)
+      if (fs.existsSync(managedPath)) fs.unlinkSync(managedPath)
+    }
+    const referenceAudioAssets = cfg.referenceAudioAssets.filter((asset) => asset.asset_id !== assetId)
+    saveConfig({ ...cfg, referenceAudioAssets })
+    return referenceAudioAssets
+  })
   ipcMain.handle('plugin:listBodyMotionPlugins', () => listBodyMotionPlugins())
   ipcMain.handle('avatar:getCurrentId', () => resolveCurrentAvatarId(resolveRepoRoot()))
   ipcMain.handle('avatar:getCurrentPlan', async (): Promise<AvatarImportPlan | null> => {
@@ -310,6 +400,13 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('config:load')
     ipcMain.removeHandler('config:save')
     ipcMain.removeHandler('config:clear')
+    ipcMain.removeHandler('voicePresets:list')
+    ipcMain.removeHandler('voicePresets:save')
+    ipcMain.removeHandler('voicePresets:delete')
+    ipcMain.removeHandler('voicePresets:setActiveForAvatarSession')
+    ipcMain.removeHandler('referenceAudio:pickAndImport')
+    ipcMain.removeHandler('referenceAudio:validate')
+    ipcMain.removeHandler('referenceAudio:delete')
     ipcMain.removeHandler('plugin:listBodyMotionPlugins')
     ipcMain.removeHandler('avatar:getCurrentId')
     ipcMain.removeHandler('avatar:getCurrentPlan')

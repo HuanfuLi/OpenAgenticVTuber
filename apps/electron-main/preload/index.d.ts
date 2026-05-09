@@ -6,6 +6,28 @@ import type {
   ConversationStats,
   CommitConversationTurnInput
 } from '../src/conversation-store'
+import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
+import type {
+  ReferenceAudioValidationInput,
+  ReferenceAudioValidationResponse
+} from '../src/reference-audio'
+
+export type VoicePresetBridge = {
+  listVoicePresets(): Promise<VoicePreset[]>
+  saveVoicePreset(preset: VoicePreset): Promise<VoicePreset[]>
+  deleteVoicePreset(presetId: string): Promise<VoicePreset[]>
+  setActiveVoicePresetForAvatarSession(
+    avatarId: string | null,
+    sessionId: string | null,
+    presetId: string
+  ): Promise<Record<string, string>>
+  pickAndImportReferenceAudio(input: {
+    transcriptText: string
+    language: ReferenceAudioAsset['language']
+  }): Promise<ReferenceAudioAsset | null>
+  validateReferenceAudio(input: ReferenceAudioValidationInput): Promise<ReferenceAudioValidationResponse>
+  deleteReferenceAudio(assetId: string): Promise<ReferenceAudioAsset[]>
+}
 
 export type AvatarImportBridge = {
   getCurrentAvatarId(): Promise<string>
