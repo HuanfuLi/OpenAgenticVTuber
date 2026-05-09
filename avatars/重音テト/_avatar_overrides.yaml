@@ -12,10 +12,10 @@ voice:
   model: en_US-amy-medium
   lipsync_mode: our-rms
 variants:
-- code: sv-microphone
+- code: microphone
   hotkey_id: cafeda105c574052a6f09fac80c00fff
   source_name: 【SV】Microphone[1]
-- code: sv-utau-baguette
+- code: baguette
   hotkey_id: b4f00fa7bd28476fa82c7c2c4387c987
   source_name: 【SV＆Utau】Baguette[2]
 - code: dark-face
@@ -39,7 +39,7 @@ variants:
 - code: sv-utau-alt
   hotkey_id: 7f7964031e3343e2b358b83021617600
   source_name: SV/UTAU Alt [9]
-- code: utau-headphone
+- code: headphone
   hotkey_id: aa9b99a2886b4820bfea94421f986f66
   source_name: 【Utau】Headphone [0]
 - code: chibi
