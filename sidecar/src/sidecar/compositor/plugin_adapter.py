@@ -5,7 +5,7 @@ from contextlib import suppress
 
 from loguru import logger
 
-from contracts import ParamFrame
+from contracts import ActionCode, ParamFrame
 from sidecar.plugins.api import BodyMotionPlugin
 
 
@@ -17,6 +17,7 @@ class PluginAdapter:
         self._latest_frame: ParamFrame | None = None
         self._latest_at: float | None = None
         self._tasks: set[asyncio.Task] = set()
+        self.action_code_queue: asyncio.Queue[ActionCode] = asyncio.Queue(maxsize=128)
 
     def submit_frame(self, frame: ParamFrame, now: float) -> None:
         self._latest_frame = frame
@@ -46,6 +47,23 @@ class PluginAdapter:
         task = loop.create_task(self._consume(sentence))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
+
+    def enqueue_action_code(self, action: ActionCode) -> bool:
+        try:
+            self.action_code_queue.put_nowait(action)
+        except asyncio.QueueFull:
+            return False
+
+        callback = getattr(self._plugin, "on_action_code", None)
+        if callable(callback):
+            try:
+                callback(action)
+            except Exception:
+                logger.exception("[PLUGIN] on_action_code callback failed")
+        return True
+
+    async def next_action_code(self) -> ActionCode:
+        return await self.action_code_queue.get()
 
     async def _consume(self, sentence: str) -> None:
         loop = asyncio.get_running_loop()

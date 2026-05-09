@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from enum import StrEnum
 
-from contracts import ParamFrame
+from contracts import ActionCode, ParamFrame
 from contracts.avatar_overrides import AvatarOverrides
 from contracts.rig_capabilities import RigCapabilities
 
@@ -26,3 +26,6 @@ class BodyMotionPlugin(ABC):
 
     def on_unload(self) -> None:
         """Best-effort cleanup. Runtime always tolerates cleanup exceptions."""
+
+    def on_action_code(self, action: ActionCode) -> None:
+        """Called when the LLM emits a validated [action] code."""
