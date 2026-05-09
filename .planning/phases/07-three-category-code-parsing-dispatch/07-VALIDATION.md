@@ -49,6 +49,8 @@ Per-phase validation contract for feedback sampling during execution.
 | 07-07-01 | 07 | 4 | PARSE-01, PARSE-03, PARSE-04, PARSE-05, PARSE-06, PARSE-07 | integration | `cd sidecar && uv run pytest tests/test_sidecar_boot.py tests/orchestrator/test_dispatch_routing.py -x --no-header` | Task creates/updates tests | passed |
 | 07-07-01b | 07 | 4 | PARSE-03 | architecture guard | `cd sidecar && uv run pytest tests/test_arch06_single_writer.py -x --no-header` | Test added in 06-07 (asserts `requestSetParameterValue` / `requestInjectParameterData` / `plugin_name` ownership stays in `pyvts_writer.py`); supersedes legacy `rg 'import pyvts'` count grep which missed indirect `PyvtsSafeWriter`-re-export wrappers (see 06-VERIFICATION post_verification F-2) | passed |
 | 07-07-02 | 07 | 4 | PARSE-03 | renderer unit | `cd apps/renderer && npm test -- --run logs-drawer-intent` | Existing renderer test infra | passed |
+| 07-08-01 | 08 | 5 | PARSE-03, PARSE-05, PARSE-06 | prompt/catalog unit | `cd sidecar && uv run pytest tests/plugins/test_prompt_section.py -x --no-header` | Extends existing prompt-section tests | planned |
+| 07-08-02 | 08 | 5 | PARSE-03, PARSE-05, PARSE-06 | boot/orchestrator integration | `cd sidecar && uv run pytest tests/test_orchestrator_turn.py tests/test_sidecar_boot.py tests/plugins/test_manifest_watcher.py tests/orchestrator/test_dispatch_routing.py -x --no-header` | Extends existing boot/orchestrator tests and UAT metadata | planned |
 
 ---
 
@@ -75,6 +77,7 @@ Per-phase validation contract for feedback sampling during execution.
 | 2 | 07-02, 07-03, 07-04, 07-05 | `npm run check:contracts; cd sidecar && uv run pytest tests/avatar/test_extract_vts.py tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py tests/parser/test_reserved.py tests/vts/test_variant_state_manager.py tests/vts/test_event_completion_tracker.py -q` |
 | 3 | 07-06 | `cd sidecar && uv run pytest tests/plugins/test_api.py tests/compositor/test_plugin_adapter.py tests/orchestrator/test_dispatch_routing.py tests/test_tts_manager.py tests/test_audio_payload_helpers.py -q` |
 | 4 | 07-07 | `cd sidecar && uv run pytest tests/test_sidecar_boot.py tests/orchestrator/test_dispatch_routing.py -q; cd ../apps/renderer && npm test -- --run logs-drawer-intent` |
+| 5 | 07-08 | `cd sidecar && uv run pytest tests/plugins/test_prompt_section.py tests/test_orchestrator_turn.py tests/test_sidecar_boot.py tests/plugins/test_manifest_watcher.py tests/orchestrator/test_dispatch_routing.py -q` |
 
 ---
 
@@ -103,6 +106,7 @@ extend the specific test files they verify:
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
 | Live VTS visual confirmation that `{hold-mic}` toggles the avatar expression and `<wave>` fires the motion hotkey | PARSE-05, PARSE-06 | Requires VTube Studio running with a real loaded rig and visible avatar | After automated tests pass, run the app with VTS, type `[smirk] {hold-mic} <wave>` into chat, confirm `[DISPATCH]` logs for all three kinds, confirm the active plugin receives `smirk`, confirm the variant changes, and confirm `[EVENT-COMPLETE]` appears after the final `EventFire.duration_ms` delay (`Meta.Duration + 1s` for valid metadata, exactly `10.0s` for fallback metadata). **Operator note:** the action code MUST exist in the active plugin's `plugin.yaml`; `[joy]` was removed by 06-08 because the active Teto catalog does not own a `joy` variant. Pick any code from `plugins/default/plugin.yaml` (currently `anger / disgust / fear / neutral / sadness / smirk / surprise`) and any `{variant}` / `<event>` declared in the active avatar's `_avatar_overrides.yaml`. |
+| Gap-closure live VTS prompt/catalog confirmation | PARSE-03, PARSE-05, PARSE-06 | Requires VTube Studio, a loaded rig, and real hotkey registration | After 07-08 automated tests pass, confirm startup logs show `[DISPATCH-CATALOG]`. If `events=0`, event-specific live UAT is blocked until an event-bearing active avatar catalog is selected or imported; variant UAT may still proceed. For current imported Teto variant testing, start with `AGENTICLLMVTUBER_ACTIVE_AVATAR=重音テト` and use a listed variant such as `{heart-eye}`. |
 
 ---
 

@@ -212,7 +212,7 @@ Plans:
   3. Cross-category collision check: at sidecar boot, `plugin_action_codes ∩ variant_codes ∩ event_codes` is empty; a manufactured collision (e.g., adding `joy` to the variant catalog while the plugin already registers `[joy]`) produces a loud boot-blocking exception with a clear error message naming both sources
   4. Variant collision policy is radio-button single-active — emitting a new variant code while another variant is already toggled turns the new ON and the previous OFF deterministically (no additive layering); chat display + TTS strips all three syntaxes cleanly (no bracket character ever leaks)
   5. Parser policy is load-bearing and verified per Phase 7 CONTEXT D-A1: no parse-time `<think>` strip is added; API-level reasoning disable remains the defense, `<think>` is reserved at boot, and leaked `<think>` is treated as an unknown event dispatch rather than a valid `<event>` code.
-**Plans**: 7 plans
+**Plans**: 8 plans
 
 Plans:
 - [x] 07-01-PLAN.md — Python Dispatch contract, EventEntry hotkey_id, VTS event extraction, and Python output model updates
@@ -222,6 +222,7 @@ Plans:
 - [x] 07-05-PLAN.md — VariantStateManager and EventCompletionTracker with radio-button and duration-pad tests
 - [x] 07-06-PLAN.md — Runtime Dispatch routing, including active PluginAdapter/plugin ActionCode delivery and TTS payload dispatches
 - [x] 07-07-PLAN.md — Boot validation/runtime manager wiring, shutdown cleanup, pyvts import guard, and `[DISPATCH]` renderer logs
+- [ ] 07-08-PLAN.md — Gap closure: expose active variant/event codes in the runtime prompt and gate live event UAT on an event-bearing avatar catalog
 
 **UI hint**: no  <!-- Parser + dispatch lives in sidecar; renderer changes are limited to bracket-strip continuation, no new UI surface. -->
 
