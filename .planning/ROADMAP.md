@@ -42,7 +42,7 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-14 | 4/9 | In Progress | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-14 | 4/10 | In Progress | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
@@ -88,16 +88,17 @@ Plans:
 
 ### Phase 13: Conversation History Sessions
 
-**Goal:** Add ChatGPT-style conversation history sessions and wire the real session state into Settings.
+**Goal:** Add ChatGPT-style conversation history sessions, wire the real session state into Settings, and add a side VTS cursor-calibration control so moved models can be re-centered.
 
 **Depends on:** Phase 12
-**Requirements:** HIST-01, HIST-02, HIST-03, HIST-04, HIST-05
-**Plans:** 3 planned
+**Requirements:** HIST-01, HIST-02, HIST-03, HIST-04, HIST-05, VTCAL-01, VTCAL-02, VTCAL-03, VTCAL-04
+**Plans:** 4 planned
 
 Plans:
 - [ ] 13-01-PLAN.md — Add durable local conversation store, typed IPC/preload bridge, and renderer state surface.
 - [ ] 13-02-PLAN.md — Wire Chat and History sheet to real sessions with complete-turn persistence.
 - [ ] 13-03-PLAN.md — Wire Settings Conversation summary/reset, copy, regression tests, and UAT checklist.
+- [ ] 13-04-PLAN.md — Add VTS cursor head-center recompute controls and calibrated tracking behavior.
 
 **Success Criteria:**
 1. Users can create, switch, rename/title, and delete conversation sessions from normal chat/history UI.
@@ -105,6 +106,8 @@ Plans:
 3. Sending a message appends to the active session while preserving the existing LLM/TTS/VTS response pipeline.
 4. Settings > Conversation reflects real session/history behavior and exposes truthful controls for retention/reset where supported.
 5. Conversation history remains transcript/session persistence only; memory and retrieval remain deferred to v4.0.
+6. Settings > VTube Studio lets the user recompute cursor-tracking head center and, where supported, enable automatic recomputation after model move/resize.
+7. Cursor tracking uses the calibrated head center while preserving Phase 10 head/eye tracking behavior and truthful unavailable/error states.
 
 ### Phase 14: Mock Boundary Audit
 
@@ -136,4 +139,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 12 re-UAT gap planning*
+*Last updated: 2026-05-09 after adding Phase 13 VTS cursor-calibration side feature*
