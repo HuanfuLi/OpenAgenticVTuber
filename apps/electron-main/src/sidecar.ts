@@ -80,6 +80,11 @@ export function buildSidecarConfigEnv(stored: StoredConfig | null): string | und
   })
 }
 
+export function buildSidecarAudioConfigEnv(stored: StoredConfig | null): string | undefined {
+  if (!stored || !stored.hasCompletedSetup) return undefined
+  return JSON.stringify(stored.audio)
+}
+
 export function activeBodyMotionPluginName(stored: StoredConfig | null): string {
   const configured = stored?.plugin?.activePluginName?.trim()
   return configured || 'default'
@@ -193,6 +198,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
   const repoRoot = path.resolve(app.getAppPath(), '..', '..')
   const storedConfig = loadConfig()
   const llmConfigJson = buildSidecarConfigEnv(storedConfig)
+  const audioConfigJson = buildSidecarAudioConfigEnv(storedConfig)
   const activePluginName = activeBodyMotionPluginName(storedConfig)
   const cursorTracking = cursorTrackingEnabled(storedConfig)
   const activeAvatarId = resolveCurrentAvatarId(repoRoot) || NO_ACTIVE_AVATAR_ID
@@ -219,7 +225,8 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
       AGENTICLLMVTUBER_ACTIVE_PLUGIN: activePluginName,
       AGENTICLLMVTUBER_CURSOR_TRACKING_ENABLED: cursorTracking ? '1' : '0',
       AGENTICLLMVTUBER_ACTIVE_AVATAR: activeAvatarId,
-      ...(llmConfigJson ? { AGENTICLLMVTUBER_LLM_CONFIG_JSON: llmConfigJson } : {})
+      ...(llmConfigJson ? { AGENTICLLMVTUBER_LLM_CONFIG_JSON: llmConfigJson } : {}),
+      ...(audioConfigJson ? { AGENTICLLMVTUBER_AUDIO_CONFIG_JSON: audioConfigJson } : {})
     },
     stdio: ['ignore', 'pipe', 'pipe'],
     // shell=true on Windows so PATHEXT lookup finds uv.cmd.

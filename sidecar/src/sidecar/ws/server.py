@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger as loguru_logger
 
 from sidecar.avatar.overrides import load_avatar_overrides
+from sidecar.audio.config import load_audio_config_from_env
 from sidecar.avatar.rig_capabilities import build_rig_capabilities, resolve_source_rig_path
 from sidecar.compositor import Compositor
 from sidecar.compositor.cursor_driver import CursorDriver
@@ -38,7 +39,7 @@ from sidecar.plugins.loader import (
     start_manifest_change_watcher,
 )
 from sidecar.plugins.supervisor import NullPlugin, PluginSupervisor
-from sidecar.tts import TTSGateway, TTSTaskManager
+from sidecar.tts import TTSGateway, TTSTaskManager, build_tts_gateway
 from sidecar.vts.handshake import connect_and_authenticate
 from sidecar.vts.discrete_dispatcher import DiscreteDispatcher
 from sidecar.vts.event_completion_tracker import EventCompletionTracker
@@ -48,6 +49,7 @@ from sidecar.admin import avatar as admin_avatar
 from sidecar.admin import rig_capabilities as admin_rig_capabilities
 from sidecar.admin import plugin as admin_plugin
 from sidecar.admin import status as admin_status
+from sidecar.admin import audio as admin_audio
 
 from .handlers import handle_control, handle_shutdown, handle_text_input  # noqa: F401 -- side-effect: registers @on(...)
 from .protocol import route
@@ -187,6 +189,8 @@ async def lifespan(app: FastAPI):
     }
     app.state.lock_state = {}
     app.state.hud_tap = HudTap()
+    app.state.audio_config = load_audio_config_from_env()
+    app.state.audio_provider_health = None
 
     provider_cfg = _load_provider_config_from_env()
     avatars = _avatars_root()
@@ -281,15 +285,13 @@ async def lifespan(app: FastAPI):
 
             persona = _persona_path(avatars, avatar_dir).read_text(encoding="utf-8")
             voice_model = overrides.voice.model if overrides.voice else "en_US-amy-medium"
-            model_path = (
-                Path(__file__).resolve().parents[4]
-                / "sidecar"
-                / "models"
-                / "piper"
-                / f"{voice_model}.onnx"
+            tts_gateway = build_tts_gateway(
+                audio_config=app.state.audio_config,
+                repo_root=Path(__file__).resolve().parents[4],
+                avatar_voice_model=voice_model,
             )
-            tts_gateway = TTSGateway(model_path)
             tts_gateway.boot()
+            app.state.audio_provider_health = tts_gateway.provider.health()
 
             gateway = LLMGateway(provider_cfg)
             await _warmup_ping(gateway)
@@ -323,7 +325,7 @@ async def lifespan(app: FastAPI):
                 )
             tts_manager = TTSTaskManager(
                 stream=tts_gateway.stream,
-                voice=tts_gateway.voice,
+                provider=tts_gateway.provider,
                 compositor_speech_queue=compositor_speech_queue,
                 compositor_sentence_complete_queue=compositor_sentence_complete_queue,
             )
@@ -415,13 +417,23 @@ async def lifespan(app: FastAPI):
         except (ReservedNameError, CategoryCollisionError):
             loguru_logger.exception("Boot validation failed.")
             raise
-        except Exception:
+        except Exception as exc:
             loguru_logger.exception("Orchestrator construction failed.")
             app.state.orchestrator = None
             app.state.tts_gateway = None
             app.state.turn_loop_task = None
             app.state.startup_error_message = (
                 "TTS failed to initialize. Check the Piper model and audio output, then restart."
+            )
+            from contracts import AudioProviderHealth
+
+            app.state.audio_provider_health = AudioProviderHealth(
+                provider_id="piper",
+                kind="tts",
+                state="misconfigured",
+                summary=app.state.startup_error_message,
+                detail=repr(exc),
+                retryable=True,
             )
     loguru_logger.info("[READY] sidecar startup complete.")
     yield
@@ -545,3 +557,4 @@ app.include_router(admin_avatar.router)
 app.include_router(admin_rig_capabilities.router)
 app.include_router(admin_plugin.router)
 app.include_router(admin_status.router)
+app.include_router(admin_audio.router)

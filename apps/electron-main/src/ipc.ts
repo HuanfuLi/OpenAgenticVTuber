@@ -28,6 +28,7 @@ import {
 import { loadConfig, saveConfig, clearConfig, type StoredConfig } from './safe-storage'
 import { createHudWindow } from './hud-window'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
+import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import {
   clearConversationHistory,
   commitConversationTurn,
@@ -135,6 +136,50 @@ export function registerIpc(window: BrowserWindow): () => void {
         developerDetails: null,
         fallbackActive: false,
         chatAvailable: true
+      }
+    }
+  })
+  ipcMain.handle('sidecar:getAudioStatus', async (): Promise<AudioProviderHealth> => {
+    let baseUrl: string
+    try {
+      baseUrl = getSidecarHttpUrl()
+    } catch {
+      return {
+        provider_id: 'piper',
+        kind: 'tts',
+        state: 'unavailable',
+        summary: 'Sidecar is not ready.',
+        detail: null,
+        retryable: true,
+        latency_ms: null,
+        redacted_diagnostics: null
+      }
+    }
+    try {
+      const resp = await fetch(`${baseUrl}/admin/audio/status`)
+      if (!resp.ok) {
+        return {
+          provider_id: 'piper',
+          kind: 'tts',
+          state: 'unavailable',
+          summary: `Audio status unavailable: HTTP ${resp.status}`,
+          detail: null,
+          retryable: true,
+          latency_ms: null,
+          redacted_diagnostics: null
+        }
+      }
+      return (await resp.json()) as AudioProviderHealth
+    } catch (err) {
+      return {
+        provider_id: 'piper',
+        kind: 'tts',
+        state: 'unavailable',
+        summary: `Audio status unavailable: ${err instanceof Error ? err.message : String(err)}`,
+        detail: null,
+        retryable: true,
+        latency_ms: null,
+        redacted_diagnostics: null
       }
     }
   })
@@ -261,6 +306,7 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('vts:resetAuth')
     ipcMain.removeHandler('sidecar:getVtsStatus')
     ipcMain.removeHandler('sidecar:getPluginStatus')
+    ipcMain.removeHandler('sidecar:getAudioStatus')
     ipcMain.removeHandler('config:load')
     ipcMain.removeHandler('config:save')
     ipcMain.removeHandler('config:clear')

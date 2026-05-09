@@ -48,43 +48,22 @@ def get_volume_by_chunks(
     return (rms_per_chunk / max_rms).tolist()
 
 
-def synthesize_and_prepare_payload(
-    voice,
-    tts_text: str,
+def prepare_payload_from_pcm(
+    pcm_int16: bytes,
+    sample_rate: int,
     display_text: DisplayTextField,
     dispatches: list[Dispatch],
     sentence_id: int,
     chunk_length_ms: int = 20,
 ) -> tuple[AudioPayloadMessage, bytes, int]:
-    """Synthesize one sentence; produce the OLVT-canonical audio envelope
-    + raw int16 PCM bytes + sample_rate, all from a single synth pass.
-
-    Returns:
-        (audio_payload_message, pcm_int16_bytes, sample_rate)
-            - audio_payload_message: ready to ws.send_json(model_dump()).
-            - pcm_int16_bytes: ready for stream.write(...).
-            - sample_rate: from voice.config.sample_rate (e.g., 22050).
-
-    Empty / whitespace-only TTS text → silent payload (audio=None, volumes=[])
-    matching OLVT _send_silent_payload behavior.
-    """
-    # Silent fast-path (mirror OLVT TTSTaskManager.speak whitespace check).
-    import re
-    if len(re.sub(r'[\s.,!?，。！？\'"』」）】\s]+', "", tts_text)) == 0:
+    """Build the existing audio envelope from provider-neutral PCM output."""
+    if not pcm_int16:
         msg = AudioPayloadMessage(
             audio=None, volumes=[], slice_length=chunk_length_ms,
             display_text=display_text, dispatches=dispatches, sentence_id=sentence_id,
             forwarded=False,
         )
-        return msg, b"", voice.config.sample_rate
-
-    # Single synth pass — collect all int16 chunks.
-    pcm_chunks: list[bytes] = []
-    sample_rate: int = voice.config.sample_rate
-    for chunk in voice.synthesize(tts_text):  # AudioChunk
-        pcm_chunks.append(chunk.audio_int16_bytes)
-        sample_rate = chunk.sample_rate  # constant per voice; safe to overwrite
-    pcm_int16 = b"".join(pcm_chunks)
+        return msg, b"", sample_rate
 
     # Volumes: numpy chunk-RMS over the same bytes.
     volumes = get_volume_by_chunks(pcm_int16, sample_rate, chunk_length_ms)
@@ -108,3 +87,38 @@ def synthesize_and_prepare_payload(
         forwarded=False,
     )
     return msg, pcm_int16, sample_rate
+
+
+def synthesize_and_prepare_payload(
+    voice,
+    tts_text: str,
+    display_text: DisplayTextField,
+    dispatches: list[Dispatch],
+    sentence_id: int,
+    chunk_length_ms: int = 20,
+) -> tuple[AudioPayloadMessage, bytes, int]:
+    """Compatibility wrapper for tests and older call sites."""
+    import re
+    if len(re.sub(r'[\s.,!?，。！？\'"』」）】\s]+', "", tts_text)) == 0:
+        return prepare_payload_from_pcm(
+            b"",
+            voice.config.sample_rate,
+            display_text,
+            dispatches,
+            sentence_id,
+            chunk_length_ms,
+        )
+
+    pcm_chunks: list[bytes] = []
+    sample_rate: int = voice.config.sample_rate
+    for chunk in voice.synthesize(tts_text):
+        pcm_chunks.append(chunk.audio_int16_bytes)
+        sample_rate = chunk.sample_rate
+    return prepare_payload_from_pcm(
+        b"".join(pcm_chunks),
+        sample_rate,
+        display_text,
+        dispatches,
+        sentence_id,
+        chunk_length_ms,
+    )

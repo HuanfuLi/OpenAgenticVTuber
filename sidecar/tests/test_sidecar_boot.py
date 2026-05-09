@@ -101,6 +101,18 @@ def _patch_clean_boot(monkeypatch, tmp_path, *, overrides, capabilities, plugin_
             self.model_path = model_path
             self.voice = "voice"
             self.stream = object()
+            self.provider = SimpleNamespace(
+                health=lambda: SimpleNamespace(model_dump=lambda: {
+                    "provider_id": "piper",
+                    "kind": "tts",
+                    "state": "ok",
+                    "summary": "Piper provider ready.",
+                    "detail": "voice=en_US-amy-medium",
+                    "retryable": False,
+                    "latency_ms": None,
+                    "redacted_diagnostics": None,
+                })
+            )
 
         def boot(self):
             calls.append("tts.boot")
@@ -114,7 +126,7 @@ def _patch_clean_boot(monkeypatch, tmp_path, *, overrides, capabilities, plugin_
 
     class FakePluginSupervisor:
         @classmethod
-        async def load_or_null(cls, plugin, caps, loaded_overrides):
+        async def load_or_null(cls, plugin, caps, loaded_overrides, **_kwargs):
             calls.append("plugin_supervisor.load")
             assert caps is capabilities
             assert loaded_overrides is overrides
@@ -122,6 +134,17 @@ def _patch_clean_boot(monkeypatch, tmp_path, *, overrides, capabilities, plugin_
 
         async def close(self):
             calls.append("plugin_supervisor.close")
+
+        def runtime_status(self):
+            return {
+                "selectedPlugin": "default",
+                "loadedPlugin": "default",
+                "lifecycleState": "active",
+                "summary": "Plugin active.",
+                "developerDetails": None,
+                "fallbackActive": False,
+                "chatAvailable": True,
+            }
 
     class FakePluginAdapter:
         def __init__(self, supervisor):
@@ -184,6 +207,7 @@ def _patch_clean_boot(monkeypatch, tmp_path, *, overrides, capabilities, plugin_
     monkeypatch.setattr(server, "start_manifest_change_watcher", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(server, "_load_plugin_instance", lambda *_args, **_kwargs: object())
     monkeypatch.setattr(server, "TTSGateway", FakeTTSGateway)
+    monkeypatch.setattr(server, "build_tts_gateway", lambda **kwargs: FakeTTSGateway(kwargs["repo_root"] / "sidecar" / "models" / "piper" / f'{kwargs["avatar_voice_model"]}.onnx'))
     monkeypatch.setattr(server, "LLMGateway", FakeGateway)
     monkeypatch.setattr(server, "_warmup_ping", lambda _gateway: asyncio.sleep(0))
     monkeypatch.setattr(server, "PluginSupervisor", FakePluginSupervisor)
@@ -205,10 +229,15 @@ def _patch_clean_boot(monkeypatch, tmp_path, *, overrides, capabilities, plugin_
 
 
 def _uat_path():
+    root = Path(__file__).resolve().parents[2]
+    active = root / ".planning" / "phases" / "07-three-category-code-parsing-dispatch" / "07-HUMAN-UAT.md"
+    if active.exists():
+        return active
     return (
-        Path(__file__).resolve().parents[2]
+        root
         / ".planning"
-        / "phases"
+        / "milestones"
+        / "v2.0-phases"
         / "07-three-category-code-parsing-dispatch"
         / "07-HUMAN-UAT.md"
     )

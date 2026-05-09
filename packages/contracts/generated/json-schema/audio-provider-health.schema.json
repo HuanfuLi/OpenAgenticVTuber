@@ -1,0 +1,96 @@
+{
+  "properties": {
+    "detail": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Detail"
+    },
+    "kind": {
+      "enum": [
+        "tts",
+        "stt"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "latency_ms": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Latency Ms"
+    },
+    "provider_id": {
+      "enum": [
+        "piper",
+        "gpt_sovits",
+        "funasr",
+        "faster_whisper",
+        "openai",
+        "groq"
+      ],
+      "title": "Provider Id",
+      "type": "string"
+    },
+    "redacted_diagnostics": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Redacted Diagnostics"
+    },
+    "retryable": {
+      "default": false,
+      "title": "Retryable",
+      "type": "boolean"
+    },
+    "state": {
+      "enum": [
+        "ok",
+        "unavailable",
+        "missing_credential",
+        "external_service_failure",
+        "timeout",
+        "misconfigured"
+      ],
+      "title": "State",
+      "type": "string"
+    },
+    "summary": {
+      "title": "Summary",
+      "type": "string"
+    }
+  },
+  "required": [
+    "detail",
+    "kind",
+    "latency_ms",
+    "provider_id",
+    "redacted_diagnostics",
+    "retryable",
+    "state",
+    "summary"
+  ],
+  "title": "AudioProviderHealth",
+  "type": "object"
+}

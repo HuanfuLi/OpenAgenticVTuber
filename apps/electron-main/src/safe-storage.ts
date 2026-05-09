@@ -8,6 +8,7 @@
 import { app, safeStorage } from 'electron'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import type { AudioConfig } from '../../../packages/contracts/ts/audio-provider'
 
 const STORE_FILE = 'llm-config.enc'
 
@@ -28,15 +29,74 @@ export interface BodyMotionPluginConfig {
   cursorTrackingEnabled?: boolean
 }
 
-export interface StoredConfig {
+export interface StoredConfigV1 {
   provider: ProviderConfig
   plugin?: BodyMotionPluginConfig
   hasCompletedSetup: boolean
   schemaVersion: 1
 }
 
+export interface StoredConfig {
+  provider: ProviderConfig
+  plugin?: BodyMotionPluginConfig
+  hasCompletedSetup: boolean
+  schemaVersion: 2
+  audio: AudioConfig
+}
+
 function storePath(): string {
   return path.join(app.getPath('userData'), STORE_FILE)
+}
+
+export function defaultAudioConfig(): AudioConfig {
+  return {
+    schema_version: 1,
+    tts: {
+      active_provider: 'piper',
+      piper: {
+        provider_id: 'piper',
+        voice_model: 'en_US-amy-medium',
+        output_device: null,
+        synthesis_timeout_ms: 30_000,
+        execution: 'off_event_loop',
+        ordered_playback: true,
+        rms_lipsync: true
+      },
+      gpt_sovits: null
+    },
+    stt: {
+      enabled: false,
+      active_provider: null,
+      capture_timeout_ms: 30_000,
+      execution: 'off_event_loop'
+    }
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+export function migrateStoredConfig(raw: unknown): StoredConfig | null {
+  if (!isRecord(raw)) return null
+  if (raw.schemaVersion === 2) {
+    if (!isRecord(raw.provider)) return null
+    return {
+      ...(raw as unknown as StoredConfig),
+      audio: isRecord(raw.audio) ? (raw.audio as unknown as AudioConfig) : defaultAudioConfig()
+    }
+  }
+  if (raw.schemaVersion === 1) {
+    const v1 = raw as unknown as StoredConfigV1
+    return {
+      provider: v1.provider,
+      plugin: v1.plugin,
+      hasCompletedSetup: v1.hasCompletedSetup,
+      schemaVersion: 2,
+      audio: defaultAudioConfig()
+    }
+  }
+  return null
 }
 
 export function loadConfig(): StoredConfig | null {
@@ -51,10 +111,8 @@ export function loadConfig(): StoredConfig | null {
   try {
     const buf = fs.readFileSync(p)
     const json = safeStorage.decryptString(buf)
-    const parsed = JSON.parse(json) as StoredConfig
-    // Schema-version guard -- re-prompt setup if we ever bump v1->v2.
-    if (parsed.schemaVersion !== 1) return null
-    return parsed
+    const parsed = JSON.parse(json) as unknown
+    return migrateStoredConfig(parsed)
   } catch {
     // Corrupted blob: treat as not-configured. User redoes setup.
     return null
@@ -62,7 +120,9 @@ export function loadConfig(): StoredConfig | null {
 }
 
 export function saveConfig(cfg: StoredConfig): void {
-  const json = JSON.stringify(cfg)
+  const migrated = migrateStoredConfig(cfg)
+  if (migrated === null) throw new Error('Unsupported stored config schemaVersion')
+  const json = JSON.stringify({ ...migrated, schemaVersion: 2 })
   const buf = safeStorage.encryptString(json)
   fs.writeFileSync(storePath(), buf, { mode: 0o600 })
 }

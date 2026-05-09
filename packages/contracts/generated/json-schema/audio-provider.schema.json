@@ -1,0 +1,215 @@
+{
+  "$defs": {
+    "FutureTTSProviderConfig": {
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "provider_id": {
+          "const": "gpt_sovits",
+          "default": "gpt_sovits",
+          "title": "Provider Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled",
+        "provider_id"
+      ],
+      "title": "FutureTTSProviderConfig",
+      "type": "object"
+    },
+    "PiperTTSConfig": {
+      "properties": {
+        "execution": {
+          "const": "off_event_loop",
+          "default": "off_event_loop",
+          "title": "Execution",
+          "type": "string"
+        },
+        "ordered_playback": {
+          "default": true,
+          "title": "Ordered Playback",
+          "type": "boolean"
+        },
+        "output_device": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Device"
+        },
+        "provider_id": {
+          "const": "piper",
+          "default": "piper",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "rms_lipsync": {
+          "default": true,
+          "title": "Rms Lipsync",
+          "type": "boolean"
+        },
+        "synthesis_timeout_ms": {
+          "default": 30000,
+          "minimum": 1000,
+          "title": "Synthesis Timeout Ms",
+          "type": "integer"
+        },
+        "voice_model": {
+          "default": "en_US-amy-medium",
+          "title": "Voice Model",
+          "type": "string"
+        }
+      },
+      "required": [
+        "execution",
+        "ordered_playback",
+        "output_device",
+        "provider_id",
+        "rms_lipsync",
+        "synthesis_timeout_ms",
+        "voice_model"
+      ],
+      "title": "PiperTTSConfig",
+      "type": "object"
+    },
+    "STTProviderConfig": {
+      "properties": {
+        "active_provider": {
+          "anyOf": [
+            {
+              "enum": [
+                "funasr",
+                "faster_whisper",
+                "openai",
+                "groq"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Active Provider"
+        },
+        "capture_timeout_ms": {
+          "default": 30000,
+          "minimum": 1000,
+          "title": "Capture Timeout Ms",
+          "type": "integer"
+        },
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "execution": {
+          "const": "off_event_loop",
+          "default": "off_event_loop",
+          "title": "Execution",
+          "type": "string"
+        }
+      },
+      "required": [
+        "active_provider",
+        "capture_timeout_ms",
+        "enabled",
+        "execution"
+      ],
+      "title": "STTProviderConfig",
+      "type": "object"
+    },
+    "TTSProviderConfig": {
+      "properties": {
+        "active_provider": {
+          "default": "piper",
+          "enum": [
+            "piper",
+            "gpt_sovits"
+          ],
+          "title": "Active Provider",
+          "type": "string"
+        },
+        "gpt_sovits": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FutureTTSProviderConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "piper": {
+          "$ref": "#/$defs/PiperTTSConfig",
+          "default": {
+            "execution": "off_event_loop",
+            "ordered_playback": true,
+            "output_device": null,
+            "provider_id": "piper",
+            "rms_lipsync": true,
+            "synthesis_timeout_ms": 30000,
+            "voice_model": "en_US-amy-medium"
+          }
+        }
+      },
+      "required": [
+        "active_provider",
+        "gpt_sovits",
+        "piper"
+      ],
+      "title": "TTSProviderConfig",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "stt": {
+      "$ref": "#/$defs/STTProviderConfig",
+      "default": {
+        "active_provider": null,
+        "capture_timeout_ms": 30000,
+        "enabled": false,
+        "execution": "off_event_loop"
+      }
+    },
+    "tts": {
+      "$ref": "#/$defs/TTSProviderConfig",
+      "default": {
+        "active_provider": "piper",
+        "gpt_sovits": null,
+        "piper": {
+          "execution": "off_event_loop",
+          "ordered_playback": true,
+          "output_device": null,
+          "provider_id": "piper",
+          "rms_lipsync": true,
+          "synthesis_timeout_ms": 30000,
+          "voice_model": "en_US-amy-medium"
+        }
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "stt",
+    "tts"
+  ],
+  "title": "AudioConfig",
+  "type": "object"
+}

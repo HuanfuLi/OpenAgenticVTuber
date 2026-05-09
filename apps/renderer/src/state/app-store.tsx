@@ -15,6 +15,7 @@ import {
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
 import { worstOf, type StatusOverall, type StatusSnapshot, type StatusValue } from './status-types'
 import type { PluginRuntimeStatus, Provider, StoredConfig, VtsStatus } from '@preload-types'
+import { defaultAudioConfig } from './setup-store'
 import { ConversationHistoryProvider } from './conversation-history'
 
 export type View = 'chat' | 'agent' | 'settings' | 'avatar-import'
@@ -139,7 +140,8 @@ function llmConfigToStoredConfig(cfg: LLMConfig, completed: boolean): StoredConf
     },
     plugin: { activePluginName: 'default' },
     hasCompletedSetup: completed,
-    schemaVersion: 1
+    schemaVersion: 2,
+    audio: defaultAudioConfig()
   }
 }
 

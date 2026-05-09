@@ -11,7 +11,14 @@ import json
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "packages/contracts/py"))
 
-from contracts import AvatarImportPlan, AvatarOverrides, DefaultPluginActionBinding, RigCapabilities  # noqa: E402
+from contracts import (  # noqa: E402
+    AudioConfig,
+    AudioProviderHealth,
+    AvatarImportPlan,
+    AvatarOverrides,
+    DefaultPluginActionBinding,
+    RigCapabilities,
+)
 
 
 def test_default_plugin_action_binding_defaults() -> None:
@@ -71,6 +78,57 @@ def test_hud_message_generated_outputs_exist() -> None:
         "packages/contracts/ts/hud-message-s2c.ts": "HudMessageS2C",
         "packages/contracts/ts/hud-message-c2s.ts": "HudMessageC2S",
         "packages/contracts/ts/index.ts": "HudMessageS2C",
+    }
+    for rel_path, pattern in required.items():
+        path = REPO_ROOT / rel_path
+        assert path.exists(), f"missing generated file: {rel_path}"
+        assert pattern in path.read_text(encoding="utf-8")
+
+
+def test_audio_provider_defaults_and_health_validation() -> None:
+    cfg = AudioConfig()
+
+    assert cfg.tts.active_provider == "piper"
+    assert cfg.tts.piper.voice_model == "en_US-amy-medium"
+    assert cfg.tts.piper.ordered_playback is True
+    assert cfg.tts.piper.rms_lipsync is True
+    assert cfg.tts.piper.execution == "off_event_loop"
+    assert cfg.stt.enabled is False
+
+    health = AudioProviderHealth(
+        provider_id="piper",
+        kind="tts",
+        state="ok",
+        summary="Piper ready.",
+        retryable=False,
+        latency_ms=12.5,
+    )
+    assert health.provider_id == "piper"
+
+    with pytest.raises(ValidationError):
+        AudioProviderHealth(
+            provider_id="piper",
+            kind="tts",
+            state="unknown",
+            summary="bad",
+        )
+
+    with pytest.raises(ValidationError):
+        AudioProviderHealth(
+            provider_id="elevenlabs",
+            kind="tts",
+            state="ok",
+            summary="bad",
+        )
+
+
+def test_audio_provider_generated_outputs_exist() -> None:
+    required = {
+        "packages/contracts/generated/json-schema/audio-provider.schema.json": "AudioConfig",
+        "packages/contracts/generated/json-schema/audio-provider-health.schema.json": "AudioProviderHealth",
+        "packages/contracts/ts/audio-provider.ts": "AudioConfig",
+        "packages/contracts/ts/audio-provider-health.ts": "AudioProviderHealth",
+        "packages/contracts/ts/index.ts": "AudioProviderHealth",
     }
     for rel_path, pattern in required.items():
         path = REPO_ROOT / rel_path

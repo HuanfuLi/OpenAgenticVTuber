@@ -12,6 +12,7 @@ import pytest
 from loguru import logger
 
 from contracts import ActionCode, Dispatch, DisplayTextField
+from sidecar.tts.provider import TTSSynthesisRequest, TTSSynthesisResult
 from sidecar.tts.tts_manager import TTSTaskManager
 
 
@@ -31,6 +32,35 @@ class _FakeWS:
 
     async def send_json(self, payload: dict) -> None:
         self.writes.append(payload)
+
+
+class _BlockingProvider:
+    provider_id = "piper"
+    sample_rate = 22050
+
+    def __init__(self) -> None:
+        self.calls: list[TTSSynthesisRequest] = []
+        self.release = asyncio.Event()
+
+    def boot(self) -> None:
+        pass
+
+    def health(self):
+        return None
+
+    def shutdown(self) -> None:
+        pass
+
+    def synthesize(self, request: TTSSynthesisRequest) -> TTSSynthesisResult:
+        self.calls.append(request)
+        import time
+
+        time.sleep(0.05)
+        return TTSSynthesisResult(
+            pcm_int16=b"\x01\x00\x02\x00",
+            sample_rate=22050,
+            provider_id="piper",
+        )
 
 
 def _display(text: str) -> DisplayTextField:
@@ -345,3 +375,70 @@ async def test_tts_logs_emit_expected_markers(monkeypatch):
     ]
     for pattern in patterns:
         assert any(re.match(pattern, record) for record in records), records
+
+
+@pytest.mark.asyncio
+async def test_provider_synthesis_runs_off_event_loop():
+    stream = _FakeStream()
+    ws = _FakeWS()
+    queue: asyncio.Queue = asyncio.Queue()
+    provider = _BlockingProvider()
+    manager = TTSTaskManager(stream=stream, compositor_speech_queue=queue, provider=provider)
+
+    sentinel_ran = False
+
+    async def sentinel():
+        nonlocal sentinel_ran
+        sentinel_ran = True
+
+    await manager.speak("hello.", _display("hello."), _dispatches(), 1, ws)
+    await sentinel()
+
+    assert sentinel_ran is True
+    await manager.wait_for_all_audio_complete()
+    assert [call.sentence_id for call in provider.calls] == [1]
+    assert ws.writes[0]["audio"] is not None
+
+
+@pytest.mark.asyncio
+async def test_silent_payload_does_not_call_provider():
+    stream = _FakeStream()
+    ws = _FakeWS()
+    queue: asyncio.Queue = asyncio.Queue()
+    provider = _BlockingProvider()
+    manager = TTSTaskManager(stream=stream, compositor_speech_queue=queue, provider=provider)
+
+    await manager.speak("   ", _display("blank"), _dispatches(), 1, ws)
+    await manager.wait_for_all_audio_complete()
+
+    assert provider.calls == []
+    assert ws.writes[0]["audio"] is None
+
+
+@pytest.mark.asyncio
+async def test_provider_failure_sends_silent_payload_and_keeps_order():
+    class FailingProvider(_BlockingProvider):
+        def synthesize(self, request: TTSSynthesisRequest) -> TTSSynthesisResult:
+            self.calls.append(request)
+            if request.sentence_id == 1:
+                raise RuntimeError("boom")
+            return TTSSynthesisResult(
+                pcm_int16=b"\x01\x00\x02\x00",
+                sample_rate=22050,
+                provider_id="piper",
+            )
+
+    stream = _FakeStream()
+    ws = _FakeWS()
+    speech_queue: asyncio.Queue = asyncio.Queue()
+    provider = FailingProvider()
+    manager = TTSTaskManager(stream=stream, compositor_speech_queue=speech_queue, provider=provider)
+
+    await manager.speak("first.", _display("first."), _dispatches(), 1, ws)
+    await manager.speak("second.", _display("second."), _dispatches(), 2, ws)
+    await manager.wait_for_all_audio_complete()
+
+    assert [w["sentence_id"] for w in ws.writes] == [1, 2]
+    assert ws.writes[0]["audio"] is None
+    assert ws.writes[1]["audio"] is not None
+    assert len(stream.writes) == 1

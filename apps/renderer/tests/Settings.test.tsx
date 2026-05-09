@@ -4,6 +4,7 @@ import { AppStoreProvider, useStore } from '@/state/app-store'
 import { ThemeProvider } from '@/state/theme-provider'
 import { COPY } from '@/lib/copy'
 import { Settings } from '@/screens/Settings/Settings'
+import { defaultAudioConfig } from '@/state/setup-store'
 import type { StoredConfig } from '@preload-types'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
 
@@ -54,7 +55,8 @@ describe('Settings TTS section', () => {
     },
     plugin: { activePluginName: 'default' },
     hasCompletedSetup: true,
-    schemaVersion: 1
+    schemaVersion: 2,
+    audio: defaultAudioConfig()
   }
   const currentAvatarPlan: AvatarImportPlan = {
     avatar_id: 'akari',
@@ -104,6 +106,16 @@ describe('Settings TTS section', () => {
           developerDetails: null,
           fallbackActive: false,
           chatAvailable: true
+        }),
+        getAudioStatus: vi.fn().mockResolvedValue({
+          provider_id: 'piper',
+          kind: 'tts',
+          state: 'ok',
+          summary: 'Piper provider ready.',
+          detail: 'voice=en_US-amy-medium',
+          retryable: false,
+          latency_ms: null,
+          redacted_diagnostics: null
         }),
         restartSidecar: vi.fn().mockResolvedValue(undefined),
         resetVtsAuth: vi.fn().mockResolvedValue(undefined),
@@ -621,7 +633,8 @@ describe('Settings TTS section', () => {
         },
         plugin: { activePluginName: 'test-motion' },
         hasCompletedSetup: true,
-        schemaVersion: 1
+        schemaVersion: 2,
+        audio: defaultAudioConfig()
       })
     })
     expect(await screen.findByText(COPY.SETTINGS.CONN_SAVED)).toBeInTheDocument()

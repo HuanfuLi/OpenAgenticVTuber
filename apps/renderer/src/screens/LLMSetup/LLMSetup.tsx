@@ -25,7 +25,7 @@
 
 import { useEffect, useState } from 'react'
 import { COPY } from '@/lib/copy'
-import { completeSetup, type Provider, type ProviderConfig } from '@/state/setup-store'
+import { completeSetup, defaultAudioConfig, type Provider, type ProviderConfig } from '@/state/setup-store'
 import { ProviderSelect } from './ProviderSelect'
 import { TestLog } from './TestLog'
 
@@ -77,7 +77,8 @@ export function LLMSetup() {
     await completeSetup({
       provider: cfg,
       hasCompletedSetup: true,
-      schemaVersion: 1
+      schemaVersion: 2,
+      audio: defaultAudioConfig()
     })
     // setup-store flips to 'ready' -> App.tsx swaps LLMSetup for AppShell.
   }

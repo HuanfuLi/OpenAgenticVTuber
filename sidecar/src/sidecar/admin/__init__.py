@@ -1,3 +1,3 @@
-"""Admin endpoints: avatar import, status, and rig capability tools."""
+"""Admin endpoints: audio, avatar import, status, and rig capability tools."""
 
-from . import rig_capabilities, status
+from . import audio, rig_capabilities, status

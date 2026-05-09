@@ -13,6 +13,7 @@ import pytest
 from contracts import ActionCode, Dispatch, DisplayTextField, SpeechEnvelopePayload
 from sidecar.tts.audio_payload_helpers import (
     get_volume_by_chunks,
+    prepare_payload_from_pcm,
     synthesize_and_prepare_payload,
 )
 
@@ -75,6 +76,26 @@ def test_linear_ramp_returns_ascending_volumes():
     assert len(volumes) == 50
     assert volumes == sorted(volumes)
     assert volumes[-1] == pytest.approx(1.0, abs=0.05)
+
+
+def test_prepare_payload_from_pcm_builds_existing_audio_shape():
+    pcm = (np.array([1000, -1000, 1000, -1000] * 200, dtype=np.int16)).tobytes()
+    msg, pcm_int16, sample_rate = prepare_payload_from_pcm(
+        pcm,
+        22050,
+        _display_text(),
+        _dispatches(),
+        sentence_id=11,
+    )
+
+    assert pcm_int16 == pcm
+    assert sample_rate == 22050
+    assert msg.audio is not None
+    assert msg.slice_length == 20
+    assert msg.sentence_id == 11
+    assert msg.volumes
+    decoded = base64.b64decode(msg.audio)
+    assert decoded[:4] == b"RIFF"
 
 
 def test_silent_payload_fast_path():

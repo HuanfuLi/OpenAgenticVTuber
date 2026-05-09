@@ -5,6 +5,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { StoredConfig } from '../src/safe-storage'
 import type { ChromeState, LogLevel, ThemePreference } from '../src/window-store'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
+import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import type {
   CommitConversationTurnInput,
   ConversationSession,
@@ -100,6 +101,8 @@ const api = {
   getVtsStatus: (): Promise<VtsStatus> => ipcRenderer.invoke('sidecar:getVtsStatus'),
   getPluginStatus: (): Promise<PluginRuntimeStatus> =>
     ipcRenderer.invoke('sidecar:getPluginStatus'),
+  getAudioStatus: (): Promise<AudioProviderHealth> =>
+    ipcRenderer.invoke('sidecar:getAudioStatus'),
   restartSidecar: (): Promise<void> => ipcRenderer.invoke('sidecar:restart'),
   resetVtsAuth: (): Promise<void> => ipcRenderer.invoke('vts:resetAuth'),
   listBodyMotionPlugins: (): Promise<BodyMotionPluginSummary[]> =>
@@ -150,6 +153,7 @@ contextBridge.exposeInMainWorld('api', api)
 
 export type RendererApi = typeof api
 export type { StoredConfig, ProviderConfig, Provider } from '../src/safe-storage'
+export type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 export type { ChromeState, LogLevel, ThemePreference } from '../src/window-store'
 export type {
   CommitConversationTurnInput,

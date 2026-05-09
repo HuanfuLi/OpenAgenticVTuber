@@ -9,9 +9,9 @@ import { Folder } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
 import { useConversationHistory } from '@/state/conversation-history'
-import { saveCompletedSetupConfig, type Provider, type ProviderConfig } from '@/state/setup-store'
+import { defaultAudioConfig, saveCompletedSetupConfig, type Provider, type ProviderConfig } from '@/state/setup-store'
 import { useTheme, type ThemeMode, type LightAccent, type DarkBg, type DarkAccent } from '@/state/theme-provider'
-import type { BodyMotionPluginSummary, PluginRuntimeStatus, StoredConfig } from '@preload-types'
+import type { AudioProviderHealth, BodyMotionPluginSummary, PluginRuntimeStatus, StoredConfig } from '@preload-types'
 import { ProviderSelect } from '@/screens/LLMSetup/ProviderSelect'
 import { TestLog } from '@/screens/LLMSetup/TestLog'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
@@ -342,7 +342,8 @@ function ConnectionSection() {
         },
         plugin: storedCfg?.plugin ?? { activePluginName: 'default' },
         hasCompletedSetup: true,
-        schemaVersion: 1
+        schemaVersion: 2,
+        audio: storedCfg?.audio ?? defaultAudioConfig()
       }
       await saveCompletedSetupConfig(nextCfg)
       setStoredCfg(nextCfg)
@@ -1039,6 +1040,26 @@ function DiagnosticsSection({ onResetClick }: { onResetClick: () => void }) {
 // -------- §5 TTS / Voice out ---------------------------------------------
 function TTSSection() {
   const C = COPY.SETTINGS
+  const [audioStatus, setAudioStatus] = useState<AudioProviderHealth | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const refreshAudioStatus = async (): Promise<void> => {
+    setLoading(true)
+    try {
+      const status = await window.api.getAudioStatus()
+      setAudioStatus(status)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void refreshAudioStatus()
+  }, [])
+
+  const healthState = audioStatus?.state ?? 'unavailable'
+  const healthClass = healthState === 'ok' ? 'green' : healthState === 'unavailable' ? 'amber' : 'red'
+
   return (
     <section className="section" id="sec-tts">
       <h2>{C.TTS_HEADER}</h2>
@@ -1048,7 +1069,17 @@ function TTSSection() {
       </div>
       <div className="kv-row">
         <span className="k">{C.TTS_VOICE}</span>
-        <span className="v">{C.TTS_VOICE_VAL}</span>
+        <span className="v">{audioStatus?.detail?.replace(/^voice=/, '') || C.TTS_VOICE_VAL}</span>
+      </div>
+      <div className="kv-row">
+        <span className="k">Health</span>
+        <span className="v">
+          <span className={`dot ${healthClass}`} /> {healthState}
+        </span>
+      </div>
+      <div className="kv-row" style={{ alignItems: 'flex-start' }}>
+        <span className="k">Summary</span>
+        <span className="v">{audioStatus?.summary ?? 'Audio status unavailable.'}</span>
       </div>
       <div className="kv-row">
         <span className="k">{C.TTS_OUTPUT}</span>
@@ -1058,6 +1089,9 @@ function TTSSection() {
         <span className="k">{C.TTS_LIPSYNC}</span>
         <span className="v">{C.TTS_LIPSYNC_VAL}</span>
       </div>
+      <button className="btn btn-secondary mt-2" onClick={() => void refreshAudioStatus()} disabled={loading}>
+        {loading ? COPY.STATUS.REFRESHING : C.CONN_REFRESH}
+      </button>
       <div className="tx-sm muted mt-2">{C.TTS_HELP}</div>
     </section>
   )

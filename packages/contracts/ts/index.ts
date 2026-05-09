@@ -1,6 +1,14 @@
 export type { ActionCode, Dispatch, EventFire, VariantToggle } from './dispatch'
 export type { DefaultPluginActionBinding } from './action-binding'
 export type { AudioPayloadMessage, DisplayTextField } from './audio-payload'
+export type {
+  AudioConfig,
+  FutureTTSProviderConfig,
+  PiperTTSConfig,
+  STTProviderConfig,
+  TTSProviderConfig,
+} from './audio-provider'
+export type { AudioProviderHealth } from './audio-provider-health'
 export type { DiscreteEvent } from './discrete-event'
 export type { EventEntry } from './event-entry'
 export type { ParamFrame, ParamMode } from './param-frame'

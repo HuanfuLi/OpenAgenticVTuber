@@ -3,6 +3,17 @@ from .action_binding import DefaultPluginActionBinding
 from .dispatch import ActionCode, Dispatch, EventFire, VariantToggle
 from .speech_envelope import SpeechEnvelopePayload
 from .audio_payload import AudioPayloadMessage, DisplayTextField
+from .audio_provider import (
+    AudioConfig,
+    AudioHealthState,
+    AudioProviderHealth,
+    AudioProviderId,
+    AudioProviderKind,
+    FutureTTSProviderConfig,
+    PiperTTSConfig,
+    STTProviderConfig,
+    TTSProviderConfig,
+)
 from .discrete_event import DiscreteEvent
 from .param_frame import ParamFrame, ParamMode
 from .variant_entry import VariantEntry
@@ -46,6 +57,15 @@ __all__ = [
     "SpeechEnvelopePayload",
     "AudioPayloadMessage",
     "DisplayTextField",
+    "AudioConfig",
+    "AudioHealthState",
+    "AudioProviderHealth",
+    "AudioProviderId",
+    "AudioProviderKind",
+    "FutureTTSProviderConfig",
+    "PiperTTSConfig",
+    "STTProviderConfig",
+    "TTSProviderConfig",
     "DiscreteEvent",
     "ParamFrame",
     "ParamMode",

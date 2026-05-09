@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AppStoreProvider } from '@/state/app-store'
 import { StatusIcon } from '@/chrome/StatusIcon'
+import { defaultAudioConfig } from '@/state/setup-store'
 
 const storedConfig = {
   provider: {
@@ -12,7 +13,8 @@ const storedConfig = {
   },
   plugin: { activePluginName: 'default' },
   hasCompletedSetup: true,
-  schemaVersion: 1
+  schemaVersion: 2,
+  audio: defaultAudioConfig()
 }
 
 function installApi() {
