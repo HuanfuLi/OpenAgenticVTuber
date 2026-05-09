@@ -37,7 +37,19 @@ def test_preserves_carryover(tmp_path, monkeypatch) -> None:
     import_resp = client.get("/admin/avatar/import/current?avatar_id=teto")
     assert import_resp.status_code == 200
     plan = import_resp.json()
+    assert plan["variants"] == []
+    assert plan["events"] == []
     plan["variants"] = [{"code": "new-joy", "hotkey_id": "", "source_name": "New Joy"}]
+    plan["events"] = [
+        {
+            "code": "saved-wave",
+            "hotkey_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "motion_file": "wave.motion3.json",
+            "duration_seconds": 1.2,
+            "duration_is_fallback": False,
+            "is_loop": False,
+        }
+    ]
 
     commit_resp = client.post("/admin/avatar/import/commit", json=plan)
 
@@ -47,6 +59,16 @@ def test_preserves_carryover(tmp_path, monkeypatch) -> None:
     data = yaml.safe_load((runtime_avatar_dir / "_avatar_overrides.yaml").read_text(encoding="utf-8"))
     assert data["source_rig_path"] == str(external_source)
     assert data["variants"] == [{"code": "new-joy", "hotkey_id": "", "source_name": "New Joy"}]
+    assert data["events"] == [
+        {
+            "code": "saved-wave",
+            "hotkey_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "motion_file": "wave.motion3.json",
+            "duration_seconds": 1.2,
+            "duration_is_fallback": False,
+            "is_loop": False,
+        }
+    ]
     assert data["body_sway_strategy"] == "proxy_param"
     assert data["proxy_body_param"] == "ParamBodyAngleX"
     assert data["exp3_body_pose"] == "body.exp3.json"

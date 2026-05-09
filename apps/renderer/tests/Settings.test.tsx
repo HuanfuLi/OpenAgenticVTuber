@@ -23,6 +23,12 @@ function StoreProbe() {
     <div>
       <span data-testid="store-view">{view}</span>
       <span data-testid="store-avatar-plan">{avatarImportPlan?.avatar_id ?? 'none'}</span>
+      <span data-testid="store-avatar-variants">
+        {avatarImportPlan?.variants.map((variant) => variant.code).join(',') ?? 'none'}
+      </span>
+      <span data-testid="store-avatar-events">
+        {avatarImportPlan?.events.map((event) => event.code).join(',') ?? 'none'}
+      </span>
     </div>
   )
 }
@@ -240,6 +246,69 @@ describe('Settings TTS section', () => {
     })
   })
 
+  it('disables Edit current when no current avatar ID is known', async () => {
+    vi.mocked(window.api.getCurrentAvatarId).mockResolvedValue('')
+    vi.mocked(window.api.getCurrentAvatarPlan).mockResolvedValue(null)
+
+    renderSettings()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
+      .then((heading) => heading.closest('section')!)
+    expect(await within(section).findByText(COPY.SETTINGS.AVATARS_UNKNOWN_ID)).toBeInTheDocument()
+    expect(within(section).getByRole('button', { name: COPY.SETTINGS.AVATARS_EDIT_CURRENT })).toBeDisabled()
+  })
+
+  it('routes Edit current with saved edited avatar catalog rows', async () => {
+    const savedPlan: AvatarImportPlan = {
+      ...currentAvatarPlan,
+      variants: [
+        { code: 'saved-heart-eye', hotkey_id: 'hotkey-heart', is_placeholder: false, source_name: 'Heart Eye' }
+      ],
+      events: [
+        {
+          code: 'saved-wave',
+          duration_is_fallback: false,
+          duration_seconds: 2.4,
+          hotkey_id: 'hotkey-saved-wave',
+          is_loop: false,
+          is_placeholder: false,
+          motion_file: 'saved-wave.motion3.json'
+        }
+      ]
+    }
+    vi.mocked(window.api.getCurrentAvatarPlan).mockResolvedValue(savedPlan)
+
+    renderSettingsWithProbe()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
+      .then((heading) => heading.closest('section')!)
+    fireEvent.click(within(section).getByRole('button', { name: COPY.SETTINGS.AVATARS_EDIT_CURRENT }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('store-view')).toHaveTextContent('avatar-import')
+      expect(screen.getByTestId('store-avatar-variants')).toHaveTextContent('saved-heart-eye')
+      expect(screen.getByTestId('store-avatar-events')).toHaveTextContent('saved-wave')
+    })
+  })
+
+  it('does not show an unavailable notice after a successful edit-current retry', async () => {
+    vi.mocked(window.api.getCurrentAvatarId).mockResolvedValue('akari')
+    vi.mocked(window.api.getCurrentAvatarPlan)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(currentAvatarPlan)
+
+    renderSettingsWithProbe()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
+      .then((heading) => heading.closest('section')!)
+    fireEvent.click(await within(section).findByRole('button', { name: COPY.SETTINGS.AVATARS_EDIT_CURRENT }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('store-view')).toHaveTextContent('avatar-import')
+    })
+    expect(within(section).queryByText(COPY.SETTINGS.AVATARS_EDIT_UNAVAILABLE)).toBeNull()
+  })
+
   it('renders compact VTube Studio status and troubleshooting actions', async () => {
     renderSettings()
 
@@ -297,6 +366,15 @@ describe('Settings TTS section', () => {
     expect(screen.getByText(/Warn: problems that need attention/i)).toBeInTheDocument()
     expect(screen.getByText(/Info: normal app milestones/i)).toBeInTheDocument()
     expect(screen.getByText(/Debug: verbose troubleshooting detail/i)).toBeInTheDocument()
+  })
+
+  it('shows the current v2.1 milestone in About instead of the skeleton version', async () => {
+    renderSettings()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.ABOUT_HEADER })
+      .then((heading) => heading.closest('section')!)
+    expect(within(section).getByText(/v2\.1 Mock\/Reality Cleanup/i)).toBeInTheDocument()
+    expect(within(section).queryByText('0.1.0-skeleton')).toBeNull()
   })
 
   it('renders body-motion plugin selection and persists active plugin', async () => {
