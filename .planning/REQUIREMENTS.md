@@ -313,8 +313,8 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | PARSE-02 | Phase 7 | Pending — `display_processor.filter_brackets` extension to all three syntaxes |
 | PARSE-03 | Phase 7 | Pending — three-path dispatch (action / variant / event) |
 | PARSE-04 | Phase 7 | Pending — `<think>` reasoning-strip runs FIRST in chain |
-| PARSE-05 | Phase 7 | Pending — radio-button single-active variant policy |
-| PARSE-06 | Phase 7 | Pending — `motion3.json.Meta.Duration + 1s` event auto-completion + 10s fallback |
+| PARSE-05 | Phase 7 | Complete — 07-05 `VariantStateManager` enforces radio-button single-active variant policy |
+| PARSE-06 | Phase 7 | Complete — 07-03 computes final event delays and 07-05 `EventCompletionTracker` uses them directly with 10s fallback |
 | PARSE-07 | Phase 7 | Pending — cross-category uniqueness check at boot (loud failure) |
 | PARSE-08 | Phase 7 | Pending — split-token reassembly fixtures for all three categories |
 | HUD-01 | Phase 9 | Pending — dedicated `/hud/ws` WebSocket endpoint |
