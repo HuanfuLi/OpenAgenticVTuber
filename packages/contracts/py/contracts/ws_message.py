@@ -15,6 +15,13 @@ from .audio_payload import AudioPayloadMessage  # noqa: F401 -- re-export
 class TextInputMessage(BaseModel):
     type: Literal["text-input"] = "text-input"
     text: str
+    session_id: str | None = None
+    history: list["TextInputHistoryMessage"] = Field(default_factory=list)
+
+
+class TextInputHistoryMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    text: str
 
 
 class DisplayTextMessage(BaseModel):

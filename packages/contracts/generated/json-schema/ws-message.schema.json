@@ -301,8 +301,49 @@
       "title": "ShutdownMessage",
       "type": "object"
     },
+    "TextInputHistoryMessage": {
+      "properties": {
+        "role": {
+          "enum": [
+            "user",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "text"
+      ],
+      "title": "TextInputHistoryMessage",
+      "type": "object"
+    },
     "TextInputMessage": {
       "properties": {
+        "history": {
+          "items": {
+            "$ref": "#/$defs/TextInputHistoryMessage"
+          },
+          "title": "History",
+          "type": "array"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
         "text": {
           "title": "Text",
           "type": "string"
@@ -315,6 +356,7 @@
         }
       },
       "required": [
+        "session_id",
         "text",
         "type"
       ],

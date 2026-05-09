@@ -91,7 +91,15 @@ export function Chat() {
     setInput('')
     appendUserMessage(text, activeSession.id)
     // OLVT-shape envelope per packages/contracts/ts/ws-message.ts.
-    const ok = send({ type: 'text-input', text })
+    const ok = send({
+      type: 'text-input',
+      text,
+      session_id: activeSession.id,
+      history: activeSession.messages.map((message) => ({
+        role: message.role,
+        text: message.text
+      }))
+    })
     if (!ok) {
       // WS not ready -- no-op for skeleton (the local-echo bubble is still added).
     }

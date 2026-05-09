@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
 
 const wsMock = vi.hoisted(() => ({ connected: true }))
+const sendMock = vi.hoisted(() => vi.fn(() => true))
 
 vi.mock('@/ws/client', () => ({
-  send: () => true
+  send: sendMock
 }))
 
 vi.mock('@/ws/store', () => ({
@@ -26,6 +27,7 @@ import {
 describe('Chat speaking affordance', () => {
   beforeEach(() => {
     wsMock.connected = true
+    sendMock.mockClear()
     resetStreaming()
     const session: ConversationSession = {
       id: 's1',
@@ -179,6 +181,62 @@ describe('Chat speaking affordance', () => {
 
     expect(await screen.findByText('Do you remember this transcript?')).toBeInTheDocument()
     expect(screen.getByText('Yes, it restored from local history.')).toBeInTheDocument()
+  })
+
+  it('sends recovered active-session transcript as LLM context', async () => {
+    const persistedSession: ConversationSession = {
+      id: 's1',
+      title: 'Persisted session',
+      titleSource: 'manual',
+      createdAt: '2026-05-09T12:00:00.000Z',
+      updatedAt: '2026-05-09T12:01:00.000Z',
+      lastMessageAt: '2026-05-09T12:01:00.000Z',
+      messages: [
+        {
+          id: 'm1',
+          role: 'user',
+          text: 'What should I bake today?',
+          createdAt: '2026-05-09T12:00:00.000Z'
+        },
+        {
+          id: 'm2',
+          role: 'assistant',
+          text: 'Bake croissants.',
+          createdAt: '2026-05-09T12:01:00.000Z'
+        }
+      ]
+    }
+    vi.mocked(window.api.getActiveConversationSession).mockResolvedValue(persistedSession)
+    vi.mocked(window.api.listConversationSessions).mockResolvedValue([
+      {
+        id: persistedSession.id,
+        title: persistedSession.title,
+        titleSource: persistedSession.titleSource,
+        createdAt: persistedSession.createdAt,
+        updatedAt: persistedSession.updatedAt,
+        lastMessageAt: persistedSession.lastMessageAt,
+        messageCount: 2,
+        preview: 'Bake croissants.'
+      }
+    ])
+
+    renderChat()
+
+    const input = await screen.findByLabelText('Chat input')
+    fireEvent.change(input, { target: { value: 'And after that?' } })
+    fireEvent.click(screen.getByLabelText('Send'))
+
+    await waitFor(() => {
+      expect(sendMock).toHaveBeenCalledWith({
+        type: 'text-input',
+        text: 'And after that?',
+        session_id: 's1',
+        history: [
+          { role: 'user', text: 'What should I bake today?' },
+          { role: 'assistant', text: 'Bake croissants.' }
+        ]
+      })
+    })
   })
 
   it('reenables the input after sidecar reconnect clears transient streaming state', () => {

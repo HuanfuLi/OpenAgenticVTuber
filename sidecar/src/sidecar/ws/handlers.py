@@ -34,7 +34,21 @@ async def handle_text_input(ws: WebSocket, msg: dict) -> None:
         )
         return
     orchestrator.set_active_ws(ws)
-    await orchestrator.pending_inputs.put(text)
+    history = [
+        {"role": item.get("role"), "text": item.get("text")}
+        for item in msg.get("history", [])
+        if isinstance(item, dict)
+        and item.get("role") in {"user", "assistant"}
+        and isinstance(item.get("text"), str)
+        and item.get("text").strip()
+    ]
+    await orchestrator.pending_inputs.put(
+        {
+            "text": text,
+            "session_id": msg.get("session_id"),
+            "history": history,
+        }
+    )
 
 
 @on("shutdown")

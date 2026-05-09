@@ -1,7 +1,7 @@
 """Orchestrator -- Phase 2 conversation pipeline owner.
 
 Responsibilities:
-  - Holds append-only `_memory: list[dict]` (CONTEXT D-18, D-19).
+  - Holds per-active-session `_memory: list[dict]` (CONTEXT D-18, D-19).
   - Holds forward-only `_head_idx: int` for KV-cache-aware pruning (D-19).
   - Holds bytes-identical `_system_prompt` built once at __init__ (D-17, Pitfall 6).
   - turn(user_text, ws): emits OLVT-canonical envelope sequence per OLVT
@@ -11,7 +11,9 @@ Responsibilities:
   - On generic exception: emit STREAM_ERROR.
 
 KV-cache discipline (Warning A precision):
-  - `_memory` is APPEND-ONLY. No pop / del / insert / remove / clear.
+  - `_memory` is append-only within a live active session. Recovered-session
+    transcript can replace it at a turn boundary when the renderer switches or
+    restores a conversation session.
   - The consumed prefix advances ONLY by integer `_head_idx` increments.
   - Failed user messages REMAIN in `_memory`; the next turn's
     `_compute_send_window` prunes them naturally via forward-only `_head_idx`.
@@ -65,6 +67,10 @@ _CONTEXT_OVERFLOW_COPY = (
     "Conversation got too long and won't fit in the model anymore. "
     "Close the app to start fresh."
 )
+
+
+type ConversationHistoryMessage = dict[str, str]
+type PendingTurnInput = str | dict[str, object]
 
 
 def _build_system_prompt(persona_text: str, dispatch_codes_section: str) -> str:
@@ -125,8 +131,9 @@ class Orchestrator:
         self._variant_state_manager = variant_state_manager
         self._discrete_dispatcher = discrete_dispatcher
         self._event_completion_tracker = event_completion_tracker
-        self._memory: list[dict] = []           # APPEND-ONLY -- D-19
+        self._memory: list[dict] = []           # append-only within active session -- D-19
         self._head_idx: int = 0                 # FORWARD-ONLY -- D-19
+        self._active_session_id: str | None = None
         self._tts_pp = tts_preprocessor_config or TTSPreprocessorConfig()
         self._sentence_counter = count(1)       # sentence_id starts at 1
         self._tts_manager = tts_manager
@@ -139,13 +146,21 @@ class Orchestrator:
         self.pending_inputs = pending_inputs or asyncio.Queue()
         self._active_ws: WebSocket | None = None
 
-    async def turn(self, user_text: str, ws: WebSocket) -> None:
+    async def turn(
+        self,
+        user_text: str,
+        ws: WebSocket,
+        *,
+        session_id: str | None = None,
+        history: list[ConversationHistoryMessage] | None = None,
+    ) -> None:
         """One turn -- emit OLVT-canonical sequence + thread state mutation."""
         self._active_ws = ws
+        self._sync_memory_from_history(session_id=session_id, history=history or [])
         await emit_chain_start(ws)
         await emit_full_text(ws, "Thinking...")  # OLVT conversation_utils.py:143
 
-        # APPEND-ONLY -- D-19. Never .pop(0), never .insert(0,...).
+        # APPEND-ONLY within the active session -- D-19.
         self._memory.append({"role": "user", "content": user_text})
 
         send_window = self._compute_send_window()
@@ -194,6 +209,32 @@ class Orchestrator:
 
         await emit_force_new_message(ws)
         await emit_chain_end(ws)
+
+    def _sync_memory_from_history(
+        self,
+        *,
+        session_id: str | None,
+        history: list[ConversationHistoryMessage],
+    ) -> None:
+        if not session_id and not history:
+            return
+        normalized = [
+            {"role": item["role"], "content": item["text"]}
+            for item in history
+            if item.get("role") in {"user", "assistant"} and item.get("text")
+        ]
+        should_replace = (
+            session_id is not None
+            and session_id != self._active_session_id
+        ) or (
+            bool(normalized)
+            and len(normalized) > len(self._memory)
+        )
+        if not should_replace:
+            return
+        self._memory = normalized
+        self._head_idx = 0
+        self._active_session_id = session_id
 
     async def _emit_sentence(
         self,
@@ -313,12 +354,24 @@ class Orchestrator:
 
     async def _turn_loop(self) -> None:
         while True:
-            user_text = await self.pending_inputs.get()
+            pending_input: PendingTurnInput = await self.pending_inputs.get()
             try:
                 if self._active_ws is None:
                     logger.warning("Dropping pending input because no active websocket is bound.")
                     continue
-                await self.turn(user_text, self._active_ws)
+                if isinstance(pending_input, str):
+                    await self.turn(pending_input, self._active_ws)
+                else:
+                    await self.turn(
+                        str(pending_input.get("text", "")),
+                        self._active_ws,
+                        session_id=(
+                            str(pending_input["session_id"])
+                            if pending_input.get("session_id") is not None
+                            else None
+                        ),
+                        history=pending_input.get("history") or [],
+                    )
             except asyncio.CancelledError:
                 raise
             except Exception:

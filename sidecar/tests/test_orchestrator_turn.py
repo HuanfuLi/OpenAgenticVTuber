@@ -161,6 +161,29 @@ async def test_memory_append_only_after_turn():
     assert "world" in orch._memory[1]["content"]
 
 
+@pytest.mark.asyncio
+async def test_restored_session_history_seeds_llm_context():
+    gw = _FakeGateway(chunks=["It was about pastries."])
+    orch = _build_orch(gw)
+    ws = _WSRecorder()
+
+    await orch.turn(
+        "What was my first question about?",
+        ws,
+        session_id="session-1",
+        history=[
+            {"role": "user", "text": "What should I bake today?"},
+            {"role": "assistant", "text": "Bake croissants."},
+        ],
+    )
+
+    assert gw.calls_received_messages[0][:3] == [
+        {"role": "user", "content": "What should I bake today?"},
+        {"role": "assistant", "content": "Bake croissants."},
+        {"role": "user", "content": "What was my first question about?"},
+    ]
+
+
 def test_memory_pop_violation_absent():
     """Defensive -- KV-cache discipline forbids ANY pop/del/insert/remove/clear
     on `_memory` (Warning A precision). Append-only invariant preserves the
@@ -530,7 +553,62 @@ async def test_handle_text_input_queues_turn_when_configured():
     await handle_text_input(ws, {"type": "text-input", "text": "hi"})
     assert ws.writes == []
     assert orch._active_ws is ws
-    assert await orch.pending_inputs.get() == "hi"
+    assert await orch.pending_inputs.get() == {
+        "text": "hi",
+        "session_id": None,
+        "history": [],
+    }
+
+
+@pytest.mark.asyncio
+async def test_handle_text_input_queues_session_history():
+    """Recovered renderer sessions send prior transcript for LLM context."""
+    from sidecar.ws.handlers import handle_text_input
+
+    orch = _build_phase3_orch()
+
+    class _FakeApp:
+        def __init__(self, orchestrator):
+            class _State:
+                pass
+
+            self._state = _State()
+            self._state.orchestrator = orchestrator
+
+        @property
+        def state(self):
+            return self._state
+
+    class _FakeWS:
+        def __init__(self, orchestrator):
+            self.app = _FakeApp(orchestrator)
+            self.writes: list[dict] = []
+
+        async def send_json(self, d: dict):
+            self.writes.append(d)
+
+    ws = _FakeWS(orch)
+    await handle_text_input(
+        ws,
+        {
+            "type": "text-input",
+            "text": "and then?",
+            "session_id": "s1",
+            "history": [
+                {"role": "user", "text": "first question"},
+                {"role": "assistant", "text": "first answer"},
+            ],
+        },
+    )
+
+    assert await orch.pending_inputs.get() == {
+        "text": "and then?",
+        "session_id": "s1",
+        "history": [
+            {"role": "user", "text": "first question"},
+            {"role": "assistant", "text": "first answer"},
+        ],
+    }
 
 
 @pytest.mark.asyncio
@@ -701,7 +779,11 @@ async def test_handle_text_input_enqueues_pending_inputs_instead_of_awaiting_tur
     await handle_text_input(ws, {"type": "text-input", "text": "hello"})
 
     assert ws.writes == []
-    assert await ws.app.state.orchestrator.pending_inputs.get() == "hello"
+    assert await ws.app.state.orchestrator.pending_inputs.get() == {
+        "text": "hello",
+        "session_id": None,
+        "history": [],
+    }
 
 
 # ---------- _load_provider_config_from_env / _warmup_ping unit tests ---------

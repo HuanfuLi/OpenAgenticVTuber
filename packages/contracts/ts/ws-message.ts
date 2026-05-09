@@ -14,8 +14,14 @@ export type WSMessage = TextInputMessage
   | LogMessage;
 
 export interface TextInputMessage {
+  history: TextInputHistoryMessage[];
+  session_id: string | null;
   text: string;
   type: 'text-input'
+}
+export interface TextInputHistoryMessage {
+  role: 'user' | 'assistant';
+  text: string
 }
 export interface DisplayTextMessage {
   text: string;
