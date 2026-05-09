@@ -39,16 +39,16 @@ Per-phase validation contract for feedback sampling during execution.
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 07-01-01 | 01 | 1 | PARSE-03, PARSE-06 | contract smoke + VTS TriggerAnimation duration unit | `uv run --project sidecar python -c "from contracts import ActionCode, VariantToggle, EventFire, Dispatch; print(ActionCode(name='joy').kind, VariantToggle(name='hold-mic', hotkey_id='hk').kind, EventFire(name='wave', hotkey_id='hk', duration_ms=2833).duration_ms)"; cd sidecar && uv run pytest tests/avatar/test_extract_vts.py::test_trigger_animation_uses_motion3_duration -x --no-header` | Extends existing `tests/avatar/test_extract_vts.py`; asserts `duration_is_fallback` false for valid metadata and true for fallback metadata | pending |
-| 07-02-01 | 02 | 2 | PARSE-03, PARSE-06 | contract drift | `npm run check:contracts` | Existing infra | pending |
-| 07-03-01 | 03 | 2 | PARSE-01, PARSE-02, PARSE-04, PARSE-08 | unit | `cd sidecar && uv run pytest tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py -x --no-header` | Task creates tests | pending |
-| 07-04-01 | 04 | 2 | PARSE-04, PARSE-07 | unit | `cd sidecar && uv run pytest tests/parser/test_reserved.py -x --no-header` | Task creates tests | pending |
-| 07-05-01 | 05 | 2 | PARSE-05, PARSE-06 | unit | `cd sidecar && uv run pytest tests/vts/test_variant_state_manager.py tests/vts/test_event_completion_tracker.py -x --no-header` | Task creates tests, including final-delay `EventFire.duration_ms=2833 -> 2.833s`, final-delay `EventFire.duration_ms=11000 -> 11.0s`, and invalid/missing/nonpositive fallback `-> 10.0s` assertions | pending |
-| 07-06-01 | 06 | 3 | PARSE-03 | unit | `cd sidecar && uv run pytest tests/plugins/test_api.py tests/compositor/test_plugin_adapter.py -x --no-header` | Extends existing Phase 6 tests | pending |
-| 07-06-02 | 06 | 3 | PARSE-03, PARSE-05, PARSE-06 | unit/integration | `cd sidecar && uv run pytest tests/orchestrator/test_dispatch_routing.py tests/test_tts_manager.py tests/test_audio_payload_helpers.py -x --no-header` | Task creates/updates tests | pending |
-| 07-07-01 | 07 | 4 | PARSE-01, PARSE-03, PARSE-04, PARSE-05, PARSE-06, PARSE-07 | integration | `cd sidecar && uv run pytest tests/test_sidecar_boot.py tests/orchestrator/test_dispatch_routing.py -x --no-header` | Task creates/updates tests | pending |
-| 07-07-01b | 07 | 4 | PARSE-03 | architecture guard | `cd sidecar && uv run pytest tests/test_arch06_single_writer.py -x --no-header` | Test added in 06-07 (asserts `requestSetParameterValue` / `requestInjectParameterData` / `plugin_name` ownership stays in `pyvts_writer.py`); supersedes legacy `rg 'import pyvts'` count grep which missed indirect `PyvtsSafeWriter`-re-export wrappers (see 06-VERIFICATION post_verification F-2) | pending |
-| 07-07-02 | 07 | 4 | PARSE-03 | renderer unit | `cd apps/renderer && npm test -- --run logs-drawer-intent` | Existing renderer test infra | pending |
+| 07-01-01 | 01 | 1 | PARSE-03, PARSE-06 | contract smoke + VTS TriggerAnimation duration unit | `uv run --project sidecar python -c "from contracts import ActionCode, VariantToggle, EventFire, Dispatch; print(ActionCode(name='joy').kind, VariantToggle(name='hold-mic', hotkey_id='hk').kind, EventFire(name='wave', hotkey_id='hk', duration_ms=2833).duration_ms)"; cd sidecar && uv run pytest tests/avatar/test_extract_vts.py::test_trigger_animation_uses_motion3_duration -x --no-header` | Extends existing `tests/avatar/test_extract_vts.py`; asserts `duration_is_fallback` false for valid metadata and true for fallback metadata | passed |
+| 07-02-01 | 02 | 2 | PARSE-03, PARSE-06 | contract drift | `npm run check:contracts` | Existing infra | passed |
+| 07-03-01 | 03 | 2 | PARSE-01, PARSE-02, PARSE-04, PARSE-08 | unit | `cd sidecar && uv run pytest tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py -x --no-header` | Task creates tests | passed |
+| 07-04-01 | 04 | 2 | PARSE-04, PARSE-07 | unit | `cd sidecar && uv run pytest tests/parser/test_reserved.py -x --no-header` | Task creates tests | passed |
+| 07-05-01 | 05 | 2 | PARSE-05, PARSE-06 | unit | `cd sidecar && uv run pytest tests/vts/test_variant_state_manager.py tests/vts/test_event_completion_tracker.py -x --no-header` | Task creates tests, including final-delay `EventFire.duration_ms=2833 -> 2.833s`, final-delay `EventFire.duration_ms=11000 -> 11.0s`, and invalid/missing/nonpositive fallback `-> 10.0s` assertions | passed |
+| 07-06-01 | 06 | 3 | PARSE-03 | unit | `cd sidecar && uv run pytest tests/plugins/test_api.py tests/compositor/test_plugin_adapter.py -x --no-header` | Extends existing Phase 6 tests | passed |
+| 07-06-02 | 06 | 3 | PARSE-03, PARSE-05, PARSE-06 | unit/integration | `cd sidecar && uv run pytest tests/orchestrator/test_dispatch_routing.py tests/test_tts_manager.py tests/test_audio_payload_helpers.py -x --no-header` | Task creates/updates tests | passed |
+| 07-07-01 | 07 | 4 | PARSE-01, PARSE-03, PARSE-04, PARSE-05, PARSE-06, PARSE-07 | integration | `cd sidecar && uv run pytest tests/test_sidecar_boot.py tests/orchestrator/test_dispatch_routing.py -x --no-header` | Task creates/updates tests | passed |
+| 07-07-01b | 07 | 4 | PARSE-03 | architecture guard | `cd sidecar && uv run pytest tests/test_arch06_single_writer.py -x --no-header` | Test added in 06-07 (asserts `requestSetParameterValue` / `requestInjectParameterData` / `plugin_name` ownership stays in `pyvts_writer.py`); supersedes legacy `rg 'import pyvts'` count grep which missed indirect `PyvtsSafeWriter`-re-export wrappers (see 06-VERIFICATION post_verification F-2) | passed |
+| 07-07-02 | 07 | 4 | PARSE-03 | renderer unit | `cd apps/renderer && npm test -- --run logs-drawer-intent` | Existing renderer test infra | passed |
 
 ---
 
@@ -116,3 +116,21 @@ extend the specific test files they verify:
 - [x] `nyquist_compliant: true` set in frontmatter.
 
 **Approval:** approved 2026-05-08
+
+## Validation Audit 2026-05-08
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+| Automated task rows audited | 10 |
+| Manual-only checks retained | 1 |
+
+Audit commands:
+
+- `npm run check:contracts` — passed.
+- `cd sidecar && uv run pytest tests/avatar/test_extract_vts.py tests/orchestrator/test_code_extractor.py tests/orchestrator/test_tts_preprocessor.py tests/parser/test_reserved.py tests/vts/test_variant_state_manager.py tests/vts/test_event_completion_tracker.py tests/compositor/test_plugin_adapter.py tests/orchestrator/test_dispatch_routing.py tests/test_sidecar_boot.py tests/test_tts_manager.py tests/test_audio_payload_helpers.py tests/test_arch06_single_writer.py -q` — 86 passed.
+- `cd apps/renderer && npm test -- --run logs-drawer-intent` — 4 passed.
+
+Result: Phase 7 remains Nyquist-compliant for automated coverage. The live VTS confirmation remains tracked separately in `07-HUMAN-UAT.md` because it requires an external running VTube Studio instance and visible rig state.
