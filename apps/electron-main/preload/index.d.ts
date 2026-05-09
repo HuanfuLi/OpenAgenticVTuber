@@ -1,6 +1,12 @@
 import type { RendererApi } from './index'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
 import type {
+  GptSoVitsHealthRequest,
+  GptSoVitsTestSynthesisRequest,
+  GptSoVitsTestSynthesisResult
+} from '../../../packages/contracts/ts/audio-provider'
+import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
+import type {
   ConversationSession,
   ConversationSessionSummary,
   ConversationStats,
@@ -27,6 +33,11 @@ export type VoicePresetBridge = {
   }): Promise<ReferenceAudioAsset | null>
   validateReferenceAudio(input: ReferenceAudioValidationInput): Promise<ReferenceAudioValidationResponse>
   deleteReferenceAudio(assetId: string): Promise<ReferenceAudioAsset[]>
+}
+
+export type GptSoVitsAudioBridge = {
+  checkGptSoVitsHealth(input: GptSoVitsHealthRequest): Promise<AudioProviderHealth>
+  testGptSoVitsSynthesis(input: GptSoVitsTestSynthesisRequest): Promise<GptSoVitsTestSynthesisResult>
 }
 
 export type AvatarImportBridge = {

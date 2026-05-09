@@ -5,6 +5,11 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { StoredConfig } from '../src/safe-storage'
 import type { ChromeState, LogLevel, ThemePreference } from '../src/window-store'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
+import type {
+  GptSoVitsHealthRequest,
+  GptSoVitsTestSynthesisRequest,
+  GptSoVitsTestSynthesisResult
+} from '../../../packages/contracts/ts/audio-provider'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
 import type {
@@ -108,6 +113,12 @@ const api = {
     ipcRenderer.invoke('sidecar:getPluginStatus'),
   getAudioStatus: (): Promise<AudioProviderHealth> =>
     ipcRenderer.invoke('sidecar:getAudioStatus'),
+  checkGptSoVitsHealth: (input: GptSoVitsHealthRequest): Promise<AudioProviderHealth> =>
+    ipcRenderer.invoke('gptSovits:checkHealth', input),
+  testGptSoVitsSynthesis: (
+    input: GptSoVitsTestSynthesisRequest
+  ): Promise<GptSoVitsTestSynthesisResult> =>
+    ipcRenderer.invoke('gptSovits:testSynthesis', input),
   listVoicePresets: (): Promise<VoicePreset[]> => ipcRenderer.invoke('voicePresets:list'),
   saveVoicePreset: (preset: VoicePreset): Promise<VoicePreset[]> =>
     ipcRenderer.invoke('voicePresets:save', preset),
@@ -180,6 +191,11 @@ contextBridge.exposeInMainWorld('api', api)
 export type RendererApi = typeof api
 export type { StoredConfig, ProviderConfig, Provider } from '../src/safe-storage'
 export type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
+export type {
+  GptSoVitsHealthRequest,
+  GptSoVitsTestSynthesisRequest,
+  GptSoVitsTestSynthesisResult
+} from '../../../packages/contracts/ts/audio-provider'
 export type {
   ReferenceAudioValidationInput,
   ReferenceAudioValidationResponse
