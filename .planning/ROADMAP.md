@@ -61,7 +61,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 
 **Phase Numbering:** v3.0 continues after shipped v2.1 Phases 11-15. Planned work starts at Phase 16.
 
-- [ ] **Phase 16: Audio Contracts + TTS Provider Shell** - Sidecar-owned audio contracts, versioned config migration, Piper adapter, and provider failure semantics.
+- [ ] **Phase 16: Audio Contracts + TTS Provider Shell** - Sidecar-owned audio contracts, versioned config migration, Piper adapter, and provider failure semantics. 4/4 plans complete; focused live audio retest pending.
 - [ ] **Phase 17: GPT-SoVITS Provider + Voice Presets** - GPT-SoVITS external/app-launched provider, test synthesis, reference audio, and named presets.
 - [ ] **Phase 18: Rich Voice Settings + Persistence** - User-facing audio settings, provider catalog labels, privacy copy, credential redaction, and diagnostics.
 - [ ] **Phase 19: STT Provider Abstraction + Local/Cloud Providers** - FunASR, faster-whisper, OpenAI, and Groq through one lazy-loaded STT provider layer.
@@ -87,6 +87,8 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
   - `16-02`: TTS Provider Shell and Piper Adapter - provider-neutral synthesis surface while preserving ordered Piper playback/RMS payload behavior.
 - **Wave 3** *(blocked on Wave 2 completion)*:
   - `16-03`: Provider Health, Failure Semantics, and Non-Blocking Regression - typed health endpoint, queue-safe failure behavior, compact diagnostics, and final evidence.
+- **Wave 4** *(gap closure after UAT)*:
+  - `16-04`: Restore Audible Voice Playback - renderer playback for non-empty sidecar WAV payloads while preserving chat streaming and VTS lipsync state.
 **Cross-cutting constraints:**
 - Existing Piper ordered playback, renderer `AudioPayloadMessage`, and `SpeechEnvelopePayload`/RMS lipsync path must remain the regression baseline.
 - Config migration must preserve existing LLM, plugin, VTS, conversation history, and avatar catalog behavior.
@@ -196,7 +198,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 | 13. Conversation History Sessions | v2.1 | 4/4 | Complete | 2026-05-09 |
 | 14. Plugin Developer Docs + Plugin Swap Hardening | v2.1 | 4/4 | Complete | 2026-05-09 |
 | 15. Mock Boundary Audit | v2.1 | 1/1 | Complete | 2026-05-09 |
-| 16. Audio Contracts + TTS Provider Shell | v3.0 | 0/3 | Planned | - |
+| 16. Audio Contracts + TTS Provider Shell | v3.0 | 4/4 | Human verification required | - |
 | 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 0/TBD | Not started | - |
 | 18. Rich Voice Settings + Persistence | v3.0 | 0/3 | Planned | - |
 | 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 0/TBD | Not started | - |
