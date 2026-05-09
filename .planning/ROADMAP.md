@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Walking Skeleton** — Phases 1-5 shipped 2026-05-08. Archive: `.planning/milestones/v1.0-ROADMAP.md`
-- 🚧 **v2.0 Plugin + Animation Control** — Phase 8 ✅, Phase 6 ✅ (re_verification_3 passed 2026-05-08 PM after 06-07 writer consolidation + F-3 tracking-range fix), Phases 7/9/10 not started.
+- 🚧 **v2.0 Plugin + Animation Control** — Phase 8 ✅, Phase 6 ✅ (re_verification_4 passed 2026-05-08 PM after 06-07 writer consolidation + F-3 tracking-range fix + 06-08 active-Teto joy vocabulary correction), Phases 7/9/10 not started.
 
 ## Overview
 
@@ -157,7 +157,7 @@ Five additional phases (6, 7, 8, 9, 10) refactoring the milestone-1 animation la
   3. A deliberately broken plugin (raises in `__init__` / blocks 30s in `on_load` / yields `NaN` ParamFrames / declares a reserved-name action code) fails loud with a clear log line and falls back to a null plugin emitting rest-state ParamFrames at 60 Hz; the sidecar process does NOT crash and AVT-02's 1-second re-injection rule is preserved
   4. CI grep-test confirms exactly one `import pyvts` in `sidecar/src/` (the `PyvtsSafeWriter` file); plugin code cannot import or instantiate pyvts directly
   5. System prompt assembled from plugin's `action_codes` is bytes-identical across two consecutive boots with the same plugin (KV-cache prefix-stability per milestone-1 D-17); switching plugins requires sidecar restart (no mid-conversation rebuild)
-**Plans**: 7 plans (3 original + 4 gap closures; original "3 plans" structure REVISED from ~2 per Phase 6 discuss-phase Area 2 decision; gap closures 06-04/05/06 landed 2026-05-08 AM; 06-07 added 2026-05-08 PM after post-verification finding — split mouth writer violates ARCH-05/06)
+**Plans**: 8 plans (3 original + 5 gap closures; original "3 plans" structure REVISED from ~2 per Phase 6 discuss-phase Area 2 decision; gap closures 06-04/05/06 landed 2026-05-08 AM; 06-07 added 2026-05-08 PM after post-verification F-1/F-2 — split mouth writer violates ARCH-05/06; 06-08 added 2026-05-08 PM after operator UAT diagnosed obsolete `joy` vocabulary mismatching the active Teto catalog)
 
 Plans:
 - [x] 06-01-PLAN.md — **Contracts**: `BodyMotionPlugin` ABC (`api.py`, `api_version: "1.0"` enum) + `PluginManifest` Pydantic (`manifest.py`) + jsonschema 4.26.0 manifest validator + reserved-name guard + manifest loader + `clamp_and_validate(frame, capabilities)` boundary stage + system-prompt action-code section assembly (per-action one-line-with-description format, code-key lex-sorted, KV-cache prefix-stable). Phase 6 SC #5 closes here; sidecar boots with null plugin if loader fails.

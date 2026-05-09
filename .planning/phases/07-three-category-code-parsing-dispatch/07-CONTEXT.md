@@ -463,8 +463,15 @@ None — `todo match-phase 7` returned 0 matches.
   `events[]` (Phase 8 schema).
 - **`sidecar/src/sidecar/vts/pyvts_writer.py`** — `PyvtsSafeWriter`
   single-writer-task wrapper (AVT-04). All variant + event fires flow
-  through it; Phase 7 doesn't add a new pyvts writer (ARCH-06: CI grep
-  test enforces single `import pyvts` site).
+  through it; Phase 7 doesn't add a new pyvts writer or any second-class
+  wrapper around it. ARCH-06 enforcement was hardened in 06-07
+  (post-verification F-2): `sidecar/tests/test_arch06_single_writer.py`
+  asserts `requestSetParameterValue` / `requestInjectParameterData` /
+  `plugin_name` callsites stay single-source in `pyvts_writer.py`. Phase 7
+  reuses this test as its architecture guard rather than the legacy
+  `rg 'import pyvts'` count grep, which is necessary but not sufficient
+  (it does not catch indirect `from sidecar.vts.pyvts_writer import`
+  re-export wrappers — see `06-VERIFICATION.md` post_verification F-2).
 
 ### Established Patterns
 
