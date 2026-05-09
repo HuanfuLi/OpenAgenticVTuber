@@ -8,6 +8,8 @@ def test_idle_driver_emits_head_and_eye_params_every_tick():
     assert "FaceAngleY" in out
     assert "FaceAngleZ" in out
     assert "EyeLeftX" in out
+    assert "EyeRightX" in out
+    assert "EyeLeftY" in out
     assert "EyeRightY" in out
     assert "Auto Breath" in out
 

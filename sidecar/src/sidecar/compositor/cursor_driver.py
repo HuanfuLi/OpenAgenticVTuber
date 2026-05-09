@@ -6,7 +6,7 @@ The accepted AVT-10 contract is a sidecar Win32 cursor/window sample from
 Phase 10 fix (VFY-01 / VFY-02):
 - Output keys are translated through ``resolve_param_id(name, "vts")`` so the
   driver emits VTS tracking-input names (FaceAngleX, FaceAngleY, EyeLeftX,
-  EyeRightY) instead of Cubism input names (ParamAngleX, etc.). This matches
+  EyeRightX, EyeLeftY, EyeRightY) instead of Cubism input names (ParamAngleX, etc.). This matches
   every other working driver in the compositor; the milestone-1 namespace
   mismatch was the cursor-never-worked root cause. See 10-RESEARCH.md.
 - The in-VTS-window gate is dropped: when the cursor is outside the rect, the
@@ -20,22 +20,16 @@ Phase 10 fix (VFY-01 / VFY-02):
 
 from __future__ import annotations
 
-from sidecar.compositor.param_id_resolver import resolve_param_id
 from sidecar.vts.window_detect import get_cursor_and_rect, get_primary_monitor_rect
 
 from .easing import ease_out_cubic
 
 
 HEAD_MAX_DEFLECTION_DEG = 15.0
-EYE_MAX_DEFLECTION_DEG = 10.0
+EYE_MAX_DEFLECTION_DEG = 13.5
 DEAD_ZONE_PX = 80.0
 EASE_BACK_DURATION_S = 0.800
 FACE_CENTER_FRAC = (0.5, 0.5)
-
-
-def _to_vts_input_keys(d: dict[str, float]) -> dict[str, float]:
-    """Translate Cubism input names to VTS tracking-input names."""
-    return {resolve_param_id(key, "vts"): value for key, value in d.items()}
 
 
 def _cursor_to_param_angles(
@@ -59,25 +53,27 @@ def _cursor_to_param_angles(
     dx = cx - face_x
     dy = cy - face_y
     if (dx * dx + dy * dy) ** 0.5 < dead_zone_px:
-        return _to_vts_input_keys(
-            {
-                "ParamAngleX": 0.0,
-                "ParamAngleY": 0.0,
-                "ParamEyeBallX": 0.0,
-                "ParamEyeBallY": 0.0,
-            }
-        )
+        return {
+            "FaceAngleX": 0.0,
+            "FaceAngleY": 0.0,
+            "EyeLeftX": 0.0,
+            "EyeRightX": 0.0,
+            "EyeLeftY": 0.0,
+            "EyeRightY": 0.0,
+        }
 
     nx = max(-1.0, min(1.0, dx / (width * 0.5)))
     ny = max(-1.0, min(1.0, dy / (height * 0.5)))
-    return _to_vts_input_keys(
-        {
-            "ParamAngleX": nx * head_max_deg,
-            "ParamAngleY": -ny * head_max_deg,
-            "ParamEyeBallX": nx * eye_max_deg / head_max_deg,
-            "ParamEyeBallY": -ny * eye_max_deg / head_max_deg,
-        }
-    )
+    eye_x = nx * eye_max_deg / head_max_deg
+    eye_y = -ny * eye_max_deg / head_max_deg
+    return {
+        "FaceAngleX": nx * head_max_deg,
+        "FaceAngleY": -ny * head_max_deg,
+        "EyeLeftX": eye_x,
+        "EyeRightX": eye_x,
+        "EyeLeftY": eye_y,
+        "EyeRightY": eye_y,
+    }
 
 
 class CursorDriver:

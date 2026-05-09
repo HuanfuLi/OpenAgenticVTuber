@@ -28,6 +28,8 @@ def test_cursor_inside_dead_zone_returns_zeros():
         "FaceAngleX": 0.0,
         "FaceAngleY": 0.0,
         "EyeLeftX": 0.0,
+        "EyeRightX": 0.0,
+        "EyeLeftY": 0.0,
         "EyeRightY": 0.0,
     }
 
@@ -63,6 +65,12 @@ def test_driver_uses_sidecar_win32_sample_contract_without_renderer_event(monkey
     )
     assert out["EyeLeftX"] > 0.0, (
         "sidecar Win32 sample contract should drive eye tracking"
+    )
+    assert out["EyeRightX"] > 0.0, (
+        "sidecar Win32 sample contract should drive both eyes horizontally"
+    )
+    assert out["EyeLeftY"] == pytest.approx(0.0), (
+        "sidecar Win32 sample contract should center vertical eye tracking"
     )
     assert out["EyeRightY"] == pytest.approx(0.0), (
         "sidecar Win32 sample contract should center vertical eye tracking"
