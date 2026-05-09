@@ -8,7 +8,7 @@ from typing import Callable
 
 from loguru import logger
 
-from contracts import ParamFrame
+from contracts import ActionCode, ParamFrame
 from contracts.action_binding import DefaultPluginActionBinding
 from contracts.avatar_overrides import AvatarOverrides
 from contracts.rig_capabilities import RigCapabilities
@@ -26,7 +26,13 @@ EMOTION_COMPOSITIONS = {
     "fear": {"FaceAngleZ": (0.04, 0.55), "FacePositionZ": (-0.04, 0.40)},
     "neutral": {},
     "sadness": {"FaceAngleZ": (-0.05, 0.45), "FacePositionZ": (-0.03, 0.35)},
-    "smirk": {"FaceAngleZ": (0.07, 0.55), "FaceAngleY": (0.05, 0.40)},
+    "smirk": {
+        "FaceAngleZ": (5.0, 0.55),
+        "FaceAngleY": (2.0, 0.40),
+        "MouthSmile": (0.72, 0.80),
+        "EyeOpenLeft": (-0.12, 0.40),
+        "EyeOpenRight": (-0.12, 0.40),
+    },
     "surprise": {
         "FacePositionZ": (0.05, 0.45),
         "EyeOpenLeft": (0.08, 0.40),
@@ -71,6 +77,9 @@ class DefaultPlugin(BodyMotionPlugin):
 
         if self._active_action is not None:
             yield self.render_frame()
+
+    def on_action_code(self, action: ActionCode) -> None:
+        self._activate(action.name.lower().strip())
 
     def on_unload(self) -> None:
         self.capabilities = None
@@ -132,6 +141,8 @@ class DefaultPlugin(BodyMotionPlugin):
     def _activate(self, action_code: str) -> None:
         if action_code == "neutral":
             self._active_action = None
+            return
+        if action_code not in SUPPORTED_ACTION_CODES:
             return
         self._active_action = action_code
         self._active_started_at = self._clock()

@@ -82,8 +82,8 @@ async def test_smirk_ramps_in_and_out_over_expected_windows() -> None:
     frame_900 = (await _collect(plugin, "continue"))[0]
 
     assert frame_0.add_params["FaceAngleZ"] == pytest.approx(0.0)
-    assert frame_150.add_params["FaceAngleZ"] == pytest.approx(0.035)
-    assert frame_300.add_params["FaceAngleZ"] == pytest.approx(0.07)
+    assert frame_150.add_params["FaceAngleZ"] == pytest.approx(2.5)
+    assert frame_300.add_params["FaceAngleZ"] == pytest.approx(5.0)
     assert frame_900.add_params["FaceAngleZ"] == pytest.approx(0.0)
     assert plugin.active_action is None
 
@@ -142,7 +142,7 @@ async def test_avatar_override_binding_selects_composition_source_without_exp3_o
     clock.now = 0.3
     frames = await _collect(plugin, "continue")
 
-    assert frames[0].add_params == {"FaceAngleZ": pytest.approx(0.07)}
+    assert frames[0].add_params == {"FaceAngleZ": pytest.approx(5.0)}
     assert plugin.composition_sources["smirk"] == "manual:Smirk"
 
 
