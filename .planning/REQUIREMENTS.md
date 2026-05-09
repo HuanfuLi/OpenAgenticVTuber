@@ -277,46 +277,46 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | AVT-10 | Phase 4 | Complete |
 | SC-01 | Phase 5 → Phase 10 | Migrated 2026-05-08 (skeleton-verification.md ceremony lands as v2.0 Phase 10 exit criterion) |
 | SC-02 | Phase 5 | Complete |
-| ARCH-01 | Phase 6 | Pending — strict system/plugin separation invariant |
-| ARCH-02 | Phase 8 | Pending — `RigCapabilities` contract defined here (MOVED from Phase 6 with 2026-05-08 order swap); Phase 6 plugin + Phase 9 HUD consume |
-| ARCH-03 | Phase 6 | Pending — orchestrator-decorated token stream feed |
-| ARCH-04 | Phase 6 | Pending — `AsyncIterator[ParamFrame]` ≤ 60 Hz contract |
-| ARCH-05 | Phase 6 | Pending — fixed compositor merge order |
-| ARCH-06 | Phase 6 | Pending — single pyvts writer rule (extends AVT-04) |
-| ARCH-07 | Phase 6 | Pending — in-sidecar Python, no isolation, full trust |
-| ARCH-08 | Phase 6 | Pending — plugin discovery precedence (`userData/` > in-tree) |
-| ARCH-09 | Phase 6 | Pending — vocabulary extension at orchestrator boot, KV-cache stable |
-| ARCH-10 | Phase 6 | Pending — runtime decoupled from M1 primitives; `IntentDriver` deleted |
-| ARCH-11 | Phase 6 | Pending — `api_version: "1.0"` gating |
-| ARCH-12 | Phase 6 | Pending — system-primitive override list explicit + per-param |
-| PLG-01 | Phase 6 | Pending — single-active body-motion plugin from `plugin.yaml` |
-| PLG-02 | Phase 6 | Pending — sorted action_codes → fixed-delimiter system-prompt fragment |
-| PLG-03 | Phase 6 | Pending — `BodyMotionPlugin` ABC with three lifecycle hooks |
-| PLG-04 | Phase 6 | Pending — async-gen supervisor + circuit breaker + null-plugin fallback |
-| PLG-05 | Phase 6 | Pending — `[0,1]` clamp at compositor → renderer boundary |
-| PLG-06 | Phase 6 | Pending — jsonschema manifest + reserved-name guard |
+| ARCH-01 | Phase 6 | Complete — strict system/plugin separation invariant |
+| ARCH-02 | Phase 8 | Complete — `RigCapabilities` contract defined here (MOVED from Phase 6 with 2026-05-08 order swap); Phase 6 plugin + Phase 9 HUD consume |
+| ARCH-03 | Phase 6 | Complete — orchestrator-decorated token stream feed |
+| ARCH-04 | Phase 6 | Complete — `AsyncIterator[ParamFrame]` ≤ 60 Hz contract |
+| ARCH-05 | Phase 6 | Complete — fixed compositor merge order |
+| ARCH-06 | Phase 6 | Complete — single pyvts writer rule (extends AVT-04) |
+| ARCH-07 | Phase 6 | Complete — in-sidecar Python, no isolation, full trust |
+| ARCH-08 | Phase 6 | Complete — plugin discovery precedence (`userData/` > in-tree) |
+| ARCH-09 | Phase 6 | Complete — vocabulary extension at orchestrator boot, KV-cache stable |
+| ARCH-10 | Phase 6 | Complete — runtime decoupled from M1 primitives; `IntentDriver` deleted |
+| ARCH-11 | Phase 6 | Complete — `api_version: "1.0"` gating |
+| ARCH-12 | Phase 6 | Complete — system-primitive override list explicit + per-param |
+| PLG-01 | Phase 6 | Complete — single-active body-motion plugin from `plugin.yaml` |
+| PLG-02 | Phase 6 | Complete — sorted action_codes → fixed-delimiter system-prompt fragment |
+| PLG-03 | Phase 6 | Complete — `BodyMotionPlugin` ABC with three lifecycle hooks |
+| PLG-04 | Phase 6 | Complete — async-gen supervisor + circuit breaker + null-plugin fallback |
+| PLG-05 | Phase 6 | Complete — `[0,1]` clamp at compositor → renderer boundary |
+| PLG-06 | Phase 6 | Complete — jsonschema manifest + reserved-name guard |
 | PLG-07 | Phase 6 | Complete — default plugin in-tree absorbs `IntentDriver` + body-sway; 06-08 removed active-Teto-invalid `joy` |
-| PLG-08 | Phase 6 | Pending — discovery scans both in-tree and `userData/` |
-| PLG-09 | Phase 6 | Pending — startup-only switching (no runtime hot-swap) |
-| PLG-10 | Phase 6 | Pending — manifest hot-reload via `watchdog` (engineer DX) |
-| IMP-01 | Phase 8 | Pending — file-dialog import + sidecar type detection |
-| IMP-02 | Phase 8 | Pending — VTS `.vtube.json` Hotkeys[] extractor |
-| IMP-03 | Phase 8 | Pending — Cubism `model3.json` placeholder relabel-required |
-| IMP-04 | Phase 8 | Pending — Cubism-bare extractor (events from .motion3.json only) |
-| IMP-05 | Phase 8 | Pending — OLVT `model_dict.json` drop-in (emotionMap + actionMap) |
-| IMP-06 | Phase 8 | Pending — event catalog from .motion3.json group keys + filenames |
-| IMP-07 | Phase 8 | Pending — mandatory review React route (NOT modal) + Save-disabled friction |
-| IMP-08 | Phase 8 | Pending — re-openable from Settings + `_avatar_overrides.yaml` jsonschema-validated |
-| IMP-09 | Phase 8 | Pending — `TetoOverrides` → `AvatarOverrides` rename |
-| IMP-10 | Phase 8 | Pending — `vts_introspect_smoke.py` against actual Teto rig |
-| PARSE-01 | Phase 7 | Pending — `code_extractor` decorator (single-pass bracket walker) |
-| PARSE-02 | Phase 7 | Pending — `display_processor.filter_brackets` extension to all three syntaxes |
-| PARSE-03 | Phase 7 | Pending — three-path dispatch (action / variant / event) |
-| PARSE-04 | Phase 7 | Pending — `<think>` reasoning-strip runs FIRST in chain |
+| PLG-08 | Phase 6 | Complete — discovery scans both in-tree and `userData/` |
+| PLG-09 | Phase 6 | Complete — startup-only switching (no runtime hot-swap) |
+| PLG-10 | Phase 6 | Complete — manifest hot-reload via `watchdog` (engineer DX) |
+| IMP-01 | Phase 8 | Complete — file-dialog import + sidecar type detection |
+| IMP-02 | Phase 8 | Complete — VTS `.vtube.json` Hotkeys[] extractor |
+| IMP-03 | Phase 8 | Complete — Cubism `model3.json` placeholder relabel-required |
+| IMP-04 | Phase 8 | Complete — Cubism-bare extractor (events from .motion3.json only) |
+| IMP-05 | Phase 8 | Complete — OLVT `model_dict.json` drop-in (emotionMap + actionMap) |
+| IMP-06 | Phase 8 | Complete — event catalog from .motion3.json group keys + filenames |
+| IMP-07 | Phase 8 | Complete — mandatory review React route (NOT modal) + Save-disabled friction |
+| IMP-08 | Phase 8 | Complete — re-openable from Settings + `_avatar_overrides.yaml` jsonschema-validated |
+| IMP-09 | Phase 8 | Complete — `TetoOverrides` → `AvatarOverrides` rename |
+| IMP-10 | Phase 8 | Complete — `vts_introspect_smoke.py` against actual Teto rig |
+| PARSE-01 | Phase 7 | Complete — `code_extractor` decorator (single-pass bracket walker) |
+| PARSE-02 | Phase 7 | Complete — `display_processor.filter_brackets` extension to all three syntaxes |
+| PARSE-03 | Phase 7 | Complete — three-path dispatch (action / variant / event) |
+| PARSE-04 | Phase 7 | Complete — revised Phase 7 parser policy implemented with reserved sentinel guard and unknown `<think>` drop behavior |
 | PARSE-05 | Phase 7 | Complete — 07-05 `VariantStateManager` enforces radio-button single-active variant policy |
 | PARSE-06 | Phase 7 | Complete — 07-03 computes final event delays and 07-05 `EventCompletionTracker` uses them directly with 10s fallback |
-| PARSE-07 | Phase 7 | Pending — cross-category uniqueness check at boot (loud failure) |
-| PARSE-08 | Phase 7 | Pending — split-token reassembly fixtures for all three categories |
+| PARSE-07 | Phase 7 | Complete — cross-category uniqueness check at boot (loud failure) |
+| PARSE-08 | Phase 7 | Complete — split-token reassembly fixtures for all three categories |
 | HUD-01 | Phase 9 | Complete — 09-01 dedicated `/hud/ws` WebSocket endpoint |
 | HUD-02 | Phase 9 | Complete — 09-01 sidecar 15 Hz HUD tap |
 | HUD-03 | Phase 9 | Complete — 09-02 scrollable HUD param list from RigCapabilities/hud_visible_param_ids |
@@ -335,7 +335,7 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 
 **Cross-phase notes (v2.0):**
 - ARCH-01..12 are cross-cutting architectural invariants. They are *primary-mapped* to Phase 6 (where the contracts cement) but every subsequent phase (7, 8, 9, 10) must honor them.
-- ARCH-02 (`RigCapabilities`) is *defined* in Phase 6 and *consumed* by Phase 9 HUD `GET /admin/rig-capabilities`.
+- ARCH-02 (`RigCapabilities`) is *defined* in Phase 8 and *consumed* by Phase 6 plugin runtime and Phase 9 HUD `GET /admin/rig-capabilities`.
 - ARCH-06 (single pyvts writer) is *introduced* in milestone-1 (AVT-04) and *extended* to all v2.0 entry points (plugin output, variant dispatch, event dispatch, HUD locks, cursor frames). CI grep-test runs in Phase 6's plumbing-week.
 - VFY-05 (side-by-side baseline harness) is *built* in Phase 6's plumbing-week 06-02 and *consumed* in Phase 10. Scope is **lipsync + idle automatable SCs only** (per 2026-05-08 Phase 6 discuss-phase Area 1 decision).
 - Phase 6 SC #2 / Phase 10 §14 SC #2+#3 are **operator-judged**, NOT diffed (per 2026-05-08 Phase 6 discuss-phase Area 1 decision; rationale: head_only ship-state is mediocre, ARCH-06 forbids reproducing M1's [joy] → Love.exp3 path).

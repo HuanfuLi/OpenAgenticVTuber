@@ -1,102 +1,122 @@
 ---
 phase: 8
 slug: avatar-import-catalogs
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-08
+last_audited: 2026-05-09T05:42:30-04:00
 ---
 
-# Phase 8 — Validation Strategy
+# Phase 8 - Validation Strategy
 
-> Per-phase validation contract for feedback sampling during execution.
-> Sourced from `08-RESEARCH.md` §"Validation Architecture" (lines 1602-1655).
-
----
+Retroactive Nyquist validation for completed Phase 8. This replaces the original draft/pending validation scaffold with the tests and evidence that actually shipped through 08-01..08-05 and 08-VERIFICATION.md.
 
 ## Test Infrastructure
 
 | Property | Value |
 |----------|-------|
-| **Framework** | pytest 8.x (already used in milestone-1 — confirmed via `sidecar/tests/`) + vitest (renderer, already used) |
-| **Config file** | `pyproject.toml` (`[tool.pytest.ini_options]`) + `apps/renderer/vitest.config.ts` |
-| **Quick run command** | `uv run pytest sidecar/tests/avatar/ -x --no-header` |
-| **Full suite command** | `uv run pytest sidecar/tests/ && cd apps/renderer && npm test` |
-| **Estimated runtime** | ~25 seconds (sidecar avatar suite alone <5s; full sidecar ~12s; renderer ~8s) |
-
----
+| Sidecar framework | pytest via `uv` in `sidecar/pyproject.toml` |
+| Renderer framework | Vitest via `apps/renderer/package.json` |
+| Contract/codegen framework | pytest in `packages/contracts/tests/` plus root `npm run check:contracts` |
+| Sidecar validation command | `cd sidecar && uv run pytest tests/avatar tests/vts/test_vts_introspect_smoke.py -q --tb=short` |
+| Renderer validation command | `npm --workspace apps/renderer run test -- --run AvatarImport` |
+| Contract validation command | `uv run --project sidecar python -m pytest packages/contracts/tests/test_codegen.py -q` |
+| Drift gate | `npm run check:contracts` |
+| Latest audit result | sidecar 67 passed; renderer 11 passed; contracts 10 passed; contract drift gate passed |
 
 ## Sampling Rate
 
-- **After every task commit:** Run `uv run pytest sidecar/tests/avatar/ -x --no-header`
-- **After every plan wave:** Run `uv run pytest sidecar/tests/`
-- **Before `/gsd:verify-work`:** Full suite must be green; `vts_introspect_smoke.py` is manual-only (requires VTS running) and may PASS-WITH-NOTE
-- **Max feedback latency:** 30 seconds
-
----
+- After avatar extractor/admin changes: run the sidecar validation command or the narrower touched test file.
+- After renderer review-screen changes: run the renderer validation command.
+- After contract/schema changes: run the contract validation command plus `npm run check:contracts`.
+- Before phase verification: run all four commands above and confirm manual UAT files are current.
 
 ## Per-Task Verification Map
 
-| Req ID | Plan | Wave | Behavior | Test Type | Automated Command | File Exists | Status |
-|--------|------|------|----------|-----------|-------------------|-------------|--------|
-| IMP-01 | 08-02 | 1 | Type detector returns correct enum for each of the 5 shapes (VTS, Cubism w-exp, Cubism bare, OLVT, unsupported/Cubism 5.3) | unit | `pytest sidecar/tests/avatar/test_import_detect.py -x` | ❌ W0 | ⬜ pending |
-| IMP-02 | 08-01 | 1 | VTS extractor on Teto produces 14 LLM-emittable variants + 1 filtered RemoveAllExpressions meta | unit | `pytest sidecar/tests/avatar/test_extract_vts.py::test_teto -x` | ❌ W0 | ⬜ pending |
-| IMP-02 | 08-01 | 1 | Naming-normalization regex matches all 15 CONTEXT examples (verified per RESEARCH §A) | unit | `pytest sidecar/tests/avatar/test_normalize.py -x` | ❌ W0 | ⬜ pending |
-| IMP-03 | 08-01 | 1 | Cubism-named extractor on mao_pro produces 8 `exp_NN`-flagged placeholder variants | unit | `pytest sidecar/tests/avatar/test_extract_cubism_named.py::test_mao_pro -x` | ❌ W0 | ⬜ pending |
-| IMP-04 | 08-01 | 1 | Cubism-bare extractor on shizuku produces 0 variants + N events (Idle motions filtered) | unit | `pytest sidecar/tests/avatar/test_extract_cubism_bare.py::test_shizuku -x` | ❌ W0 | ⬜ pending |
-| IMP-05 | 08-01 | 1 | OLVT extractor reads local `model_dict.json`, produces 6 mao_pro variants from `actionMap`, ignores `emotionMap` (D-A2-3) | unit | `pytest sidecar/tests/avatar/test_extract_olvt.py::test_mao_pro -x` | ❌ W0 | ⬜ pending |
-| IMP-06 | 08-01 | 1 | `motion3.json.Meta.Duration` extracted correctly (Teto IDLE = 2.833s, Loop=true) | unit | `pytest sidecar/tests/avatar/test_motion3_meta.py -x` | ❌ W0 | ⬜ pending |
-| IMP-07 | 08-01 | 1 | Placeholder detection regex `^exp_?\d+$` (case-insensitive) catches `exp_01` but not `sv-microphone` or `hold-mic` | unit | `pytest sidecar/tests/avatar/test_normalize.py::test_placeholder -x` | ❌ W0 | ⬜ pending |
-| IMP-07 | 08-03 | 3 | Review screen disables Save when ANY placeholder code present; Save enables when all renamed | integration (renderer) | `cd apps/renderer && npm test -- --run AvatarImport` | ❌ W0 | ⬜ pending |
-| IMP-08 | 08-02 | 2 | Atomic write writes via `.tmp` → `fsync` → `os.replace()`; pre-validates jsonschema; failure leaves no `.tmp` artifact | unit | `pytest sidecar/tests/avatar/test_overrides_writer.py -x` | ❌ W0 | ⬜ pending |
-| IMP-08 | 08-02 | 2 | Re-import preserves user `notes`, `body_sway_strategy`, `proxy_body_param`, `exp3_body_pose`, `discovered_hotkeys` (per RESEARCH §Pitfall 6) | unit | `pytest sidecar/tests/avatar/test_reimport.py -x` | ❌ W0 | ⬜ pending |
-| IMP-09 | 08-01 | 1 | `TetoOverrides` → `AvatarOverrides` rename; `AvatarOverrides` Pydantic round-trips existing `teto_overrides.yaml` content | unit (regression) | `pytest sidecar/tests/avatar/test_overrides_loader.py -x` | ❌ W0 | ⬜ pending |
-| IMP-10 | 08-01 | 1 | `vts_introspect_smoke.py` asserts pyvts 0.3.3 produces expected fields (`getModelInfo`/`requestHotKeyList`/`requestTrackingParameterList`) against running VTS w/ Teto loaded | manual-only (requires VTS running) | `uv run python sidecar/scripts/vts_introspect_smoke.py` | ❌ W0 | ⬜ pending |
-| ARCH-02 | 08-01 | 1 | `RigCapabilities` Pydantic builds correctly from Teto's source rig files (writable_param_ids from cdi3, expressions from .vtube.json hotkeys, hotkeys with HotkeyID UUIDs, cdi3_display_names dict, sign_inversions from AvatarOverrides) | unit | `pytest sidecar/tests/avatar/test_rig_capabilities.py::test_build_from_teto -x` | ❌ W0 | ⬜ pending |
+| Task ID | Plan | Wave | Requirement(s) | Test Type | Automated Command | File Exists | Status |
+|---------|------|------|----------------|-----------|-------------------|-------------|--------|
+| 08-01 T1 | 08-01 | 1 | IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-09, IMP-10, ARCH-02 | Wave 0 scaffolds, contracts, schema, normalize/loader tests | `cd sidecar && uv run pytest tests/avatar/ -x --no-header` | yes | covered |
+| 08-01 T2 | 08-01 | 1 | IMP-02, IMP-06, IMP-09 | normalize, motion metadata, overrides loader | `cd sidecar && uv run pytest tests/avatar/test_normalize.py tests/avatar/test_motion3_meta.py tests/avatar/test_overrides_loader.py -x --no-header` | yes | covered |
+| 08-01 T3 | 08-01 | 1 | IMP-02, IMP-03, IMP-04, IMP-05 | VTS/Cubism/OLVT extractors | `cd sidecar && uv run pytest tests/avatar/test_extract_vts.py tests/avatar/test_extract_cubism_named.py tests/avatar/test_extract_cubism_bare.py tests/avatar/test_extract_olvt.py -x --no-header` | yes | covered |
+| 08-01 T4 | 08-01 | 1 | ARCH-02 | RigCapabilities builder | `cd sidecar && uv run pytest tests/avatar/test_rig_capabilities.py -x --no-header` | yes | covered |
+| 08-01 T5 | 08-01 | 1 | IMP-10 | VTS smoke script unavailable/auth shape | `cd sidecar && uv run python scripts/vts_introspect_smoke.py` plus `tests/vts/test_vts_introspect_smoke.py` in 08-05 | yes | covered + manual UAT |
+| 08-02 T1 | 08-02 | 2 | IMP-01 | Import type detection | `cd sidecar && uv run pytest tests/avatar/test_import_detect.py -x --no-header` | yes | covered |
+| 08-02 T2 | 08-02 | 2 | IMP-08 | Atomic override writer and schema validation | `cd sidecar && uv run pytest tests/avatar/test_overrides_writer.py -x --no-header` | yes | covered |
+| 08-02 T3 | 08-02 | 2 | IMP-01, IMP-08 | Admin import/current/commit endpoints | `cd sidecar && uv run pytest tests/avatar/test_admin_avatar.py -x --no-header` | yes | covered |
+| 08-02 T4 | 08-02 | 2 | IMP-01, IMP-08, ARCH-02 | Contract mirrors and Electron/renderer type surface | `npm run check:contracts` | yes | covered |
+| 08-03 T1 | 08-03 | 3 | IMP-07 | Renderer route shell and AppShell/Settings entry | `npm --workspace apps/renderer run test -- --run AvatarImport` | yes | covered |
+| 08-03 T2 | 08-03 | 3 | IMP-07 | Variant/event review tables and placeholder gate | `npm --workspace apps/renderer run test -- --run AvatarImport` | yes | covered |
+| 08-03 T3 | 08-03 | 3 | IMP-07, IMP-08 | Save flow, unsupported rig errors, re-import badges | `npm --workspace apps/renderer run test -- --run AvatarImport` | yes | covered |
+| 08-04 T1 | 08-04 | 4 | IMP-05, IMP-09, ARCH-02 | DefaultPluginActionBinding contract and owner fields | `uv run --project sidecar python -m pytest packages/contracts/tests/test_codegen.py -q` | yes | covered |
+| 08-04 T2 | 08-04 | 4 | IMP-05, IMP-09, ARCH-02 | Generated TS/JSON schema and runtime schema drift | `npm run check:contracts` | yes | covered |
+| 08-05 T1 | 08-05 | 5 | IMP-08, IMP-09 | Runtime avatar destination and re-import preservation | `cd sidecar && uv run pytest tests/avatar/test_admin_avatar.py tests/avatar/test_reimport.py -q --tb=short` | yes | covered |
+| 08-05 T2 | 08-05 | 5 | IMP-07, IMP-10 | AvatarImport footer layout and VTS smoke auth handling | `npm --workspace apps/renderer run test -- --run AvatarImport`; `cd sidecar && uv run pytest tests/vts/test_vts_introspect_smoke.py -q --tb=short` | yes | covered |
+| 08-05 T3 | 08-05 | 5 | IMP-01..IMP-10, ARCH-02 | Native-dialog dogfood, saved YAML schema validation, VTS smoke evidence | UAT files plus schema validation command from 08-VERIFICATION.md | yes | covered + manual UAT |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+## Requirement Coverage Map
 
----
+| Requirement | Primary Plan(s) | Automated Evidence | Manual Evidence | Status |
+|-------------|-----------------|--------------------|-----------------|--------|
+| IMP-01 | 08-02, 08-03, 08-05 | `tests/avatar/test_import_detect.py`, `tests/avatar/test_admin_avatar.py`, renderer AvatarImport tests | `08-DOGFOOD-UAT.md` | covered |
+| IMP-02 | 08-01 | `tests/avatar/test_extract_vts.py`, `tests/avatar/test_normalize.py` | dogfood selected Teto VTS-shape source | covered |
+| IMP-03 | 08-01, 08-03 | `tests/avatar/test_extract_cubism_named.py`, renderer placeholder-gate tests | none required | covered |
+| IMP-04 | 08-01 | `tests/avatar/test_extract_cubism_bare.py` | none required | covered |
+| IMP-05 | 08-01, 08-04, 08-05 | `tests/avatar/test_extract_olvt.py`, `packages/contracts/tests/test_codegen.py`, `tests/avatar/test_admin_avatar.py` | none required | covered |
+| IMP-06 | 08-01 | `tests/avatar/test_motion3_meta.py`, `tests/avatar/test_extract_cubism_bare.py` | none required | covered |
+| IMP-07 | 08-03, 08-05 | `apps/renderer/tests/AvatarImport.test.tsx` | `08-DOGFOOD-UAT.md` | covered |
+| IMP-08 | 08-02, 08-03, 08-05 | `tests/avatar/test_overrides_writer.py`, `tests/avatar/test_admin_avatar.py`, `tests/avatar/test_reimport.py`, renderer AvatarImport tests | `08-DOGFOOD-UAT.md` | covered |
+| IMP-09 | 08-01, 08-04, 08-05 | `tests/avatar/test_overrides_loader.py`, `tests/avatar/test_reimport.py`, `packages/contracts/tests/test_codegen.py` | none required | covered |
+| IMP-10 | 08-01, 08-05 | `tests/vts/test_vts_introspect_smoke.py` covers auth rejection/unavailable VTS behavior | `08-VTS-SMOKE-UAT.md` records live PASS | covered |
+| ARCH-02 | 08-01, 08-04, 08-05 | `tests/avatar/test_rig_capabilities.py`, `packages/contracts/tests/test_codegen.py`, `npm run check:contracts` | none required | covered |
 
-## Wave 0 Requirements
+No missing or partial requirement coverage remains.
 
-All test files below MUST be created in Wave 0 of plan 08-01 (test stubs land before extractor logic):
+## Wave Verification
 
-- [ ] `sidecar/tests/avatar/__init__.py` — package marker
-- [ ] `sidecar/tests/avatar/conftest.py` — shared fixtures: `teto_dir`, `mao_pro_dir`, `shizuku_dir` pointing to `Live2D/重音テト/`, `Live2D/mao_pro/runtime/`, `Live2D/shizuku/runtime/`; `olvt_model_dict_path` pointing to `C:\Users\16079\Code\OpenLLM_Vtuber\model_dict.json`
-- [ ] `sidecar/tests/avatar/test_import_detect.py` — covers IMP-01 with all 5 shapes
-- [ ] `sidecar/tests/avatar/test_normalize.py` — covers IMP-02 naming-normalization (15 Teto names from RESEARCH §A) + IMP-07 placeholder regex
-- [ ] `sidecar/tests/avatar/test_extract_vts.py` — covers IMP-02 (against Teto rig)
-- [ ] `sidecar/tests/avatar/test_extract_cubism_named.py` — covers IMP-03 (against mao_pro rig)
-- [ ] `sidecar/tests/avatar/test_extract_cubism_bare.py` — covers IMP-04 (against shizuku rig)
-- [ ] `sidecar/tests/avatar/test_extract_olvt.py` — covers IMP-05 (against local OLVT `model_dict.json`)
-- [ ] `sidecar/tests/avatar/test_motion3_meta.py` — covers IMP-06 (against Teto IDLE.motion3.json)
-- [ ] `sidecar/tests/avatar/test_overrides_writer.py` — covers IMP-08 atomic-write + jsonschema validation
-- [ ] `sidecar/tests/avatar/test_reimport.py` — covers re-import diff/preservation logic (RESEARCH §Pitfall 6)
-- [ ] `sidecar/tests/avatar/test_overrides_loader.py` — regression test for IMP-09 rename
-- [ ] `sidecar/tests/avatar/test_rig_capabilities.py` — covers ARCH-02 RigCapabilities builder
-- [ ] `apps/renderer/src/screens/AvatarImport/__tests__/AvatarImport.test.tsx` — covers IMP-07 placeholder gate UX (single-page scrollable per CONTEXT D-A3-1; per-row 4-control set per D-A3-3)
-- [ ] `jsonschema 4.26.0` added to `sidecar/pyproject.toml` dependencies (per RESEARCH §Standard Stack)
-
----
+| Wave | Plans | Command | Latest Evidence |
+|------|-------|---------|-----------------|
+| 1 | 08-01 | `cd sidecar && uv run pytest tests/avatar/ -x --no-header` | 08-01 summary: 35 passed, 1 xfailed; later full Phase 8 sidecar audit: 67 passed |
+| 2 | 08-02 | `cd sidecar && uv run pytest tests/avatar/ -x --no-header`; `npm run check:contracts` | 08-02 summary: 53 tests passed, typechecks passed, contract drift passed |
+| 3 | 08-03 | `npm --workspace apps/renderer run test -- --run AvatarImport` | 08-03 summary: 9 tests passed; latest audit: 11 passed |
+| 4 | 08-04 | `uv run --project sidecar python -m pytest packages/contracts/tests/test_codegen.py -q`; `npm run check:contracts` | latest audit: 10 passed and drift gate passed |
+| 5 | 08-05 | sidecar avatar/admin/reimport/VTS tests; renderer AvatarImport; schema validation; UAT files | 08-05 summary and latest audit pass |
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| pyvts 0.3.3 introspection smoke-test against actual Teto rig | IMP-10 | Requires VTube Studio running with Teto loaded + API auth granted; cannot be automated in CI without VTS instance | 1. Start VTube Studio with Teto rig loaded; 2. Grant API auth; 3. Run `uv run python sidecar/scripts/vts_introspect_smoke.py`; 4. Confirm script exits 0 with all 5 shape assertions logged ✓; 5. If fail, capture pyvts version + VTS version in `08-PROVENANCE.md` |
-| Dogfooded Teto import flow end-to-end (Phase 8 exit gate per CONTEXT D-A4-1) | IMP-01..09 (E2E) | Requires Electron app running with sidecar; user-driven file dialog + review screen interaction | 1. `npm run dev` boots stack; 2. Settings → "Import avatar"; 3. Select `Live2D/重音テト/` folder; 4. Walk review screen, edit 14 variant codes to semantic names (or accept auto-derived), delete `Remove Water Mark` row, ensure events table is empty; 5. Click Save; 6. Confirm `avatars/teto/_avatar_overrides.yaml` written; 7. In same PR, delete `avatars/teto/avatar.yaml` + `teto_overrides.yaml`; 8. Restart sidecar, confirm boot succeeds reading new file (per RESEARCH §Pitfall 7 sequencing) |
-| Cubism 5.3 reject-with-helpful-error end-to-end | IMP-01 | No Cubism 5.3 rig exists in repo; behavior is rejection-side (preventive) | 1. Construct synthetic moc3 file with first 8 bytes `MOC3\x06\x00\x00\x00` (header version=6); 2. Place alongside fake `model3.json` in temp dir; 3. Try import; 4. Confirm Electron shows friendly error "This avatar uses Cubism 5.3, which is not yet supported by VTube Studio. Please use a Cubism 4.x or 5.0–5.2 rig"; 5. Confirm no `_avatar_overrides.yaml` is written |
+| Behavior | Requirement | Status | Why Manual | Evidence |
+|----------|-------------|--------|------------|----------|
+| Native-dialog Teto import flow end-to-end | IMP-01..IMP-09 | passed | Requires Electron dialog and user review/save interaction | `.planning/phases/08-avatar-import-catalogs/08-DOGFOOD-UAT.md`, status pass; runtime artifact `avatars/重音テト/_avatar_overrides.yaml` validated |
+| Live VTS introspection smoke against actual Teto rig | IMP-10 | passed | Requires VTube Studio running with Teto loaded and API auth granted | `.planning/phases/08-avatar-import-catalogs/08-VTS-SMOKE-UAT.md`, status pass after token reset/re-approval |
 
----
+Cubism 5.3 rejection is covered as an import-detection/admin error behavior; no separate live rig is required.
+
+## Validation Audit 2026-05-09
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 14 stale validation rows refreshed |
+| Escalated | 0 |
+| Automated requirement rows | 11/11 |
+| Manual-only rows | 2 passed |
+
+Commands run during this audit:
+
+| Command | Result |
+|---------|--------|
+| `cd sidecar && uv run pytest tests/avatar tests/vts/test_vts_introspect_smoke.py -q --tb=short` | 67 passed, 2 FastAPI collection warnings |
+| `npm --workspace apps/renderer run test -- --run AvatarImport` | 1 file passed, 11 tests passed |
+| `uv run --project sidecar python -m pytest packages/contracts/tests/test_codegen.py -q` | 10 passed |
+| `npm run check:contracts` | passed, no generated contract drift |
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter (after planner produces task IDs in plan files and gsd-plan-checker confirms each row above maps to a real task)
+- [x] All Phase 8 requirements map to automated verification or passed manual UAT.
+- [x] Wave 0 test infrastructure exists and is no longer pending.
+- [x] Sampling continuity is preserved across all five Phase 8 plans.
+- [x] No watch-mode test command is used.
+- [x] Manual-only VTS and native-dialog checks have PASS evidence.
+- [x] `nyquist_compliant: true` and `wave_0_complete: true` are set in frontmatter.
 
-**Approval:** pending
+**Approval:** validated
