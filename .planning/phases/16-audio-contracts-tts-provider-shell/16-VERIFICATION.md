@@ -1,5 +1,5 @@
 ---
-status: human_needed
+status: gaps_found
 phase: 16-audio-contracts-tts-provider-shell
 verified_at: 2026-05-09T18:38:56-04:00
 source:
@@ -14,6 +14,8 @@ source:
 ## Result
 
 Automated verification passed. Human UAT is required before Phase 16 should be called officially done because live audio playback and VTube Studio lipsync need observation.
+
+Updated after UAT: one blocker was found. VTS lipsync works, but no voice is audible.
 
 ## Must-Haves
 
@@ -39,3 +41,12 @@ See `16-UAT.md`:
 2. VTS mouth/lipsync still moves from RMS during speech.
 3. Settings TTS diagnostics show Piper/default model and truthful health.
 4. Existing setup survives restart after schemaVersion 2 migration.
+
+## Gaps Found
+
+### Gap 1: No audible voice while lipsync works
+
+- **Severity:** blocker
+- **UAT:** `16-UAT.md` test 1
+- **Diagnosis:** Renderer ignores `AudioPayloadMessage.audio`; audible output depends only on sidecar-local `sounddevice.OutputStream`. Since RMS/lipsync can be queued before sidecar stream write, VTS mouth movement can work even when local sidecar audio is inaudible.
+- **Fix plan:** `16-04-PLAN.md`
