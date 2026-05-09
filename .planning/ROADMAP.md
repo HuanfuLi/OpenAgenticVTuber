@@ -221,7 +221,7 @@ Plans:
 - [x] 07-04-PLAN.md — Reserved-name and cross-category validation module with parser tests
 - [x] 07-05-PLAN.md — VariantStateManager and EventCompletionTracker with radio-button and duration-pad tests
 - [x] 07-06-PLAN.md — Runtime Dispatch routing, including active PluginAdapter/plugin ActionCode delivery and TTS payload dispatches
-- [ ] 07-07-PLAN.md — Boot validation/runtime manager wiring, shutdown cleanup, pyvts import guard, and `[DISPATCH]` renderer logs
+- [x] 07-07-PLAN.md — Boot validation/runtime manager wiring, shutdown cleanup, pyvts import guard, and `[DISPATCH]` renderer logs
 
 **UI hint**: no  <!-- Parser + dispatch lives in sidecar; renderer changes are limited to bracket-strip continuation, no new UI surface. -->
 

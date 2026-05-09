@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
-status: executing
-stopped_at: Completed 07-06-PLAN.md
-last_updated: "2026-05-09T00:40:40.156Z"
+status: verifying
+stopped_at: Completed 07-07-PLAN.md
+last_updated: "2026-05-09T00:53:17.592Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 37
-  completed_plans: 36
+  completed_plans: 37
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 Phase: 07 (three-category-code-parsing-dispatch) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -106,6 +106,7 @@ Last activity: 2026-05-09
 | Phase 07-three-category-code-parsing-dispatch P05 | 6min | 1 tasks | 5 files |
 | Phase 07-three-category-code-parsing-dispatch P02 | 8min | 1 tasks | 14 files |
 | Phase 07-three-category-code-parsing-dispatch P06 | 250min | 2 tasks | 11 files |
+| Phase 07-three-category-code-parsing-dispatch P07 | 9min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -189,6 +190,9 @@ Recent decisions affecting current work:
 - [Phase 07-three-category-code-parsing-dispatch]: Plan 07-06 kept valid_expression_names as a backward-compatible constructor alias for plugin action code parsing while routing through Dispatch records.
 - [Phase 07-three-category-code-parsing-dispatch]: Plan 07-06 logs DISPATCH-DROP for missing plugin adapters, full action queues, and missing event hotkey IDs instead of raising from the orchestrator hot path.
 - [Phase 07-three-category-code-parsing-dispatch]: Plan 07-06 audio payload emission uses dispatches only; stale actions assertions were updated in directly affected orchestrator-turn tests.
+- [Phase 07-three-category-code-parsing-dispatch]: Boot validation raises ReservedNameError or CategoryCollisionError instead of being swallowed by the generic startup fallback.
+- [Phase 07-three-category-code-parsing-dispatch]: Orchestrator accepts AvatarOverrides directly and derives variant/event parser catalogs from that boot-frozen object.
+- [Phase 07-three-category-code-parsing-dispatch]: Renderer keeps the logs-drawer intent test filename while assertions now document [DISPATCH] behavior.
 
 ### Pending Todos
 
@@ -211,6 +215,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-09T00:40:40.148Z
-Stopped at: Completed 07-06-PLAN.md
+Last session: 2026-05-09T00:53:17.584Z
+Stopped at: Completed 07-07-PLAN.md
 Resume file: None
