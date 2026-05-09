@@ -239,11 +239,11 @@ Plans:
   3. User locks any non-system-primitive param; lock persists until user clicks the lock toggle off (releasing the slider does NOT release the lock); control returns to the compositor on unlock
   4. App restart clears all lock state (session-only persistence — locks are a discovery tool, not a persistent preference); re-importing an avatar mid-session also clears all lock state and shows a toast
   5. `MouthOpen` (and any future `SYSTEM_PRIMITIVE_OVERRIDES` entry) does NOT appear in the HUD list under any circumstance — verified by an automated test that boots a default rig and asserts the HUD payload excludes the dict's keys (resolver-mapped to Cubism names where applicable)
-**Plans**: ~2 plans (TBD at /gsd:plan-phase 9)
+**Plans**: 2 plans (planned 2026-05-08)
 
 Plans:
-- [ ] 09-01-PLAN.md (TBD) — Sidecar HUD tap (`compositor/hud_tap.py` 15 Hz gate + fanout) + `LockState: dict[str, float]` integration into compositor merge (locks LAST, with system-primitive override list per ARCH-12) + dedicated `/hud/ws` FastAPI endpoint + `GET /admin/rig-capabilities` HTTP fetch endpoint + `HudMessageS2C` / `HudMessageC2S` contracts joining Phase 7 codegen pipeline + avatar-re-import lock clear hook
-- [ ] 09-02-PLAN.md (TBD) — Renderer HUD UI in a separate Electron BrowserWindow (Settings "Open HUD" button → `electron-main` opens the HUD window loading the same renderer bundle on a `/hud` route + `useHudStream` hook + scrollable param list filtered against `SYSTEM_PRIMITIVE_OVERRIDES` + slider/lock-toggle/value display + optimistic lock on drag + auto-clear-locks on avatar re-import toast)
+- [ ] 09-01-PLAN.md — Sidecar HUD foundation: HudMessage{S2C,C2S} Pydantic contracts + Phase 7 codegen integration; `compositor/hud_tap.py` 15 Hz fanout; Compositor lock_state dict + locks-LAST merge with SYSTEM_PRIMITIVE_OVERRIDES defense-in-depth; `hud_excluded_param_ids` resolver-mapped helper in lock_filter.py; `/hud/ws` FastAPI endpoint with set-lock/clear-lock handlers; `GET /admin/rig-capabilities` HTTP endpoint with sidecar-derived hud_excluded_param_ids — covers HUD-01, HUD-02, HUD-05, HUD-06, HUD-07, HUD-08
+- [ ] 09-02-PLAN.md — Renderer HUD UI: Electron multi-BrowserWindow factory (`hud-window.ts`, ipc:hud:open, before-quit cleanup); App.tsx route hash branch (`#/hud`); `<HudRoot>` component tree with `useHudStream` hook (drag→set-lock optimistic, manual-disengage, 1.5s reconnect); native `<input type=range>` sliders bounded by RigCapabilities.param_ranges; Lock/Unlock SVG icons; HUD CSS section in index.css; Settings "Open HUD" button entry point; auto-clear-locks toast on locked_ids drop; live operator UAT — covers HUD-03, HUD-04
 
 **UI hint**: yes  <!-- Dedicated React route mounted in a separate Electron BrowserWindow; multi-row scrollable param list with slider + lock toggle. NO override-badge (designed out by HUD-exclusion rule). -->
 
