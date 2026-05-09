@@ -1,10 +1,11 @@
 ---
-status: resolved
+status: complete
 phase: 11-status-app-state-reality
 source:
   - 11-01-SUMMARY.md
-started: 2026-05-09T06:52:57-04:00
-updated: 2026-05-09T07:12:13-04:00
+  - 11-02-SUMMARY.md
+started: 2026-05-09T07:17:28-04:00
+updated: 2026-05-09T07:22:37-04:00
 ---
 
 ## Current Test
@@ -13,78 +14,39 @@ updated: 2026-05-09T07:12:13-04:00
 
 ## Tests
 
-### 1. Status popover shows configured LLM
-expected: Open the app with a completed LLM setup. Open the status popover from the hex status button. The LLM row shows your configured provider/model from setup, such as LM Studio plus the selected model or auto-detect. It does not show hardcoded qwen2.5 text and does not show fake "last reply" latency.
-result: issue
-reported: "Pass but: I cannot reconfigure LLM? I was able to configure it before. I should be able to change provider and configure provider settings like LM Studio models, but now it is hardcoded auto-detect"
-severity: major
-
-### 2. Status refresh is real
-expected: In the status popover, click Refresh status. The button briefly shows a refresh-in-progress state, then the rows continue to reflect real setup/sidecar/VTS state. It does not force the LLM row to green, does not change the model to qwen2.5, and does not add fake latency.
+### 1. Status popover shows real configured state
+expected: Open the app after LLM setup has completed. Open the status popover from the status button. The LLM row shows the currently stored provider/model, such as LM Studio plus auto-detect or your saved model name. The Sidecar and VTS rows reflect real current state. It does not show hardcoded qwen2.5 text or fake last-reply latency.
 result: pass
 
-### 3. Sidecar and VTS rows are truthful
-expected: With the sidecar running, the Sidecar row shows the real local websocket URL. With VTube Studio running and authorized, the VTS row reports an authenticated/ready state; if VTS is not running or not detected, the VTS row says so truthfully instead of pretending to be connected.
+### 2. Settings connection edit mode is available
+expected: Open Settings > Connection / Models. The section shows the stored Provider, Endpoint, and Model. Click Edit connection. Editable controls appear for Provider, Endpoint URL, Model, and API key; the Change provider button is not disabled or deferred.
 result: pass
 
-### 4. Settings connection refresh is real
-expected: Open Settings > Connection / Models and click Refresh status. The visible provider, endpoint, and model remain the persisted setup values, and the action does not inject qwen2.5 or fake "last reply" latency into the app status.
-result: issue
-reported: "As I said in test 1, it is basically hardcoded as LM Studio + auto-detect. Fail"
-severity: major
+### 3. Settings can save a changed model
+expected: In Settings > Connection / Models edit mode, enter or change the Model value, save the connection, and return to the summary view. The section shows the saved model value instead of forcing auto-detect, and the status popover reflects the saved provider/model after refresh.
+result: pass
 
-### 5. Preferences persist through Electron storage
-expected: Change an Appearance theme option and toggle Settings > Diagnostics > Show log panel. Close and restart the app. The theme preference and log panel preference restore from the previous session, while the LLM setup remains stored through the existing setup flow.
+### 4. Blank model remains explicit auto-detect
+expected: In Settings > Connection / Models edit mode, clear the Model value and save. The summary and status display auto-detect because the saved model is blank, not because the UI is hardcoded. You can reopen edit mode and type a model again.
+result: pass
+
+### 5. Settings connection test works from edit mode
+expected: In Settings > Connection / Models edit mode, click Test connection. A connection test log appears in the section and reports success or a truthful connection error from the real sidecar/LLM setup. It does not use a mock alert.
+result: pass
+
+### 6. Preferences still persist through Electron storage
+expected: Change an Appearance theme option and toggle Settings > Diagnostics > Show log panel. Close and restart the app. The theme and log panel preference restore, and the LLM connection settings remain stored.
 result: pass
 
 ## Summary
 
-total: 5
-passed: 3
-issues: 2
+total: 6
+passed: 6
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- truth: "The LLM status reflects configurable provider/model settings, and the user can update those provider/model settings after initial setup."
-  status: resolved
-  reason: "User reported: Pass but: I cannot reconfigure LLM? I was able to configure it before. I should be able to change provider and configure provider settings like LM Studio models, but now it is hardcoded auto-detect"
-  severity: major
-  test: 1
-  root_cause: "Phase 11 correctly changed the status row to read persisted setup state, but the only editable provider/model UI remains the first-run LLMSetup gate. After setup completes, Settings > Connection / Models renders the stored provider, endpoint, and model as read-only rows and the Change provider button is disabled, so a blank stored model can only appear as auto-detect and cannot be changed from the app."
-  artifacts:
-    - path: "apps/renderer/src/screens/Settings/Settings.tsx"
-      issue: "ConnectionSection reads real StoredConfig but only displays provider/endpoint/model; it disables Change provider and has no edit/save path."
-    - path: "apps/renderer/src/screens/LLMSetup/LLMSetup.tsx"
-      issue: "The editable provider, endpoint, model, API key, and connection test flow is only available while setup.phase is setup-required."
-    - path: "apps/renderer/src/App.tsx"
-      issue: "GatedShell swaps LLMSetup out permanently once setup is ready, leaving no post-setup reconfiguration route."
-  missing:
-    - "Add a post-setup Settings edit flow for provider, endpoint URL, model name, and API key."
-    - "Persist changes through window.api.saveStoredConfig with hasCompletedSetup true while preserving unrelated StoredConfig fields such as the active body motion plugin."
-    - "Refresh app status after saving so the status popover reflects the newly saved provider/model without mock mutations."
-    - "Cover Settings reconfiguration with focused renderer tests, including the blank-model auto-detect case and a nonblank saved model."
-  resolution: "Closed by 11-02: Settings now exposes editable provider/endpoint/model/API key controls, saves via safeStorage-backed StoredConfig, preserves plugin config, refreshes status, and has renderer regression tests."
-  debug_session: ".planning/debug/phase-11-llm-reconfigure-gap.md"
-- truth: "Settings > Connection / Models shows and preserves configurable provider/model settings instead of appearing hardcoded to LM Studio auto-detect."
-  status: resolved
-  reason: "User reported: As I said in test 1, it is basically hardcoded as LM Studio + auto-detect. Fail"
-  severity: major
-  test: 4
-  root_cause: "The Settings connection section is a read-only status summary, not a configuration editor. It falls back to the persisted LM Studio default and renders an empty modelName as auto-detect, which is truthful for the stored data but fails the expected reconfiguration behavior."
-  artifacts:
-    - path: "apps/renderer/src/screens/Settings/Settings.tsx"
-      issue: "The Change provider control is intentionally disabled with copy that says reconfiguration lands later."
-    - path: "apps/renderer/src/lib/copy.ts"
-      issue: "Settings copy still describes provider reconfiguration as deferred instead of offering real controls."
-    - path: "apps/renderer/src/state/setup-store.ts"
-      issue: "The setup store exposes first-run completeSetup but no obvious post-setup save/update helper for Settings to reuse."
-  missing:
-    - "Replace the disabled Change provider affordance with editable Settings controls or a reusable setup-editor flow."
-    - "Use existing provider choices and LLM test behavior where practical so Settings does not introduce a second provider contract."
-    - "Keep auto-detect as explicit blank-model behavior, not a hardcoded model value."
-    - "Remove stale deferred copy and test that Settings save preserves the selected provider/model after reload."
-  resolution: "Closed by 11-02: the disabled deferred button and copy were removed; Settings now saves changed LLM config and keeps blank model as explicit auto-detect behavior."
-  debug_session: ".planning/debug/phase-11-llm-reconfigure-gap.md"
+[none yet]
