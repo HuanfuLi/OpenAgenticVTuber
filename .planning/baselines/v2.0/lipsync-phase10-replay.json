@@ -1,0 +1,7 @@
+{
+  "mode": "lipsync",
+  "passed": true,
+  "pearson_r": 0.9747730195034283,
+  "sample_count": 90,
+  "threshold": 0.7
+}

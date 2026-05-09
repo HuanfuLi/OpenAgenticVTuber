@@ -16,9 +16,9 @@ Phase 10 re-runs all six §14 success criteria from `PROJECT_DESIGN.md §14` aga
 
 | # | Criterion | Verdict | Observation | Evidence |
 |---|-----------|---------|-------------|----------|
-| 1 | Lipsync RMS-vs-MouthOpen tracking (TTS-04 / AVT-03 carry-through) | ___PENDING___ | pearson_r = ___PENDING___ from Phase 10 replay | `.planning/baselines/v2.0/lipsync-phase10-replay.json` |
+| 1 | Lipsync RMS-vs-MouthOpen tracking (TTS-04 / AVT-03 carry-through) | PASS | pearson_r=0.9747730195034283 (1.39× over 0.7 threshold) from Phase 10 replay | `.planning/baselines/v2.0/lipsync-phase10-replay.json` |
 | 2 | `[smirk]` smooth blend (operator-judged; replaces M1 `[joy]` per 06-08) | ___PENDING___ | ___PENDING___ checklist score (see ceremony §SC #2 below) | This file, §"SC #2 Ceremony Log" |
-| 3 | Idle micro-motion non-zero variance (AVT-02 carry-through) | ___PENDING___ | variance_sum = ___PENDING___ from Phase 10 replay | `.planning/baselines/v2.0/idle-phase10-replay.json` |
+| 3 | Idle micro-motion non-zero variance (AVT-02 carry-through) | PASS | variance_sum=0.06643749130899018 (0 < x < 0.5; 7.5× under ceiling) from Phase 10 replay | `.planning/baselines/v2.0/idle-phase10-replay.json` |
 | 4 | Body sway through full utterance (operator-judged) | ___PENDING___ | ___PENDING___ checklist score (see ceremony §SC #4 below) | This file, §"SC #4 Ceremony Log" |
 | 5 | Cursor tracking (operator-judged post-Plan 10-01 fix) | ___PENDING___ | Cursor namespace fix landed; in-window + outside-window tracking observed: ___PENDING___ | `.planning/phases/10-cursor-polish-14-sc-re-verification/10-01-SUMMARY.md` + this file §"SC #5 Ceremony Log" |
 | 6 | OLVT WS protocol shape (bookkeeping) | PASS | M1 Phase 1+2 (PLUMB-03) verified the OLVT-shape envelope; v2.0 Phase 7 `Dispatch` and Phase 9 `HudMessageS2C/C2S` are new `type` values inside the existing envelope, not envelope-structure changes. | `.planning/phases/01-plumbing-process-lifecycle/01-02-SUMMARY.md`, `.planning/phases/02-conversation-pipeline/`, `.planning/phases/07-three-category-code-parsing-dispatch/`, `.planning/phases/09-slider-hud-per-param-lock/` |
@@ -33,7 +33,7 @@ cd sidecar
 uv run python scripts/plumbing_harness.py --mode lipsync --out ../.planning/baselines/v2.0/lipsync-phase10-replay.json
 ```
 
-**Replay verdict:** ___PENDING___ (auto-fills from JSON `passed` field after Task 2)
+**Replay verdict:** PASS — `passed: true`; `pearson_r=0.9747730195034283`; `sample_count=90`; `threshold=0.7`.
 
 ### SC #2 Ceremony Log (operator-judged — `[smirk]` smooth blend)
 
@@ -75,7 +75,7 @@ cd sidecar
 uv run python scripts/plumbing_harness.py --mode idle --out ../.planning/baselines/v2.0/idle-phase10-replay.json
 ```
 
-**Replay verdict:** ___PENDING___ (auto-fills from JSON `passed` field after Task 2)
+**Replay verdict:** PASS — `passed: true`; `variance_sum=0.06643749130899018`; `duration_seconds=30.0`; `variance_ceiling=0.5`.
 
 ### SC #4 Ceremony Log (operator-judged — body sway through ~30-45s utterance)
 
@@ -149,12 +149,12 @@ No automated re-test. SC #6 is recorded-only.
 
 Phase 10 re-runs the plumbing harness built in Phase 6 06-02 against the same synthetic inputs. M1 baseline files at `.planning/baselines/v2.0/{lipsync,idle}.json` remain immutable (preserved as historical reference per Pitfall 5); replay outputs are written to `*-phase10-replay.json` filenames.
 
-Harness re-run on ___PENDING___ (date filled at ceremony time):
+Harness re-run on 2026-05-09 (Task 2 automated replay):
 
 | Mode | Phase 6 baseline (06-02, 2026-05-08) | Phase 10 replay | Tolerance | Pass? |
 |------|--------------------------------------|-----------------|-----------|-------|
-| lipsync | `pearson_r=0.9747730195034283` | `pearson_r=___PENDING___` | `>= 0.7` | ___PENDING___ |
-| idle | `variance_sum=0.06643749130899018` | `variance_sum=___PENDING___` | `0 < x < 0.5` | ___PENDING___ |
+| lipsync | `pearson_r=0.9747730195034283` | `pearson_r=0.9747730195034283` (2026-05-09) | `>= 0.7` | yes |
+| idle | `variance_sum=0.06643749130899018` | `variance_sum=0.06643749130899018` (2026-05-09) | `0 < x < 0.5` | yes |
 
 Tolerance bands per D-E1: ±100ms latency / ±0.05 param values for SC #1 + SC #3 only. Both Phase 6 baselines exceed thresholds with substantial margin (lipsync 1.39× over; idle 7.5× under), so replay-time PASS is overdetermined — the harness's `passed: true` JSON field is the gate.
 
