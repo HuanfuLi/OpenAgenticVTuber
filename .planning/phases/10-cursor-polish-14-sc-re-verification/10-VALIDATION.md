@@ -1,95 +1,110 @@
 ---
 phase: 10
 slug: cursor-polish-14-sc-re-verification
-status: ready
+status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-05-09
-last_updated: 2026-05-09
+last_audited: 2026-05-09T05:55:00-04:00
 ---
 
-# Phase 10 — Validation Strategy
+# Phase 10 - Validation Strategy
 
-> Per-phase validation contract for feedback sampling during execution. Filled by gsd-planner.
-
----
+Retroactive Nyquist validation for completed Phase 10. This refreshes the original plan-time validation map after 10-03 and 10-04 closed SC2 smirk rendering, SC5 eye tracking, and blink visibility gaps.
 
 ## Test Infrastructure
 
-- **pytest** (existing, Phase 1) — used by all 10-01 tasks (cursor regression test, window_detect helper test, full sidecar suite)
-- **plumbing_harness.py** (existing, Phase 6 06-02) — used by 10-02 Task 2 for SC #1 + SC #3 baseline replay
-- **markdown deliverable** (skeleton-verification.md) — produced by 10-02 Tasks 1 + 3; verified via grep / Select-String section-header counts and ___PENDING___ marker absence
-- **Operator visual review** (10-02 Task 3 only) — checkpoint:human-verify ceremony for SC #2 / SC #4 / SC #5
-
----
+| Property | Value |
+|----------|-------|
+| Framework | pytest via `uv` in `sidecar/pyproject.toml` |
+| Harness | `sidecar/scripts/plumbing_harness.py` from Phase 6 |
+| Artifact checks | PowerShell checks for `.planning/skeleton-verification.md` section/PASS/pending counts and replay JSON thresholds |
+| Focused validation command | `cd sidecar && uv run pytest tests/compositor/test_idle_driver.py tests/compositor/test_compositor.py tests/compositor/test_cursor_driver.py tests/compositor/test_cursor_driver_namespace.py tests/compositor/test_cursor_driver_eye_tracking.py tests/vts/test_window_detect.py tests/test_arch06_single_writer.py tests/plugins/test_supervisor.py tests/compositor/test_plugin_adapter.py tests/plugins/test_default_plugin.py tests/test_orchestrator_turn.py tests/orchestrator/test_dispatch_routing.py -q` |
+| Latest audit result | 90 pytest passed; skeleton artifact has 6 PASS rows and 0 pending markers; baseline JSON thresholds pass; one `pyvts` import remains |
 
 ## Sampling Rate
 
-- **After every task commit:** Run the task's `<verify><automated>` command (typically pytest on focused test files; <10s on warm cache).
-- **After Wave 1 (Plan 10-01):** Full sidecar suite + `tests/test_arch06_single_writer.py` + `grep "import pyvts" sidecar/src/` literal grep gate.
-- **After Wave 2 (Plan 10-02):** Harness replay both modes + skeleton-verification.md section-presence check + `___PENDING___` marker count = 0.
-- **Before `/gsd:verify-work`:** Full sidecar suite green + harness replay produces PASS JSON for both modes + ARCH-06 single-writer test green + skeleton-verification.md committed with all six SC verdicts filled.
-- **Max feedback latency:** 90 seconds (warm cache; first-run pytest cold-start may take ~30s for the full suite).
-
----
+- After cursor changes: run cursor driver, namespace, eye-tracking, window-detect, compositor, and ARCH-06 tests.
+- After idle/blink changes: run `tests/compositor/test_idle_driver.py` and compositor merge tests.
+- After plugin action changes: run default plugin, supervisor, plugin adapter, orchestrator turn, and dispatch routing tests.
+- After skeleton-verification edits: run the skeleton artifact checks and baseline JSON threshold checks.
+- Before milestone audit: run the focused validation command and confirm live UAT evidence is recorded in `10-VERIFICATION.md` and `.planning/skeleton-verification.md`.
 
 ## Per-Task Verification Map
 
-| Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists? |
-|---------|------|------|-------------|-----------|-------------------|--------------|
-| 10-01 T1 | 10-01 | 1 | VFY-01, VFY-02 | unit (Wave 0 — RED test scaffold + helper + helper test) | `cd sidecar && uv run pytest tests/vts/test_window_detect.py -x -q` | ✅ test_window_detect.py exists; CREATE test_cursor_driver_namespace.py + extend window_detect.py + extend test_window_detect.py |
-| 10-01 T2 | 10-01 | 1 | VFY-01, VFY-02 | unit (GREEN — cursor namespace fix + gate drop + synthetic fallback + flipped test assertions) | `cd sidecar && uv run pytest tests/compositor/test_cursor_driver.py tests/compositor/test_cursor_driver_namespace.py tests/vts/test_window_detect.py tests/test_arch06_single_writer.py -x -q` | ✅ All target files exist or were created in T1 |
-| 10-01 T3 | 10-01 | 1 | VFY-01, VFY-02, ARCH-06 (carry-through) | integration / full-suite gate | `cd sidecar && uv run pytest -q` | ✅ Existing 80+ tests + new tests pass |
-| 10-01 T3 (gate B) | 10-01 | 1 | ARCH-06 (carry-through) | grep gate | `grep -rn "^import pyvts\|^from pyvts" sidecar/src/ \| wc -l` (expected: 1) | ✅ Plan 10-01 must not introduce new pyvts importers |
-| 10-02 T1 | 10-02 | 2 | VFY-03, VFY-04 | artifact existence + structure | `powershell -Command "(Select-String -Path '.planning/skeleton-verification.md' -Pattern '^## ').Count"` (expected: 4) | ❌ Phase 10 deliverable — CREATE |
-| 10-02 T2 | 10-02 | 2 | VFY-05 | harness replay | `cd sidecar && uv run python scripts/plumbing_harness.py --mode lipsync --out ../.planning/baselines/v2.0/lipsync-phase10-replay.json && uv run python scripts/plumbing_harness.py --mode idle --out ../.planning/baselines/v2.0/idle-phase10-replay.json` | ✅ Harness exists; ❌ replay JSON outputs CREATED by this task |
-| 10-02 T2 (gate B) | 10-02 | 2 | Pitfall 5 (M1 baseline immutability) | git-diff gate | `git diff --exit-code .planning/baselines/v2.0/lipsync.json .planning/baselines/v2.0/idle.json` (expected: exit 0) | ✅ Pre-existing baseline files |
-| 10-02 T3 | 10-02 | 2 | VFY-03 (operator), VFY-04 | manual-only (checkpoint:human-verify) | Operator runs ceremony per skeleton-verification.md scripts; final automated check: `grep -c "___PENDING___" .planning/skeleton-verification.md` (expected: 0) | ❌ Operator ceremony — Task 3 fills verdicts |
+| Task ID | Plan | Wave | Requirement(s) | Test Type | Automated Command | File Exists | Status |
+|---------|------|------|----------------|-----------|-------------------|-------------|--------|
+| 10-01 T1 | 10-01 | 1 | VFY-01, VFY-02 | window-detect helper and cursor namespace RED scaffold | `cd sidecar && uv run pytest tests/vts/test_window_detect.py -x -q` | yes | covered |
+| 10-01 T2 | 10-01 | 1 | VFY-01, VFY-02 | cursor namespace, outside-window projection, synthetic fallback | `cd sidecar && uv run pytest tests/compositor/test_cursor_driver.py tests/compositor/test_cursor_driver_namespace.py tests/vts/test_window_detect.py tests/test_arch06_single_writer.py -x -q` | yes | covered |
+| 10-01 T3 | 10-01 | 1 | VFY-01, VFY-02, ARCH-06 carry-through | cursor/compositor integration and single-writer guard | focused cursor gate plus pyvts import grep | yes | covered |
+| 10-02 T1 | 10-02 | 2 | VFY-03, VFY-04 | skeleton-verification artifact structure | `Select-String` checks for sections, PASS rows, and zero `___PENDING___` markers | yes | covered |
+| 10-02 T2 | 10-02 | 2 | VFY-05 | lipsync and idle replay artifacts | parse `.planning/baselines/v2.0/{lipsync,idle}-phase10-replay.json` and assert pass/threshold values | yes | covered |
+| 10-02 T3 | 10-02 | 2 | VFY-03, VFY-04 | operator §14 visual ceremony | operator records SC #2, #4, #5 verdicts in `.planning/skeleton-verification.md` | yes | passed |
+| 10-03 T1 | 10-03 | 3 | VFY-03, VFY-04 | smirk action-code RED regression | `cd sidecar && uv run pytest tests/plugins/test_default_plugin.py tests/compositor/test_plugin_adapter.py -q` | yes | covered |
+| 10-03 T2 | 10-03 | 3 | VFY-03, VFY-04 | DefaultPlugin, PluginSupervisor, and PluginAdapter smirk dispatch path | `cd sidecar && uv run pytest tests/plugins/test_supervisor.py tests/compositor/test_plugin_adapter.py tests/plugins/test_default_plugin.py tests/test_orchestrator_turn.py tests/orchestrator/test_dispatch_routing.py tests/test_arch06_single_writer.py -q` | yes | covered |
+| 10-03 T3 | 10-03 | 3 | VFY-03, VFY-04 | live SC #2 smirk rerun | operator corrected SC #2 to PASS; `.planning/skeleton-verification.md` updated | yes | passed |
+| 10-04 T1 | 10-04 | 4 | VFY-01, VFY-02, VFY-03, VFY-04 | cursor eye and blink ownership RED regressions | `cd sidecar && uv run pytest tests/compositor/test_cursor_driver_eye_tracking.py tests/compositor/test_idle_driver.py -q` | yes | covered |
+| 10-04 T2 | 10-04 | 4 | VFY-01, VFY-02, VFY-03, VFY-04 | full cursor eye surface, Teto horizontal inversion, app-owned idle blink removal | `cd sidecar && uv run pytest tests/compositor/test_idle_driver.py tests/compositor/test_compositor.py tests/compositor/test_cursor_driver.py tests/compositor/test_cursor_driver_namespace.py tests/compositor/test_cursor_driver_eye_tracking.py tests/vts/test_window_detect.py tests/test_arch06_single_writer.py -q` | yes | covered |
+| 10-04 T3 | 10-04 | 4 | VFY-03, VFY-04 | live SC #5 and blink rerun | operator confirmed cursor eye tracking and blink behavior pass; skeleton final verdict PASS | yes | passed |
 
----
+## Requirement Coverage Map
 
-## Wave 0 Requirements
+| Requirement | Primary Plan(s) | Automated Evidence | Manual Evidence | Status |
+|-------------|-----------------|--------------------|-----------------|--------|
+| VFY-01 | 10-01, 10-04 | cursor namespace, outside-window, synthetic fallback, and eye-tracking tests | SC #5 live UAT PASS | covered |
+| VFY-02 | 10-01, 10-04 | window-detect helper tests, cursor fallback/projection tests, ARCH-06 guard | SC #5 live UAT PASS | covered |
+| VFY-03 | 10-02, 10-03, 10-04 | skeleton artifact checks; smirk/cursor/blink regression suites | all six §14 SC rows recorded PASS | covered |
+| VFY-04 | 10-02, 10-03, 10-04 | skeleton artifact checks and zero pending-marker check | operator-updated `.planning/skeleton-verification.md` | covered |
+| VFY-05 | 10-02 | lipsync replay JSON has `passed: true` and `pearson_r >= 0.7`; idle replay JSON has `passed: true` and `0 < variance_sum < 0.5` | none required | covered |
 
-Wave 0 is folded into Plan 10-01 Task 1 (no separate setup wave needed):
+No missing or partial automated requirement coverage remains. Visual quality checks that cannot be mechanized are recorded as passed manual UAT.
 
-- [x] `sidecar/tests/compositor/test_cursor_driver_namespace.py` — CREATE in 10-01 T1 (RED state at end of T1; turns GREEN in T2)
-- [x] `sidecar/src/sidecar/vts/window_detect.py` — EXTEND in 10-01 T1 (add `get_primary_monitor_rect()`)
-- [x] `sidecar/tests/vts/test_window_detect.py` — EXTEND in 10-01 T1 (add 4 tests for the helper)
-- [x] No framework install needed (pytest, uv, plumbing_harness.py all pre-existing)
+## Wave Verification
 
-Pre-existing infrastructure that Phase 10 reuses:
-- pytest + uv (Phase 1)
-- plumbing_harness.py + baselines (Phase 6 06-02)
-- compositor/param_id_resolver.py + VTS_TRACKING_INPUT_PARAM_IDS (Phase 4 / Phase 6)
-- ws/server.py CursorDriver wiring (Phase 4)
-- vts/window_detect.py (Phase 4)
-- test_arch06_single_writer.py (Phase 6 06-07)
-
----
+| Wave | Plans | Command | Latest Evidence |
+|------|-------|---------|-----------------|
+| 1 | 10-01 | cursor/window/ARCH-06 focused suite | 10-01 summary records final focused gate 28 passed; later combined audit 90 passed |
+| 2 | 10-02 | skeleton artifact checks and replay JSON thresholds | skeleton has 6 PASS rows and 0 pending markers; replay JSON thresholds pass |
+| 3 | 10-03 | smirk plugin/supervisor/adapter/orchestrator suite | 10-03 summary records 61 passed; later combined audit 90 passed |
+| 4 | 10-04 | cursor eye, blink ownership, compositor, window, ARCH-06 suite | 10-04 summary records 32 passed; later combined audit 90 passed |
 
 ## Manual-Only Verifications
 
-Three SCs require operator visual judgment per Phase 6 discuss-phase decision (operator-judged, no JSON baseline). All three are bundled into the single `checkpoint:human-verify` task `10-02 T3`:
+| Behavior | Requirement | Status | Why Manual | Evidence |
+|----------|-------------|--------|------------|----------|
+| SC #2 `[smirk]` smooth blend | VFY-03, VFY-04 | passed | Requires live avatar visual judgment | `.planning/skeleton-verification.md`; `10-VERIFICATION.md`; `10-03-SUMMARY.md` |
+| SC #4 body sway through full utterance | VFY-03, VFY-04 | passed | Requires live audiovisual judgment | `.planning/skeleton-verification.md`; `10-VERIFICATION.md` |
+| SC #5 cursor head and eye tracking plus blink behavior | VFY-01, VFY-02, VFY-03, VFY-04 | passed | Requires live VTube Studio rig observation | `.planning/skeleton-verification.md`; `10-VERIFICATION.md`; `10-04-SUMMARY.md` |
 
-1. **SC #2 — `[smirk]` smooth blend.** Operator pastes prompt, observes avatar's face for fade-in / hold / decay. Verdict per D-B5 rubric (3/3 PASS, 1-2/3 PARTIAL, 0/3 FAIL).
+DPI awareness and multi-monitor synthetic-canvas projection remain future robustness improvements, not Phase 10 validation gaps.
 
-2. **SC #4 — Body sway through ~30-45s utterance.** Operator pastes long-utterance prompt, observes body motion through entire reply. Verdict per D-B5 rubric.
+## Validation Audit 2026-05-09
 
-3. **SC #5 — Cursor tracking (post-Plan-10-01 fix).** Operator moves cursor in/around/outside VTS window, observes head + eye tracking + steady-state hold. Verdict per same 3-check rubric.
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 3 stale validation areas refreshed: 10-02 ceremony wording, 10-03 smirk closure, 10-04 cursor/blink closure |
+| Escalated | 0 |
+| Automated requirement rows | 5/5 |
+| Manual-only rows | 3 passed |
 
-Plus the milestone close decision itself (PASS / PARTIAL / FAIL ship verdict) is operator-recorded based on how the SCs settle.
+Commands run during this audit:
 
-These cannot be automated — they verify the rendered visual quality of the avatar, which is the user-facing deliverable of the §14 ceremony.
-
----
+| Command | Result |
+|---------|--------|
+| `cd sidecar && uv run pytest tests/compositor/test_idle_driver.py tests/compositor/test_compositor.py tests/compositor/test_cursor_driver.py tests/compositor/test_cursor_driver_namespace.py tests/compositor/test_cursor_driver_eye_tracking.py tests/vts/test_window_detect.py tests/test_arch06_single_writer.py tests/plugins/test_supervisor.py tests/compositor/test_plugin_adapter.py tests/plugins/test_default_plugin.py tests/test_orchestrator_turn.py tests/orchestrator/test_dispatch_routing.py -q` | 90 passed |
+| Skeleton artifact check for sections, PASS rows, and pending markers | sections=4, pass_rows=6, pending=0 |
+| Replay JSON threshold check | lipsync pearson=0.9747730195034283, idle variance=0.06643749130899018 |
+| `rg -n "import pyvts|from pyvts" sidecar/src` | one match: `sidecar/src/sidecar/vts/pyvts_writer.py` |
 
 ## Validation Sign-Off
 
-- [x] All tasks have `<automated>` verify (10-01 T1/T2/T3, 10-02 T1/T2) or are checkpoint-typed (10-02 T3 is `checkpoint:human-verify`)
-- [x] Sampling continuity: no 3 consecutive autonomous tasks without automated verify (10-01 has T1+T2+T3 each with pytest verify; 10-02 has T1+T2 each with shell verify; T3 is the human-verify gate)
-- [x] Wave 0 covers all required test infrastructure (folded into 10-01 T1)
-- [x] No watch-mode flags (all pytest invocations use `-x -q` or default; no `--watch`)
-- [x] Feedback latency < 90s (focused pytest <10s warm; full suite ~30-60s; harness replay ~5s per mode)
-- [x] `nyquist_compliant: true` set in frontmatter
+- [x] All Phase 10 requirements map to automated verification or passed manual UAT.
+- [x] 10-03 and 10-04 gap closures are reflected in validation coverage.
+- [x] Skeleton verification has all six §14 SC verdicts as PASS and no pending markers.
+- [x] Replay JSON artifacts clear lipsync and idle thresholds.
+- [x] ARCH-06 single-writer import guard remains satisfied.
+- [x] No watch-mode test command is used.
+- [x] `nyquist_compliant: true` and `wave_0_complete: true` remain set in frontmatter.
 
-**Approval:** ready (planner sign-off 2026-05-09; awaiting plan-checker verification)
+**Approval:** validated
