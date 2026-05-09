@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from loguru import logger
 
-from contracts import ActionCode, EventFire, VariantToggle
+from contracts import ActionCode, AvatarOverrides, EventEntry, EventFire, VariantEntry, VariantToggle
 from sidecar.orchestrator.orchestrator import Orchestrator
 from sidecar.orchestrator.output_types import DisplayText, SentenceOutput
 
@@ -174,3 +174,43 @@ async def test_stub_audio_payload_contains_dispatches_and_no_actions() -> None:
 
     assert ws.writes[0]["dispatches"] == [dispatch.model_dump() for dispatch in dispatches]
     assert "actions" not in ws.writes[0]
+
+
+@pytest.mark.asyncio
+async def test_pipeline_uses_plugin_actions_and_avatar_overrides_for_code_extractor() -> None:
+    class Gateway:
+        async def stream(self, _send_window, _system_prompt):
+            yield "[neutral] {heart-eye} <wave> Hello."
+
+    orchestrator = Orchestrator(
+        gateway=Gateway(),
+        persona_text="persona",
+        action_codes_section="",
+        plugin_action_codes={"neutral"},
+        avatar_overrides=AvatarOverrides(
+            variants=[
+                VariantEntry(
+                    code="heart-eye",
+                    hotkey_id="hk-variant",
+                    source_name="Heart Eye",
+                )
+            ],
+            events=[
+                EventEntry(
+                    code="wave",
+                    hotkey_id="hk-event",
+                    motion_file="wave.motion3.json",
+                    duration_seconds=1.5,
+                )
+            ],
+        ),
+    )
+
+    outputs = [item async for item in orchestrator._run_pipeline([])]
+
+    assert len(outputs) == 1
+    assert outputs[0].dispatches == [
+        ActionCode(name="neutral"),
+        VariantToggle(name="heart-eye", hotkey_id="hk-variant"),
+        EventFire(name="wave", hotkey_id="hk-event", duration_ms=2500),
+    ]
