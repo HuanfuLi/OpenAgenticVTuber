@@ -1,13 +1,15 @@
 /* SPEC §Component Inventory + USERFLOW D — slide-in History sheet.
  * Phase 13 replaces placeholder threads with real local conversation sessions.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { X, Plus, Search } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
 import { useConversationHistory } from '@/state/conversation-history'
 import { useInputDisabled } from '@/screens/Chat/useStreamingMessages'
 import type { ConversationSessionSummary } from '@preload-types'
+
+const CLOSE_ANIMATION_MS = 200
 
 function bucketFor(session: ConversationSessionSummary): string {
   const date = new Date(session.lastMessageAt ?? session.updatedAt)
@@ -46,15 +48,39 @@ export function HistorySheet() {
   const [query, setQuery] = useState('')
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [closing, setClosing] = useState(false)
+  const closeTimer = useRef<number | null>(null)
+
+  const closeSheet = useCallback(() => {
+    if (closing) return
+    setClosing(true)
+    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current)
+    closeTimer.current = window.setTimeout(() => {
+      setHistoryOpen(false)
+      setClosing(false)
+      closeTimer.current = null
+    }, CLOSE_ANIMATION_MS)
+  }, [closing, setHistoryOpen])
 
   useEffect(() => {
     if (!historyOpen) return
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setHistoryOpen(false)
+      if (e.key === 'Escape') closeSheet()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [historyOpen, setHistoryOpen])
+  }, [closeSheet, historyOpen])
+
+  useEffect(() => {
+    if (historyOpen) setClosing(false)
+  }, [historyOpen])
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current !== null) window.clearTimeout(closeTimer.current)
+    },
+    []
+  )
 
   const filteredGroups = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -88,18 +114,24 @@ export function HistorySheet() {
 
   return (
     <div
-      className="sheet-overlay"
+      className={`sheet-overlay${closing ? ' closing' : ''}`}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) setHistoryOpen(false)
+        if (e.target === e.currentTarget) closeSheet()
       }}
     >
-      <div className="sheet" data-theme-surface role="dialog" aria-label={COPY.HISTORY.HEADER}>
+      <div
+        className={`sheet${closing ? ' closing' : ''}`}
+        data-theme-surface
+        role="dialog"
+        aria-label={COPY.HISTORY.HEADER}
+      >
         <div className="head">
           <h3>{COPY.HISTORY.HEADER}</h3>
           <button
             className="icon-btn"
             aria-label="Close"
-            onClick={() => setHistoryOpen(false)}
+            onClick={closeSheet}
+            disabled={closing}
           >
             <X size={16} />
           </button>
@@ -112,6 +144,7 @@ export function HistorySheet() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={COPY.HISTORY.SEARCH}
             aria-label={COPY.HISTORY.SEARCH_LABEL}
+            disabled={closing}
           />
         </label>
 
@@ -135,15 +168,12 @@ export function HistorySheet() {
                       <button
                         className="history-row-main"
                         onClick={() => {
-                          void selectSession(session.id).then(() => setHistoryOpen(false))
+                          void selectSession(session.id).then(() => closeSheet())
                         }}
-                        disabled={turnInFlight}
+                        disabled={turnInFlight || closing}
                         aria-current={isActive ? 'true' : undefined}
                       >
                         <span className="history-row-title">{session.title}</span>
-                        <span className="history-row-preview">
-                          {session.preview || COPY.HISTORY.EMPTY_PREVIEW}
-                        </span>
                         <span className="history-row-meta">
                           {session.messageCount} {session.messageCount === 1 ? 'message' : 'messages'} ·{' '}
                           {formatTime(session.updatedAt)}
@@ -156,12 +186,21 @@ export function HistorySheet() {
                             value={renameValue}
                             onChange={(e) => setRenameValue(e.target.value)}
                             aria-label={COPY.HISTORY.RENAME_INPUT_LABEL}
+                            disabled={closing}
                             autoFocus
                           />
-                          <button className="btn btn-secondary" onClick={() => void submitRename()}>
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => void submitRename()}
+                            disabled={closing}
+                          >
                             {COPY.HISTORY.RENAME_SAVE}
                           </button>
-                          <button className="btn btn-ghost" onClick={() => setRenamingId(null)}>
+                          <button
+                            className="btn btn-ghost"
+                            onClick={() => setRenamingId(null)}
+                            disabled={closing}
+                          >
                             {COPY.HISTORY.RENAME_CANCEL}
                           </button>
                         </div>
@@ -170,7 +209,7 @@ export function HistorySheet() {
                           <button
                             className="btn btn-ghost"
                             onClick={() => startRename(session)}
-                            disabled={turnInFlight}
+                            disabled={turnInFlight || closing}
                           >
                             {COPY.HISTORY.RENAME}
                           </button>
@@ -181,7 +220,7 @@ export function HistorySheet() {
                                 void deleteSession(session.id)
                               }
                             }}
-                            disabled={turnInFlight}
+                            disabled={turnInFlight || closing}
                           >
                             {COPY.HISTORY.DELETE}
                           </button>
@@ -203,14 +242,14 @@ export function HistorySheet() {
         <button
           className="btn btn-secondary"
           onClick={() => {
-            void createSession().then(() => setHistoryOpen(false))
+            void createSession().then(() => closeSheet())
           }}
-          disabled={turnInFlight}
+          disabled={turnInFlight || closing}
         >
           <Plus size={14} /> {COPY.HISTORY.NEW_THREAD}
         </button>
       </div>
-      <div className="sheet-grab" onClick={() => setHistoryOpen(false)} />
+      <div className="sheet-grab" onClick={closeSheet} />
     </div>
   )
 }

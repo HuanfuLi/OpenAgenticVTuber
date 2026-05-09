@@ -123,6 +123,8 @@ describe('HistorySheet', () => {
 
     expect(await screen.findByText('Croissant plan')).toBeInTheDocument()
     expect(screen.getByText('Debug notes')).toBeInTheDocument()
+    expect(screen.queryByText('Fresh croissants and local transcripts.')).toBeNull()
+    expect(screen.queryByText('Renderer state stays deterministic.')).toBeNull()
 
     fireEvent.change(screen.getByLabelText(COPY.HISTORY.SEARCH_LABEL), {
       target: { value: 'renderer' }
@@ -130,6 +132,7 @@ describe('HistorySheet', () => {
 
     expect(screen.queryByText('Croissant plan')).toBeNull()
     expect(screen.getByText('Debug notes')).toBeInTheDocument()
+    expect(screen.queryByText('Renderer state stays deterministic.')).toBeNull()
   })
 
   it('creates, selects, renames, and deletes sessions through conversation history APIs', async () => {
@@ -139,10 +142,12 @@ describe('HistorySheet', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: COPY.HISTORY.NEW_THREAD }))
     await waitFor(() => expect(api.createConversationSession).toHaveBeenCalled())
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: COPY.HISTORY.HEADER })).toBeNull())
 
     fireEvent.click(screen.getByText('open history'))
     fireEvent.click(await screen.findByText('Debug notes'))
     await waitFor(() => expect(api.selectConversationSession).toHaveBeenCalledWith('s2'))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: COPY.HISTORY.HEADER })).toBeNull())
 
     fireEvent.click(screen.getByText('open history'))
     const row = (await screen.findByText('Croissant plan')).closest('.history-row')!
@@ -159,5 +164,21 @@ describe('HistorySheet', () => {
     fireEvent.click(within(renamedRow as HTMLElement).getByRole('button', { name: COPY.HISTORY.DELETE }))
     await waitFor(() => expect(api.deleteConversationSession).toHaveBeenCalled())
     expect(window.confirm).toHaveBeenCalledWith(COPY.HISTORY.DELETE_CONFIRM)
+  })
+
+  it('plays a collapse animation before unmounting the sheet', async () => {
+    const { container } = renderHistory()
+    fireEvent.click(screen.getByText('open history'))
+
+    expect(await screen.findByRole('dialog', { name: COPY.HISTORY.HEADER })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    expect(screen.getByRole('dialog', { name: COPY.HISTORY.HEADER })).toBeInTheDocument()
+    expect(container.querySelector('.sheet.closing')).not.toBeNull()
+    expect(container.querySelector('.sheet-overlay.closing')).not.toBeNull()
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: COPY.HISTORY.HEADER })).toBeNull()
+    })
   })
 })
