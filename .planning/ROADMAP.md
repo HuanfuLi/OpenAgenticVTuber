@@ -101,9 +101,12 @@ Plans:
 - [x] 13-03-PLAN.md — Wire Settings Conversation summary/reset, copy, regression tests, and UAT checklist.
 - [x] 13-04-PLAN.md — Close UAT gap: title-first History rows without visible assistant-response preview and add close animation.
 
+Post-completion fixes:
+- [x] Recovered session follow-up context — restored transcripts are sent with `text-input` and used to seed sidecar LLM memory before processing a follow-up turn.
+
 **Success Criteria:**
 1. Users can create, switch, rename/title, and delete conversation sessions from normal chat/history UI.
-2. Active session messages persist across app restart and restore without relying on scripted conversation fixtures.
+2. Active session messages persist across app restart, restore without relying on scripted conversation fixtures, and are provided as LLM context for follow-up turns in reopened sessions.
 3. Sending a message appends to the active session while preserving the existing LLM/TTS/VTS response pipeline.
 4. Settings > Conversation reflects real session/history behavior and exposes truthful controls for retention/reset where supported.
 5. Conversation history remains transcript/session persistence only; memory and retrieval remain deferred to v4.0.
@@ -121,6 +124,9 @@ Plans:
 - [x] 14-02-PLAN.md — Harden plugin listing, selection restart, runtime health, and invalid/fallback reporting.
 - [x] 14-03-PLAN.md — Close UAT gaps for AvatarOverrides docs and Windows sidecar process-tree restart cleanup.
 - [x] 14-04-PLAN.md — Reconnect chat WebSocket after plugin-switch sidecar restart so the input re-enables.
+
+Post-completion fixes:
+- [x] Cursor tracking toggle — Settings > Body motion plugin can enable/disable cursor tracking, persists the choice in stored plugin config, and restarts the sidecar so the compositor boots with or without `CursorDriver`.
 
 **Success Criteria:**
 1. Human plugin developers can find the plugin directory layout, manifest schema, lifecycle hooks, `ParamFrame` semantics, dependency expectations, and testing workflow in top-level docs.
@@ -159,4 +165,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 14 UAT recheck passed*
+*Last updated: 2026-05-09 after documenting Phase 14 side fixes*

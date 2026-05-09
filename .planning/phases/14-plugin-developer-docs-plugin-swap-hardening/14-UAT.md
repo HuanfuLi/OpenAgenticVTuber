@@ -134,3 +134,15 @@ blocked: 0
     - "Subscribe to sidecar:ready events in the WS client and reconnect to the new URL."
     - "Close/replace stale sockets and cancel stale reconnect attempts when a new ready URL arrives."
     - "Reset transient streaming input-disabled/speaking state on sidecar reconnect if no turn can continue across restart."
+
+## Post-Completion Notes
+
+### N1. Cursor Tracking Toggle
+status: pass
+commit: "2422a45"
+summary: "Settings > Body motion plugin now includes a Cursor tracking switch. The setting persists as `plugin.cursorTrackingEnabled`, defaults to enabled when absent, uses the existing save-and-restart sidecar path, and boots the sidecar with `AGENTICLLMVTUBER_CURSOR_TRACKING_ENABLED=0` when disabled so `CursorDriver` is not constructed."
+
+### N2. Restored Session LLM Context
+status: pass
+commit: "ed3a5e8"
+summary: "Recovered conversation sessions now seed the LLM request context. Chat sends the active session transcript with `text-input`, and the sidecar syncs orchestrator memory from that transcript before processing the follow-up turn, so a reopened session can answer questions about prior turns."
