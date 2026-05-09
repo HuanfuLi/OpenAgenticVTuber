@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-05-09T00:11:11.275Z"
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-05-09T00:19:34.483Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 37
-  completed_plans: 31
+  completed_plans: 32
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 07 (three-category-code-parsing-dispatch) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
@@ -101,6 +101,7 @@ Last activity: 2026-05-09
 | Phase 06-plugin-runtime-default-plugin P06 | 3min | 2 tasks | 3 files |
 | Phase 06-plugin-runtime-default-plugin P08 | 5 min | 3 tasks | 11 files |
 | Phase 07-three-category-code-parsing-dispatch P01 | 5min | 1 tasks | 10 files |
+| Phase 07-three-category-code-parsing-dispatch P04 | 3min | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -172,6 +173,8 @@ Recent decisions affecting current work:
 - [Phase 06-plugin-runtime-default-plugin]: Phase 6 keeps default plugin action dispatch only; model-owned variant/event dispatch such as heart-eye remains Phase 7 work.
 - [Phase 07-three-category-code-parsing-dispatch]: ActionIntent was deleted from the Python contracts package rather than aliased; Dispatch is the sole Phase 7 contract surface.
 - [Phase 07-three-category-code-parsing-dispatch]: TriggerAnimation entries use real motion3 Meta.Duration only when finite and within 0 < duration <= 10.0; fallback entries carry duration_is_fallback=True.
+- [Phase 07-three-category-code-parsing-dispatch]: Reserved-name enforcement is exposed as a boot-time validation primitive; parser/runtime hot paths do not consult the reserved list.
+- [Phase 07-three-category-code-parsing-dispatch]: The reserved LLM protocol list is a fixed system invariant covering the PLG-06 floor plus the 28-entry Phase 7 research sweep.
 
 ### Pending Todos
 
@@ -194,6 +197,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-09T00:11:11.268Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-05-09T00:19:34.474Z
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None

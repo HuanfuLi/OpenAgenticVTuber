@@ -166,6 +166,7 @@ def post_process(ts: str) -> str:
     ts = ts.replace("\r\n", "\n")
     ts = ts.replace("export type WsMessageSchema =", "export type WSMessage =")
     ts = ts.replace("[unknown, unknown]", "[number, number]")
+    ts = ts.replace("(ActionCode | VariantToggle | EventFire)[]", "Dispatch[]")
     ts = re.sub(r'"([^"]+)"', r"'\1'", ts)
     ts = inline_aliases(ts)
     ts = re.sub(r"\n{3,}", "\n\n", ts)
@@ -293,8 +294,15 @@ def main() -> int:
     ts_by_file = dedup_cross_file(ts_by_file)
 
     for ts_name in [target[1] for target in TARGETS]:
+        if ts_name == "dispatch" and "export type Dispatch" not in ts_by_file[ts_name]:
+            ts_by_file[ts_name] = (
+                ts_by_file[ts_name].rstrip()
+                + "\n\nexport type Dispatch = ActionCode | VariantToggle | EventFire;\n"
+            )
         if ts_name == "param-frame" and "export type ParamMode" not in ts_by_file[ts_name]:
             ts_by_file[ts_name] = "export type ParamMode = 'add' | 'set';\n\n" + ts_by_file[ts_name]
+        if ts_name == "audio-payload":
+            ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "Dispatch", "./dispatch")
         if ts_name == "ws-message":
             ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "Dispatch", "./dispatch")
             ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "DisplayTextField", "./audio-payload")

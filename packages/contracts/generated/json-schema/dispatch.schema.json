@@ -1,0 +1,98 @@
+{
+  "$defs": {
+    "ActionCode": {
+      "properties": {
+        "kind": {
+          "const": "action",
+          "default": "action",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "title": "ActionCode",
+      "type": "object"
+    },
+    "EventFire": {
+      "properties": {
+        "duration_ms": {
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "hotkey_id": {
+          "title": "Hotkey Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "event",
+          "default": "event",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "duration_ms",
+        "hotkey_id",
+        "kind",
+        "name"
+      ],
+      "title": "EventFire",
+      "type": "object"
+    },
+    "VariantToggle": {
+      "properties": {
+        "hotkey_id": {
+          "title": "Hotkey Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "variant",
+          "default": "variant",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "hotkey_id",
+        "kind",
+        "name"
+      ],
+      "title": "VariantToggle",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "action": "#/$defs/ActionCode",
+      "event": "#/$defs/EventFire",
+      "variant": "#/$defs/VariantToggle"
+    },
+    "propertyName": "kind"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ActionCode"
+    },
+    {
+      "$ref": "#/$defs/VariantToggle"
+    },
+    {
+      "$ref": "#/$defs/EventFire"
+    }
+  ]
+}
