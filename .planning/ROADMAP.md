@@ -42,7 +42,7 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-14 | 5/10 | In Progress | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-14 | 5/11 | In Progress | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
@@ -73,12 +73,13 @@ Plans:
 
 **Depends on:** Phase 11
 **Requirements:** SET-01, SET-02, SET-03, SET-04, SET-05, SET-06, SET-07
-**Plans:** 3 complete
+**Plans:** 3 complete, 1 gap closure planned
 
 Plans:
 - [x] 12-01-PLAN.md — Replace Settings placeholders with real section content or accurate deferred states.
 - [x] 12-02-PLAN.md — Close UAT gaps for Avatar current-edit loading and log-level descriptions.
 - [x] 12-03-PLAN.md — Close UAT gaps for current avatar re-edit reliability and About version copy.
+- [ ] 12-04-PLAN.md — Clarify known-ID avatar degraded warning copy.
 
 **Success Criteria:**
 1. Avatar and VTube Studio settings link to existing import/review and real connection/auth state.
@@ -139,4 +140,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 12 12-03 gap closure execution*
+*Last updated: 2026-05-09 after Phase 12 warning-copy gap planning*
