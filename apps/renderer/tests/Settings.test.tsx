@@ -111,6 +111,7 @@ describe('Settings TTS section', () => {
         getCurrentAvatarPlan: vi.fn().mockResolvedValue(currentAvatarPlan),
         getLogLevel: vi.fn().mockResolvedValue('info'),
         saveLogLevel: vi.fn().mockResolvedValue('debug'),
+        openLogFolder: vi.fn().mockResolvedValue(undefined),
         getChromeState: vi.fn().mockResolvedValue({
           logsDrawerEnabled: false,
           logsDrawerHeight: 200,
@@ -449,6 +450,16 @@ describe('Settings TTS section', () => {
     expect(screen.getByText(/Warn: problems that need attention/i)).toBeInTheDocument()
     expect(screen.getByText(/Info: normal app milestones/i)).toBeInTheDocument()
     expect(screen.getByText(/Debug: verbose troubleshooting detail/i)).toBeInTheDocument()
+  })
+
+  it('opens the diagnostics log folder through the Electron bridge', async () => {
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('button', { name: COPY.SETTINGS.DIAG_OPEN_FOLDER }))
+
+    await waitFor(() => {
+      expect(window.api.openLogFolder).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('shows the current v2.1 milestone in About instead of the skeleton version', async () => {

@@ -2,7 +2,8 @@
 // declared in apps/electron-main/preload/index.ts. Returns a cleanup callback
 // that unregisters all listeners (called when the window is destroyed).
 
-import { app, dialog, ipcMain, type BrowserWindow } from 'electron'
+import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron'
+import fs from 'node:fs'
 import path from 'node:path'
 import {
   getReadyUrl,
@@ -42,6 +43,11 @@ import {
 
 function resolveRepoRoot(): string {
   return path.resolve(app.getAppPath(), '..', '..')
+}
+
+async function openPathOrThrow(targetPath: string): Promise<void> {
+  const error = await shell.openPath(targetPath)
+  if (error) throw new Error(error)
 }
 
 export function registerIpc(window: BrowserWindow): () => void {
@@ -206,6 +212,17 @@ export function registerIpc(window: BrowserWindow): () => void {
   })
   ipcMain.handle('log:getLevel', () => getLogLevel())
   ipcMain.handle('log:saveLevel', (_e, level) => saveLogLevel(level))
+  ipcMain.handle('shell:openLogFolder', async () => {
+    const logsPath = app.getPath('logs')
+    fs.mkdirSync(logsPath, { recursive: true })
+    await openPathOrThrow(logsPath)
+  })
+  ipcMain.handle('shell:openSetupHelp', async () => {
+    await openPathOrThrow(path.join(resolveRepoRoot(), 'README.md'))
+  })
+  ipcMain.handle('shell:openVtsDocs', async () => {
+    await shell.openExternal('https://github.com/DenchiSoft/VTubeStudio/wiki/Plugins')
+  })
   ipcMain.handle('conversation:listSessions', () => listConversationSessions())
   ipcMain.handle('conversation:getActive', () => getActiveConversationSession())
   ipcMain.handle('conversation:create', () => createConversationSession())
@@ -256,6 +273,9 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('hud:open')
     ipcMain.removeHandler('log:getLevel')
     ipcMain.removeHandler('log:saveLevel')
+    ipcMain.removeHandler('shell:openLogFolder')
+    ipcMain.removeHandler('shell:openSetupHelp')
+    ipcMain.removeHandler('shell:openVtsDocs')
     ipcMain.removeHandler('conversation:listSessions')
     ipcMain.removeHandler('conversation:getActive')
     ipcMain.removeHandler('conversation:create')

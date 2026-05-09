@@ -211,7 +211,7 @@ export function LLMSetup() {
         <div className="setup-actions">
           <button
             className="btn btn-link"
-            onClick={() => alert('(mock) Would open: setup help docs')}
+            onClick={() => void window.api?.openSetupHelp?.()}
           >
             {C.HELP_LINK}
           </button>

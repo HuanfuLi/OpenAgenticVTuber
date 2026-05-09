@@ -13,7 +13,7 @@ vi.mock('@/ws/store', () => ({
   useWSConnected: () => wsMock.connected
 }))
 
-import { AppStoreProvider } from '@/state/app-store'
+import { AppStoreProvider, useStore } from '@/state/app-store'
 import { COPY } from '@/lib/copy'
 import { Chat } from '@/screens/Chat/Chat'
 import type { ConversationSession } from '@preload-types'
@@ -75,7 +75,9 @@ describe('Chat speaking affordance', () => {
           messageCount: 0,
           activeSessionId: session.id,
           persistence: 'local'
-        })
+        }),
+        openVtsDocs: vi.fn().mockResolvedValue(undefined),
+        restartSidecar: vi.fn().mockResolvedValue(undefined)
       }
     })
   })
@@ -93,6 +95,16 @@ describe('Chat speaking affordance', () => {
       <AppStoreProvider>
         <Chat />
       </AppStoreProvider>
+    )
+  }
+
+  function BannerHarness({ kind }: { kind: 'llm' | 'sidecarRepeat' }) {
+    const { setBanners } = useStore()
+    return (
+      <>
+        <button onClick={() => setBanners({ [kind]: true })}>show banner</button>
+        <Chat />
+      </>
     )
   }
 
@@ -259,5 +271,52 @@ describe('Chat speaking affordance', () => {
 
     expect(screen.getByLabelText('Chat input')).not.toBeDisabled()
     expect(screen.queryByTestId('speaking-label')).toBeNull()
+  })
+
+  it('opens VTube Studio docs through the Electron bridge', () => {
+    renderChat()
+
+    fireEvent.click(screen.getByRole('button', { name: COPY.CHAT.EMPTY_VTS_LINK }))
+
+    expect(window.api.openVtsDocs).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not inject prototype scripted messages into normal Chat', () => {
+    renderChat()
+
+    window.dispatchEvent(new CustomEvent('chat:inject'))
+
+    expect(screen.queryByText('echo: hello')).toBeNull()
+  })
+
+  it('refreshes status through real APIs from the LLM banner action', async () => {
+    render(
+      <AppStoreProvider>
+        <BannerHarness kind="llm" />
+      </AppStoreProvider>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'show banner' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
+
+    await waitFor(() => {
+      expect(window.api.getStoredConfig).toHaveBeenCalled()
+      expect(window.api.getVtsStatus).toHaveBeenCalled()
+    })
+  })
+
+  it('restarts the sidecar through the real API from the crash banner action', async () => {
+    render(
+      <AppStoreProvider>
+        <BannerHarness kind="sidecarRepeat" />
+      </AppStoreProvider>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'show banner' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Restart sidecar' }))
+
+    await waitFor(() => {
+      expect(window.api.restartSidecar).toHaveBeenCalledTimes(1)
+    })
   })
 })

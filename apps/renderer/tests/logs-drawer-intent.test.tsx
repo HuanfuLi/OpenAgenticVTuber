@@ -7,8 +7,8 @@
  * that calls setLogsDrawer({enabled: true, open: true}) on mount so the body
  * actually renders the lines we want to assert against.
  */
-import { describe, it, expect } from 'vitest'
-import { render, type RenderResult } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { fireEvent, render, screen, type RenderResult } from '@testing-library/react'
 import { useEffect } from 'react'
 import { LogsDrawer } from '@/chrome/LogsDrawer'
 import { AppStoreProvider, useStore } from '@/state/app-store'
@@ -31,6 +31,15 @@ function renderDrawer(logLines: string[]): RenderResult {
 }
 
 describe('LogsDrawer [DISPATCH] coloring', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: {
+        openLogFolder: vi.fn().mockResolvedValue(undefined)
+      }
+    })
+  })
+
   it('renders [DISPATCH] prefix in --success color', () => {
     const line = '[DISPATCH] kind=action name=joy'
     renderDrawer([line])
@@ -69,5 +78,13 @@ describe('LogsDrawer [DISPATCH] coloring', () => {
     // Exactly one green span -- only the [DISPATCH] line.
     expect(greens.length).toBe(1)
     expect(greens[0]?.textContent).toBe('[DISPATCH]')
+  })
+
+  it('opens the log folder through the Electron bridge', () => {
+    renderDrawer(['[READY] sidecar ws://127.0.0.1:54321/ws'])
+
+    fireEvent.click(screen.getByRole('button', { name: /Open log folder/i }))
+
+    expect(window.api.openLogFolder).toHaveBeenCalledTimes(1)
   })
 })

@@ -98,7 +98,7 @@ export function LogsDrawer({ logLines }: LogsDrawerProps) {
             style={{ height: 24, padding: '0 8px', fontSize: 12 }}
             onClick={(e) => {
               e.stopPropagation()
-              alert('(mock) Would open: ~/Library/Logs/AgenticLLMVTuber')
+              void window.api?.openLogFolder?.()
             }}
           >
             <Folder size={12} /> {COPY.LOGS.OPEN_FOLDER}

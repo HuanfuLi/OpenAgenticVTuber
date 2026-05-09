@@ -121,6 +121,9 @@ const api = {
   // Diagnostics preferences
   getLogLevel: (): Promise<LogLevel> => ipcRenderer.invoke('log:getLevel'),
   saveLogLevel: (level: LogLevel): Promise<LogLevel> => ipcRenderer.invoke('log:saveLevel', level),
+  openLogFolder: (): Promise<void> => ipcRenderer.invoke('shell:openLogFolder'),
+  openSetupHelp: (): Promise<void> => ipcRenderer.invoke('shell:openSetupHelp'),
+  openVtsDocs: (): Promise<void> => ipcRenderer.invoke('shell:openVtsDocs'),
 
   // Conversation history
   listConversationSessions: (): Promise<ConversationSessionSummary[]> =>

@@ -13,22 +13,9 @@ import {
   type SetStateAction
 } from 'react'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
-import {
-  mockBanners,
-  mockToasts,
-  type Banners,
-  type Toast
-} from '@/dev/__mocks__/mock-backend'
 import { worstOf, type StatusOverall, type StatusSnapshot, type StatusValue } from './status-types'
 import type { PluginRuntimeStatus, Provider, StoredConfig, VtsStatus } from '@preload-types'
 import { ConversationHistoryProvider } from './conversation-history'
-
-export type ChatRole = 'user' | 'assistant'
-export interface ChatMessage {
-  id: number
-  role: ChatRole
-  text: string
-}
 
 export type View = 'chat' | 'agent' | 'settings' | 'avatar-import'
 
@@ -43,6 +30,19 @@ export interface LogsDrawerState {
   enabled: boolean
   open: boolean
   height: number
+}
+
+export interface Banners {
+  llm: boolean
+  vts: boolean
+  vtsAuth: boolean
+  sidecarRepeat: boolean
+  tts: boolean
+}
+
+export interface Toast {
+  id: string
+  text: string
 }
 
 interface AppStoreValue {
@@ -62,8 +62,6 @@ interface AppStoreValue {
   setLogsDrawer: (patch: Partial<LogsDrawerState>) => void
   showThreadList: boolean
   setShowThreadList: Dispatch<SetStateAction<boolean>>
-  chatMessages: ChatMessage[]
-  setChatMessages: Dispatch<SetStateAction<ChatMessage[]>>
   avatarImportPlan: AvatarImportPlan | null
   setAvatarImportPlan: Dispatch<SetStateAction<AvatarImportPlan | null>>
   status: StatusSnapshot
@@ -72,8 +70,10 @@ interface AppStoreValue {
   markPluginRestartPending: (pluginName: string) => void
   restartSidecar: () => Promise<void>
   banners: Banners
+  setBanners: (patch: Partial<Banners>) => void
   toasts: Toast[]
   pushToast: (toast: { text: string; ttlMs?: number }) => void
+  setStatusForDev: (patch: Partial<StatusSnapshot>) => void
   resetAll: () => void
 }
 
@@ -189,7 +189,6 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [agentToggle, setAgentToggle] = useState<boolean>(false)
   const [logsDrawer, setLogsDrawerState] = useState<LogsDrawerState>(DEFAULT_LOGS)
   const [showThreadList, setShowThreadList] = useState<boolean>(false)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [avatarImportPlan, setAvatarImportPlan] = useState<AvatarImportPlan | null>(null)
 
   const [status, setStatus] = useState<StatusSnapshot>(DEFAULT_STATUS)
@@ -270,20 +269,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     sidecarRepeat: false,
     tts: false
   })
-  useEffect(() => mockBanners.subscribe(setBanners), [])
+  const patchBanners = useCallback((patch: Partial<Banners>) => {
+    setBanners((cur) => ({ ...cur, ...patch }))
+  }, [])
 
   const [toasts, setToasts] = useState<Toast[]>([])
-  useEffect(
-    () =>
-      mockToasts.subscribe((evt) => {
-        if (evt.kind === 'add') setToasts((t) => [...t, { id: evt.id, text: evt.text }])
-        else if (evt.kind === 'remove') setToasts((t) => t.filter((x) => x.id !== evt.id))
-      }),
-    []
-  )
-
   const pushToast = useCallback((toast: { text: string; ttlMs?: number }) => {
-    mockToasts.push({ text: toast.text }, toast.ttlMs ?? 3000)
+    const id = Math.random().toString(36).slice(2)
+    setToasts((cur) => [...cur, { id, text: toast.text }])
+    window.setTimeout(() => {
+      setToasts((cur) => cur.filter((item) => item.id !== id))
+    }, toast.ttlMs ?? 3000)
   }, [])
 
   useEffect(() => {
@@ -379,7 +375,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setStatusOpen(false)
     setAgentToggle(false)
     setLogsDrawerState(DEFAULT_LOGS)
-    setChatMessages([])
+    setBanners({
+      llm: false,
+      vts: false,
+      vtsAuth: false,
+      sidecarRepeat: false,
+      tts: false
+    })
+    setToasts([])
     setAvatarImportPlan(null)
   }, [])
 
@@ -401,8 +404,6 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setLogsDrawer,
       showThreadList,
       setShowThreadList,
-      chatMessages,
-      setChatMessages,
       avatarImportPlan,
       setAvatarImportPlan,
       status,
@@ -411,8 +412,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       markPluginRestartPending,
       restartSidecar: restartSidecarAction,
       banners,
+      setBanners: patchBanners,
       toasts,
       pushToast,
+      setStatusForDev: patchStatus,
       resetAll
     }),
     [
@@ -424,12 +427,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       agentToggle,
       logsDrawer,
       showThreadList,
-      chatMessages,
       avatarImportPlan,
       status,
       banners,
       toasts,
       pushToast,
+      patchBanners,
+      patchStatus,
       completeSetup,
       setLlmConfig,
       setLogsDrawer,

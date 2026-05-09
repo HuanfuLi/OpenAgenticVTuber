@@ -1024,7 +1024,7 @@ function DiagnosticsSection({ onResetClick }: { onResetClick: () => void }) {
       <div className="row mt-4" style={{ display: 'flex', gap: 8 }}>
         <button
           className="btn btn-secondary"
-          onClick={() => alert('(mock) Would open: ~/Library/Logs/AgenticLLMVTuber')}
+          onClick={() => void window.api?.openLogFolder?.()}
         >
           <Folder size={14} /> {C.DIAG_OPEN_FOLDER}
         </button>

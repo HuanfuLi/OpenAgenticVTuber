@@ -12,7 +12,6 @@ import { Send } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
 import { useConversationHistory } from '@/state/conversation-history'
-import { mockBanners, SCRIPTED_CONVO } from '@/dev/__mocks__/mock-backend'
 import { send } from '@/ws/client'
 import { appendUserMessage, useWSConnected } from '@/ws/store'
 import {
@@ -23,7 +22,7 @@ import {
 } from './useStreamingMessages'
 
 export function Chat() {
-  const { status, banners, chatMessages, setChatMessages } = useStore()
+  const { status, banners, refreshStatus, restartSidecar, setBanners } = useStore()
   const { activeSession } = useConversationHistory()
   const messages = useStreamingMessages()
   const streamBanner = useStreamingBanner()
@@ -33,20 +32,6 @@ export function Chat() {
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
-  // Inject scripted convo via window event from dev panel (DEV-only).
-  // The scripted convo writes to the local app-store's chatMessages slice so
-  // it doesn't fight the WS bubble stream.
-  useEffect(() => {
-    const onInject = (): void =>
-      setChatMessages(
-        SCRIPTED_CONVO.map((m, i) => ({ id: Date.now() + i, role: m.role, text: m.text }))
-      )
-    window.addEventListener('chat:inject', onInject)
-    return () => window.removeEventListener('chat:inject', onInject)
-  }, [setChatMessages])
-
-  // Combine the (DEV-injected) scripted convo with the streaming chat reducer.
-  // Live messages always render after any scripted ones, in order.
   const merged = [
     ...activeSession.messages.map((m) => ({
       id: m.id,
@@ -54,13 +39,6 @@ export function Chat() {
       text: m.text,
       isThinking: false,
       createdAt: m.createdAt
-    })),
-    ...chatMessages.map((m) => ({
-      id: String(m.id),
-      role: m.role,
-      text: m.text,
-      isThinking: false,
-      createdAt: new Date(m.id).toISOString()
     })),
     ...messages.map((m) => ({
       id: m.id,
@@ -130,7 +108,7 @@ export function Chat() {
               <p>{COPY.CHAT.EMPTY_VTS_BODY}</p>
               <button
                 className="btn btn-link"
-                onClick={() => alert('(mock) Would open: VTube Studio docs')}
+                onClick={() => void window.api?.openVtsDocs?.()}
               >
                 {COPY.CHAT.EMPTY_VTS_LINK}
               </button>
@@ -138,8 +116,8 @@ export function Chat() {
           )
         ) : (
           merged.map((m) => {
-            // numeric ids come from prototype scripted convo; UUID strings come
-            // from the streaming reducer. Both are stable for the bubble's life.
+            // UUID strings come from persisted history or the streaming reducer.
+            // Numeric fallback keeps older in-memory message shapes readable.
             const numericTs = Number(m.id)
             const date =
               m.createdAt ? new Date(m.createdAt) :
@@ -185,7 +163,9 @@ export function Chat() {
           <button
             className="btn btn-secondary"
             style={{ height: 26, padding: '0 10px', fontSize: 12 }}
-            onClick={() => mockBanners.set({ llm: false })}
+            onClick={() => {
+              void refreshStatus().then(() => setBanners({ llm: false }))
+            }}
           >
             Retry
           </button>
@@ -198,7 +178,9 @@ export function Chat() {
           <button
             className="btn btn-secondary"
             style={{ height: 26, padding: '0 10px', fontSize: 12 }}
-            onClick={() => mockBanners.set({ vtsAuth: false })}
+            onClick={() => {
+              void restartSidecar().then(() => setBanners({ vtsAuth: false }))
+            }}
           >
             Re-request
           </button>
@@ -210,7 +192,9 @@ export function Chat() {
           <button
             className="btn btn-secondary"
             style={{ height: 26, padding: '0 10px', fontSize: 12 }}
-            onClick={() => mockBanners.set({ sidecarRepeat: false })}
+            onClick={() => {
+              void restartSidecar().then(() => setBanners({ sidecarRepeat: false }))
+            }}
           >
             Restart sidecar
           </button>

@@ -6,7 +6,7 @@
 import { useState } from 'react'
 import { useStore } from '@/state/app-store'
 import { useTheme, type ThemePrefs } from '@/state/theme-provider'
-import { mockStatus, mockBanners, mockToasts, type StatusValue } from './__mocks__/mock-backend'
+import type { StatusValue } from '@/state/status-types'
 import { COPY } from '@/lib/copy'
 import { send } from '@/ws/client'
 
@@ -32,10 +32,12 @@ export function DevPanel() {
     status,
     banners,
     resetAll,
-    setView,
     showThreadList,
     setShowThreadList,
-    setHistoryOpen
+    setHistoryOpen,
+    setBanners,
+    pushToast,
+    setStatusForDev
   } = useStore()
   const { prefs, setPrefs } = useTheme()
 
@@ -70,13 +72,11 @@ export function DevPanel() {
         red: 'exited code 137'
       }
     } as const
-    mockStatus.set({ [key]: next, [`${key}Detail`]: detailMap[key][next] })
+    setStatusForDev({ [key]: next, [`${key}Detail`]: detailMap[key][next] })
   }
 
   const triggerToast = (text: string): void => {
-    const id = Math.random().toString(36).slice(2)
-    mockToasts.push({ id, text })
-    setTimeout(() => mockToasts.remove(id), 4000)
+    pushToast({ text, ttlMs: 4000 })
   }
 
   const setBodySway = (name: string): void => {
@@ -131,29 +131,20 @@ export function DevPanel() {
         <button className="dev-btn" onClick={resetAll}>
           Reset cold launch
         </button>
-        <button className="dev-btn" onClick={() => mockBanners.set({ llm: !banners.llm })}>
+        <button className="dev-btn" onClick={() => setBanners({ llm: !banners.llm })}>
           Force LLM unreachable
         </button>
-        <button className="dev-btn" onClick={() => mockBanners.set({ vts: !banners.vts })}>
+        <button className="dev-btn" onClick={() => setBanners({ vts: !banners.vts })}>
           Force VTS disconnected
         </button>
-        <button className="dev-btn" onClick={() => mockBanners.set({ vtsAuth: !banners.vtsAuth })}>
+        <button className="dev-btn" onClick={() => setBanners({ vtsAuth: !banners.vtsAuth })}>
           Force VTS auth denied
         </button>
         <button className="dev-btn" onClick={() => triggerToast(COPY.ERRORS.SIDECAR_TOAST)}>
           Sidecar crash + restart
         </button>
-        <button className="dev-btn" onClick={() => mockBanners.set({ tts: !banners.tts })}>
+        <button className="dev-btn" onClick={() => setBanners({ tts: !banners.tts })}>
           Force TTS unavailable
-        </button>
-        <button
-          className="dev-btn"
-          onClick={() => {
-            setView('chat')
-            window.dispatchEvent(new CustomEvent('chat:inject'))
-          }}
-        >
-          Inject scripted convo
         </button>
         <button
           className="dev-btn"
