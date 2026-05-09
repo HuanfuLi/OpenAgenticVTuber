@@ -75,8 +75,9 @@ No missing or partial automated requirement coverage remains. Visual quality che
 | SC #2 `[smirk]` smooth blend | VFY-03, VFY-04 | passed | Requires live avatar visual judgment | `.planning/skeleton-verification.md`; `10-VERIFICATION.md`; `10-03-SUMMARY.md` |
 | SC #4 body sway through full utterance | VFY-03, VFY-04 | passed | Requires live audiovisual judgment | `.planning/skeleton-verification.md`; `10-VERIFICATION.md` |
 | SC #5 cursor head and eye tracking plus blink behavior | VFY-01, VFY-02, VFY-03, VFY-04 | passed | Requires live VTube Studio rig observation | `.planning/skeleton-verification.md`; `10-VERIFICATION.md`; `10-04-SUMMARY.md` |
+| Live DPI + secondary-monitor VTS detection | VFY-01, VFY-02 | passed | Requires real Windows monitor topology and VTS HWND coordinates | 2026-05-09 Win32 diagnostic recorded 2 monitors, VTS on `DISPLAY2`, and `CursorDriver.tick()` output from the secondary-monitor VTS rect |
 
-DPI awareness and multi-monitor synthetic-canvas projection remain future robustness improvements, not Phase 10 validation gaps.
+The live DPI-aware VTS-window path is validated. Multi-monitor synthetic-canvas projection remains a future robustness improvement only for the fallback path used when VTS cannot be detected.
 
 ## Validation Audit 2026-05-09
 
@@ -93,6 +94,8 @@ Commands run during this audit:
 | Command | Result |
 |---------|--------|
 | `cd sidecar && uv run pytest tests/compositor/test_idle_driver.py tests/compositor/test_compositor.py tests/compositor/test_cursor_driver.py tests/compositor/test_cursor_driver_namespace.py tests/compositor/test_cursor_driver_eye_tracking.py tests/vts/test_window_detect.py tests/test_arch06_single_writer.py tests/plugins/test_supervisor.py tests/compositor/test_plugin_adapter.py tests/plugins/test_default_plugin.py tests/test_orchestrator_turn.py tests/orchestrator/test_dispatch_routing.py -q` | 90 passed |
+| `cd sidecar && uv run pytest tests/compositor/test_cursor_driver.py tests/compositor/test_cursor_driver_namespace.py tests/compositor/test_cursor_driver_eye_tracking.py tests/vts/test_window_detect.py -q` | 20 passed |
+| Win32 monitor/VTS diagnostic via `uv run python -` | `SetProcessDPIAware` ok; primary `(0,0,2560,1440)`; virtual screen `(0,-81,5120,1521)`; 2 monitors; VTS HWND on `DISPLAY2` at `(2553,-81,3847,622)`; cursor driver output used the VTS rect |
 | Skeleton artifact check for sections, PASS rows, and pending markers | sections=4, pass_rows=6, pending=0 |
 | Replay JSON threshold check | lipsync pearson=0.9747730195034283, idle variance=0.06643749130899018 |
 | `rg -n "import pyvts|from pyvts" sidecar/src` | one match: `sidecar/src/sidecar/vts/pyvts_writer.py` |

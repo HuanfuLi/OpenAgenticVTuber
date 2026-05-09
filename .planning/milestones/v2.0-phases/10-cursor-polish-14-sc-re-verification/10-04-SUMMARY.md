@@ -107,7 +107,7 @@ The blink issue was separate from cursor tracking. VTS/model tracking already ow
 
 ## Issues Encountered
 
-None remaining for SC #5. DPI awareness and multi-monitor synthetic-canvas projection remain future robustness improvements, not Phase 10 blockers.
+None remaining for SC #5. A later pre-close diagnostic validated the live DPI-aware VTS-window cursor path on a two-monitor Windows setup with VTS on the secondary display. The only remaining cursor robustness item is the no-VTS-rect synthetic fallback, which still projects against the primary monitor only.
 
 ## Known Stubs
 

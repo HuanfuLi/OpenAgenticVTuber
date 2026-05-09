@@ -8,34 +8,23 @@ A local-first desktop companion app: a VTube Studio Live2D avatar that holds con
 
 Multi-avatar identity persistence — the same user can have meaningfully *distinct* relationships with different avatars (per-avatar episodic memory + shared user-facts) such that switching avatars genuinely switches the conversation partner, not just the skin.
 
-This is the **v1-horizon** core value. The v1.0 walking skeleton shipped the single-avatar / in-memory foundation; v2.0 now refactors animation control so later multi-avatar identity work can depend on explicit rig capabilities and swappable motion plugins.
+This is the **v1-horizon** core value. The v1.0 walking skeleton shipped the single-avatar / in-memory foundation; v2.0 shipped the animation-control refactor so later multi-avatar identity work can depend on explicit rig capabilities, avatar catalogs, and swappable motion plugins.
 
 ## Current State
 
-**Shipped:** v1.0 Walking Skeleton on 2026-05-08.
+**Shipped:** v1.0 Walking Skeleton on 2026-05-08; v2.0 Plugin + Animation Control on 2026-05-09.
 
-The app now boots as an Electron desktop shell with a Python sidecar, speaks via local Piper TTS, streams LLM replies sentence-by-sentence, and drives VTube Studio through a sidecar-owned compositor. Teto remains the dev rig. The accepted current body-motion strategy is `head_only`; full rig-adaptive body control is intentionally moved into the v2.0 plugin/HUD architecture.
+The app now boots as an Electron desktop shell with a Python sidecar, speaks via local Piper TTS, streams LLM replies sentence-by-sentence, and drives VTube Studio through a sidecar-owned compositor. Teto remains the dev rig. Animation control is now plugin-driven: avatar imports produce `AvatarOverrides` and `RigCapabilities`, the default plugin owns action-code motion, the parser routes `[action]` / `{variant}` / `<event>` codes, and a HUD exposes a focused live parameter/lock surface for operator discovery.
 
-Phase 9 is complete: Settings opens a separate slider HUD window backed by `/admin/rig-capabilities` and `/hud/ws`; the HUD shows a focused VTS-input slider surface, streams live compositor frames, and supports session-only per-param locks that apply last in the compositor.
+The §14 ceremony has been re-run under the refactored architecture. All six success criteria are PASS in `.planning/skeleton-verification.md` after gap closure for smirk rendering, cursor eye tracking, and blink ownership.
 
-## Current Milestone: v2.0 Plugin + Animation Control
+## Current Milestone State
 
-**Goal:** Separate animation control from the system core so body-motion strategies are swappable, expose the rig's full parameter surface via an in-app slider HUD with per-param locks for parameter discovery, and formalize a three-category LLM code system (action / variant / event) so plugin authors can extend the LLM system prompt cleanly.
+No active milestone is defined. v2.0 is archived; the next milestone should start with `$gsd-new-milestone` and create fresh requirements before adding new phases.
 
-**Target features (per `PROJECT_DESIGN.md` §14B):**
-- Plugin runtime — single-active body-motion plugin, `plugin.yaml` manifest + `BodyMotionPlugin` ABC, default plugin ships with system (OLVT emotion vocabulary, rig-adaptive)
-- Three-category code system — `[action]` plugin-domain, `{variant}` system-domain (persistent state), `<event>` system-domain (one-shot motion); reserved-name guard; cross-category uniqueness check
-- Avatar import flow — type-detected auto-extraction from VTS `.vtube.json` hotkeys / Cubism `.model3.json` expressions / `.motion3.json` files; OLVT `model_dict.json` drop-in support; mandatory user review screen
-- Slider HUD — sidecar tap of compositor output at 15 Hz on HUD-mode IPC channel; per-param lock with auto-engage on drag; session-only persistence
-- Cursor tracking rewrite — sidecar-side OS-level global capture (replaces renderer-canvas-relative reads)
-- Milestone-close §14 verification — re-run all six §14 SCs against the refactored architecture (the SC-01 milestone-1 deferred)
-
-**Key context:**
-- Phase numbering continues from milestone-1's last phase (5) → this milestone covers Phases 6–10 per §14B.7.
-- Agent system development (entire §9 of PROJECT_DESIGN.md, originally the planned next milestone) is **deferred** in favor of this animation-architecture pivot.
-- Milestone-1's 05-02 (`skeleton-verification.md` ceremony) was deferred 2026-05-08; SC-01 migrates to Phase 10's exit criterion under the refactored architecture.
-- Phase 5's contracts codegen pipeline is complete: Pydantic contracts now regenerate the six TypeScript mirrors plus committed JSON Schema intermediates, guarded by `npm run check:contracts`.
-- Default plugin must adapt to rig (Teto's body params are orphaned per Phase 4 investigation → plugin emulates body sway via head/face params; plugin reads `RigCapabilities` at `on_load` and adapts).
+**Accepted deferred items:**
+- Phase 7 live `<event>` UAT remains catalog-gated because active Teto currently has `events: []`; automated parser/routing/tracker coverage is present.
+- Phase 10 no-VTS-rect cursor synthetic fallback remains primary-monitor-only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ## Requirements
 
@@ -50,16 +39,15 @@ Phase 9 is complete: Settings opens a separate slider HUD window backed by `/adm
 - [x] Append-only `_memory` + forward-only `_head_idx` orchestrator; in-memory single thread cleared on relaunch — *Validated in Phase 2 (LLM-04); KV-cache discipline grep returns 0 violations; fresh-thread invariant verified at runtime introspection*
 - [x] Pydantic contracts are the source of truth for the six TypeScript contract mirrors; JSON Schema intermediates are committed and `npm run check:contracts` guards drift — *Validated in Phase 5: Polish, Contracts Codegen (SC-02)*
 - [x] Slider HUD exposes a focused rig parameter surface with session-only per-param locks — *Validated in Phase 9: Slider HUD + Per-Param Lock (HUD-01..HUD-08); live UAT approved after `hud_visible_param_ids` and non-blocking HUD stream fixes*
+- [x] Avatar import + catalogs create and review `_avatar_overrides.yaml`, populate `AvatarOverrides`, and define the rig-introspection data consumed by plugins, parsers, and HUD — *Validated in Phase 8 (IMP-01..IMP-10, ARCH-02)*
+- [x] Plugin runtime moves body-motion behavior behind `BodyMotionPlugin`, default plugin, manifest validation, supervisor, rate limiting, clamp, and single-writer VTS routing — *Validated in Phase 6 (ARCH-01..ARCH-12, PLG-01..PLG-10)*
+- [x] Three-category code system routes `[action]` to plugin logic, `{variant}` to persistent avatar variants, and `<event>` to one-shot motion/event hotkeys — *Validated in Phase 7 (PARSE-01..PARSE-08); live event UAT is catalog-gated by current Teto `events: []`*
+- [x] v2.0 §14 re-verification records all six success criteria as PASS under the refactored plugin architecture — *Validated in Phase 10 (VFY-01..VFY-05)*
 
 ### Active
 
-<!-- v2.0 Plugin + Animation Control. Detailed requirement IDs live in .planning/REQUIREMENTS.md. -->
+No active milestone requirements. Fresh requirements should be created by `$gsd-new-milestone`.
 
-- [ ] Avatar import + catalogs: user imports an avatar, reviews extracted variant/event/emotion bindings, and saves `_avatar_overrides.yaml`.
-- [ ] Rig capabilities contract: sidecar exposes a single `RigCapabilities` source for plugin `on_load()` and renderer HUD population.
-- [ ] Plugin runtime: body-motion logic moves behind a `BodyMotionPlugin` API; the default plugin absorbs milestone-1 intent/body-sway behavior.
-- [ ] Three-category code system: `[action]` routes to plugin logic, `{variant}` toggles persistent avatar variants, and `<event>` fires one-shot motion/event hotkeys.
-- [ ] v2.0 §14 re-verification: replay the skeleton success criteria against the refactored plugin architecture, including the migrated SC-01 ceremony.
 ### Out of Scope (this milestone — deferred to later v1 milestones)
 
 - **Agent mode and goal-loop** — entire §9; deferred to dedicated agent-runtime milestone
@@ -67,7 +55,7 @@ Phase 9 is complete: Settings opens a separate slider HUD window backed by `/adm
 - **Skills system + auto-parser (in-app screen-control)** — depends on agent runtime
 - **Memory subsystem** — profile loading, Chroma per-avatar episodic, FTS5 chat search, shared user-facts bucket, RRF retrieval, deletion ops; deferred to memory milestone
 - **Multi-thread chat per avatar** — single in-memory thread for skeleton
-- **Multi-avatar switching + import pipeline** — single hardcoded avatar (Teto, dev-only) for skeleton
+- **Multi-avatar switching** — import/catalog infrastructure exists, but relationship identity, per-avatar memory, and first-class switching remain deferred
 - **Pet mode (form-factor toggle and click-through)** — windowed mode only for skeleton
 - **Audio-to-params learned drivers (v1.5)** — rule-based DSP only
 - **Voice input (PTT, VAD, faster-whisper)** — text input only for skeleton
@@ -135,6 +123,9 @@ Phase 9 is complete: Settings opens a separate slider HUD window backed by `/adm
 | Per-template permission grant + visible badge for scheduled goals (§13.121) | Per-session re-grant defeats unattended scheduling; per-template grants are the minimum viable backdoor with explicit user awareness | — Pending |
 | Skill systems separate, non-overlapping in v1 (§13.122) | Two domains (CLI vs screen-control) have different permission models; bridge layer deferred to v1.5 | — Pending |
 | Default avatar = Live2D Inc. sample model (§13.123) | Clean redistribution license; Teto is dev-only | — Pending |
+| v2.0 execution order 8 → 6 → 7 → 9 → 10 | Phase 8 had to define `RigCapabilities` and `AvatarOverrides` before Phase 6 plugin runtime could consume them cleanly | ✓ Good |
+| VTS owns normal idle blinking | App-owned idle blinking fought VTS/model blinking and caused half-blinks/long closed holds | ✓ Good |
+| Live event UAT requires an event-bearing avatar catalog | Current active Teto catalog has `events: []`; treating this as a prerequisite avoids inventing fake live evidence | ✓ Good |
 
 ## Evolution
 
@@ -154,4 +145,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-09 after Phase 9 completion — slider HUD + per-param lock validated; Phase 10 verification remains*
+*Last updated: 2026-05-09 after v2.0 milestone archive*

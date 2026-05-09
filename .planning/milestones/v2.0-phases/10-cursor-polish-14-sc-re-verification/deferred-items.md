@@ -31,3 +31,9 @@
 - **Observed:** App-owned idle blinking fought VTS/model-owned blinking. Live behavior included half-blinks, open-to-close flicker, and eyes staying closed longer than expected.
 - **Ownership decision:** VTube Studio owns normal idle blinking. AgenticLLMVTuber must not emit routine `EyeOpenLeft` / `EyeOpenRight` from `IdleDriver`. Future deliberate eye gestures such as wink remain allowed as explicit plugin/action/variant output with a bounded duration; they are not idle motion.
 - **Disposition:** resolved in Plan 10-04 by deleting app-owned idle blinking and adding a regression that `IdleDriver` never emits eye-open blink params.
+
+## Narrowed deferred item: SYNTHETIC-CANVAS-MULTI-MONITOR
+
+- **Source:** Pre-close live diagnostic on 2026-05-09.
+- **Observed:** The normal VTS-window path is DPI-aware in app startup (`python -m sidecar` runs `sidecar.__main__`, which sets Windows DPI awareness before sidecar imports). On the test machine, Win32 reported two monitors, VTS was detected on the secondary display at `rect=(2553,-81,3847,622)`, and `CursorDriver.tick()` emitted head plus eye params from that real VTS rect.
+- **Disposition:** live DPI + multi-monitor VTS detection is validated for Phase 10. The remaining deferred robustness item is limited to the synthetic fallback path used when VTS cannot be detected; that fallback still projects against the primary monitor rect only.

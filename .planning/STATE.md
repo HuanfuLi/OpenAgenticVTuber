@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
-status: complete
-stopped_at: Completed Phase 10 gap closure
-last_updated: "2026-05-09T08:20:00Z"
+status: archived
+stopped_at: Archived v2.0 milestone
+last_updated: "2026-05-09T09:30:00-04:00"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
@@ -17,16 +17,16 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-08)
+See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon — v2.0 is infrastructure prep on the way there)
-**Current focus:** Phase 10 — cursor-polish-14-sc-re-verification
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 10 (cursor-polish-14-sc-re-verification) — EXECUTING
-Plan: 4 of 4
-Status: Phase 10 complete — all §14 SCs PASS after gap closure
+Milestone: v2.0 Plugin + Animation Control — ARCHIVED
+Status: Complete with accepted low-severity tech debt
+Next: Run `$gsd-new-milestone` to define fresh requirements and roadmap scope.
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -38,17 +38,19 @@ Status: Phase 10 complete — all §14 SCs PASS after gap closure
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
   - Phase 10 gap closure complete: Plan 10-03 resolved SC2-SMIRK-RENDERING, and Plan 10-04 resolved SC5-EYE-TRACKING plus BLINK-EYE-VISIBILITY. Operator confirmed cursor eye tracking works and blink behavior passes after app-owned idle blinking was removed so VTS owns normal blinking.
 
-Last activity: 2026-05-09
+Last activity: 2026-05-09 — archived `.planning/milestones/v2.0-ROADMAP.md`, `.planning/milestones/v2.0-REQUIREMENTS.md`, `.planning/milestones/v2.0-MILESTONE-AUDIT.md`, and `.planning/milestones/v2.0-phases/`.
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
 
-**Anti-pattern flag (recorded 2026-05-08 PM, RESOLVED):** External agent analyzing F-1 proposed pivoting away from VTS+pyvts to live2d-py and creating "Phase 6.5 mocap pipeline" with new MotionCaptureFrame contract. This proposal was rejected — it conflated "implementation violates documented architecture" with "documented architecture is wrong." ARCH-05/06 are correct as written; the fix is consolidate-to-match-spec, not pivot. PROJECT.md / REQUIREMENTS.md / ROADMAP architectural intent remained unchanged. 06-07 took the narrow path: delete split writer, harden CI assertion. Outcome confirms the diagnosis was correct — implementation alignment was the right fix. Keep this flag here as a reference for future agents who hit similar "should we re-architect?" temptations.
+**Anti-pattern flag (recorded 2026-05-08 PM, RESOLVED):** External agent analyzing F-1 proposed pivoting away from VTS+pyvts to live2d-py and creating "Phase 6.5 mocap pipeline" with new MotionCaptureFrame contract. This proposal was rejected — it conflated "implementation violates documented architecture" with "documented architecture is wrong." ARCH-05/06 were correct as written; the fix was consolidate-to-match-spec, not pivot. PROJECT.md / archived REQUIREMENTS.md / ROADMAP architectural intent remained unchanged. 06-07 took the narrow path: delete split writer, harden CI assertion. Outcome confirms the diagnosis was correct — implementation alignment was the right fix. Keep this flag here as a reference for future agents who hit similar "should we re-architect?" temptations.
 
 **Note on v1.0:** Phase 4 body-sway investigation and Phase 5 codegen are complete. 05-02 (§14 verification ceremony) was deferred 2026-05-08 — SC-01 migrates to v2.0 Phase 10's exit criterion.
 
 **Milestone archive:** v1.0 Walking Skeleton archived on 2026-05-08. See `.planning/MILESTONES.md`, `.planning/v1.0-MILESTONE-AUDIT.md`, and `.planning/milestones/v1.0-ROADMAP.md`.
 
-**Note on v2.0 order (REVISED 2026-05-08):** v2.0 execution order changed from 6→8→7→9→10 to **8→6→7→9→10**. Phase 8 now runs first because it produces the data + defines the `RigCapabilities` and `AvatarOverrides` Pydantic contracts that Phase 6 plugin runtime consumes. ARCH-02 requirement moved from Phase 6 → Phase 8. Decision recorded in ROADMAP.md "Overview (v2.0)" + REQUIREMENTS.md v2.0 header. Discovered during /gsd:discuss-phase 6 — the discussion was paused; user runs /gsd:discuss-phase 8 next.
+**Milestone archive:** v2.0 Plugin + Animation Control archived on 2026-05-09. See `.planning/MILESTONES.md`, `.planning/milestones/v2.0-MILESTONE-AUDIT.md`, `.planning/milestones/v2.0-ROADMAP.md`, `.planning/milestones/v2.0-REQUIREMENTS.md`, and `.planning/milestones/v2.0-phases/`.
+
+**Note on v2.0 order (REVISED 2026-05-08):** v2.0 execution order changed from 6→8→7→9→10 to **8→6→7→9→10**. Phase 8 ran first because it produced the data + defined the `RigCapabilities` and `AvatarOverrides` Pydantic contracts that Phase 6 plugin runtime consumes. ARCH-02 requirement moved from Phase 6 → Phase 8. Decision is preserved in `.planning/milestones/v2.0-ROADMAP.md` and `.planning/milestones/v2.0-REQUIREMENTS.md`.
 
 ## Performance Metrics
 
@@ -231,6 +233,15 @@ Carried forward from research synthesis as plan-time decision items:
 
 - **R-OPEN-1**: Body-sway-during-TTS unsolved on VTS rigs — Phase 4 entry gate (04-00 Teto smoke-pass) is the empirical resolver
 - **R-OPEN-2**: VTS-only renderer locks out future mobile companion — accepted, post-MVP Pixi exploration is the hedge
+
+## Deferred Items
+
+Items acknowledged and deferred at v2.0 milestone close on 2026-05-09:
+
+| Category | Item | Status |
+|----------|------|--------|
+| phase-7-uat | Live `<event>` UAT requires an active avatar catalog with events; current Teto has `events: []` | deferred |
+| phase-10-cursor | No-VTS-rect synthetic fallback projects against primary monitor only; live DPI-aware secondary-monitor VTS path is validated | deferred |
 
 ## Session Continuity
 

@@ -55,6 +55,7 @@ re_verification:
 | Live SC #4 body sway | Operator UAT | pass | PASS |
 | Live SC #5 cursor eyes | Operator UAT | pass; eye tracking works with no problem | PASS |
 | Live blink behavior | Operator UAT | pass after app-owned idle blinking removed | PASS |
+| Live DPI + secondary-monitor VTS detection | `cd sidecar; uv run python -` Win32 diagnostic on 2026-05-09 | 2 monitors detected; VTS HWND found on `DISPLAY2` at `rect=(2553,-81,3847,622)`; `CursorDriver.tick()` emitted `FaceAngleX/Y` plus all four eye params from that VTS rect | PASS |
 
 ### Requirements Coverage
 
@@ -76,7 +77,7 @@ None remaining. Operator supplied PASS for the final SC #5 and blink behavior ch
 
 ### Gaps Summary
 
-No gaps remaining for Phase 10. DPI awareness and multi-monitor synthetic-canvas projection remain future robustness improvements, not Phase 10 blockers.
+No gaps remaining for Phase 10. The live DPI-aware VTS-window path was validated on a two-monitor Windows setup with VTS running on the secondary display. The remaining deferred robustness item is narrower: when VTS cannot be detected and cursor projection falls back to a synthetic canvas, the fallback still uses the primary-monitor rect only.
 
 ---
 

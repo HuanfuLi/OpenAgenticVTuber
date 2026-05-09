@@ -35,10 +35,45 @@ The project now has a usable walking skeleton: Electron launches a Python sideca
 - Expression activation should use VTS expression APIs for expression files; raw parameter injection is only appropriate for verified tracking/input parameters.
 - UAT artifacts are first-class closure evidence when they contain the operator-observed pass/fix loop.
 
+## Milestone: v2.0 — Plugin + Animation Control
+
+**Shipped:** 2026-05-09
+**Phases:** 5
+**Plans:** 27
+
+### What Was Built
+
+v2.0 moved animation control out of one-off compositor intent logic and into a plugin/catalog architecture. The project now has avatar import and review artifacts, `RigCapabilities` and `AvatarOverrides`, a supervised default body-motion plugin, three-category LLM dispatch, a live slider HUD with locks, and a refreshed §14 verification record with all six success criteria passing.
+
+### What Worked
+
+- Executing Phase 8 before Phase 6 avoided compatibility shims: plugin runtime could consume the real catalog/capabilities contracts.
+- Live UAT found the highest-risk animation gaps: supervised smirk dispatch, cursor eye routing/sign, and blink ownership.
+- The single-writer VTS rule remained a useful architectural guard when plugin, variant, event, HUD, and cursor paths all needed VTS access.
+- The HUD quickly exposed rig reality: fewer visible operator sliders than raw writable params is correct for a useful discovery surface.
+
+### What Was Inefficient
+
+- Several validation docs became stale after gap-only fixes and needed retroactive Nyquist refreshes.
+- Cursor behavior mixed three concerns at first: namespace, eye surface/sign, and fallback projection. Separating live VTS-window projection from synthetic fallback debt made the close decision cleaner.
+- Event UAT depends on importing an event-bearing avatar; Teto could not validate that live path because its active catalog has `events: []`.
+
+### Patterns Established
+
+- Avatar catalogs are boot-frozen contracts shared by prompt assembly, parser runtime, plugin load, HUD population, and verification.
+- VTS owns normal idle blinking. Future deliberate eye gestures are allowed only as explicit bounded plugin/action/variant output.
+- HUD surfaces should be capability-filtered for operator usefulness, not raw dumps of every writable Cubism parameter.
+
+### Key Lessons
+
+- Treat real rig catalogs as prerequisites for live UAT. If the active avatar cannot express a category, record that as prerequisite-gated instead of fabricating evidence.
+- A plugin supervisor must proxy the full production plugin surface, not only lifecycle methods; otherwise tests can pass while live action dispatch is a no-op.
+- Multi-monitor cursor support is mostly solved by the authoritative VTS HWND rect. The remaining robustness issue is only the fallback path when no VTS rect is available.
+
 ## Cross-Milestone Trends
 
-| Trend | v1.0 Observation |
-|-------|------------------|
-| Live-runtime dependencies | VTS, audio devices, and LM Studio require human/UAT checkpoints. |
-| Contract drift | Generated contracts plus drift checks are worth keeping as a required gate. |
-| Logging | Any 60 Hz loop can become unusable without throttling and opt-in evidence flags. |
+| Trend | v1.0 Observation | v2.0 Observation |
+|-------|------------------|------------------|
+| Live-runtime dependencies | VTS, audio devices, and LM Studio require human/UAT checkpoints. | VTS rig catalogs also gate what can be live-tested; event UAT needs an event-bearing avatar. |
+| Contract drift | Generated contracts plus drift checks are worth keeping as a required gate. | Contract codegen had to handle nested generated schemas and discriminated HUD unions; drift checks stayed useful. |
+| Logging | Any 60 Hz loop can become unusable without throttling and opt-in evidence flags. | Dispatch logs and HUD stream telemetry were useful, but validation docs must be refreshed immediately after UAT gap fixes. |

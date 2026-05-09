@@ -35,3 +35,41 @@
 **What's next:** v2.0 Plugin + Animation Control, starting from Phase 8 Avatar Import + Catalogs.
 
 ---
+
+## v2.0 Plugin + Animation Control (Shipped: 2026-05-09)
+
+**Delivered:** A plugin-driven animation architecture with avatar catalog import, three-category LLM dispatch, a live slider HUD, and a refreshed §14 verification record against the refactored system.
+
+**Phases completed:** 8, 6, 7, 9, 10 (27 plans total)
+
+**Key accomplishments:**
+
+- Built avatar import/catalog infrastructure around `AvatarOverrides` and `RigCapabilities`, including review/edit/write flows and Teto dogfooding.
+- Replaced compositor-owned expression/body intent logic with a single-active `BodyMotionPlugin` runtime, default plugin, supervisor, manifest validation, and single-writer VTS guardrails.
+- Shipped the `[action]`, `{variant}`, and `<event>` parser/dispatch system with reserved-name and cross-category collision protection.
+- Added a dedicated HUD window backed by `/admin/rig-capabilities` and `/hud/ws`, focused visible sliders, live stream telemetry, and session-only per-param locks.
+- Closed the migrated §14 verification ceremony: lipsync, smirk/action dispatch, idle motion, body sway, cursor head/eye tracking, blink ownership, and protocol shape are all recorded PASS.
+
+**Known deferred items at close:**
+
+- Phase 7 live `<event>` UAT remains externally catalog-gated because active Teto currently has `events: []`; automated parser/routing/tracker coverage is present.
+- Phase 10 no-VTS-rect cursor synthetic fallback remains primary-monitor-only. The live DPI-aware VTS-window path was validated on a two-monitor Windows setup with VTS on the secondary display.
+
+**Stats:**
+
+- 5 phases complete
+- 27 plans complete
+- 53 v2.0 requirements satisfied
+- Audit status: `tech_debt` with no critical gaps
+- Nyquist status: compliant
+
+**Archive:**
+
+- `.planning/milestones/v2.0-ROADMAP.md`
+- `.planning/milestones/v2.0-REQUIREMENTS.md`
+- `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
+- `.planning/milestones/v2.0-phases/`
+
+**What's next:** Start the next milestone with `$gsd-new-milestone`; it will create fresh requirements for the next scope.
+
+---
