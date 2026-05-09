@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: executing
 stopped_at: Completed 07-05-PLAN.md
-last_updated: "2026-05-09T00:22:51.112Z"
+last_updated: "2026-05-09T00:23:56.583Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 37
-  completed_plans: 34
+  completed_plans: 35
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 07 (three-category-code-parsing-dispatch) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
@@ -104,6 +104,7 @@ Last activity: 2026-05-09
 | Phase 07-three-category-code-parsing-dispatch P04 | 3min | 1 tasks | 4 files |
 | Phase 07-three-category-code-parsing-dispatch P03 | 7min | 1 tasks | 7 files |
 | Phase 07-three-category-code-parsing-dispatch P05 | 6min | 1 tasks | 5 files |
+| Phase 07-three-category-code-parsing-dispatch P02 | 8min | 1 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -182,6 +183,8 @@ Recent decisions affecting current work:
 - [Phase 07-three-category-code-parsing-dispatch]: EventFire.duration_ms is computed from EventEntry at parse time, using 10s exactly for fallback entries and duration_seconds*1000+1000 otherwise.
 - [Phase 07-three-category-code-parsing-dispatch]: Variant state is session-local shadow state; idempotent re-emits no-op.
 - [Phase 07-three-category-code-parsing-dispatch]: EventCompletionTracker treats positive EventFire.duration_ms as the final completion delay with no blend pad or upper clamp.
+- [Phase 07-three-category-code-parsing-dispatch]: Generated TS mirrors expose a named Dispatch union rather than repeating ActionCode | VariantToggle | EventFire inline.
+- [Phase 07-three-category-code-parsing-dispatch]: Nested generated schemas for avatar import/overrides were committed because the global contract drift guard covers all packages/contracts/generated output.
 
 ### Pending Todos
 
@@ -204,6 +207,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-09T00:22:51.104Z
+Last session: 2026-05-09T00:23:56.574Z
 Stopped at: Completed 07-05-PLAN.md
 Resume file: None
