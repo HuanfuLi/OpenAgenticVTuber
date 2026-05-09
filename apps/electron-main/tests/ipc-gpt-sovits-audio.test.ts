@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import fs from 'node:fs'
+import path from 'node:path'
 import type {
   GptSoVitsHealthRequest,
   GptSoVitsProviderConfig,
@@ -249,5 +251,30 @@ describe('GPT-SoVITS audio IPC handlers', () => {
 
     expect(mocks.removedHandlers).toContain('gptSovits:checkHealth')
     expect(mocks.removedHandlers).toContain('gptSovits:testSynthesis')
+  })
+})
+
+describe('GPT-SoVITS preload bridge declarations', () => {
+  it('allowlists health and test synthesis methods through concrete IPC channels', () => {
+    const preloadSource = fs.readFileSync(path.join(process.cwd(), 'preload/index.ts'), 'utf-8')
+
+    expect(preloadSource).toContain('checkGptSoVitsHealth')
+    expect(preloadSource).toContain("ipcRenderer.invoke('gptSovits:checkHealth'")
+    expect(preloadSource).toContain('testGptSoVitsSynthesis')
+    expect(preloadSource).toContain("ipcRenderer.invoke('gptSovits:testSynthesis'")
+  })
+
+  it('declares GPT-SoVITS bridge methods with generated contract types', () => {
+    const declarationSource = fs.readFileSync(path.join(process.cwd(), 'preload/index.d.ts'), 'utf-8')
+
+    expect(declarationSource).toContain('GptSoVitsHealthRequest')
+    expect(declarationSource).toContain('GptSoVitsTestSynthesisRequest')
+    expect(declarationSource).toContain('GptSoVitsTestSynthesisResult')
+    expect(declarationSource).toContain(
+      'checkGptSoVitsHealth(input: GptSoVitsHealthRequest): Promise<AudioProviderHealth>'
+    )
+    expect(declarationSource).toContain(
+      'testGptSoVitsSynthesis(input: GptSoVitsTestSynthesisRequest): Promise<GptSoVitsTestSynthesisResult>'
+    )
   })
 })
