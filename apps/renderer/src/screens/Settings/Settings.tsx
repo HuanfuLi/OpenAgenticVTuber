@@ -343,7 +343,10 @@ function ConnectionSection() {
         plugin: storedCfg?.plugin ?? { activePluginName: 'default' },
         hasCompletedSetup: true,
         schemaVersion: 2,
-        audio: storedCfg?.audio ?? defaultAudioConfig()
+        audio: storedCfg?.audio ?? defaultAudioConfig(),
+        voicePresets: storedCfg?.voicePresets ?? [],
+        referenceAudioAssets: storedCfg?.referenceAudioAssets ?? [],
+        activePresetByAvatarSession: storedCfg?.activePresetByAvatarSession ?? {}
       }
       await saveCompletedSetupConfig(nextCfg)
       setStoredCfg(nextCfg)

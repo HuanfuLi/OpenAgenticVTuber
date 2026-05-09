@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react'
 import type { StoredConfig, ProviderConfig, Provider } from '@preload-types'
 import type { AudioConfig } from '@contracts/audio-provider'
+import type { ReferenceAudioAsset, VoicePreset } from '@contracts/voice-preset'
 
 export type { StoredConfig, ProviderConfig, Provider }
 
@@ -36,6 +37,17 @@ export function defaultAudioConfig(): AudioConfig {
       capture_timeout_ms: 30_000,
       execution: 'off_event_loop'
     }
+  }
+}
+
+export function defaultVoicePresetLibrary(): Pick<
+  StoredConfig,
+  'voicePresets' | 'referenceAudioAssets' | 'activePresetByAvatarSession'
+> {
+  return {
+    voicePresets: [] as VoicePreset[],
+    referenceAudioAssets: [] as ReferenceAudioAsset[],
+    activePresetByAvatarSession: {}
   }
 }
 
@@ -71,6 +83,9 @@ export async function saveCompletedSetupConfig(cfg: StoredConfig): Promise<void>
   const final: StoredConfig = {
     ...cfg,
     audio: cfg.audio ?? defaultAudioConfig(),
+    voicePresets: cfg.voicePresets ?? [],
+    referenceAudioAssets: cfg.referenceAudioAssets ?? [],
+    activePresetByAvatarSession: cfg.activePresetByAvatarSession ?? {},
     hasCompletedSetup: true,
     schemaVersion: 2
   }

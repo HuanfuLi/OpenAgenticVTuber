@@ -42,6 +42,7 @@ function audioMessage(audio: string | null): WSMessage {
   return {
     type: 'audio',
     audio,
+    failed_audio: null,
     dispatches: [],
     display_text: {
       avatar: 'Teto',

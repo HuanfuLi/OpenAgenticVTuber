@@ -56,7 +56,10 @@ describe('Settings TTS section', () => {
     plugin: { activePluginName: 'default' },
     hasCompletedSetup: true,
     schemaVersion: 2,
-    audio: defaultAudioConfig()
+    audio: defaultAudioConfig(),
+    voicePresets: [],
+    referenceAudioAssets: [],
+    activePresetByAvatarSession: {}
   }
   const currentAvatarPlan: AvatarImportPlan = {
     avatar_id: 'akari',

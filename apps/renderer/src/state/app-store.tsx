@@ -141,7 +141,10 @@ function llmConfigToStoredConfig(cfg: LLMConfig, completed: boolean): StoredConf
     plugin: { activePluginName: 'default' },
     hasCompletedSetup: completed,
     schemaVersion: 2,
-    audio: defaultAudioConfig()
+    audio: defaultAudioConfig(),
+    voicePresets: [],
+    referenceAudioAssets: [],
+    activePresetByAvatarSession: {}
   }
 }
 
