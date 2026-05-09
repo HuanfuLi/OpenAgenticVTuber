@@ -20,7 +20,7 @@ Phase 10 re-runs all six §14 success criteria from `PROJECT_DESIGN.md §14` aga
 | 2 | `[smirk]` smooth blend (operator-judged; replaces M1 `[joy]` per 06-08) | PASS | Operator confirmed the smirk face is visible after Plan 10-03 fixed supervised action-code dispatch. | This file, §"SC #2 Ceremony Log" |
 | 3 | Idle micro-motion non-zero variance (AVT-02 carry-through) | PASS | variance_sum=0.06643749130899018 (0 < x < 0.5; 7.5× under ceiling) from Phase 10 replay | `.planning/baselines/v2.0/idle-phase10-replay.json` |
 | 4 | Body sway through full utterance (operator-judged) | PASS | Operator reported SC #4 pass; speech/body-sway behavior accepted for v2.0 close. | This file, §"SC #4 Ceremony Log" |
-| 5 | Cursor tracking (operator-judged post-Plan 10-01 fix) | PARTIAL | Head tracks the cursor, including outside the VTS canvas, but eyes do not visibly track; whole-screen tracking is acceptable and likely preferable. | `.planning/phases/10-cursor-polish-14-sc-re-verification/10-01-SUMMARY.md` + this file §"SC #5 Ceremony Log" |
+| 5 | Cursor tracking (operator-judged post-Plan 10-04 fix) | PASS | Head and eyes track the cursor correctly; outside-window tracking remains accepted. App-owned idle blinking was removed so VTS owns normal blinking. | `.planning/phases/10-cursor-polish-14-sc-re-verification/10-01-SUMMARY.md`, `.planning/phases/10-cursor-polish-14-sc-re-verification/10-04-SUMMARY.md`, this file §"SC #5 Ceremony Log" |
 | 6 | OLVT WS protocol shape (bookkeeping) | PASS | M1 Phase 1+2 (PLUMB-03) verified the OLVT-shape envelope; v2.0 Phase 7 `Dispatch` and Phase 9 `HudMessageS2C/C2S` are new `type` values inside the existing envelope, not envelope-structure changes. | `.planning/phases/01-plumbing-process-lifecycle/01-02-SUMMARY.md`, `.planning/phases/02-conversation-pipeline/`, `.planning/phases/07-three-category-code-parsing-dispatch/`, `.planning/phases/09-slider-hud-per-param-lock/` |
 
 ### SC #1 Ceremony Log (automated)
@@ -129,11 +129,11 @@ uv run python scripts/plumbing_harness.py --mode idle --out ../.planning/baselin
 - 1-2/3 → PARTIAL
 - 0/3 → FAIL (and the diagnosis paragraph from Plan 10-01 SUMMARY is the FAIL evidence per D-A6)
 
-**Recorded verdict:** PARTIAL
-**Recorded observation:** Head tracking now responds to cursor movement and continues outside the VTS canvas. Eye tracking is still not visibly responding, matching a pre-existing OpenLLMVtuber issue where only the head follows the cursor. The whole-screen cursor behavior is accepted and may be preferable; the remaining gap is eye-only.
-**Evidence link:** Operator live UAT report on 2026-05-09 plus `.planning/phases/10-cursor-polish-14-sc-re-verification/10-01-SUMMARY.md`.
+**Recorded verdict:** PASS
+**Recorded observation:** After Plan 10-04, operator confirmed cursor eye tracking works with no problem. Fixes applied: cursor emits the full VTS eye-input surface (`EyeLeftX`, `EyeRightX`, `EyeLeftY`, `EyeRightY`), Teto's inverted horizontal eye mapping is handled by inverting cursor eye X, and normal idle blinking is left to VTS instead of app-owned `EyeOpenLeft` / `EyeOpenRight` pulses. Whole-screen/outside-window tracking remains accepted.
+**Evidence link:** Operator live UAT pass on 2026-05-09 plus `.planning/phases/10-cursor-polish-14-sc-re-verification/10-04-SUMMARY.md`.
 
-**Gap recorded:** SC5-EYE-TRACKING — cursor-driven eye motion is not visibly present. Code investigation found the current cursor path emits only `EyeLeftX` for horizontal eye movement and `EyeRightY` for vertical eye movement after translating `ParamEyeBallX/Y`; Teto's `.vtube.json` maps those inputs to `ParamEyeBallX/Y`, but live UAT still shows head-only tracking. Follow-up should test whether VTS requires a different eye-input pair, stronger values, direct Cubism eye params, or a rig-specific override for cursor eye tracking.
+**Gap resolved:** SC5-EYE-TRACKING — cursor-driven head and eye tracking are visibly present. `BLINK-EYE-VISIBILITY` was resolved by deleting app-owned idle blinking; future deliberate eye gestures such as wink remain allowed as bounded plugin/action/variant output.
 
 ### SC #6 Ceremony Log (bookkeeping — no re-test)
 
@@ -202,16 +202,14 @@ Cross-reference table — does NOT duplicate verdicts. Verdicts live in each pha
 - **PARTIAL** if any SC is PARTIAL with no rationale, OR exactly one SC is FAIL with documented rationale.
 - **FAIL** if more than one SC is FAIL, OR any SC is FAIL with no rationale.
 
-**Recorded verdict:** PARTIAL
+**Recorded verdict:** PASS
 
-**Decision basis:** Five of six §14 checks pass; SC #5 remains partial because head tracking works but eye tracking remains head-only/no visible eye response. SC #2 is resolved after Plan 10-03 and operator correction. v2.0 remains PARTIAL until the cursor eye-tracking gap is resolved or explicitly deferred with fresh evidence.
+**Decision basis:** All six §14 checks pass after Phase 10 gap closure. SC #2 smirk rendering is visible after Plan 10-03; SC #5 cursor tracking now has visible head and eye tracking after Plan 10-04; app-owned idle blinking was removed so VTS owns normal blinking.
 
 ### Open issues for next milestone
 
 - **DPI awareness** — cursor projection on high-DPI displays uses raw pixel coordinates; on 200% scaling the synthetic-canvas projection skews toward one corner (VFY-02 deferred this).
 - **Multi-monitor cursor robustness** — current synthetic-canvas fallback projects against primary monitor only; users on multi-monitor setups will see cursor tracking only when cursor is on primary screen.
-- **SC5-EYE-TRACKING** — cursor now drives visible head tracking, including outside the VTS canvas, but live UAT shows eyes do not visibly track. Likely follow-up area: eye-input routing/tuning around `EyeLeftX` / `EyeRightY` versus the full `EyeLeftX` / `EyeLeftY` / `EyeRightX` / `EyeRightY` input surface or direct `ParamEyeBallX/Y` writes for this rig.
-- **Blink timing affects eye verification** — idle blink currently sometimes holds the eyes closed long enough to make eye-variant and cursor-eye checks difficult. This is separate from SC2 smirk rendering and should be addressed with the SC5 eye-tracking work.
 - **Native Cubism rendering integration** — VTube Studio + pyvts is the v1 rendering path; native Cubism (alongside pixi-live2d-display-advanced) is a v1.5 / v2 candidate per CLAUDE.md "What NOT to Use" + PROJECT_DESIGN.md §11.
 - **Body-sway physics-chain investigation** — head_only ship state acknowledged as mediocre per Phase 6 discuss-phase decision; AVT-06 R-OPEN-1 remains open. Future milestone may investigate `<model>.vtube.json` physics-chain proxy or `.exp3.json` body-pose modulation by RMS.
 - **Multi-avatar identity persistence** — v1-horizon HEADLINE value, NOT v2.0. Per-avatar episodic Chroma stores + shared user-facts bucket + RRF-hybrid retrieval + write-on-promotion are the next milestone's deliverable (REQUIREMENTS MEM-01..MEM-07).

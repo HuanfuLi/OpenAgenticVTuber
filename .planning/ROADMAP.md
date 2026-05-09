@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Walking Skeleton** — Phases 1-5 shipped 2026-05-08. Archive: `.planning/milestones/v1.0-ROADMAP.md`
-- 🚧 **v2.0 Plugin + Animation Control** — Phase 8 ✅, Phase 6 ✅ (re_verification_4 passed 2026-05-08 PM after 06-07 writer consolidation + F-3 tracking-range fix + 06-08 active-Teto joy vocabulary correction), Phase 7 ✅, Phase 9 ✅, Phase 10 remaining.
+- ✅ **v2.0 Plugin + Animation Control** — Phase 8 ✅, Phase 6 ✅ (re_verification_4 passed 2026-05-08 PM after 06-07 writer consolidation + F-3 tracking-range fix + 06-08 active-Teto joy vocabulary correction), Phase 7 ✅, Phase 9 ✅, Phase 10 ✅ after gap closure.
 
 ## Overview
 
@@ -145,7 +145,7 @@ Five additional phases (6, 7, 8, 9, 10) refactoring the milestone-1 animation la
 - [x] **Phase 6: Plugin Runtime + Default Plugin** — Plugin contracts (ABC, manifest), in-sidecar loader with supervisor + clamp + rate-limiter, default plugin absorbing milestone-1 IntentDriver + body-sway logic; consumes Phase 8's `RigCapabilities` + `AvatarOverrides` — **second in execution order** *(2026-05-08 PM passed re_verification_4 after 06-08 corrected active Teto joy vocabulary; 06-07 closed ARCH-05/06 split-writer violation + tracking-range fix closed F-3)*
 - [x] **Phase 7: Three-Category Code Parsing + Dispatch** — `code_extractor` decorator dispatching `[xxx]` / `{xxx}` / `<xxx>` to plugin / variant-toggle / event-fire paths — third in execution order; complete after 07-08 prompt-catalog gap closure and live `{heart-eye}` UAT confirmation
 - [x] **Phase 9: Slider HUD + Per-Param Lock** — Sidecar 15 Hz HUD-mode IPC tap + dedicated React route + per-param lock with auto-engage on drag — fourth in execution order (2026-05-09)
-- [ ] **Phase 10: Cursor Fix + §14 SC Re-Verification** — Mandatory cursor namespace fix (per 2026-05-08 discuss-phase amendment) + drop in-VTS-window gate + synthetic-canvas fallback + side-by-side §14 SC harness replay (lipsync + idle) + operator ceremony for SC #2 [smirk] / SC #4 body sway / SC #5 cursor + skeleton-verification.md commit — last in execution order; 4 plans including gap closure for SC2-SMIRK-RENDERING and SC5-EYE-TRACKING
+- [x] **Phase 10: Cursor Fix + §14 SC Re-Verification** — Mandatory cursor namespace fix (per 2026-05-08 discuss-phase amendment) + drop in-VTS-window gate + synthetic-canvas fallback + side-by-side §14 SC harness replay (lipsync + idle) + operator ceremony for SC #2 [smirk] / SC #4 body sway / SC #5 cursor + skeleton-verification.md commit — complete 2026-05-09 after gap closure for SC2-SMIRK-RENDERING and SC5-EYE-TRACKING
 
 ### Phase 6: Plugin Runtime + Default Plugin
 **Goal**: The animation layer becomes plug-and-play. A developer can swap the body-motion strategy by changing one config line, restarting the sidecar, and observing the avatar move differently — without touching idle / lipsync / cursor / pyvts-writer code. The default plugin ships with the system and absorbs the milestone-1 `IntentDriver` + `compositor/body_sway/*` logic. As of 06-08, the active imported Teto catalog is strict: `joy` is obsolete/invalid and absent, so declared default-plugin actions such as `[smirk]` cover ParamFrame ramp behavior while model-owned variants such as `heart-eye` are deferred to Phase 7 `{variant}` dispatch.
@@ -266,9 +266,9 @@ Plans:
 
 Plans:
 - [x] 10-01-PLAN.md — Cursor diagnose + namespace fix + drop in-VTS-window gate + synthetic-canvas fallback + regression test (VFY-01, VFY-02). Wave 1, autonomous.
-- [ ] 10-02-PLAN.md — §14 SC ceremony script + skeleton-verification.md commit + plumbing harness replay (lipsync + idle) + operator-judged SC #2 [smirk] / SC #4 body sway / SC #5 cursor verdicts + milestone v2.0 close decision (VFY-03, VFY-04, VFY-05). Wave 2, has checkpoint:human-verify task.
+- [x] 10-02-PLAN.md — §14 SC ceremony script + skeleton-verification.md commit + plumbing harness replay (lipsync + idle) + operator-judged SC #2 [smirk] / SC #4 body sway / SC #5 cursor verdicts + milestone v2.0 close decision (VFY-03, VFY-04, VFY-05). Wave 2, completed by original ceremony plus 10-03/10-04 gap closure.
 - [x] 10-03-PLAN.md — GAP: close SC2-SMIRK-RENDERING by making routed `ActionCode(name="smirk")` visibly activate the default plugin and rerunning SC #2 UAT. Wave 3, gap_closure. Completed 2026-05-09.
-- [ ] 10-04-PLAN.md — GAP: close SC5-EYE-TRACKING by fixing cursor eye routing/tuning and rerunning SC #5 UAT. Wave 4, gap_closure.
+- [x] 10-04-PLAN.md — GAP: close SC5-EYE-TRACKING by fixing cursor eye routing/tuning and rerunning SC #5 UAT. Wave 4, gap_closure. Completed 2026-05-09.
 
 **UI hint**: no  <!-- Verification ceremony is observational; cursor polish is sidecar-only. -->
 
@@ -294,7 +294,7 @@ Milestone v2.0 phases execute in REVISED order: 8 → 6 → 7 → 9 → 10 (revi
 | 6. Plugin Runtime + Default Plugin | 8/8 | Complete — re_verification_4 passed; F-1/F-2 closed by 06-07 writer consolidation; F-3 closed by tracking-range fix; joy vocabulary gap closed by 06-08 | 2026-05-08 |
 | 7. Three-Category Code Parsing + Dispatch | 8/8 | Complete — 07-08 gap closure exposed active dispatch codes in prompt; live `{heart-eye}` variant confirmed; event UAT prerequisite-gated by current Teto `events: []` | 2026-05-09 |
 | 9. Slider HUD + Per-Param Lock | 2/2 | Complete — live HUD UAT approved after visible-param and stream-liveness fixes | 2026-05-09 |
-| 10. Cursor Polish + §14 SC Re-Verification | 1/2 | In Progress|  |
+| 10. Cursor Polish + §14 SC Re-Verification | 4/4 | Complete — all six §14 SCs passed after gap closure | 2026-05-09 |
 
 ## Coverage
 

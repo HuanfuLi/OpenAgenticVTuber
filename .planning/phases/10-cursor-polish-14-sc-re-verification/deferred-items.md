@@ -11,13 +11,12 @@
 - **Scope assessment:** unrelated to 10-01 cursor/window changes. Plan 10-01 touched cursor driver, window detection, and direct tests only.
 - **Disposition:** resolved during Phase 10 checkpoint handling by commit `2144ee5` (`test(phase-10): align stale contract tests with dispatch`).
 
-## Gap: SC5-EYE-TRACKING
+## Resolved gap: SC5-EYE-TRACKING
 
 - **Source:** Operator live UAT on 2026-05-09.
-- **Observed:** Cursor now visibly tracks through the head and continues outside the VTS canvas, but eyes do not visibly track. This matches the pre-existing OpenLLMVtuber issue where only the head follows the cursor.
-- **Current code path:** `CursorDriver` translates `ParamEyeBallX -> EyeLeftX` and `ParamEyeBallY -> EyeRightY`; Teto's `.vtube.json` maps `EyeLeftX` to `ParamEyeBallX` and `EyeRightY` to `ParamEyeBallY`, but live UAT still shows no visible eye response.
-- **Hypothesis:** The eye path needs rig-specific routing/tuning beyond the generic Cubism-to-VTS resolver: possibly driving the full `EyeLeftX` / `EyeLeftY` / `EyeRightX` / `EyeRightY` input surface, stronger values, direct `ParamEyeBallX/Y` writes for this rig, or a cursor-specific avatar override.
-- **Disposition:** marked as a Phase 10 SC #5 gap in `.planning/skeleton-verification.md`; not fixed in the current checkpoint.
+- **Observed:** Initial live UAT showed head tracking but no visible eye tracking. After Plan 10-04, operator confirmed eye tracking works with no problem.
+- **Root cause:** Cursor eye output was too narrow and then horizontally inverted for Teto. The working path emits the full VTS eye input surface (`EyeLeftX`, `EyeRightX`, `EyeLeftY`, `EyeRightY`) and inverts eye X for Teto's `.vtube.json` mapping (`EyeLeftX` input range maps to `ParamEyeBallX` output in reverse).
+- **Disposition:** resolved by Plan 10-04. `.planning/skeleton-verification.md` now records SC #5 as PASS.
 
 ## Resolved gap: SC2-SMIRK-RENDERING
 
