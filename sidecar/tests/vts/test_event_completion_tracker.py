@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 import pytest
 
@@ -26,6 +27,7 @@ async def test_tracking_valid_duration_logs_after_exact_final_delay(
     sleep_spy, caplog
 ):
     delays, release, original_sleep = sleep_spy
+    caplog.set_level(logging.INFO, logger=tracker_module.__name__)
     tracker = EventCompletionTracker()
 
     tracker.track(EventFire(name="wave", hotkey_id="hk-wave", duration_ms=2833))
@@ -35,6 +37,7 @@ async def test_tracking_valid_duration_logs_after_exact_final_delay(
     assert tracker.in_flight_set() == {"hk-wave"}
 
     release.set()
+    await original_sleep(0)
     await tracker.close()
     assert "hotkey_id=hk-wave name=wave" in caplog.text
 
