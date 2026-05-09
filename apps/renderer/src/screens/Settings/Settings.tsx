@@ -364,6 +364,18 @@ function PluginSection() {
           ))}
         </div>
       )}
+      <div className="row mt-2" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => {
+            void window.api?.openHud?.()
+          }}
+        >
+          {COPY.HUD.OPEN_HUD_BUTTON}
+        </button>
+        <span className="tx-sm muted">{COPY.HUD.OPEN_HUD_HELP}</span>
+      </div>
       {status && <div className="tx-sm muted mt-2">{status}</div>}
     </section>
   )

@@ -50,6 +50,7 @@ describe('Settings TTS section', () => {
             path: 'userData/plugins/test-motion/plugin.yaml'
           }
         ]),
+        openHud: vi.fn().mockResolvedValue(undefined),
         onSidecarReady: vi.fn().mockReturnValue(() => undefined),
         onSidecarCrash: vi.fn().mockReturnValue(() => undefined)
       }
@@ -87,5 +88,27 @@ describe('Settings TTS section', () => {
       })
     })
     expect(screen.getByText(COPY.SETTINGS.PLUGINS_SAVED)).toBeInTheDocument()
+  })
+
+  it('renders Open HUD button in the body motion plugin section', async () => {
+    renderSettings()
+
+    expect(await screen.findByRole('button', { name: COPY.HUD.OPEN_HUD_BUTTON })).toBeInTheDocument()
+  })
+
+  it('clicking Open HUD invokes window.api.openHud', async () => {
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('button', { name: COPY.HUD.OPEN_HUD_BUTTON }))
+
+    await waitFor(() => {
+      expect(window.api.openHud).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('renders Open HUD helper text', async () => {
+    renderSettings()
+
+    expect(await screen.findByText(COPY.HUD.OPEN_HUD_HELP)).toBeInTheDocument()
   })
 })
