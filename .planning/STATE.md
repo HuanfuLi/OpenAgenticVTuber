@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Mock/Reality Cleanup
-status: verifying
-stopped_at: Phase 12 UAT gaps executed; Phase 13 planned
-last_updated: "2026-05-09T07:50:15-04:00"
+status: planning
+stopped_at: Phase 12 re-UAT gaps diagnosed and planned
+last_updated: "2026-05-09T08:02:07-04:00"
 last_activity: 2026-05-09
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 8
+  total_plans: 9
   completed_plans: 4
 ---
 
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: 12 (Settings Reality Pass) — GAP CLOSURE EXECUTED
-Plan: 2 of 2 complete
-Status: Ready for Phase 12 re-UAT
-Next: Run `$gsd-verify-work 12` to re-check the resolved avatar and diagnostics gaps.
+Phase: 12 (Settings Reality Pass) — RE-UAT GAPS DIAGNOSED
+Plan: 2 of 3 complete
+Status: Ready for Phase 12 gap execution
+Next: Run `$gsd-execute-phase 12 --gaps-only` to close current avatar re-edit reliability and About version copy gaps.
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -39,7 +39,7 @@ Next: Run `$gsd-verify-work 12` to re-check the resolved avatar and diagnostics 
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
   - Phase 10 gap closure complete: Plan 10-03 resolved SC2-SMIRK-RENDERING, and Plan 10-04 resolved SC5-EYE-TRACKING plus BLINK-EYE-VISIBILITY. Operator confirmed cursor eye tracking works and blink behavior passes after app-owned idle blinking was removed so VTS owns normal blinking.
 
-Last activity: 2026-05-09 — executed Phase 12 12-02 gap closure and planned Phase 13 as three waves. Phase 12 remains the current verification gate: re-UAT the resolved avatar and diagnostics gaps before moving into Phase 13 execution.
+Last activity: 2026-05-09 — completed Phase 12 re-UAT. Diagnostics passed, but Avatars still has current-edit reliability bugs and About still shows the stale 0.1.0-skeleton label. Diagnosed root causes and created 12-03 gap-closure plan. Phase 13 planning exists, but Phase 12 remains the current gate.
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
 

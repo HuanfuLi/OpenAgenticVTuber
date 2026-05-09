@@ -1,10 +1,10 @@
 ---
-status: complete
+status: diagnosed
 phase: 12-settings-reality-pass
 source:
   - .planning/phases/12-settings-reality-pass/12-01-SUMMARY.md
 started: 2026-05-09T07:32:27-04:00
-updated: 2026-05-09T07:59:40-04:00
+updated: 2026-05-09T08:02:07-04:00
 ---
 
 ## Current Test
@@ -57,12 +57,16 @@ blocked: 0
   reason: "User reported: Pass with bugs: 1. App start with unknown Avatar ID but Edit current button is not disabled. 2. After I load a model and it shows valid Avatar ID, and I Edit current, it did not show edits I made before, but only fresh config table so I have to configure again. 3. After I configured again and saved, I then try to Edit current again, but the button is not responding (it is not disabled at that time) with a text below showing \"Current avatar catalog is not available to edit.\""
   severity: major
   test: 2
-  root_cause: "AvatarsSection performs a one-shot current-plan load during initial render and permanently disables Edit current when that first plan load returns null. If sidecar metadata is unavailable during startup, the UI stays degraded. The load path also couples current-id and current-plan failure handling, so an API or startup failure can leave the displayed ID as 'unknown' while the copy says the ID is known."
+  root_cause: "12-02 made Edit current retry metadata, but its disabled state is still wrong: after loading completes, disabled={loading && !hasCurrentId} leaves the button enabled even when no current avatar ID is known. The main-process current-avatar source also still falls back to hardcoded 'teto' from electron-store/window-store and sidecar spawn, while the real imported Teto catalog in this repo is under avatars/重音テト. That stale ID produces missing current-plan metadata and makes re-edit unreliable after saves/restarts. The current UAT also exposes a missing regression: re-edit must load persisted _avatar_overrides.yaml rows, not a fresh import-plan table."
   artifacts:
     - path: "apps/renderer/src/screens/Settings/Settings.tsx"
-      issue: "AvatarsSection disables Edit current with disabled={!plan && !loading} and only loads current metadata in a mount-only useEffect."
+      issue: "AvatarsSection disables Edit current only while loading without an ID, so the button remains enabled in the no-ID degraded state."
     - path: "apps/electron-main/src/ipc.ts"
-      issue: "avatar:getCurrentPlan truthfully returns null while sidecar/current metadata is unavailable, so renderer must retry or present a non-contradictory state."
+      issue: "avatar:getCurrentId and avatar:getCurrentPlan default to store currentAvatarId or 'teto' without validating that an override catalog exists for that ID."
+    - path: "apps/electron-main/src/sidecar.ts"
+      issue: "AGENTICLLMVTUBER_ACTIVE_AVATAR is spawned from the same stale 'teto' fallback, so the sidecar can boot against a non-catalog avatar even when a real imported catalog exists."
+    - path: "apps/renderer/src/screens/AvatarImport/AvatarImport.tsx"
+      issue: "No regression covers saving current edits, returning to Settings, and re-opening Edit current with the persisted edited variants/events."
   resolution:
     - "12-02 keeps current avatar ID loading independent from current-plan metadata loading."
     - "12-02 enables Edit current when a current avatar ID is known and retries getCurrentAvatarPlan() before routing or showing an unavailable notice."
@@ -71,13 +75,25 @@ blocked: 0
     - "Load current avatar ID independently from current avatar metadata and keep a truthful fallback state."
     - "Retry current avatar metadata when sidecar status becomes ready and when Edit current is clicked."
     - "Do not permanently disable Edit current after a transient metadata miss; show an actionable unavailable message only after retry fails."
+  missing:
+    - "Disable Edit current when no current avatar ID is known or when no persisted current catalog can be loaded."
+    - "Resolve the current avatar ID from a real persisted override catalog instead of hardcoding 'teto' when the store value is stale or missing."
+    - "Guarantee Edit current uses saved _avatar_overrides.yaml data after save/restart rather than a freshly detected import table."
   debug_session: "inline verify-work diagnosis 2026-05-09"
+  fix_plan: ".planning/phases/12-settings-reality-pass/12-03-PLAN.md"
 - truth: "Settings > About shows a current milestone/version label instead of the stale initial skeleton label."
   status: failed
   reason: "User reported: Side issue: The About section shows stale version number as 0.1.0-skeleton. Should also be updated as milestone number"
   severity: minor
   test: 6
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Settings About copy still uses the original Phase 1 UI-SPEC skeleton string. The Phase 12 copy pass updated milestone wording for deferred sections but did not include ABOUT_VERSION_VAL or a test asserting the About version reflects the current v2.1 milestone context."
+  artifacts:
+    - path: "apps/renderer/src/lib/copy.ts"
+      issue: "COPY.SETTINGS.ABOUT_VERSION_VAL is hardcoded to '0.1.0-skeleton'."
+    - path: "apps/renderer/tests/Settings.test.tsx"
+      issue: "Settings tests do not assert that About avoids stale skeleton version copy."
+  missing:
+    - "Update About version copy to the current v2.1 milestone/version label."
+    - "Add a Settings regression test that fails on the stale '0.1.0-skeleton' About value."
+  debug_session: "inline verify-work diagnosis 2026-05-09"
+  fix_plan: ".planning/phases/12-settings-reality-pass/12-03-PLAN.md"
