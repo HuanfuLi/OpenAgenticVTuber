@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { AppStoreProvider } from '@/state/app-store'
 import { ThemeProvider } from '@/state/theme-provider'
 import { COPY } from '@/lib/copy'
 import { Settings } from '@/screens/Settings/Settings'
 import type { StoredConfig } from '@preload-types'
+import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
 
 function renderSettings() {
   return render(
@@ -28,6 +29,31 @@ describe('Settings TTS section', () => {
     hasCompletedSetup: true,
     schemaVersion: 1
   }
+  const currentAvatarPlan: AvatarImportPlan = {
+    avatar_id: 'akari',
+    avatar_name: 'Akari',
+    detected_type: 'live2d',
+    source_rig_path: 'C:/avatars/akari/model3.json',
+    variants: [
+      { code: 'smile', hotkey_id: 'hotkey-smile', is_placeholder: false, source_name: 'Smile' },
+      { code: 'wink', hotkey_id: 'hotkey-wink', is_placeholder: false, source_name: 'Wink' }
+    ],
+    events: [
+      {
+        code: 'wave',
+        duration_is_fallback: false,
+        duration_seconds: 1.2,
+        hotkey_id: 'hotkey-wave',
+        is_loop: false,
+        is_placeholder: false,
+        motion_file: 'wave.motion3.json'
+      }
+    ],
+    voice: { backend: 'piper', model: 'en_US-amy-medium', lipsync_mode: 'rms' },
+    default_plugin_action_bindings: [],
+    existing_overrides: null,
+    warnings: []
+  }
 
   beforeEach(() => {
     Object.defineProperty(window, 'api', {
@@ -43,6 +69,12 @@ describe('Settings TTS section', () => {
           authenticated: true,
           windowDetected: true
         }),
+        restartSidecar: vi.fn().mockResolvedValue(undefined),
+        resetVtsAuth: vi.fn().mockResolvedValue(undefined),
+        getCurrentAvatarId: vi.fn().mockResolvedValue('akari'),
+        getCurrentAvatarPlan: vi.fn().mockResolvedValue(currentAvatarPlan),
+        getLogLevel: vi.fn().mockResolvedValue('info'),
+        saveLogLevel: vi.fn().mockResolvedValue('debug'),
         getChromeState: vi.fn().mockResolvedValue({
           logsDrawerEnabled: false,
           logsDrawerHeight: 200,
@@ -94,6 +126,88 @@ describe('Settings TTS section', () => {
     expect(screen.getByText(COPY.SETTINGS.TTS_OUTPUT_VAL)).toBeInTheDocument()
     expect(screen.getByText(COPY.SETTINGS.TTS_HELP)).toBeInTheDocument()
     expect(screen.queryByText(/Coming in milestone-3.*TTS/i)).toBeNull()
+  })
+
+  it('renders one combined Avatars section with current catalog counts and actions', async () => {
+    renderSettings()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
+      .then((heading) => heading.closest('section')!)
+
+    expect(within(section).getByText('akari')).toBeInTheDocument()
+    expect(within(section).getByText('Akari')).toBeInTheDocument()
+    expect(within(section).getByText('C:/avatars/akari/model3.json')).toBeInTheDocument()
+    expect(within(section).getByText('2')).toBeInTheDocument()
+    expect(within(section).getByText('1')).toBeInTheDocument()
+    expect(within(section).getByText('piper · en_US-amy-medium')).toBeInTheDocument()
+    expect(within(section).getByRole('button', { name: COPY.SETTINGS.AVATARS_EDIT_CURRENT })).toBeInTheDocument()
+    expect(within(section).getByRole('button', { name: COPY.SETTINGS.AVATARS_IMPORT_REPLACE })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Avatar catalogs' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Per-avatar settings' })).toBeNull()
+  })
+
+  it('shows degraded avatar state without assuming Teto when metadata is unavailable', async () => {
+    vi.mocked(window.api.getCurrentAvatarId).mockResolvedValue('custom-avatar')
+    vi.mocked(window.api.getCurrentAvatarPlan).mockResolvedValue(null)
+
+    renderSettings()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
+      .then((heading) => heading.closest('section')!)
+    expect(await within(section).findByText('custom-avatar')).toBeInTheDocument()
+    expect(within(section).getByText(COPY.SETTINGS.AVATARS_DEGRADED)).toBeInTheDocument()
+    expect(within(section).queryByText(/teto/i)).toBeNull()
+    expect(within(section).getByRole('button', { name: COPY.SETTINGS.AVATARS_IMPORT_REPLACE })).not.toBeDisabled()
+  })
+
+  it('renders compact VTube Studio status and troubleshooting actions', async () => {
+    renderSettings()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.VTS_HEADER })
+      .then((heading) => heading.closest('section')!)
+    expect(within(section).getByText('VTS authenticated and window detected.')).toBeInTheDocument()
+    expect(within(section).getByText(COPY.SETTINGS.VTS_HELP)).toBeInTheDocument()
+
+    fireEvent.click(within(section).getByText(COPY.SETTINGS.VTS_TROUBLESHOOTING))
+    fireEvent.click(within(section).getByRole('button', { name: COPY.SETTINGS.VTS_RESET_AUTH }))
+
+    await waitFor(() => {
+      expect(window.api.resetVtsAuth).toHaveBeenCalledTimes(1)
+      expect(window.api.getVtsStatus).toHaveBeenCalled()
+    })
+
+    fireEvent.click(within(section).getByRole('button', { name: COPY.SETTINGS.VTS_RESTART }))
+    await waitFor(() => {
+      expect(window.api.restartSidecar).toHaveBeenCalled()
+    })
+  })
+
+  it('renders Conversation as truth-only and Memory as disabled v4.0 scope', async () => {
+    renderSettings()
+
+    const conversation = await screen.findByRole('heading', { name: COPY.SETTINGS.CONVERSATION_HEADER })
+      .then((heading) => heading.closest('section')!)
+    expect(within(conversation).getByText(COPY.SETTINGS.CONVERSATION_MODE_VAL)).toBeInTheDocument()
+    expect(within(conversation).getByText(COPY.SETTINGS.CONVERSATION_RESET_VAL)).toBeInTheDocument()
+    expect(within(conversation).queryByRole('button', { name: /new thread/i })).toBeNull()
+    expect(within(conversation).queryByPlaceholderText(/search threads/i)).toBeNull()
+
+    const memory = screen.getByRole('heading', { name: COPY.SETTINGS.MEMORY_HEADER }).closest('section')!
+    expect(memory).toHaveAttribute('aria-disabled', 'true')
+    expect(within(memory).getByText(/v4\.0 agentic system plus memory/i)).toBeInTheDocument()
+  })
+
+  it('persists diagnostics log level and removes targeted stale milestone-2 copy', async () => {
+    renderSettings()
+
+    const select = await screen.findByRole('combobox', { name: COPY.SETTINGS.DIAG_LOG_LEVEL })
+    fireEvent.change(select, { target: { value: 'debug' } })
+
+    await waitFor(() => {
+      expect(window.api.saveLogLevel).toHaveBeenCalledWith('debug')
+    })
+    expect(select).toHaveValue('debug')
+    expect(screen.queryByText('Coming in milestone-2.', { exact: false })).toBeNull()
   })
 
   it('renders body-motion plugin selection and persists active plugin', async () => {
