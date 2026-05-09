@@ -11,6 +11,7 @@ from typing import AsyncIterator
 import pytest
 from litellm.exceptions import ContextWindowExceededError
 
+from contracts import ActionCode
 from sidecar.orchestrator.orchestrator import Orchestrator
 from sidecar.orchestrator.output_types import DisplayText, SentenceOutput
 from sidecar.orchestrator.tts_preprocessor import TTSPreprocessorConfig
@@ -39,12 +40,12 @@ class _FakeTTSManager:
         self.wait_started = asyncio.Event()
         self.release_wait = asyncio.Event()
 
-    async def speak(self, tts_text, display_text, actions, sentence_id, ws) -> None:
+    async def speak(self, tts_text, display_text, dispatches, sentence_id, ws) -> None:
         self.speak_calls.append(
             {
                 "tts_text": tts_text,
                 "display_text": display_text,
-                "actions": actions,
+                "dispatches": dispatches,
                 "sentence_id": sentence_id,
             }
         )
@@ -58,9 +59,14 @@ class _FakeTTSManager:
 class _FakePluginAdapter:
     def __init__(self) -> None:
         self.received: list[str] = []
+        self.actions: list[ActionCode] = []
 
     def enqueue_sentence(self, sentence: str) -> None:
         self.received.append(sentence)
+
+    def enqueue_action_code(self, action: ActionCode) -> bool:
+        self.actions.append(action)
+        return True
 
 
 async def _fake_sentence_stream(*sentences: str) -> AsyncIterator[SentenceOutput]:
@@ -69,7 +75,7 @@ async def _fake_sentence_stream(*sentences: str) -> AsyncIterator[SentenceOutput
             display_text=DisplayText(text=text),
             tts_text=text,
             plugin_text=text,
-            actions=[],
+            dispatches=[],
         )
 
 
@@ -156,19 +162,18 @@ def test_memory_pop_violation_absent():
 
 
 @pytest.mark.asyncio
-async def test_intent_emitted_in_audio_actions():
+async def test_action_code_emitted_in_audio_dispatches():
     gw = _FakeGateway(chunks=["Hello [joy] world."])
     orch = _build_orch(gw)
     ws = _WSRecorder()
     await orch.turn("hi", ws)
     audio_writes = [w for w in ws.writes if w.get("type") == "audio"]
-    all_actions = [a for w in audio_writes for a in w["actions"]]
+    all_dispatches = [a for w in audio_writes for a in w["dispatches"]]
     assert any(
-        a["kind"] == "expression"
+        a["kind"] == "action"
         and a["name"] == "joy"
-        and a["avatar_id"] == "teto"
-        for a in all_actions
-    ), all_actions
+        for a in all_dispatches
+    ), all_dispatches
 
 
 @pytest.mark.asyncio
@@ -194,10 +199,11 @@ async def test_plugin_adapter_receives_bracketed_sentence_while_display_and_tts_
         assert "[" not in audio["display_text"]["text"]
         assert "]" not in audio["display_text"]["text"]
     assert any(
-        action["kind"] == "expression" and action["name"] == "joy"
+        dispatch["kind"] == "action" and dispatch["name"] == "joy"
         for audio in audio_writes
-        for action in audio["actions"]
+        for dispatch in audio["dispatches"]
     )
+    assert plugin_adapter.actions == [ActionCode(name="joy")]
     assert audio_writes[0]["display_text"]["text"] == "Hello world."
 
 
@@ -275,7 +281,7 @@ async def test_system_prompt_built_once():
     gw = _FakeGateway(chunks=["ok."])
     orch = _build_orch(gw)
     prompt_at_init = orch._system_prompt
-    orch._valid_expression_names.add("JOY_MUTATED_AFTER_INIT")
+    orch._plugin_action_codes.add("JOY_MUTATED_AFTER_INIT")
     ws = _WSRecorder()
     await orch.turn("hi", ws)
     assert "JOY_MUTATED_AFTER_INIT" not in gw.calls_received_system_prompt[0]
@@ -326,8 +332,8 @@ async def test_stub_tts_log_line_emitted():
 
 
 @pytest.mark.asyncio
-async def test_intent_log_line_emitted():
-    """D-14 ActionIntent log line surfaces via loguru for Logs drawer."""
+async def test_dispatch_log_line_emitted():
+    """ActionCode dispatch log line surfaces via loguru for Logs drawer."""
     from loguru import logger
 
     records: list[str] = []
@@ -336,17 +342,22 @@ async def test_intent_log_line_emitted():
     )
     try:
         gw = _FakeGateway(chunks=["Hello [joy] world."])
-        orch = _build_orch(gw)
+        orch = Orchestrator(
+            gateway=gw,
+            persona_text="You are Teto.",
+            action_codes_section=ACTION_CODES_SECTION,
+            tts_preprocessor_config=TTSPreprocessorConfig(),
+            plugin_adapter=_FakePluginAdapter(),
+            valid_expression_names={"joy"},
+        )
         ws = _WSRecorder()
         await orch.turn("hi", ws)
     finally:
         logger.remove(sink_id)
     assert any(
-        "[INTENT]" in r
-        and "kind=expression" in r
+        "[DISPATCH]" in r
+        and "kind=action" in r
         and "name=joy" in r
-        and "avatar=teto" in r
-        and "strength=1.0" in r
         for r in records
     ), records
 
