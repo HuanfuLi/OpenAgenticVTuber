@@ -91,6 +91,47 @@ export function registerIpc(window: BrowserWindow): () => void {
       }
     }
   })
+  ipcMain.handle('sidecar:getPluginStatus', async () => {
+    let baseUrl: string
+    try {
+      baseUrl = getSidecarHttpUrl()
+    } catch {
+      return {
+        selectedPlugin: null,
+        loadedPlugin: null,
+        lifecycleState: 'unknown/loading',
+        summary: 'Sidecar is not ready.',
+        developerDetails: null,
+        fallbackActive: false,
+        chatAvailable: true
+      }
+    }
+    try {
+      const resp = await fetch(`${baseUrl}/admin/plugin/status`)
+      if (!resp.ok) {
+        return {
+          selectedPlugin: null,
+          loadedPlugin: null,
+          lifecycleState: 'unknown/loading',
+          summary: `Plugin status unavailable: HTTP ${resp.status}`,
+          developerDetails: null,
+          fallbackActive: false,
+          chatAvailable: true
+        }
+      }
+      return await resp.json()
+    } catch (err) {
+      return {
+        selectedPlugin: null,
+        loadedPlugin: null,
+        lifecycleState: 'unknown/loading',
+        summary: `Plugin status unavailable: ${err instanceof Error ? err.message : String(err)}`,
+        developerDetails: null,
+        fallbackActive: false,
+        chatAvailable: true
+      }
+    }
+  })
 
   // New for 01-02 (safeStorage credential gate, PLUMB-04 / D-07 / D-09):
   ipcMain.handle('config:load', () => loadConfig())
@@ -202,6 +243,7 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('sidecar:restart')
     ipcMain.removeHandler('vts:resetAuth')
     ipcMain.removeHandler('sidecar:getVtsStatus')
+    ipcMain.removeHandler('sidecar:getPluginStatus')
     ipcMain.removeHandler('config:load')
     ipcMain.removeHandler('config:save')
     ipcMain.removeHandler('config:clear')

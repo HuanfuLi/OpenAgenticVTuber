@@ -11,7 +11,7 @@ import { useStore } from '@/state/app-store'
 import { useConversationHistory } from '@/state/conversation-history'
 import { saveCompletedSetupConfig, type Provider, type ProviderConfig } from '@/state/setup-store'
 import { useTheme, type ThemeMode, type LightAccent, type DarkBg, type DarkAccent } from '@/state/theme-provider'
-import type { BodyMotionPluginSummary, StoredConfig } from '@preload-types'
+import type { BodyMotionPluginSummary, PluginRuntimeStatus, StoredConfig } from '@preload-types'
 import { ProviderSelect } from '@/screens/LLMSetup/ProviderSelect'
 import { TestLog } from '@/screens/LLMSetup/TestLog'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
@@ -481,18 +481,29 @@ function ConnectionSection() {
 // -------- Body motion plugins --------------------------------------------
 function PluginSection() {
   const C = COPY.SETTINGS
+  const { markPluginRestartPending, refreshStatus, status: appStatus } = useStore()
   const [plugins, setPlugins] = useState<BodyMotionPluginSummary[]>([])
   const [storedCfg, setStoredCfg] = useState<StoredConfig | null>(null)
+  const [runtimeStatus, setRuntimeStatus] = useState<PluginRuntimeStatus | null>(null)
   const [status, setStatus] = useState<string>('')
+
+  const refreshPlugins = async (): Promise<void> => {
+    const [cfg, discovered, runtime] = await Promise.all([
+      window.api.getStoredConfig(),
+      window.api.listBodyMotionPlugins(),
+      window.api.getPluginStatus?.().catch(() => null) ?? Promise.resolve(null)
+    ])
+    setStoredCfg(cfg)
+    setPlugins(discovered)
+    setRuntimeStatus(runtime)
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.api) return
     let cancelled = false
-    Promise.all([window.api.getStoredConfig(), window.api.listBodyMotionPlugins()])
-      .then(([cfg, discovered]) => {
+    refreshPlugins()
+      .then(() => {
         if (cancelled) return
-        setStoredCfg(cfg)
-        setPlugins(discovered)
       })
       .catch(() => {
         if (!cancelled) setPlugins([])
@@ -506,18 +517,26 @@ function PluginSection() {
 
   const selectPlugin = async (name: string): Promise<void> => {
     if (!storedCfg || name === activePlugin) return
+    const selected = plugins.find((plugin) => plugin.name === name)
     const nextCfg: StoredConfig = {
       ...storedCfg,
       plugin: { activePluginName: name }
     }
     setStoredCfg(nextCfg)
     setStatus(C.PLUGINS_SAVING)
+    markPluginRestartPending(name)
     try {
       await window.api.saveStoredConfig(nextCfg)
+      await refreshStatus()
+      await refreshPlugins()
       setStatus(C.PLUGINS_SAVED)
     } catch {
       setStoredCfg(storedCfg)
-      setStatus(C.PLUGINS_ERROR)
+      setStatus(
+        selected?.valid === false
+          ? `${C.PLUGINS_ERROR} ${selected.statusSummary ?? ''}`.trim()
+          : C.PLUGINS_ERROR
+      )
     }
   }
 
@@ -529,17 +548,44 @@ function PluginSection() {
         <div className="placeholder-line muted">{C.PLUGINS_EMPTY}</div>
       ) : (
         <div className="radio-group" role="radiogroup" aria-label={C.PLUGINS_HEADER}>
-          {plugins.map((plugin) => (
-            <RadioRow
-              key={`${plugin.source}:${plugin.name}`}
-              id={plugin.name}
-              label={`${plugin.name}${plugin.version ? ` v${plugin.version}` : ''}`}
-              isDefault={plugin.name === 'default'}
-              checked={activePlugin === plugin.name}
-              onChange={selectPlugin}
-            />
-          ))}
+          {plugins.map((plugin) => {
+            const pluginValid = plugin.valid !== false
+            return (
+            <div key={`${plugin.source}:${plugin.name}`}>
+              <RadioRow
+                id={plugin.name}
+                label={`${plugin.name}${plugin.version ? ` v${plugin.version}` : ''}${pluginValid ? '' : ' - invalid'}`}
+                isDefault={plugin.name === 'default'}
+                checked={activePlugin === plugin.name}
+                disabled={plugin.selectable === false}
+                onChange={selectPlugin}
+                tooltip={pluginValid ? null : plugin.statusSummary ?? 'Plugin manifest is invalid.'}
+              />
+              {!pluginValid && (
+                <details className="tx-sm muted" style={{ margin: '4px 0 8px 32px' }}>
+                  <summary>{plugin.statusSummary ?? 'Invalid manifest'}</summary>
+                  <div className="mono tx-sm" style={{ marginTop: 4 }}>{plugin.developerDetails}</div>
+                </details>
+              )}
+            </div>
+          )})}
         </div>
+      )}
+      <div className="kv-row">
+        <span className="k">Runtime</span>
+        <span className="v">
+          <span className={`dot ${appStatus.plugin === 'green' ? 'green' : appStatus.plugin === 'amber' ? 'amber' : 'red'}`} />{' '}
+          {runtimeStatus?.lifecycleState ?? appStatus.pluginLifecycleState}
+        </span>
+      </div>
+      <div className="tx-sm muted mt-2">{runtimeStatus?.summary ?? appStatus.pluginDetail}</div>
+      {(runtimeStatus?.developerDetails || appStatus.pluginDeveloperDetails) && (
+        <details className="tx-sm muted mt-2">
+          <summary>{COPY.STATUS.PLUGIN_DETAILS}</summary>
+          <div className="mono tx-sm" style={{ marginTop: 4 }}>
+            {runtimeStatus?.developerDetails ?? appStatus.pluginDeveloperDetails}
+          </div>
+        </details>
       )}
       <div className="row mt-2" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <button

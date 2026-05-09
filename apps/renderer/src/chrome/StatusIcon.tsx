@@ -104,6 +104,27 @@ export function StatusIcon() {
             <span className="label">{COPY.STATUS.SIDECAR}</span>
             <span className="detail">{status.sidecarDetail}</span>
           </div>
+          <div className="row">
+            <span
+              className={`dot ${
+                status.plugin === 'green'
+                  ? 'green'
+                  : status.plugin === 'amber'
+                    ? 'amber'
+                    : 'red'
+              }`}
+            />
+            <span className="label">{COPY.STATUS.PLUGIN}</span>
+            <span className="detail">{status.pluginDetail}</span>
+          </div>
+          {status.pluginDeveloperDetails && (
+            <details className="tx-sm muted" style={{ marginTop: 4 }}>
+              <summary>{COPY.STATUS.PLUGIN_DETAILS}</summary>
+              <pre className="tx-sm" style={{ whiteSpace: 'pre-wrap', marginTop: 4 }}>
+                {status.pluginDeveloperDetails}
+              </pre>
+            </details>
+          )}
           <button
             className="btn btn-primary"
             disabled={retesting}

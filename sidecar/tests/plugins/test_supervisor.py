@@ -58,6 +58,8 @@ async def test_load_or_null_falls_back_on_load_failure() -> None:
 
     assert isinstance(supervisor.plugin, NullPlugin)
     assert [frame async for frame in supervisor.on_token_stream("hi")] == [ParamFrame()]
+    assert supervisor.runtime_status()["lifecycleState"] == "load failed"
+    assert supervisor.runtime_status()["fallbackActive"] is True
 
 
 @pytest.mark.asyncio
@@ -85,6 +87,28 @@ async def test_generator_failure_circuit_breaker_opens_after_three_failures() ->
 
     assert supervisor.circuit_open is True
     assert [frame async for frame in supervisor.on_token_stream("hi")] == []
+    assert supervisor.runtime_status()["lifecycleState"] == "circuit open"
+
+
+@pytest.mark.asyncio
+async def test_load_or_null_preserves_selected_plugin_when_manifest_invalid() -> None:
+    supervisor = await PluginSupervisor.load_or_null(
+        NullPlugin(),
+        RigCapabilities(),
+        AvatarOverrides(),
+        selected_plugin_name="broken",
+        failure_state="invalid manifest",
+        failure_summary="Selected plugin is invalid.",
+        failure_details="missing api_version",
+    )
+
+    status = supervisor.runtime_status()
+
+    assert status["selectedPlugin"] == "broken"
+    assert status["loadedPlugin"] is None
+    assert status["lifecycleState"] == "invalid manifest"
+    assert status["fallbackActive"] is True
+    assert status["chatAvailable"] is True
 
 
 @pytest.mark.asyncio

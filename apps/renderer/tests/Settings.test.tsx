@@ -96,6 +96,15 @@ describe('Settings TTS section', () => {
           authenticated: true,
           windowDetected: true
         }),
+        getPluginStatus: vi.fn().mockResolvedValue({
+          selectedPlugin: 'default',
+          loadedPlugin: 'default',
+          lifecycleState: 'active',
+          summary: 'Plugin active.',
+          developerDetails: null,
+          fallbackActive: false,
+          chatAvailable: true
+        }),
         restartSidecar: vi.fn().mockResolvedValue(undefined),
         resetVtsAuth: vi.fn().mockResolvedValue(undefined),
         getCurrentAvatarId: vi.fn().mockResolvedValue('akari'),
@@ -120,14 +129,18 @@ describe('Settings TTS section', () => {
             version: '1.0.0',
             description: 'Default body motion',
             source: 'repo',
-            path: 'plugins/default/plugin.yaml'
+            path: 'plugins/default/plugin.yaml',
+            valid: true,
+            selectable: true
           },
           {
             name: 'test-motion',
             version: '0.1.0',
             description: 'Test body motion',
             source: 'userData',
-            path: 'userData/plugins/test-motion/plugin.yaml'
+            path: 'userData/plugins/test-motion/plugin.yaml',
+            valid: true,
+            selectable: true
           }
         ]),
         openHud: vi.fn().mockResolvedValue(undefined),
@@ -460,6 +473,37 @@ describe('Settings TTS section', () => {
       })
     })
     expect(screen.getByText(COPY.SETTINGS.PLUGINS_SAVED)).toBeInTheDocument()
+  })
+
+  it('shows invalid plugin manifests with details and keeps them selectable', async () => {
+    vi.mocked(window.api.listBodyMotionPlugins).mockResolvedValue([
+      {
+        name: 'broken-motion',
+        version: null,
+        description: null,
+        source: 'userData',
+        path: 'userData/plugins/broken/plugin.yaml',
+        valid: false,
+        selectable: true,
+        statusSummary: 'Manifest invalid; selecting it will use fallback/null motion.',
+        developerDetails: 'missing api_version',
+        manifestApiVersion: null
+      }
+    ])
+
+    renderSettings()
+
+    expect(await screen.findByText('broken-motion - invalid')).toBeInTheDocument()
+    expect(screen.getByText(/selecting it will use fallback\/null motion/i)).toBeInTheDocument()
+    expect(screen.getByText('missing api_version')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('broken-motion - invalid'))
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith({
+        ...storedConfig,
+        plugin: { activePluginName: 'broken-motion' }
+      })
+    })
   })
 
   it('renders Open HUD button in the body motion plugin section', async () => {

@@ -46,6 +46,21 @@ def test_discover_manifests_fails_on_duplicate_user_plugin_names(tmp_path: Path)
         discover_manifests(tmp_path / "missing-repo", tmp_path / "user")
 
 
+def test_discover_manifests_non_strict_skips_invalid_and_duplicate_entries(tmp_path: Path) -> None:
+    valid = _write_manifest(tmp_path / "repo" / "default", "default", code="neutral")
+    _write_manifest(tmp_path / "user" / "one", "dupe", code="joy")
+    _write_manifest(tmp_path / "user" / "two", "dupe", code="neutral")
+    broken_dir = tmp_path / "user" / "broken"
+    broken_dir.mkdir(parents=True)
+    (broken_dir / "plugin.yaml").write_text("name: broken\n", encoding="utf-8")
+
+    discovered = discover_manifests(tmp_path / "repo", tmp_path / "user", strict=False)
+
+    assert discovered["default"] == valid
+    assert discovered["dupe"] == tmp_path / "user" / "one" / "plugin.yaml"
+    assert "broken" not in discovered
+
+
 def test_manifest_rejects_reserved_and_bracketed_action_codes() -> None:
     with pytest.raises(ValidationError, match="reserved"):
         PluginManifest.model_validate(

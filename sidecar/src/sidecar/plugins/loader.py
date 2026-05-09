@@ -23,17 +23,42 @@ def _manifest_paths(root: Path | None) -> list[Path]:
     return sorted(root.glob("*/plugin.yaml"))
 
 
-def discover_manifests(repo_plugins_dir: Path, user_plugins_dir: Path | None) -> dict[str, Path]:
+def discover_manifests(
+    repo_plugins_dir: Path,
+    user_plugins_dir: Path | None,
+    *,
+    strict: bool = True,
+) -> dict[str, Path]:
     discovered: dict[str, Path] = {}
 
     for manifest_path in _manifest_paths(repo_plugins_dir):
-        manifest = load_manifest(manifest_path)
+        try:
+            manifest = load_manifest(manifest_path)
+        except Exception as exc:  # noqa: BLE001 - non-strict discovery is UI/status tolerant
+            if strict:
+                raise
+            logger.warning("[PLUGIN-DISCOVERY] invalid repo manifest {}: {}", manifest_path, exc)
+            continue
         discovered[manifest.name] = manifest_path
 
     user_seen: dict[str, Path] = {}
     for manifest_path in _manifest_paths(user_plugins_dir):
-        manifest = load_manifest(manifest_path)
+        try:
+            manifest = load_manifest(manifest_path)
+        except Exception as exc:  # noqa: BLE001 - non-strict discovery is UI/status tolerant
+            if strict:
+                raise
+            logger.warning("[PLUGIN-DISCOVERY] invalid userData manifest {}: {}", manifest_path, exc)
+            continue
         if manifest.name in user_seen:
+            if not strict:
+                logger.warning(
+                    "[PLUGIN-DISCOVERY] duplicate userData plugin name {} ({} and {})",
+                    manifest.name,
+                    user_seen[manifest.name],
+                    manifest_path,
+                )
+                continue
             raise ValueError(
                 f"duplicate userData plugin name: {manifest.name} "
                 f"({user_seen[manifest.name]} and {manifest_path})"

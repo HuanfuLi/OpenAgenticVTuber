@@ -33,6 +33,31 @@ export interface BodyMotionPluginSummary {
   description: string | null
   source: 'repo' | 'userData'
   path: string
+  valid: boolean
+  selectable: boolean
+  statusSummary?: string
+  developerDetails?: string
+  manifestApiVersion?: string | null
+  isSelected?: boolean
+}
+
+export type PluginLifecycleState =
+  | 'active'
+  | 'restart pending'
+  | 'load failed'
+  | 'fallback/null'
+  | 'circuit open'
+  | 'invalid manifest'
+  | 'unknown/loading'
+
+export interface PluginRuntimeStatus {
+  selectedPlugin: string | null
+  loadedPlugin: string | null
+  lifecycleState: PluginLifecycleState
+  summary: string
+  developerDetails?: string | null
+  fallbackActive: boolean
+  chatAvailable: boolean
 }
 
 const api = {
@@ -73,6 +98,8 @@ const api = {
     ipcRenderer.invoke('config:save', cfg),
   clearStoredConfig: (): Promise<void> => ipcRenderer.invoke('config:clear'),
   getVtsStatus: (): Promise<VtsStatus> => ipcRenderer.invoke('sidecar:getVtsStatus'),
+  getPluginStatus: (): Promise<PluginRuntimeStatus> =>
+    ipcRenderer.invoke('sidecar:getPluginStatus'),
   restartSidecar: (): Promise<void> => ipcRenderer.invoke('sidecar:restart'),
   resetVtsAuth: (): Promise<void> => ipcRenderer.invoke('vts:resetAuth'),
   listBodyMotionPlugins: (): Promise<BodyMotionPluginSummary[]> =>

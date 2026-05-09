@@ -5,9 +5,20 @@ export interface StatusSnapshot {
   llm: StatusValue
   vts: StatusValue
   sidecar: StatusValue
+  plugin: StatusValue
   llmDetail: string
   vtsDetail: string
   sidecarDetail: string
+  pluginDetail: string
+  pluginLifecycleState:
+    | 'active'
+    | 'restart pending'
+    | 'load failed'
+    | 'fallback/null'
+    | 'circuit open'
+    | 'invalid manifest'
+    | 'unknown/loading'
+  pluginDeveloperDetails?: string | null
 }
 
 export function worstOf(s: StatusSnapshot): StatusOverall {

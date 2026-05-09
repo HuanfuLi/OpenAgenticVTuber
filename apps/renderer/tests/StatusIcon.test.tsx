@@ -29,6 +29,15 @@ function installApi() {
         authenticated: true,
         windowDetected: true
       }),
+      getPluginStatus: vi.fn().mockResolvedValue({
+        selectedPlugin: 'default',
+        loadedPlugin: 'default',
+        lifecycleState: 'active',
+        summary: 'Plugin active.',
+        developerDetails: null,
+        fallbackActive: false,
+        chatAvailable: true
+      }),
       restartSidecar: vi.fn().mockResolvedValue(undefined),
       getChromeState: vi.fn().mockResolvedValue({
         logsDrawerEnabled: false,
@@ -65,6 +74,7 @@ describe('StatusIcon', () => {
     fireEvent.click(screen.getByRole('button', { name: /Status:/i }))
 
     expect(await screen.findByText('teto-test-model · LM Studio')).toBeInTheDocument()
+    expect(screen.getByText('default: Plugin active.')).toBeInTheDocument()
     expect(screen.queryByText(/qwen2\.5/i)).toBeNull()
     expect(screen.queryByText(/last reply/i)).toBeNull()
   })
@@ -79,6 +89,7 @@ describe('StatusIcon', () => {
     await waitFor(() => {
       expect(window.api.getStoredConfig).toHaveBeenCalledTimes(2)
       expect(window.api.getVtsStatus).toHaveBeenCalledTimes(2)
+      expect(window.api.getPluginStatus).toHaveBeenCalledTimes(2)
     })
     expect(screen.queryByText(/qwen2\.5/i)).toBeNull()
     expect(screen.queryByText(/last reply/i)).toBeNull()

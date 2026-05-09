@@ -20,7 +20,7 @@ import {
   type Toast
 } from '@/dev/__mocks__/mock-backend'
 import { worstOf, type StatusOverall, type StatusSnapshot, type StatusValue } from './status-types'
-import type { Provider, StoredConfig, VtsStatus } from '@preload-types'
+import type { PluginRuntimeStatus, Provider, StoredConfig, VtsStatus } from '@preload-types'
 import { ConversationHistoryProvider } from './conversation-history'
 
 export type ChatRole = 'user' | 'assistant'
@@ -69,6 +69,7 @@ interface AppStoreValue {
   status: StatusSnapshot
   statusOverall: StatusOverall
   refreshStatus: () => Promise<void>
+  markPluginRestartPending: (pluginName: string) => void
   restartSidecar: () => Promise<void>
   banners: Banners
   toasts: Toast[]
@@ -95,9 +96,13 @@ const DEFAULT_STATUS: StatusSnapshot = {
   llm: 'amber',
   vts: 'amber',
   sidecar: 'amber',
+  plugin: 'amber',
   llmDetail: 'loading setup',
   vtsDetail: 'checking VTS status',
-  sidecarDetail: 'starting...'
+  sidecarDetail: 'starting...',
+  pluginDetail: 'checking plugin status',
+  pluginLifecycleState: 'unknown/loading',
+  pluginDeveloperDetails: null
 }
 
 function providerLabel(provider: string): string {
@@ -156,6 +161,25 @@ function vtsStatusToSnapshot(vts: VtsStatus): Pick<StatusSnapshot, 'vts' | 'vtsD
   return { vts: 'red', vtsDetail: vts.detail }
 }
 
+function pluginStatusToSnapshot(
+  plugin: PluginRuntimeStatus
+): Pick<StatusSnapshot, 'plugin' | 'pluginDetail' | 'pluginLifecycleState' | 'pluginDeveloperDetails'> {
+  const lifecycle = plugin.lifecycleState
+  const statusValue: StatusValue =
+    lifecycle === 'active'
+      ? 'green'
+      : lifecycle === 'restart pending' || lifecycle === 'unknown/loading'
+        ? 'amber'
+        : 'red'
+  const selected = plugin.selectedPlugin ? `${plugin.selectedPlugin}: ` : ''
+  return {
+    plugin: statusValue,
+    pluginDetail: `${selected}${plugin.summary}`,
+    pluginLifecycleState: lifecycle,
+    pluginDeveloperDetails: plugin.developerDetails ?? null
+  }
+}
+
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [hasCompletedSetup, setHasCompletedSetup] = useState<boolean>(false)
   const [llmConfig, setLlmConfigState] = useState<LLMConfig>(DEFAULT_LLM_CONFIG)
@@ -176,7 +200,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const refreshStatus = useCallback(async () => {
     if (typeof window === 'undefined' || !window.api) return
-    const [cfg, readyUrl, vts] = await Promise.all([
+    const [cfg, readyUrl, vts, plugin] = await Promise.all([
       window.api.getStoredConfig ? window.api.getStoredConfig().catch(() => null) : Promise.resolve(null),
       window.api.getReadyUrl ? window.api.getReadyUrl().catch(() => null) : Promise.resolve(null),
       window.api.getVtsStatus
@@ -185,6 +209,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
             detail: 'VTS status unavailable.',
             authenticated: false,
             windowDetected: false
+          }))
+        : Promise.resolve(null),
+      window.api.getPluginStatus
+        ? window.api.getPluginStatus().catch(() => ({
+            selectedPlugin: null,
+            loadedPlugin: null,
+            lifecycleState: 'unknown/loading' as const,
+            summary: 'Plugin status unavailable.',
+            developerDetails: null,
+            fallbackActive: false,
+            chatAvailable: true
           }))
         : Promise.resolve(null)
     ])
@@ -198,7 +233,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       ...llmStatusFromConfig(cfg ?? null),
       sidecar: readyUrl ? 'green' : 'amber',
       sidecarDetail: readyUrl ?? 'starting...',
-      ...(vts ? vtsStatusToSnapshot(vts) : {})
+      ...(vts ? vtsStatusToSnapshot(vts) : {}),
+      ...(plugin ? pluginStatusToSnapshot(plugin) : {})
     })
   }, [patchStatus])
 
@@ -266,7 +302,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     const offCrash = window.api.onSidecarCrash((info) => {
       if (info.willRespawn) setSidecar('amber', 'restarting…')
       else setSidecar('red', `exited code ${info.code}`)
-      patchStatus({ vts: 'amber', vtsDetail: 'waiting for sidecar' })
+      patchStatus({
+        vts: 'amber',
+        vtsDetail: 'waiting for sidecar',
+        plugin: 'amber',
+        pluginDetail: 'waiting for sidecar',
+        pluginLifecycleState: 'unknown/loading',
+        pluginDeveloperDetails: null
+      })
     })
     return () => {
       offReady()
@@ -313,6 +356,15 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     await refreshStatus()
   }, [patchStatus, refreshStatus])
 
+  const markPluginRestartPending = useCallback((pluginName: string) => {
+    patchStatus({
+      plugin: 'amber',
+      pluginDetail: `${pluginName}: plugin selection saved; restarting sidecar.`,
+      pluginLifecycleState: 'restart pending',
+      pluginDeveloperDetails: null
+    })
+  }, [patchStatus])
+
   const resetAll = useCallback(() => {
     void window.api?.clearStoredConfig?.()
     void window.api?.saveChromeState?.({
@@ -356,6 +408,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       status,
       statusOverall: worstOf(status),
       refreshStatus,
+      markPluginRestartPending,
       restartSidecar: restartSidecarAction,
       banners,
       toasts,
@@ -381,6 +434,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setLlmConfig,
       setLogsDrawer,
       refreshStatus,
+      markPluginRestartPending,
       restartSidecarAction,
       resetAll
     ]

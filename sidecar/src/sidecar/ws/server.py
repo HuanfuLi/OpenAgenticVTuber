@@ -46,6 +46,7 @@ from sidecar.vts.pyvts_writer import PyvtsSafeWriter
 from sidecar.vts.variant_state_manager import VariantStateManager
 from sidecar.admin import avatar as admin_avatar
 from sidecar.admin import rig_capabilities as admin_rig_capabilities
+from sidecar.admin import plugin as admin_plugin
 from sidecar.admin import status as admin_status
 
 from .handlers import handle_control, handle_shutdown, handle_text_input  # noqa: F401 -- side-effect: registers @on(...)
@@ -171,6 +172,15 @@ async def lifespan(app: FastAPI):
     plugin_manifest_watcher = None
     event_completion_tracker: EventCompletionTracker | None = None
     app.state.startup_error_message = None
+    app.state.plugin_runtime_status = {
+        "selectedPlugin": _active_plugin_id(),
+        "loadedPlugin": None,
+        "lifecycleState": "unknown/loading",
+        "summary": "Plugin runtime is starting.",
+        "developerDetails": None,
+        "fallbackActive": False,
+        "chatAvailable": True,
+    }
     app.state.lock_state = {}
     app.state.hud_tap = HudTap()
 
@@ -211,9 +221,17 @@ async def lifespan(app: FastAPI):
             )
             plugin_manifest = None
             plugin = NullPlugin()
+            plugin_failure_state = None
+            plugin_failure_summary = None
+            plugin_failure_details = None
+            active_plugin_id = _active_plugin_id()
             try:
-                manifests = discover_manifests(_repo_root() / "plugins", _user_plugins_dir())
-                manifest_path = manifests.get(_active_plugin_id())
+                manifests = discover_manifests(
+                    _repo_root() / "plugins",
+                    _user_plugins_dir(),
+                    strict=False,
+                )
+                manifest_path = manifests.get(active_plugin_id)
                 if manifest_path is not None:
                     plugin_manifest = load_manifest(manifest_path)
                     plugin_manifest_watcher = start_manifest_change_watcher(
@@ -221,8 +239,19 @@ async def lifespan(app: FastAPI):
                         plugin_manifest,
                     )
                 else:
-                    loguru_logger.warning("[PLUGIN] active plugin not found: {}", _active_plugin_id())
-            except Exception:
+                    plugin_failure_state = "invalid manifest"
+                    plugin_failure_summary = (
+                        f"Selected plugin '{active_plugin_id}' has no valid manifest; using fallback/null motion."
+                    )
+                    plugin_failure_details = (
+                        "The plugin was not found in the valid manifest catalog. "
+                        "Check plugin.yaml syntax, required fields, api_version, and duplicate names."
+                    )
+                    loguru_logger.warning("[PLUGIN] active plugin not found: {}", active_plugin_id)
+            except Exception as exc:
+                plugin_failure_state = "load failed"
+                plugin_failure_summary = "Plugin discovery failed; using fallback/null motion."
+                plugin_failure_details = repr(exc)
                 loguru_logger.exception("[PLUGIN] discovery/load failed; using NullPlugin")
 
             plugin_action_codes = {
@@ -238,7 +267,12 @@ async def lifespan(app: FastAPI):
             if plugin_manifest is not None:
                 try:
                     plugin = _load_plugin_instance(manifest_path, plugin_manifest.entrypoint)
-                except Exception:
+                except Exception as exc:
+                    plugin_failure_state = "load failed"
+                    plugin_failure_summary = (
+                        f"Selected plugin '{active_plugin_id}' could not be imported; using fallback/null motion."
+                    )
+                    plugin_failure_details = repr(exc)
                     loguru_logger.exception("[PLUGIN] instance load failed; using NullPlugin")
 
             persona = _persona_path(avatars, avatar_dir).read_text(encoding="utf-8")
@@ -259,7 +293,17 @@ async def lifespan(app: FastAPI):
             compositor_speech_queue: asyncio.Queue = asyncio.Queue()
             compositor_sentence_complete_queue: asyncio.Queue = asyncio.Queue()
             pending_inputs: asyncio.Queue[str] = asyncio.Queue()
-            plugin_supervisor = await PluginSupervisor.load_or_null(plugin, capabilities, overrides)
+            plugin_supervisor = await PluginSupervisor.load_or_null(
+                plugin,
+                capabilities,
+                overrides,
+                selected_plugin_name=active_plugin_id,
+                loaded_plugin_name=plugin_manifest.name if plugin_manifest is not None else None,
+                failure_state=plugin_failure_state or "load failed",
+                failure_summary=plugin_failure_summary,
+                failure_details=plugin_failure_details,
+            )
+            app.state.plugin_runtime_status = plugin_supervisor.runtime_status()
             plugin_adapter = PluginAdapter(plugin_supervisor)
             dispatch_codes_section = build_dispatch_codes_section(plugin_manifest, overrides)
             loguru_logger.info(
@@ -493,4 +537,5 @@ from ..llm.setup_test import router as admin_router  # noqa: E402
 app.include_router(admin_router)
 app.include_router(admin_avatar.router)
 app.include_router(admin_rig_capabilities.router)
+app.include_router(admin_plugin.router)
 app.include_router(admin_status.router)

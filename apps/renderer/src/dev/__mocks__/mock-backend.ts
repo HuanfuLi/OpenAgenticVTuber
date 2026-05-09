@@ -65,9 +65,13 @@ const statusState: StatusSnapshot = {
   llm: 'amber',
   vts: 'amber',
   sidecar: 'green',
+  plugin: 'green',
   llmDetail: 'qwen2.5-7b · LM Studio · last reply 423ms',
   vtsDetail: 'awaiting connection',
-  sidecarDetail: 'ws://127.0.0.1:53811/ws'
+  sidecarDetail: 'ws://127.0.0.1:53811/ws',
+  pluginDetail: 'default: Plugin active.',
+  pluginLifecycleState: 'active',
+  pluginDeveloperDetails: null
 }
 
 function emitStatus(): void {

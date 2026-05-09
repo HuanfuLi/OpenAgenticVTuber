@@ -31,6 +31,12 @@ export interface BodyMotionPluginSummary {
   description: string | null
   source: 'repo' | 'userData'
   path: string
+  valid: boolean
+  selectable: boolean
+  statusSummary?: string
+  developerDetails?: string
+  manifestApiVersion?: string | null
+  isSelected?: boolean
 }
 
 interface SidecarSupervisorState {
@@ -87,19 +93,47 @@ function parseYamlScalar(text: string, key: string): string | null {
 function readPluginSummary(
   manifestPath: string,
   source: BodyMotionPluginSummary['source']
-): BodyMotionPluginSummary | null {
+): BodyMotionPluginSummary {
+  const fallbackName = path.basename(path.dirname(manifestPath))
   try {
     const text = fs.readFileSync(manifestPath, 'utf8') as string
-    const fallbackName = path.basename(path.dirname(manifestPath))
+    const name = parseYamlScalar(text, 'name') || fallbackName
+    const version = parseYamlScalar(text, 'version')
+    const entrypoint = parseYamlScalar(text, 'entrypoint')
+    const apiVersion = parseYamlScalar(text, 'api_version')
+    const problems: string[] = []
+    if (!parseYamlScalar(text, 'name')) problems.push('missing name')
+    if (!version) problems.push('missing version')
+    if (!entrypoint) problems.push('missing entrypoint')
+    else if (!entrypoint.includes(':')) problems.push('entrypoint must use path.py:ClassName')
+    if (!apiVersion) problems.push('missing api_version')
+    else if (apiVersion.split('.')[0] !== '1') problems.push(`unsupported api_version ${apiVersion}`)
+    const valid = problems.length === 0
     return {
-      name: parseYamlScalar(text, 'name') || fallbackName,
-      version: parseYamlScalar(text, 'version'),
+      name,
+      version,
       description: parseYamlScalar(text, 'description'),
       source,
-      path: manifestPath
+      path: manifestPath,
+      valid,
+      selectable: true,
+      statusSummary: valid ? 'Manifest valid.' : 'Manifest invalid; selecting it will use fallback/null motion.',
+      developerDetails: valid ? undefined : problems.join('; '),
+      manifestApiVersion: apiVersion
     }
-  } catch {
-    return null
+  } catch (err) {
+    return {
+      name: fallbackName,
+      version: null,
+      description: null,
+      source,
+      path: manifestPath,
+      valid: false,
+      selectable: true,
+      statusSummary: 'Manifest could not be read; selecting it will use fallback/null motion.',
+      developerDetails: err instanceof Error ? err.message : String(err),
+      manifestApiVersion: null
+    }
   }
 }
 
@@ -117,18 +151,21 @@ export function listBodyMotionPlugins(): BodyMotionPluginSummary[] {
   const repoRoot = path.resolve(app.getAppPath(), '..', '..')
   const repoPluginRoot = path.join(repoRoot, 'plugins')
   const userPluginRoot = path.join(app.getPath('userData'), 'plugins')
+  const selected = activeBodyMotionPluginName(loadConfig())
   const discovered = new Map<string, BodyMotionPluginSummary>()
 
   for (const manifestPath of pluginManifestPaths(repoPluginRoot)) {
     const summary = readPluginSummary(manifestPath, 'repo')
-    if (summary) discovered.set(summary.name, summary)
+    discovered.set(summary.name, summary)
   }
   for (const manifestPath of pluginManifestPaths(userPluginRoot)) {
     const summary = readPluginSummary(manifestPath, 'userData')
-    if (summary) discovered.set(summary.name, summary)
+    discovered.set(summary.name, summary)
   }
 
-  return [...discovered.values()].sort((a, b) => a.name.localeCompare(b.name))
+  return [...discovered.values()]
+    .map((plugin) => ({ ...plugin, isSelected: plugin.name === selected }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 function resolveSidecarRoot(): string {
