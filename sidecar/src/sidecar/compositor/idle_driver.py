@@ -13,8 +13,8 @@ class IdleDriver:
 
     BLINK_DURATION_S = 0.07
     BLINK_REOPEN_DURATION_S = 0.18
-    BLINK_CLOSE_ADD = -0.45
-    BLINK_REOPEN_ADD = 0.22
+    BLINK_CLOSED_VALUE = 0.05
+    BLINK_OPEN_VALUE = 0.55
 
     def __init__(self, seed: int = 42, breath_writeable: bool = False) -> None:
         self._noise = OpenSimplex(seed)
@@ -48,9 +48,9 @@ class IdleDriver:
             self._blink_reopen_until = self._blink_until + self.BLINK_REOPEN_DURATION_S
             self._schedule_next_blink(now)
         if now < self._blink_until:
-            out["EyeOpenLeft"] = self.BLINK_CLOSE_ADD
-            out["EyeOpenRight"] = self.BLINK_CLOSE_ADD
+            out["EyeOpenLeft"] = self.BLINK_CLOSED_VALUE
+            out["EyeOpenRight"] = self.BLINK_CLOSED_VALUE
         elif now < self._blink_reopen_until:
-            out["EyeOpenLeft"] = self.BLINK_REOPEN_ADD
-            out["EyeOpenRight"] = self.BLINK_REOPEN_ADD
+            out["EyeOpenLeft"] = self.BLINK_OPEN_VALUE
+            out["EyeOpenRight"] = self.BLINK_OPEN_VALUE
         return out

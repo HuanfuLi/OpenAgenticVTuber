@@ -18,6 +18,6 @@ def test_idle_blink_reopens_after_short_closure_window():
     driver = IdleDriver(seed=1)
     driver._next_blink_at = 1.0
 
-    assert driver.tick(1.0)["EyeOpenLeft"] < 0.0
-    assert driver.tick(1.08)["EyeOpenLeft"] > 0.0
+    assert driver.tick(1.0)["EyeOpenLeft"] == 0.05
+    assert driver.tick(1.08)["EyeOpenLeft"] == 0.55
     assert "EyeOpenLeft" not in driver.tick(1.30)
