@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from contracts import ActionIntent, DisplayTextField, SpeechEnvelopePayload
+from contracts import ActionCode, Dispatch, DisplayTextField, SpeechEnvelopePayload
 from sidecar.tts.audio_payload_helpers import (
     get_volume_by_chunks,
     synthesize_and_prepare_payload,
@@ -23,8 +23,8 @@ def _display_text() -> DisplayTextField:
     return DisplayTextField(text="Hello", name="Teto", avatar="teto")
 
 
-def _actions() -> list[ActionIntent]:
-    return [ActionIntent(kind="expression", name="joy", avatar_id="teto")]
+def _dispatches() -> list[Dispatch]:
+    return [ActionCode(name="joy")]
 
 
 def test_speech_envelope_payload_roundtrip():
@@ -89,7 +89,7 @@ def test_silent_payload_fast_path():
         _NoSynthVoice(),
         "   。！？  ",
         _display_text(),
-        _actions(),
+        _dispatches(),
         sentence_id=7,
     )
 
@@ -97,6 +97,7 @@ def test_silent_payload_fast_path():
     assert msg.volumes == []
     assert msg.slice_length == 20
     assert msg.sentence_id == 7
+    assert msg.dispatches == _dispatches()
     assert pcm_int16 == b""
     assert sample_rate == 22050
 
@@ -112,7 +113,7 @@ def test_synthesize_and_prepare_payload_real_voice():
         voice,
         "Hello world.",
         _display_text(),
-        _actions(),
+        _dispatches(),
         sentence_id=3,
     )
 
@@ -126,3 +127,4 @@ def test_synthesize_and_prepare_payload_real_voice():
         assert wf.getsampwidth() == 2
     assert decoded[:4] == b"RIFF"
     assert len(msg.volumes) > 0
+    assert msg.dispatches == _dispatches()

@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from loguru import logger
 
-from contracts import ActionIntent, DisplayTextField
+from contracts import ActionCode, Dispatch, DisplayTextField
 from sidecar.tts.tts_manager import TTSTaskManager
 
 
@@ -37,16 +37,8 @@ def _display(text: str) -> DisplayTextField:
     return DisplayTextField(text=text, name="Teto", avatar="teto")
 
 
-def _actions() -> list[ActionIntent]:
-    return [
-        ActionIntent(
-            kind="expression",
-            name="joy",
-            strength=1.0,
-            duration_ms=None,
-            avatar_id="teto",
-        )
-    ]
+def _dispatches() -> list[Dispatch]:
+    return [ActionCode(name="joy")]
 
 
 def _pcm_wav_b64(sample_rate: int = 22050, pcm: bytes = b"\x01\x00\x02\x00") -> str:
@@ -72,7 +64,7 @@ async def test_speak_returns_immediately_and_parallel_synth_occurs(monkeypatch):
     entered: list[int] = []
     release = asyncio.Event()
 
-    async def fake_prepare(*, tts_text, display_text, actions, sentence_id):
+    async def fake_prepare(*, tts_text, display_text, dispatches, sentence_id):
         entered.append(sentence_id)
         if len(entered) == 2:
             release.set()
@@ -84,7 +76,7 @@ async def test_speak_returns_immediately_and_parallel_synth_occurs(monkeypatch):
                 "volumes": [0.5],
                 "slice_length": 20,
                 "display_text": display_text.model_dump(),
-                "actions": [a.model_dump() for a in actions],
+                "dispatches": [a.model_dump() for a in dispatches],
                 "sentence_id": sentence_id,
                 "forwarded": False,
             },
@@ -94,8 +86,8 @@ async def test_speak_returns_immediately_and_parallel_synth_occurs(monkeypatch):
 
     monkeypatch.setattr(manager, "_synthesize_payload", fake_prepare)
 
-    await manager.speak("one.", _display("one."), _actions(), 1, ws)
-    await manager.speak("two.", _display("two."), _actions(), 2, ws)
+    await manager.speak("one.", _display("one."), _dispatches(), 1, ws)
+    await manager.speak("two.", _display("two."), _dispatches(), 2, ws)
 
     await asyncio.wait_for(release.wait(), timeout=1)
     assert entered == [1, 2]
@@ -114,7 +106,7 @@ async def test_sender_buffers_out_of_order_synth_until_next_sequence(monkeypatch
     first_can_finish = asyncio.Event()
     second_ready = asyncio.Event()
 
-    async def fake_prepare(*, tts_text, display_text, actions, sentence_id):
+    async def fake_prepare(*, tts_text, display_text, dispatches, sentence_id):
         if sentence_id == 1:
             await first_can_finish.wait()
         if sentence_id == 2:
@@ -126,7 +118,7 @@ async def test_sender_buffers_out_of_order_synth_until_next_sequence(monkeypatch
                 "volumes": [sentence_id / 10.0],
                 "slice_length": 20,
                 "display_text": display_text.model_dump(),
-                "actions": [a.model_dump() for a in actions],
+                "dispatches": [a.model_dump() for a in dispatches],
                 "sentence_id": sentence_id,
                 "forwarded": False,
             },
@@ -136,8 +128,8 @@ async def test_sender_buffers_out_of_order_synth_until_next_sequence(monkeypatch
 
     monkeypatch.setattr(manager, "_synthesize_payload", fake_prepare)
 
-    await manager.speak("first.", _display("first."), _actions(), 1, ws)
-    await manager.speak("second.", _display("second."), _actions(), 2, ws)
+    await manager.speak("first.", _display("first."), _dispatches(), 1, ws)
+    await manager.speak("second.", _display("second."), _dispatches(), 2, ws)
 
     await asyncio.wait_for(second_ready.wait(), timeout=1)
     await asyncio.sleep(0)
@@ -177,7 +169,7 @@ async def test_sender_uses_locked_order_for_non_silent_payload(monkeypatch):
     loop = asyncio.get_running_loop()
     monkeypatch.setattr(loop, "run_in_executor", fake_executor)
 
-    async def fake_prepare(*, tts_text, display_text, actions, sentence_id):
+    async def fake_prepare(*, tts_text, display_text, dispatches, sentence_id):
         return (
             {
                 "type": "audio",
@@ -185,7 +177,7 @@ async def test_sender_uses_locked_order_for_non_silent_payload(monkeypatch):
                 "volumes": [0.2, 0.8],
                 "slice_length": 20,
                 "display_text": display_text.model_dump(),
-                "actions": [a.model_dump() for a in actions],
+                "dispatches": [a.model_dump() for a in dispatches],
                 "sentence_id": sentence_id,
                 "forwarded": False,
             },
@@ -195,7 +187,7 @@ async def test_sender_uses_locked_order_for_non_silent_payload(monkeypatch):
 
     monkeypatch.setattr(manager, "_synthesize_payload", fake_prepare)
 
-    await manager.speak("hello.", _display("hello."), _actions(), 1, ws)
+    await manager.speak("hello.", _display("hello."), _dispatches(), 1, ws)
     await manager.wait_for_all_audio_complete()
 
     assert observed == ["queue-put", "ws-send", "write"]
@@ -220,7 +212,7 @@ async def test_sender_broadcasts_speech_envelope_to_extra_queues(monkeypatch):
         extra_speech_queues=[mouth_queue],
     )
 
-    async def fake_prepare(*, tts_text, display_text, actions, sentence_id):
+    async def fake_prepare(*, tts_text, display_text, dispatches, sentence_id):
         return (
             {
                 "type": "audio",
@@ -228,7 +220,7 @@ async def test_sender_broadcasts_speech_envelope_to_extra_queues(monkeypatch):
                 "volumes": [0.2, 0.8],
                 "slice_length": 20,
                 "display_text": display_text.model_dump(),
-                "actions": [a.model_dump() for a in actions],
+                "dispatches": [a.model_dump() for a in dispatches],
                 "sentence_id": sentence_id,
                 "forwarded": False,
             },
@@ -238,7 +230,7 @@ async def test_sender_broadcasts_speech_envelope_to_extra_queues(monkeypatch):
 
     monkeypatch.setattr(manager, "_synthesize_payload", fake_prepare)
 
-    await manager.speak("hello.", _display("hello."), _actions(), 1, ws)
+    await manager.speak("hello.", _display("hello."), _dispatches(), 1, ws)
     await manager.wait_for_all_audio_complete()
 
     compositor_envelope = await speech_queue.get()
@@ -263,7 +255,7 @@ async def test_silent_payload_skips_queue_put_and_stream_write(monkeypatch):
 
     speech_queue.put = fake_put  # type: ignore[method-assign]
 
-    await manager.speak("   ", _display("blank"), _actions(), 1, ws)
+    await manager.speak("   ", _display("blank"), _dispatches(), 1, ws)
     await manager.wait_for_all_audio_complete()
 
     assert queue_put_calls == 0
@@ -286,7 +278,7 @@ async def test_wait_for_all_audio_complete_waits_for_tasks_queue_and_latency(mon
 
     monkeypatch.setattr(asyncio, "sleep", fake_sleep)
 
-    async def fake_prepare(*, tts_text, display_text, actions, sentence_id):
+    async def fake_prepare(*, tts_text, display_text, dispatches, sentence_id):
         return (
             {
                 "type": "audio",
@@ -294,7 +286,7 @@ async def test_wait_for_all_audio_complete_waits_for_tasks_queue_and_latency(mon
                 "volumes": [0.1],
                 "slice_length": 20,
                 "display_text": display_text.model_dump(),
-                "actions": [a.model_dump() for a in actions],
+                "dispatches": [a.model_dump() for a in dispatches],
                 "sentence_id": sentence_id,
                 "forwarded": False,
             },
@@ -304,7 +296,7 @@ async def test_wait_for_all_audio_complete_waits_for_tasks_queue_and_latency(mon
 
     monkeypatch.setattr(manager, "_synthesize_payload", fake_prepare)
 
-    await manager.speak("hello.", _display("hello."), _actions(), 1, ws)
+    await manager.speak("hello.", _display("hello."), _dispatches(), 1, ws)
     await manager.wait_for_all_audio_complete()
 
     assert sleep_calls == [pytest.approx(0.27)]
@@ -317,7 +309,7 @@ async def test_tts_logs_emit_expected_markers(monkeypatch):
     queue: asyncio.Queue = asyncio.Queue()
     manager = TTSTaskManager(stream=stream, compositor_speech_queue=queue)
 
-    async def fake_prepare(*, tts_text, display_text, actions, sentence_id):
+    async def fake_prepare(*, tts_text, display_text, dispatches, sentence_id):
         await asyncio.sleep(0)
         return (
             {
@@ -326,7 +318,7 @@ async def test_tts_logs_emit_expected_markers(monkeypatch):
                 "volumes": [0.4],
                 "slice_length": 20,
                 "display_text": display_text.model_dump(),
-                "actions": [a.model_dump() for a in actions],
+                "dispatches": [a.model_dump() for a in dispatches],
                 "sentence_id": sentence_id,
                 "forwarded": False,
             },
@@ -339,7 +331,7 @@ async def test_tts_logs_emit_expected_markers(monkeypatch):
     records: list[str] = []
     sink_id = logger.add(lambda msg: records.append(msg.record["message"]), level="INFO")
     try:
-        await manager.speak("hello.", _display("hello."), _actions(), 1, ws)
+        await manager.speak("hello.", _display("hello."), _dispatches(), 1, ws)
         await manager.wait_for_all_audio_complete()
     finally:
         logger.remove(sink_id)
