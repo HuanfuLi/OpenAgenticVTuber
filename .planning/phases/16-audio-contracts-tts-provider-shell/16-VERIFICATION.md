@@ -1,7 +1,7 @@
 ---
-status: human_needed
+status: passed
 phase: 16-audio-contracts-tts-provider-shell
-verified_at: 2026-05-09T19:09:00-04:00
+verified_at: 2026-05-09T19:12:00-04:00
 source:
   - 16-01-PLAN.md
   - 16-02-PLAN.md
@@ -14,9 +14,9 @@ source:
 
 ## Result
 
-Automated gap-closure verification passed. Human UAT is still required before Phase 16 should be called officially done because live audible playback and VTube Studio lipsync need observation.
+Automated gap-closure verification passed. Focused human UAT also passed, so Phase 16 is verified complete.
 
-Updated after UAT: the no-audible-voice blocker has a code fix and focused retest entry in `16-UAT.md`.
+Updated after UAT: the no-audible-voice blocker has a code fix and passed focused retest entry in `16-UAT.md`.
 
 ## Must-Haves
 
@@ -34,9 +34,9 @@ Updated after UAT: the no-audible-voice blocker has a code fix and focused retes
 - `npm --workspace apps/electron-main run build` - passed.
 - `uv run --project sidecar python -m pytest sidecar\tests\test_tts_manager.py sidecar\tests\test_tts_gateway.py sidecar\tests\test_audio_payload_helpers.py sidecar\tests\test_sidecar_boot.py sidecar\tests\admin\test_audio_status_endpoint.py -q` - passed.
 
-## Human Verification Required
+## Human Verification
 
-See `16-UAT.md` Gap Closure Retest:
+Passed in `16-UAT.md` Gap Closure Retest:
 
 1. Send a normal chat message and confirm voice is audible from the app.
 2. Confirm VTS mouth/lipsync still moves during the same spoken response.
@@ -50,4 +50,4 @@ See `16-UAT.md` Gap Closure Retest:
 - **UAT:** `16-UAT.md` test 1
 - **Diagnosis:** Renderer ignored `AudioPayloadMessage.audio`; audible output depended only on sidecar-local `sounddevice.OutputStream`.
 - **Fix:** `16-04-PLAN.md` added renderer playback for non-empty WAV payloads and tests for silent envelopes.
-- **Status:** implemented; pending focused human retest.
+- **Status:** resolved by `16-04-SUMMARY.md`; focused live retest passed on 2026-05-09.

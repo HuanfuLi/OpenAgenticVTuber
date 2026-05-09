@@ -1,8 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 16-audio-contracts-tts-provider-shell
 created: 2026-05-09T19:05:00-04:00
-updated: 2026-05-09T19:05:00-04:00
+updated: 2026-05-09T19:12:00-04:00
+resolved: 2026-05-09T19:12:00-04:00
 source: .planning/phases/16-audio-contracts-tts-provider-shell/16-UAT.md
 ---
 
@@ -25,3 +26,7 @@ Phase 16 preserved the prior sidecar-owned playback model, but UAT shows that mo
 ## Fix Direction
 
 Add a renderer audio playback helper for `AudioPayloadMessage.audio` and call it from the WS audio handler. Keep silent/action-only payloads silent. Keep RMS/lipsync unchanged. Avoid adding Phase 17/18 rich voice controls.
+
+## Resolution
+
+Resolved by `16-04-SUMMARY.md`: renderer playback now consumes non-empty sidecar WAV audio payloads, silent envelopes remain silent, and the focused live retest passed on 2026-05-09.

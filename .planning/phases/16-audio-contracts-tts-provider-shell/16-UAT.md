@@ -1,12 +1,14 @@
 ---
-status: diagnosed
+status: complete
 phase: 16-audio-contracts-tts-provider-shell
 source:
   - 16-01-SUMMARY.md
   - 16-02-SUMMARY.md
   - 16-03-SUMMARY.md
+  - 16-04-SUMMARY.md
 started: 2026-05-09T18:38:56-04:00
-updated: 2026-05-09T19:08:00-04:00
+updated: 2026-05-09T19:12:00-04:00
+resolved: 2026-05-09T19:12:00-04:00
 ---
 
 ## Current Test
@@ -53,7 +55,7 @@ blocked: 0
 ## Gaps
 
 - truth: "Multi-sentence chat output speaks through Piper in the same sentence order shown in the chat stream."
-  status: failed
+  status: resolved
   reason: "User reported: No voice at all, but lipsync is working."
   severity: blocker
   test: 1
@@ -66,10 +68,11 @@ blocked: 0
     - path: "sidecar/src/sidecar/tts/PROVENANCE.md"
       issue: "Existing architecture states renderer does not play Web Audio, making sidecar device playback a single point of audible-output failure."
   missing:
-    - "Add a renderer-side WAV playback path or explicit fallback for AudioPayloadMessage.audio."
-    - "Keep VTS RMS/lipsync behavior unchanged and avoid double-playing when sidecar playback is intentionally active."
-    - "Add tests proving audio payloads with WAV data invoke renderer playback and silent/error payloads do not."
+    - "Resolved by 16-04: renderer-side WAV playback path added for non-empty AudioPayloadMessage.audio."
+    - "Resolved by 16-04: VTS RMS/lipsync behavior preserved; silent/action-only envelopes do not invoke playback."
+    - "Resolved by 16-04: tests cover WAV playback, silent envelopes, chat text merge, speaking state, and playback failure cleanup."
   debug_session: ".planning/debug/phase-16-no-audible-voice.md"
+  resolved_by: "16-04-SUMMARY.md / focused live retest pass on 2026-05-09"
 
 ## Gap Closure Retest
 
@@ -78,8 +81,16 @@ expected: Sending a normal chat message produces audible renderer playback from 
 automated_evidence:
   - `npm --workspace apps/renderer run test -- --run Chat.test.tsx ws-audio-player.test.ts ws-store-audio.test.ts` - passed, 18 tests.
   - `npm --workspace apps/renderer run typecheck` - passed.
-result: pending human retest
+result: pass
 notes:
   - Renderer now plays non-empty base64 WAV audio payloads.
   - Silent/action-only envelopes with `audio: null` do not invoke playback.
   - Chat text merge and speaking-state updates remain covered by regression tests.
+  - Human live retest passed on 2026-05-09.
+
+## Recheck Summary
+
+total: 1
+passed: 1
+issues: 0
+pending: 0

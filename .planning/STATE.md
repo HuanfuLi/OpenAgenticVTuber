@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
-status: human_verification_required
-stopped_at: Phase 16 gap closure executed; awaiting focused live audio retest
-last_updated: "2026-05-09T19:09:00-04:00"
+status: ready_for_next_phase
+stopped_at: Phase 16 complete; ready for Phase 17
+last_updated: "2026-05-09T19:12:00-04:00"
 last_activity: 2026-05-09
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
   completed_plans: 4
 ---
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon - v3.0 improves voice usability before memory/avatar identity work)
-**Current focus:** Phase 16: Audio Contracts + TTS Provider Shell
+**Current focus:** Phase 17: GPT-SoVITS Provider + Voice Presets
 
 ## Current Position
 
-Phase: 16 of 22 (Audio Contracts + TTS Provider Shell)
-Plan: 4/4 complete
-Status: Gap closure automated checks passed; focused live audio retest pending
-Last activity: 2026-05-09 - Phase 16 audio playback gap closure added renderer WAV playback and UAT retest evidence
+Phase: 17 of 22 (GPT-SoVITS Provider + Voice Presets)
+Plan: Ready to execute when Phase 17 planning is accepted
+Status: Phase 16 complete after focused live audio retest passed
+Last activity: 2026-05-09 - Phase 16 completed with audio contracts, Piper provider shell, renderer WAV playback, and passed live retest
 
-Progress: [██████████] 100%
+Progress: [█---------] 1/7 phases complete in v3.0
 
 ## Performance Metrics
 
@@ -42,7 +42,7 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 16. Audio Contracts + TTS Provider Shell | 0/3 | - | - |
+| 16. Audio Contracts + TTS Provider Shell | 4/4 | same-session | same-session |
 | 17. GPT-SoVITS Provider + Voice Presets | 0/TBD | - | - |
 | 18. Rich Voice Settings + Persistence | 0/TBD | - | - |
 | 19. STT Provider Abstraction + Local/Cloud Providers | 0/TBD | - | - |
@@ -64,7 +64,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Complete Phase 16 focused Gap Closure Retest from `16-UAT.md`.
+- Phase 17 planning artifacts are present locally and ready for review/execution.
 
 ### Blockers/Concerns
 
@@ -83,6 +83,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-09T19:09:00-04:00
-Stopped at: Phase 16 gap closure executed; ready for focused live retest
+Last session: 2026-05-09T19:12:00-04:00
+Stopped at: Phase 16 complete; ready for Phase 17
 Resume file: .planning/STATE.md
