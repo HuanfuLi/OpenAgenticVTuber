@@ -111,51 +111,51 @@ Populated by the roadmapper during ROADMAP.md creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUDIO-01 | TBD | Pending |
-| AUDIO-02 | TBD | Pending |
-| AUDIO-03 | TBD | Pending |
-| AUDIO-04 | TBD | Pending |
-| TTS-01 | TBD | Pending |
-| TTS-02 | TBD | Pending |
-| TTS-03 | TBD | Pending |
-| TTS-04 | TBD | Pending |
-| TTS-05 | TBD | Pending |
-| TTS-06 | TBD | Pending |
-| PRESET-01 | TBD | Pending |
-| PRESET-02 | TBD | Pending |
-| PRESET-03 | TBD | Pending |
-| PRESET-04 | TBD | Pending |
-| STT-01 | TBD | Pending |
-| STT-02 | TBD | Pending |
-| STT-03 | TBD | Pending |
-| STT-04 | TBD | Pending |
-| STT-05 | TBD | Pending |
-| STT-06 | TBD | Pending |
-| VIN-01 | TBD | Pending |
-| VIN-02 | TBD | Pending |
-| VIN-03 | TBD | Pending |
-| VIN-04 | TBD | Pending |
-| VIN-05 | TBD | Pending |
-| VIN-06 | TBD | Pending |
-| CODE-01 | TBD | Pending |
-| CODE-02 | TBD | Pending |
-| CODE-03 | TBD | Pending |
-| CODE-04 | TBD | Pending |
-| AEC-01 | TBD | Pending |
-| AEC-02 | TBD | Pending |
-| AEC-03 | TBD | Pending |
-| AEC-04 | TBD | Pending |
-| PRIV-01 | TBD | Pending |
-| PRIV-02 | TBD | Pending |
-| PERF-01 | TBD | Pending |
-| PERF-02 | TBD | Pending |
-| PERF-03 | TBD | Pending |
+| AUDIO-01 | Phase 18 | Pending |
+| AUDIO-02 | Phase 16 | Pending |
+| AUDIO-03 | Phase 16 | Pending |
+| AUDIO-04 | Phase 16 | Pending |
+| TTS-01 | Phase 17 | Pending |
+| TTS-02 | Phase 17 | Pending |
+| TTS-03 | Phase 17 | Pending |
+| TTS-04 | Phase 17 | Pending |
+| TTS-05 | Phase 16 | Pending |
+| TTS-06 | Phase 17 | Pending |
+| PRESET-01 | Phase 17 | Pending |
+| PRESET-02 | Phase 17 | Pending |
+| PRESET-03 | Phase 17 | Pending |
+| PRESET-04 | Phase 17 | Pending |
+| STT-01 | Phase 19 | Pending |
+| STT-02 | Phase 19 | Pending |
+| STT-03 | Phase 19 | Pending |
+| STT-04 | Phase 19 | Pending |
+| STT-05 | Phase 19 | Pending |
+| STT-06 | Phase 19 | Pending |
+| VIN-01 | Phase 20 | Pending |
+| VIN-02 | Phase 20 | Pending |
+| VIN-03 | Phase 20 | Pending |
+| VIN-04 | Phase 20 | Pending |
+| VIN-05 | Phase 20 | Pending |
+| VIN-06 | Phase 20 | Pending |
+| CODE-01 | Phase 21 | Pending |
+| CODE-02 | Phase 21 | Pending |
+| CODE-03 | Phase 21 | Pending |
+| CODE-04 | Phase 21 | Pending |
+| AEC-01 | Phase 22 | Pending |
+| AEC-02 | Phase 22 | Pending |
+| AEC-03 | Phase 22 | Pending |
+| AEC-04 | Phase 22 | Pending |
+| PRIV-01 | Phase 18 | Pending |
+| PRIV-02 | Phase 18 | Pending |
+| PERF-01 | Phase 19 | Pending |
+| PERF-02 | Phase 18 | Pending |
+| PERF-03 | Phase 16 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 39 total
-- Mapped to phases: 0
-- Unmapped: 39
+- Mapped to phases: 39
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-09*  
-*Last updated: 2026-05-09 after initial v3.0 requirements definition*
+*Last updated: 2026-05-09 after v3.0 roadmap traceability mapping*

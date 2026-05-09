@@ -5,6 +5,7 @@
 - ✅ **v1.0 Walking Skeleton** — Phases 1-5 shipped 2026-05-08. Archive: `.planning/milestones/v1.0-ROADMAP.md`
 - ✅ **v2.0 Plugin + Animation Control** — Phases 8, 6, 7, 9, 10 shipped 2026-05-09. Archive: `.planning/milestones/v2.0-ROADMAP.md`
 - ✅ **v2.1 Mock/Reality Cleanup** — Phases 11-15 shipped 2026-05-09. Archive: `.planning/milestones/v2.1-ROADMAP.md`
+- 📋 **v3.0 Rich Voice Configuration + Voice Input** — Phases 16-22 planned.
 
 ## Shipped Phases
 
@@ -52,33 +53,153 @@ Audit: `.planning/milestones/v2.1-MILESTONE-AUDIT.md`
 
 </details>
 
+## Overview
+
+v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Piper ordered playback, renderer audio payloads, RMS/lipsync, VTS compositor, and conversation-history semantics remain intact while users gain GPT-SoVITS voice output and Chinese/English voice input. The roadmap follows the research-recommended order: lock contracts and Piper regression safety first, add GPT-SoVITS and presets, expose rich settings, add STT providers, wire renderer voice capture, then empirically harden code-switch quality and no-headphones/AEC behavior.
+
+## Phases
+
+**Phase Numbering:** v3.0 continues after shipped v2.1 Phases 11-15. Planned work starts at Phase 16.
+
+- [ ] **Phase 16: Audio Contracts + TTS Provider Shell** - Sidecar-owned audio contracts, versioned config migration, Piper adapter, and provider failure semantics.
+- [ ] **Phase 17: GPT-SoVITS Provider + Voice Presets** - GPT-SoVITS external/app-launched provider, test synthesis, reference audio, and named presets.
+- [ ] **Phase 18: Rich Voice Settings + Persistence** - User-facing audio settings, provider catalog labels, privacy copy, credential redaction, and diagnostics.
+- [ ] **Phase 19: STT Provider Abstraction + Local/Cloud Providers** - FunASR, faster-whisper, OpenAI, and Groq through one lazy-loaded STT provider layer.
+- [ ] **Phase 20: Renderer Voice Capture + PTT/VAD Preview UX** - Microphone capture, push-to-talk, VAD controls, transcript preview, and final-text submission through the existing chat path.
+- [ ] **Phase 21: Code-Switch Evaluation + Hardening** - Locked bilingual eval corpus, provider scorecard, no-translation checks, and evidence-backed provider copy.
+- [ ] **Phase 22: AEC Spike + No-Headphones Decision** - Browser/WebRTC AEC prototype, self-speech suppression, conservative VAD defaults, and truthful no-headphones status.
+
+## Phase Details
+
+### Phase 16: Audio Contracts + TTS Provider Shell
+**Goal**: The app has a stable audio-provider foundation that preserves existing Piper playback and lipsync while making TTS/STT configuration safe to evolve.
+**Depends on**: Phase 15
+**Requirements**: AUDIO-02, AUDIO-03, AUDIO-04, TTS-05, PERF-03
+**Success Criteria** (what must be TRUE):
+  1. Existing Piper chat responses still play in sentence order and drive renderer audio payloads plus VTS lipsync/RMS exactly through the current playback path.
+  2. Audio settings persist through a versioned config migration without breaking existing LLM, VTS, conversation history, or avatar catalog settings.
+  3. Provider health checks return clear unavailable, missing credential, external-service failure, and timeout states instead of empty turns or silent fallback.
+  4. Slow or failed provider work cannot block the chat WebSocket, compositor, HUD traffic, or ordered TTS queue.
+**Plans**: TBD
+
+### Phase 17: GPT-SoVITS Provider + Voice Presets
+**Goal**: Users can choose GPT-SoVITS for character voice output, validate it before use, and organize voice presets without losing Piper fallback safety.
+**Depends on**: Phase 16
+**Requirements**: TTS-01, TTS-02, TTS-03, TTS-04, TTS-06, PRESET-01, PRESET-02, PRESET-03, PRESET-04
+**Success Criteria** (what must be TRUE):
+  1. User can select Piper or GPT-SoVITS as the active TTS provider and run test synthesis without sending a chat turn.
+  2. User can configure GPT-SoVITS external-server settings or an optional app-managed launch command with health, stop, and restart controls.
+  3. User can create, rename, select, and delete named voice presets with backend-specific tuning controls.
+  4. User can import GPT-SoVITS reference audio into sanitized app-managed storage and see validation failures before using it.
+  5. When GPT-SoVITS fails, the user sees a visible failure/fallback state and the app never silently changes provider mid-turn.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 18: Rich Voice Settings + Persistence
+**Goal**: Users can manage voice output/input configuration from truthful settings screens with clear capability labels, privacy boundaries, and diagnostics.
+**Depends on**: Phase 17
+**Requirements**: AUDIO-01, PRIV-01, PRIV-02, PERF-02
+**Success Criteria** (what must be TRUE):
+  1. User can see available TTS and STT providers with capability labels such as Local, Cloud, Chinese/English, Requires API key, and Requires external service.
+  2. Cloud STT providers remain disabled by default and require separate explicit credentials and consent before any audio can be sent.
+  3. Settings, logs, and diagnostics redact STT credentials, reference-audio paths, transcripts, and provider errors where appropriate.
+  4. User can inspect TTS/STT latency, timeout, and provider-failure diagnostics without exposing secrets.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 19: STT Provider Abstraction + Local/Cloud Providers
+**Goal**: Voice transcription providers are available behind one lazy-loaded interface, with local-first defaults and explicit model/cache controls.
+**Depends on**: Phase 18
+**Requirements**: STT-01, STT-02, STT-03, STT-04, STT-05, STT-06, PERF-01
+**Success Criteria** (what must be TRUE):
+  1. User can enable STT with FunASR as the default local provider or faster-whisper as a local fallback.
+  2. User can configure OpenAI or Groq transcription only as explicit opt-in cloud providers.
+  3. User can run a test transcription for the selected STT provider before enabling voice input.
+  4. User can see and control local model cache/download behavior before large STT models are loaded or fetched.
+  5. Heavy local STT models lazy-load after boot rather than blocking app startup.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 20: Renderer Voice Capture + PTT/VAD Preview UX
+**Goal**: Users can talk to the avatar through push-to-talk or VAD, see transient transcription preview, and submit final transcripts through the existing chat pipeline unchanged.
+**Depends on**: Phase 19
+**Requirements**: VIN-01, VIN-02, VIN-03, VIN-04, VIN-05, VIN-06
+**Success Criteria** (what must be TRUE):
+  1. User can grant microphone permission and always see whether the app is idle, listening, recording, finalizing, or in error.
+  2. User can hold push-to-talk, speak an utterance, see transcription chunks as preview, and submit only the final transcript.
+  3. User can enable VAD auto-submit with visible sensitivity and silence-timeout controls.
+  4. Preview text never appears in conversation history; only final STT text enters the existing chat pipeline unchanged with no translation.
+  5. Speech captured while a turn is in progress queues safely instead of corrupting active TTS/playback state.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 21: Code-Switch Evaluation + Hardening
+**Goal**: The Chinese/English voice-input claim is evidence-backed, repeatable, and reflected honestly in provider recommendations.
+**Depends on**: Phase 20
+**Requirements**: CODE-01, CODE-02, CODE-03, CODE-04
+**Success Criteria** (what must be TRUE):
+  1. User can speak Chinese, English, or mixed Chinese/English in one utterance without manually switching language mode.
+  2. The milestone has a locked bilingual/code-switch evaluation corpus and provider scorecard.
+  3. Default STT provider recommendation is backed by eval results for semantic correctness, key-token retention, and no-translation behavior.
+  4. User-facing provider copy accurately describes strengths and limitations for Chinese, English, and code-switching.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 22: AEC Spike + No-Headphones Decision
+**Goal**: The app makes an empirical, truthful decision about no-headphones use and prevents assistant speech from becoming user input.
+**Depends on**: Phase 21
+**Requirements**: AEC-01, AEC-02, AEC-03, AEC-04
+**Success Criteria** (what must be TRUE):
+  1. Browser/WebRTC echo cancellation with renderer mic capture has recorded real test results.
+  2. During active TTS, assistant speech is not auto-submitted as user speech through VAD or cloud STT.
+  3. User sees truthful no-headphones support status: supported, experimental, or use-headphones/PTT fallback.
+  4. VAD defaults remain conservative until AEC/no-headphones behavior is verified.
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
-| Milestone | Scope | Plans Complete | Status | Shipped |
-|-----------|-------|----------------|--------|---------|
-| v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
-| v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-15 | 15/15 | Complete | 2026-05-09 |
+**Execution Order:** Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22.
 
-## Next Milestone Intent
-
-v3.0 should focus on STT and TTS: voice input, configurable TTS voice/backend settings, and integration with the existing conversation, history, TTS, and VTS lipsync pipeline.
-
-v4.0 remains the agentic system plus memory milestone: agent mode, goal loop, scheduler/skills bridge, and per-avatar/shared memory.
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Plumbing & Process Lifecycle | v1.0 | 2/2 | Complete | 2026-05-08 |
+| 2. Conversation Pipeline | v1.0 | 3/3 | Complete | 2026-05-08 |
+| 3. TTS & Sentence-Buffered Audio | v1.0 | 3/3 | Complete | 2026-05-08 |
+| 4. Action Compositor + VTS Bridge + Body-Sway Investigation | v1.0 | 8/8 | Complete | 2026-05-08 |
+| 5. Polish, Contracts Codegen, §14 Verification | v1.0 | 1/1 | Complete | 2026-05-08 |
+| 6. Plugin Runtime + Default Plugin | v2.0 | 8/8 | Complete | 2026-05-09 |
+| 7. Three-Category Code Parsing + Dispatch | v2.0 | 8/8 | Complete | 2026-05-09 |
+| 8. Avatar Import + Catalogs | v2.0 | 5/5 | Complete | 2026-05-09 |
+| 9. Slider HUD + Per-Param Lock | v2.0 | 2/2 | Complete | 2026-05-09 |
+| 10. Cursor Polish + §14 SC Re-Verification | v2.0 | 4/4 | Complete | 2026-05-09 |
+| 11. Status & App State Reality | v2.1 | 2/2 | Complete | 2026-05-09 |
+| 12. Settings Reality Pass | v2.1 | 4/4 | Complete | 2026-05-09 |
+| 13. Conversation History Sessions | v2.1 | 4/4 | Complete | 2026-05-09 |
+| 14. Plugin Developer Docs + Plugin Swap Hardening | v2.1 | 4/4 | Complete | 2026-05-09 |
+| 15. Mock Boundary Audit | v2.1 | 1/1 | Complete | 2026-05-09 |
+| 16. Audio Contracts + TTS Provider Shell | v3.0 | 0/TBD | Not started | - |
+| 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 0/TBD | Not started | - |
+| 18. Rich Voice Settings + Persistence | v3.0 | 0/TBD | Not started | - |
+| 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 0/TBD | Not started | - |
+| 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 0/TBD | Not started | - |
+| 21. Code-Switch Evaluation + Hardening | v3.0 | 0/TBD | Not started | - |
+| 22. AEC Spike + No-Headphones Decision | v3.0 | 0/TBD | Not started | - |
 
 ## Coverage
 
 - v1.0 requirements archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 - v2.0 requirements archived in `.planning/milestones/v2.0-REQUIREMENTS.md`.
 - v2.1 requirements archived in `.planning/milestones/v2.1-REQUIREMENTS.md`.
-- v2.0 audit result: functionally complete with tech debt, 53/53 requirements satisfied, 5/5 phases complete, Nyquist compliant.
-- v2.1 audit result: complete, 26/26 requirements satisfied, 5/5 phases complete, no open critical gaps.
+- v3.0 active requirements mapped: 39/39.
+- No orphaned v3.0 requirements.
 
 ## Accepted Deferred Items
 
 - Phase 7 live `<event>` UAT is catalog-gated because active Teto currently has `events: []`; parser, routing, and completion tracking are covered by automated tests.
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 - Memory and per-avatar identity remain deferred to v4.0 with the agentic system.
+- v3.0 excludes GPT-SoVITS installer/training/voice cloning, wake-word activation, translation before LLM submission, barge-in interruption, silent cloud STT fallback, and any promise that no-headphones/AEC is solved before Phase 22 evidence.
 
 ---
-*Last updated: 2026-05-09 after v2.1 milestone completion*
+*Last updated: 2026-05-09 after v3.0 roadmap creation*
