@@ -12,6 +12,7 @@ import {
   type Dispatch,
   type SetStateAction
 } from 'react'
+import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
 import {
   mockBanners,
   mockToasts,
@@ -62,6 +63,8 @@ interface AppStoreValue {
   setShowThreadList: Dispatch<SetStateAction<boolean>>
   chatMessages: ChatMessage[]
   setChatMessages: Dispatch<SetStateAction<ChatMessage[]>>
+  avatarImportPlan: AvatarImportPlan | null
+  setAvatarImportPlan: Dispatch<SetStateAction<AvatarImportPlan | null>>
   status: StatusSnapshot
   statusOverall: StatusOverall
   refreshStatus: () => Promise<void>
@@ -162,6 +165,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [logsDrawer, setLogsDrawerState] = useState<LogsDrawerState>(DEFAULT_LOGS)
   const [showThreadList, setShowThreadList] = useState<boolean>(false)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [avatarImportPlan, setAvatarImportPlan] = useState<AvatarImportPlan | null>(null)
 
   const [status, setStatus] = useState<StatusSnapshot>(DEFAULT_STATUS)
 
@@ -323,6 +327,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setAgentToggle(false)
     setLogsDrawerState(DEFAULT_LOGS)
     setChatMessages([])
+    setAvatarImportPlan(null)
   }, [])
 
   const value = useMemo<AppStoreValue>(
@@ -345,6 +350,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setShowThreadList,
       chatMessages,
       setChatMessages,
+      avatarImportPlan,
+      setAvatarImportPlan,
       status,
       statusOverall: worstOf(status),
       refreshStatus,
@@ -364,6 +371,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       logsDrawer,
       showThreadList,
       chatMessages,
+      avatarImportPlan,
       status,
       banners,
       toasts,

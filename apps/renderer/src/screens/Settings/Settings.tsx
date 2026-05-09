@@ -13,6 +13,10 @@ import { useTheme, type ThemeMode, type LightAccent, type DarkBg, type DarkAccen
 import type { BodyMotionPluginSummary, StoredConfig } from '@preload-types'
 import { ProviderSelect } from '@/screens/LLMSetup/ProviderSelect'
 import { TestLog } from '@/screens/LLMSetup/TestLog'
+import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
+import type { LogLevel } from '@preload-types'
+
+const LOG_LEVELS: LogLevel[] = ['error', 'warn', 'info', 'debug']
 
 // -------- Swatch resolvers ------------------------------------------------
 function lightAccentSwatchColor(id: LightAccent): string {
@@ -553,10 +557,257 @@ function PluginSection() {
   )
 }
 
+// -------- §2 Avatars ------------------------------------------------------
+function voiceLabel(plan: AvatarImportPlan): string {
+  const voice = plan.voice
+  if (!voice) return COPY.SETTINGS.AVATARS_NO_VOICE
+  return [voice.backend, voice.model].filter(Boolean).join(' · ') || COPY.SETTINGS.AVATARS_NO_VOICE
+}
+
+function AvatarsSection() {
+  const C = COPY.SETTINGS
+  const { setAvatarImportPlan, setView } = useStore()
+  const [currentId, setCurrentId] = useState<string>('')
+  const [plan, setPlan] = useState<AvatarImportPlan | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [notice, setNotice] = useState('')
+
+  const loadCurrent = async (): Promise<AvatarImportPlan | null> => {
+    if (!window.api?.getCurrentAvatarId || !window.api?.getCurrentAvatarPlan) {
+      setLoading(false)
+      setCurrentId('unknown')
+      setPlan(null)
+      return null
+    }
+    setLoading(true)
+    try {
+      const [id, currentPlan] = await Promise.all([
+        window.api.getCurrentAvatarId(),
+        window.api.getCurrentAvatarPlan()
+      ])
+      setCurrentId(id)
+      setPlan(currentPlan)
+      return currentPlan
+    } catch {
+      setPlan(null)
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadCurrent()
+  }, [])
+
+  const openImport = (): void => {
+    setAvatarImportPlan(null)
+    setView('avatar-import')
+  }
+
+  const editCurrent = async (): Promise<void> => {
+    setNotice('')
+    const currentPlan = plan ?? await loadCurrent()
+    if (!currentPlan) {
+      setNotice(C.AVATARS_EDIT_UNAVAILABLE)
+      return
+    }
+    setAvatarImportPlan(currentPlan)
+    setView('avatar-import')
+  }
+
+  return (
+    <section className="section" id="sec-avatars">
+      <h2>{C.AVATARS_HEADER}</h2>
+      <div className="group-help">{C.AVATARS_HELP}</div>
+      {loading ? (
+        <div className="placeholder-line muted">{C.AVATARS_LOADING}</div>
+      ) : plan ? (
+        <>
+          <div className="kv-row">
+            <span className="k">{C.AVATARS_ID}</span>
+            <span className="v">{plan.avatar_id}</span>
+          </div>
+          <div className="kv-row">
+            <span className="k">{C.AVATARS_NAME}</span>
+            <span className="v">{plan.avatar_name}</span>
+          </div>
+          <div className="kv-row" style={{ alignItems: 'flex-start' }}>
+            <span className="k">{C.AVATARS_SOURCE}</span>
+            <span className="v mono tx-sm">{plan.source_rig_path}</span>
+          </div>
+          <div className="kv-row">
+            <span className="k">{C.AVATARS_VARIANTS}</span>
+            <span className="v">{plan.variants.length}</span>
+          </div>
+          <div className="kv-row">
+            <span className="k">{C.AVATARS_EVENTS}</span>
+            <span className="v">{plan.events.length}</span>
+          </div>
+          <div className="kv-row">
+            <span className="k">{C.AVATARS_VOICE}</span>
+            <span className="v">{voiceLabel(plan)}</span>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="kv-row">
+            <span className="k">{C.AVATARS_ID}</span>
+            <span className="v">{currentId || 'unknown'}</span>
+          </div>
+          <div className="placeholder-line muted">{C.AVATARS_DEGRADED}</div>
+        </>
+      )}
+      <div className="row mt-2" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button className="btn btn-secondary" onClick={editCurrent} disabled={!plan && !loading}>
+          {C.AVATARS_EDIT_CURRENT}
+        </button>
+        <button className="btn btn-secondary" onClick={openImport}>
+          {C.AVATARS_IMPORT_REPLACE}
+        </button>
+      </div>
+      {notice && <div className="tx-sm muted mt-2">{notice}</div>}
+    </section>
+  )
+}
+
+// -------- §4 VTube Studio -------------------------------------------------
+function VTubeStudioSection() {
+  const C = COPY.SETTINGS
+  const { refreshStatus, restartSidecar, status } = useStore()
+  const [busy, setBusy] = useState<'restart' | 'reset' | null>(null)
+  const [notice, setNotice] = useState('')
+
+  const onRestart = async (): Promise<void> => {
+    setBusy('restart')
+    setNotice('')
+    try {
+      await restartSidecar()
+      setNotice(C.VTS_ACTION_DONE)
+    } catch {
+      setNotice(C.VTS_ACTION_ERROR)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const onResetAuth = async (): Promise<void> => {
+    setBusy('reset')
+    setNotice('')
+    try {
+      await window.api.resetVtsAuth()
+      await refreshStatus()
+      setNotice(C.VTS_ACTION_DONE)
+    } catch {
+      setNotice(C.VTS_ACTION_ERROR)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const isGreen = status.vts === 'green'
+
+  return (
+    <section className="section" id="sec-vts">
+      <h2>{C.VTS_HEADER}</h2>
+      <div className="group-help">{C.VTS_HELP}</div>
+      <div className="kv-row">
+        <span className="k">{C.VTS_STATUS}</span>
+        <span className="v">
+          <span className={`dot ${isGreen ? 'green' : status.vts === 'red' ? 'red' : 'amber'}`} /> {status.vtsDetail}
+        </span>
+      </div>
+      <div className="kv-row">
+        <span className="k">{C.VTS_WINDOW}</span>
+        <span className="v">{isGreen ? C.VTS_WINDOW_DETECTED : C.VTS_WINDOW_MISSING}</span>
+      </div>
+      <div className="kv-row">
+        <span className="k">{C.VTS_AUTH}</span>
+        <span className="v">{isGreen ? C.VTS_AUTHENTICATED : C.VTS_NOT_AUTHENTICATED}</span>
+      </div>
+      <details className="mt-2">
+        <summary className="v">{C.VTS_TROUBLESHOOTING}</summary>
+        <div className="tx-sm muted mt-2">{C.VTS_RESET_HELP}</div>
+        <div className="row mt-2" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={onRestart} disabled={busy !== null}>
+            {C.VTS_RESTART}
+          </button>
+          <button className="btn btn-secondary" onClick={onResetAuth} disabled={busy !== null}>
+            {C.VTS_RESET_AUTH}
+          </button>
+        </div>
+      </details>
+      {notice && <div className="tx-sm muted mt-2">{notice}</div>}
+    </section>
+  )
+}
+
+// -------- §7 Conversation -------------------------------------------------
+function ConversationSection() {
+  const C = COPY.SETTINGS
+  return (
+    <section className="section" id="sec-conversation">
+      <h2>{C.CONVERSATION_HEADER}</h2>
+      <div className="kv-row">
+        <span className="k">{C.CONVERSATION_MODE}</span>
+        <span className="v">{C.CONVERSATION_MODE_VAL}</span>
+      </div>
+      <div className="kv-row">
+        <span className="k">{C.CONVERSATION_RESET}</span>
+        <span className="v">{C.CONVERSATION_RESET_VAL}</span>
+      </div>
+      <div className="tx-sm muted mt-2">{C.CONVERSATION_HELP}</div>
+    </section>
+  )
+}
+
+// -------- §8 Memory -------------------------------------------------------
+function MemorySection() {
+  const C = COPY.SETTINGS
+  return (
+    <section className="section" id="sec-memory" aria-disabled="true">
+      <h2>{C.MEMORY_HEADER}</h2>
+      <div className="kv-row">
+        <span className="k">{C.MEMORY_STATUS}</span>
+        <span className="v">{C.MEMORY_STATUS_VAL}</span>
+      </div>
+      <div className="placeholder-line muted">{C.MEMORY_HELP}</div>
+    </section>
+  )
+}
+
 // -------- §15 Diagnostics ------------------------------------------------
 function DiagnosticsSection({ onResetClick }: { onResetClick: () => void }) {
   const C = COPY.SETTINGS
   const { logsDrawer, setLogsDrawer } = useStore()
+  const [logLevel, setLogLevel] = useState<LogLevel>('info')
+  const [logLevelStatus, setLogLevelStatus] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    window.api
+      ?.getLogLevel?.()
+      .then((level) => {
+        if (!cancelled) setLogLevel(level)
+      })
+      .catch(() => {
+        /* keep default */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const onLogLevelChange = async (level: LogLevel): Promise<void> => {
+    setLogLevel(level)
+    setLogLevelStatus('')
+    try {
+      await window.api.saveLogLevel(level)
+    } catch {
+      setLogLevelStatus(C.VTS_ACTION_ERROR)
+    }
+  }
+
   return (
     <section className="section" id="sec-diagnostics">
       <h2>{C.DIAG_HEADER}</h2>
@@ -588,10 +839,19 @@ function DiagnosticsSection({ onResetClick }: { onResetClick: () => void }) {
             {C.DIAG_LOG_LEVEL_HELP}
           </div>
         </div>
-        <select className="select" disabled style={{ width: 120 }} value="info" onChange={() => {}}>
-          <option>info</option>
+        <select
+          className="select"
+          style={{ width: 120 }}
+          aria-label={C.DIAG_LOG_LEVEL}
+          value={logLevel}
+          onChange={(e) => void onLogLevelChange(e.target.value as LogLevel)}
+        >
+          {LOG_LEVELS.map((level) => (
+            <option key={level} value={level}>{level}</option>
+          ))}
         </select>
       </div>
+      {logLevelStatus && <div className="tx-sm muted mt-2">{logLevelStatus}</div>}
 
       <div className="kv-row" style={{ alignItems: 'flex-start' }}>
         <div>
@@ -727,7 +987,7 @@ function ResetDialog({
 // -------- Settings root --------------------------------------------------
 export function Settings() {
   const C = COPY.SETTINGS
-  const { resetAll, setView } = useStore()
+  const { resetAll } = useStore()
   const [resetOpen, setResetOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
@@ -737,10 +997,12 @@ export function Settings() {
 
   const anchors = [
     { id: 'sec-connection', label: 'Connection' },
-    { id: 'sec-2', label: 'Avatars' },
+    { id: 'sec-avatars', label: 'Avatars' },
     { id: 'sec-plugins', label: 'Plugins' },
-    { id: 'sec-4', label: 'VTube Studio' },
+    { id: 'sec-vts', label: 'VTube Studio' },
     { id: 'sec-tts', label: 'TTS' },
+    { id: 'sec-conversation', label: 'Conversation' },
+    { id: 'sec-memory', label: 'Memory' },
     { id: 'sec-appearance', label: 'Appearance' },
     { id: 'sec-diagnostics', label: 'Diagnostics' },
     { id: 'sec-about', label: 'About' }
@@ -788,19 +1050,11 @@ export function Settings() {
 
         <ConnectionSection />
 
-        <section className="section" id="sec-avatar-catalogs">
-          <h2>{C.AVATAR_CATALOGS_HEADER}</h2>
-          <div className="tx-sm muted mt-2">{C.AVATAR_CATALOGS_HELP}</div>
-          <div className="row mt-2" style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-secondary" onClick={() => setView('avatar-import')}>
-              {COPY.AVATAR_IMPORT.SETTINGS_BUTTON_LABEL}
-            </button>
-          </div>
-        </section>
-
+        <AvatarsSection />
         <PluginSection />
-
-        {C.PLACEHOLDERS.filter((p) => p.num < 5).map((p) => (
+        <VTubeStudioSection />
+        <TTSSection />
+        {C.PLACEHOLDERS.filter((p) => p.num === 6).map((p) => (
           <PlaceholderSection
             key={p.num}
             num={p.num}
@@ -809,9 +1063,9 @@ export function Settings() {
             body={p.body}
           />
         ))}
-
-        <TTSSection />
-        {C.PLACEHOLDERS.filter((p) => p.num > 5).map((p) => (
+        <ConversationSection />
+        <MemorySection />
+        {C.PLACEHOLDERS.filter((p) => p.num > 8).map((p) => (
           <PlaceholderSection
             key={p.num}
             num={p.num}

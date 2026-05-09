@@ -25,10 +25,11 @@ function errorMessage(error: unknown): string {
 }
 
 export function AvatarImport({ _testInitialPlan }: AvatarImportProps = {}) {
-  const { setView } = useStore()
-  const [plan, setPlan] = useState<AvatarImportPlan | null>(_testInitialPlan ?? null)
-  const [variants, setVariants] = useState<VariantEntry[]>(_testInitialPlan?.variants ?? [])
-  const [events, setEvents] = useState<EventEntry[]>(_testInitialPlan?.events ?? [])
+  const { avatarImportPlan, setAvatarImportPlan, setView } = useStore()
+  const initialPlan = _testInitialPlan ?? avatarImportPlan
+  const [plan, setPlan] = useState<AvatarImportPlan | null>(initialPlan ?? null)
+  const [variants, setVariants] = useState<VariantEntry[]>(initialPlan?.variants ?? [])
+  const [events, setEvents] = useState<EventEntry[]>(initialPlan?.events ?? [])
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const { isDisabled, placeholderCount, firstPlaceholderIndex } = usePlaceholderGate(variants)
@@ -42,6 +43,7 @@ export function AvatarImport({ _testInitialPlan }: AvatarImportProps = {}) {
     if (!folder) return
     try {
       const nextPlan = await window.api.requestImportPlan(folder)
+      setAvatarImportPlan(nextPlan)
       setPlan(nextPlan)
       setVariants(nextPlan.variants)
       setEvents(nextPlan.events)
@@ -61,6 +63,7 @@ export function AvatarImport({ _testInitialPlan }: AvatarImportProps = {}) {
         return
       }
       console.log(C.SUCCESS_TOAST)
+      setAvatarImportPlan(null)
       setView('chat')
     } catch (error) {
       setErrorMsg(errorMessage(error))
@@ -103,7 +106,14 @@ export function AvatarImport({ _testInitialPlan }: AvatarImportProps = {}) {
             ? C.ERROR_CUBISM_5_3
             : C.ERROR_NO_MODEL3}
         </p>
-        <button type="button" className="btn btn-secondary" onClick={() => setView('chat')}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => {
+            setAvatarImportPlan(null)
+            setView('chat')
+          }}
+        >
           {C.CANCEL_BUTTON_LABEL}
         </button>
       </div>
@@ -167,7 +177,10 @@ export function AvatarImport({ _testInitialPlan }: AvatarImportProps = {}) {
               type="button"
               className="btn btn-secondary"
               disabled={saving}
-              onClick={() => setView('chat')}
+              onClick={() => {
+                setAvatarImportPlan(null)
+                setView('chat')
+              }}
             >
               {C.CANCEL_BUTTON_LABEL}
             </button>
