@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Mock/Reality Cleanup
 status: planning
-stopped_at: Phase 13 complete; Phase 14 ready to execute
-last_updated: "2026-05-09T11:15:00-04:00"
+stopped_at: Phase 14 planned; ready to execute 14-01
+last_updated: "2026-05-09T11:25:00-04:00"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 Phase: 13 (Conversation History Sessions) — COMPLETE
 Plan: 4 of 4 complete
 Status: Passed gap recheck; History row presentation and close animation confirmed.
-Next: Execute Phase 14 plugin developer docs and plugin swap hardening.
+Next: Execute Phase 14 plan 14-01, then 14-02.
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -39,7 +39,7 @@ Next: Execute Phase 14 plugin developer docs and plugin swap hardening.
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
   - Phase 10 gap closure complete: Plan 10-03 resolved SC2-SMIRK-RENDERING, and Plan 10-04 resolved SC5-EYE-TRACKING plus BLINK-EYE-VISIBILITY. Operator confirmed cursor eye tracking works and blink behavior passes after app-owned idle blinking was removed so VTS owns normal blinking.
 
-Last activity: 2026-05-09 — Phase 13 passed UAT recheck. History rows are title-first without visible assistant-response preview, preview text remains searchable but hidden, and the History sheet has a confirmed slide-out close animation. Focused tests and typecheck passed.
+Last activity: 2026-05-09 — Phase 14 planning completed with two executable plans: 14-01 for plugin helper kit, sample plugin, docs, and tool-neutral AI playbook; 14-02 for plugin listing, auto-restart, runtime health, and invalid/fallback reporting.
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
 

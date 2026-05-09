@@ -42,7 +42,7 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-15 | 10/13 | In Progress; Phase 13 complete | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-15 | 10/13 | In Progress; Phase 14 planned | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
@@ -117,8 +117,8 @@ Plans:
 **Plans:** 2 planned
 
 Plans:
-- [ ] 14-01-PLAN.md — Write code-verified plugin developer docs, AI-agent brief, and default-plugin worked example.
-- [ ] 14-02-PLAN.md — Harden plugin listing/selection/restart/status behavior and cover invalid/fallback cases with tests.
+- [ ] 14-01-PLAN.md — Add the plugin helper kit, sample plugin, human docs, and tool-neutral AI playbook.
+- [ ] 14-02-PLAN.md — Harden plugin listing, selection restart, runtime health, and invalid/fallback reporting.
 
 **Success Criteria:**
 1. Human plugin developers can find the plugin directory layout, manifest schema, lifecycle hooks, `ParamFrame` semantics, dependency expectations, and testing workflow in top-level docs.
@@ -157,4 +157,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 13 UAT recheck passed*
+*Last updated: 2026-05-09 after Phase 14 planning completed*
