@@ -42,7 +42,7 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-15 | 10/13 | In Progress; Phase 14 planned | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-15 | 12/13 | In Progress; Phase 14 implemented, UAT pending | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
@@ -114,11 +114,11 @@ Plans:
 
 **Depends on:** Phase 13
 **Requirements:** PLUGDOC-01, PLUGDOC-02, PLUGDOC-03, PLUGDOC-04, PLUGDOC-05
-**Plans:** 2 planned
+**Plans:** 2 complete
 
 Plans:
-- [ ] 14-01-PLAN.md — Add the plugin helper kit, sample plugin, human docs, and tool-neutral AI playbook.
-- [ ] 14-02-PLAN.md — Harden plugin listing, selection restart, runtime health, and invalid/fallback reporting.
+- [x] 14-01-PLAN.md — Add the plugin helper kit, sample plugin, human docs, and tool-neutral AI playbook.
+- [x] 14-02-PLAN.md — Harden plugin listing, selection restart, runtime health, and invalid/fallback reporting.
 
 **Success Criteria:**
 1. Human plugin developers can find the plugin directory layout, manifest schema, lifecycle hooks, `ParamFrame` semantics, dependency expectations, and testing workflow in top-level docs.
@@ -157,4 +157,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 14 planning completed*
+*Last updated: 2026-05-09 after Phase 14 execution completed; UAT pending*

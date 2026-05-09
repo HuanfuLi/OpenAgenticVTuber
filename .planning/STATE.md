@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Mock/Reality Cleanup
-status: planning
-stopped_at: Phase 14 planned; ready to execute 14-01
-last_updated: "2026-05-09T11:25:00-04:00"
+status: implemented
+stopped_at: Phase 14 executed; ready for verify-work UAT
+last_updated: "2026-05-09T09:34:00-04:00"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 13
-  completed_plans: 10
+  completed_plans: 12
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: 13 (Conversation History Sessions) — COMPLETE
-Plan: 4 of 4 complete
-Status: Passed gap recheck; History row presentation and close animation confirmed.
-Next: Execute Phase 14 plan 14-01, then 14-02.
+Phase: 14 (Plugin Developer Docs + Plugin Swap Hardening) — IMPLEMENTED
+Plan: 2 of 2 complete
+Status: Automated checks passed; human UAT pending for sample-plugin switch, broken-plugin fallback, selected-config preservation, and chat availability.
+Next: Run `$gsd-verify-work 14`.
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -39,7 +39,7 @@ Next: Execute Phase 14 plan 14-01, then 14-02.
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
   - Phase 10 gap closure complete: Plan 10-03 resolved SC2-SMIRK-RENDERING, and Plan 10-04 resolved SC5-EYE-TRACKING plus BLINK-EYE-VISIBILITY. Operator confirmed cursor eye tracking works and blink behavior passes after app-owned idle blinking was removed so VTS owns normal blinking.
 
-Last activity: 2026-05-09 — Phase 14 planning completed with two executable plans: 14-01 for plugin helper kit, sample plugin, docs, and tool-neutral AI playbook; 14-02 for plugin listing, auto-restart, runtime health, and invalid/fallback reporting.
+Last activity: 2026-05-09 — Phase 14 execution completed. Added plugin helper kit, sample plugin, docs, AI playbook, invalid-manifest Settings display, automatic restart-pending status, sidecar plugin runtime status, and fallback/null reporting.
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
 
@@ -215,10 +215,13 @@ Recent decisions affecting current work:
 - [Phase 09-slider-hud-per-param-lock]: The HUD stream is independent of VTS writer availability so operator discovery and lock telemetry do not go dead when VTS is not actively writable.
 - [Phase 10-cursor-polish-14-sc-re-verification]: Plan 10-01 applies cursor Cubism-to-VTS tracking-input translation at the CursorDriver edge via resolve_param_id.
 - [Phase 10-cursor-polish-14-sc-re-verification]: Plan 10-01 removes the in-VTS-window cursor gate and uses primary-monitor synthetic-canvas fallback when VTS bounds are unavailable.
+- [Phase 14-plugin-developer-docs-plugin-swap-hardening]: The canonical AI motion-plugin guide is tool-neutral; Codex only has a thin adapter skill pointing at the shared playbook.
+- [Phase 14-plugin-developer-docs-plugin-swap-hardening]: Plugin health is a separate status row from chat/sidecar health; failed motion falls back to NullPlugin while chat remains available.
+- [Phase 14-plugin-developer-docs-plugin-swap-hardening]: Invalid selected plugins preserve the user's selected config and report invalid/load-failed/fallback state instead of silently reverting to default.
 
 ### Pending Todos
 
-- v2.1 Phase 14: context gathered for human/AI plugin developer docs and plugin swap/status hardening.
+- v2.1 Phase 14: human UAT pending for sample plugin switch, broken plugin fallback, selected config preservation, and chat availability while plugin motion is degraded.
 - v2.1 Phase 15: isolate dev mocks and add mock-boundary regression coverage.
 
 ### Blockers/Concerns
