@@ -95,14 +95,14 @@ def test_failure_mapping_json_400_timeout_bad_url_and_unreadable_reference(tmp_p
         preset=_preset(),
         reference_audio=reference,
         transport=httpx.MockTransport(
-            lambda _request: httpx.Response(400, json={"message": "reference audio unreadable at C:/secret/ref.wav"})
+            lambda _request: httpx.Response(400, json={"message": "bad language value"})
         ),
     )
     with pytest.raises(TTSProviderError) as json_error:
         json_provider.synthesize(TTSSynthesisRequest(text="こんにちは", sentence_id=1))
     assert json_error.value.state == "external_service_failure"
     assert "GPT-SoVITS synthesis failed" in json_error.value.summary
-    assert "reference audio" in (json_error.value.detail or "")
+    assert "bad language" in (json_error.value.detail or "")
 
     timeout_provider = GptSoVitsProvider(
         config=_config(),
