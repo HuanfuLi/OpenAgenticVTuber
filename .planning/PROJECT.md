@@ -8,7 +8,7 @@ A local-first desktop companion app: a VTube Studio Live2D avatar that holds con
 
 Multi-avatar identity persistence — the same user can have meaningfully *distinct* relationships with different avatars (per-avatar episodic memory + shared user-facts) such that switching avatars genuinely switches the conversation partner, not just the skin.
 
-This is the **v1-horizon** core value. The v1.0 walking skeleton shipped the single-avatar / in-memory foundation; v2.0 shipped the animation-control refactor so later multi-avatar identity work can depend on explicit rig capabilities, avatar catalogs, and swappable motion plugins.
+This is the **v1-horizon** core value. The v1.0 walking skeleton shipped the single-avatar / in-memory foundation; v2.0 shipped the animation-control refactor so later multi-avatar identity work can depend on explicit rig capabilities, avatar catalogs, and swappable motion plugins. v3.0 makes the companion conversationally usable by voice, with rich TTS configuration and high-accuracy Chinese/English STT input.
 
 ## Current State
 
@@ -18,14 +18,25 @@ The app now boots as an Electron desktop shell with a Python sidecar, speaks via
 
 The §14 ceremony has been re-run under the refactored architecture. All six success criteria are PASS in `.planning/skeleton-verification.md` after gap closure for smirk rendering, cursor eye tracking, and blink ownership.
 
-## Current Milestone: v3.0 STT/TTS
+## Current Milestone: v3.0 Rich Voice Configuration + Voice Input
 
-**Goal:** Add voice input and improve TTS configurability while preserving the existing conversation history, TTS playback, and VTube Studio lipsync pipeline.
+**Goal:** Refactor audio I/O into configurable backend systems so users can choose rich TTS voices, especially GPT-SoVITS, and talk to the avatar through high-accuracy Chinese/English STT.
 
 **Target features:**
-- Speech-to-text input with explicit push-to-talk or an equivalent intentional activation model.
-- Configurable TTS voice/backend settings beyond the current fixed Piper path.
-- Voice and TTS settings integrated with the existing persisted conversation sessions and VTS lipsync flow.
+- TTS backend abstraction — preserve sentence-buffered playback, ordered delivery, RMS/lipsync envelope, and Piper fallback while allowing provider-specific synthesis backends.
+- GPT-SoVITS support — external-server mode plus optional app-managed launch command mode; no dependency installer or model training/cloning UI.
+- Rich voice settings — provider switching, health/test synthesis, backend-specific tuning controls, named voice presets, and GPT-SoVITS reference-audio management.
+- STT service — pluggable ASR providers with FunASR as the default, faster-whisper as local fallback, and OpenAI + Groq cloud transcription providers.
+- Chinese/English voice input — explicit high-accuracy code-switching quality target, chunk preview while recording, final transcript submission unchanged to the LLM (no translation).
+- VAD + PTT UX — both push-to-talk and VAD auto-submit modes; voice input is queued through the existing turn pipeline.
+- Echo cancellation phase — prototype and decide a real AEC path for filtering the app's own TTS voice from microphone input; high-quality no-headphones use is a milestone risk, not assumed solved.
+
+**Key context:**
+- Phase numbering continues after v2.1, so this milestone starts at Phase 16.
+- Open-LLM-VTuber is the implementation reference for ASR provider shape, VAD state machine, and audio capture integration patterns.
+- Existing Piper behavior is the regression baseline for TTS latency, ordered playback, and lipsync RMS envelopes.
+- FunASR is the preferred default for Chinese/English code-switching if research confirms packaging and quality; faster-whisper remains the local fallback/provider baseline.
+- Cloud STT providers are opt-in and require user-supplied credentials; local-first remains the default posture.
 
 **Next milestone intent:**
 - v4.0 carries the agentic system plus memory.
@@ -59,9 +70,12 @@ The §14 ceremony has been re-run under the refactored architecture. All six suc
 
 ### Active
 
-- [ ] Voice input / STT activation and transcription — *v3.0 candidate requirement*
-- [ ] TTS voice/backend configuration — *v3.0 candidate requirement*
-- [ ] Voice/TTS settings integration with conversation history and VTS lipsync — *v3.0 candidate requirement*
+- [ ] Audio backend contracts: TTS and STT providers have explicit sidecar-owned interfaces, config contracts, health/test endpoints, and failure semantics.
+- [ ] GPT-SoVITS voice output: user can configure external or app-launched GPT-SoVITS, tune synthesis parameters, manage reference audio, and save named presets.
+- [ ] Rich voice settings UI: user can switch providers, test voices/STT, tune backend-specific controls, and persist voice presets per current avatar/session.
+- [ ] Bilingual STT service: user can speak Chinese, English, or code-switched utterances through PTT or VAD; preview text appears while recording and final text enters the chat pipeline unchanged.
+- [ ] STT provider set: FunASR default, faster-whisper local fallback, OpenAI cloud, and Groq cloud are available through one provider interface.
+- [ ] Echo-cancellation decision: milestone includes an AEC prototype/decision phase that determines the supported no-headphones behavior and documents any remaining limitation.
 
 ### Out of Scope (deferred to later v1 milestones)
 
@@ -162,4 +176,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-09 after v2.1 milestone completion*
+*Last updated: 2026-05-09 after starting v3.0 milestone — rich voice configuration + bilingual STT scope confirmed*

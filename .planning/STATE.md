@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
 milestone: v3.0
-milestone_name: STT/TTS
-status: ready_for_new_milestone
-stopped_at: v2.1 Mock/Reality Cleanup completed and archived
+milestone_name: Rich Voice Configuration + Voice Input
+status: planning
+stopped_at: Defining v3.0 requirements
 last_updated: "2026-05-09T13:00:00-04:00"
 last_activity: 2026-05-09
 progress:
@@ -19,15 +19,26 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-05-09)
 
-**Core value:** Multi-avatar identity persistence (v1 horizon — v2.1 made the current product surface truthful before voice and agentic milestones)
-**Current focus:** Prepare v3.0 STT/TTS milestone
+**Core value:** Multi-avatar identity persistence (v1 horizon — v3.0 improves voice usability before memory/avatar identity work)
+**Current focus:** v3.0 requirements and roadmap — rich voice configuration + bilingual STT
 
 ## Current Position
 
-Phase: none active
-Plan: none active
-Status: v2.1 Mock/Reality Cleanup is complete and archived.
-Next: Run `$gsd-new-milestone v3.0 STT/TTS` or plan the next selected milestone scope.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v3.0 Rich Voice Configuration + Voice Input
+
+Milestone v3.0 scope confirmed 2026-05-09:
+
+  - TTS backend abstraction preserving Piper sentence-buffered playback, ordered delivery, and RMS/lipsync behavior.
+  - GPT-SoVITS support with external-server mode, optional app-managed launch command mode, tuning controls, named presets, and reference-audio management.
+  - STT service with FunASR default, faster-whisper local fallback, OpenAI + Groq cloud providers, Chinese/English code-switching as a high-accuracy target, chunk preview while recording, and final transcript submission unchanged.
+  - Both push-to-talk and VAD auto-submit modes; Open-LLM-VTuber is the ASR/VAD implementation reference.
+  - Dedicated AEC prototype/decision phase for filtering the app's own TTS voice from microphone input; no-headphones support is not assumed until verified.
+
+Last activity: 2026-05-09 — Milestone v3.0 started
+
+Historical v2.0/v2.1 completion notes preserved below:
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
