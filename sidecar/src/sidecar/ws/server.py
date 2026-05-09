@@ -44,6 +44,7 @@ from sidecar.vts.event_completion_tracker import EventCompletionTracker
 from sidecar.vts.pyvts_writer import PyvtsSafeWriter
 from sidecar.vts.variant_state_manager import VariantStateManager
 from sidecar.admin import avatar as admin_avatar
+from sidecar.admin import rig_capabilities as admin_rig_capabilities
 
 from .handlers import handle_control, handle_shutdown, handle_text_input  # noqa: F401 -- side-effect: registers @on(...)
 from .protocol import route
@@ -456,3 +457,4 @@ from ..llm.setup_test import router as admin_router  # noqa: E402
 
 app.include_router(admin_router)
 app.include_router(admin_avatar.router)
+app.include_router(admin_rig_capabilities.router)
