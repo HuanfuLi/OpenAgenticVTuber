@@ -1,10 +1,10 @@
 ---
-status: diagnosed
+status: gap_closure_executed
 phase: 12-settings-reality-pass
 source:
   - .planning/phases/12-settings-reality-pass/12-01-SUMMARY.md
 started: 2026-05-09T07:32:27-04:00
-updated: 2026-05-09T08:02:07-04:00
+updated: 2026-05-09T08:10:42-04:00
 ---
 
 ## Current Test
@@ -19,7 +19,7 @@ result: pass
 
 ### 2. Avatar Import/Edit Routing
 expected: In Settings > Avatars, "Edit current" opens the Avatar Import review flow for the active avatar catalog. "Import/replace" starts the folder-pick/import flow instead of reusing the current plan.
-result: issue
+result: resolved_pending_retest
 reported: "Pass with bugs: 1. App start with unknown Avatar ID but Edit current button is not disabled. 2. After I load a model and it shows valid Avatar ID, and I Edit current, it did not show edits I made before, but only fresh config table so I have to configure again. 3. After I configured again and saved, I then try to Edit current again, but the button is not responding (it is not disabled at that time) with a text below showing \"Current avatar catalog is not available to edit.\""
 severity: major
 
@@ -37,7 +37,7 @@ result: pass
 
 ### 6. About Version Truthfulness
 expected: Settings > About shows a current milestone/version label instead of the stale initial skeleton label.
-result: issue
+result: resolved_pending_retest
 reported: "Side issue: The About section shows stale version number as 0.1.0-skeleton. Should also be updated as milestone number"
 severity: minor
 
@@ -45,7 +45,8 @@ severity: minor
 
 total: 6
 passed: 4
-issues: 2
+issues: 0
+resolved_pending_retest: 2
 pending: 0
 skipped: 0
 blocked: 0
@@ -53,7 +54,7 @@ blocked: 0
 ## Gaps
 
 - truth: "In Settings > Avatars, Edit current opens the Avatar Import review flow for the active avatar catalog."
-  status: failed
+  status: resolved_pending_retest
   reason: "User reported: Pass with bugs: 1. App start with unknown Avatar ID but Edit current button is not disabled. 2. After I load a model and it shows valid Avatar ID, and I Edit current, it did not show edits I made before, but only fresh config table so I have to configure again. 3. After I configured again and saved, I then try to Edit current again, but the button is not responding (it is not disabled at that time) with a text below showing \"Current avatar catalog is not available to edit.\""
   severity: major
   test: 2
@@ -79,10 +80,14 @@ blocked: 0
     - "Disable Edit current when no current avatar ID is known or when no persisted current catalog can be loaded."
     - "Resolve the current avatar ID from a real persisted override catalog instead of hardcoding 'teto' when the store value is stale or missing."
     - "Guarantee Edit current uses saved _avatar_overrides.yaml data after save/restart rather than a freshly detected import table."
+  resolution_12_03:
+    - "Current avatar ID resolution now validates persisted avatars/*/_avatar_overrides.yaml catalogs and repairs stale stored IDs."
+    - "Renderer disables Edit current when no current avatar ID is known and clears loading correctly in the no-ID state."
+    - "Edit current regression coverage now asserts saved variants/events are routed to Avatar Import."
   debug_session: "inline verify-work diagnosis 2026-05-09"
   fix_plan: ".planning/phases/12-settings-reality-pass/12-03-PLAN.md"
 - truth: "Settings > About shows a current milestone/version label instead of the stale initial skeleton label."
-  status: failed
+  status: resolved_pending_retest
   reason: "User reported: Side issue: The About section shows stale version number as 0.1.0-skeleton. Should also be updated as milestone number"
   severity: minor
   test: 6
@@ -95,5 +100,8 @@ blocked: 0
   missing:
     - "Update About version copy to the current v2.1 milestone/version label."
     - "Add a Settings regression test that fails on the stale '0.1.0-skeleton' About value."
+  resolution_12_03:
+    - "Settings About now shows v2.1 Mock/Reality Cleanup."
+    - "Settings regression coverage asserts About no longer renders 0.1.0-skeleton."
   debug_session: "inline verify-work diagnosis 2026-05-09"
   fix_plan: ".planning/phases/12-settings-reality-pass/12-03-PLAN.md"
