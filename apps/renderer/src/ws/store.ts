@@ -33,6 +33,7 @@ import {
   resetStreaming
 } from '@/screens/Chat/useStreamingMessages'
 import { commitConversationTurnFromDispatcher } from '@/state/conversation-history'
+import { playAudioPayload } from './audio-player'
 
 // -- log channel: sidecar log envelopes flow through here to AppShell --------
 
@@ -73,6 +74,9 @@ subscribe((msg: WSMessage) => {
   }
   if (isAudioPayload(msg)) {
     appendAssistantSentence(msg.display_text.text, msg.sentence_id)
+    if (msg.audio && msg.audio.trim().length > 0) {
+      playAudioPayload(msg.audio)
+    }
     setSpeaking(true)
     return
   }

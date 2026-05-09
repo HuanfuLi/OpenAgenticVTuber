@@ -4,7 +4,7 @@ import { playAudioPayload } from '@/ws/audio-player'
 class MockAudioElement {
   src: string
   listeners = new Map<string, Array<() => void>>()
-  play = vi.fn(() => Promise.resolve())
+  play = vi.fn(() => nextPlayResult)
 
   constructor(src: string) {
     this.src = src
@@ -28,11 +28,13 @@ class MockAudioElement {
 
 let mockAudioElements: MockAudioElement[] = []
 let objectUrlCounter = 0
+let nextPlayResult: Promise<void>
 
 describe('playAudioPayload', () => {
   beforeEach(() => {
     mockAudioElements = []
     objectUrlCounter = 0
+    nextPlayResult = Promise.resolve()
     vi.restoreAllMocks()
 
     vi.stubGlobal('Audio', MockAudioElement)
@@ -80,13 +82,12 @@ describe('playAudioPayload', () => {
   })
 
   it('logs and cleans up when browser playback rejects', async () => {
+    nextPlayResult = Promise.reject(new Error('blocked'))
     playAudioPayload(btoa('RIFF-wav-bytes'))
-    mockAudioElements[0]!.play.mockRejectedValueOnce(new Error('blocked'))
-    playAudioPayload(btoa('RIFF-second'))
 
     await Promise.resolve()
 
     expect(console.warn).toHaveBeenCalled()
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:audio-2')
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:audio-1')
   })
 })
