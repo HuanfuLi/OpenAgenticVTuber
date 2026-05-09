@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 19 context gathered
-last_updated: "2026-05-09T23:35:22Z"
-last_activity: 2026-05-09 - Completed Phase 17 plan 17-01 contract foundation
+stopped_at: Completed 17-02-PLAN.md
+last_updated: "2026-05-09T23:42:30Z"
+last_activity: 2026-05-09 - Completed Phase 17 plan 17-02 preset persistence and reference-audio validation IPC
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 14
-  completed_plans: 5
+  completed_plans: 6
   percent: 14
 ---
 
@@ -26,26 +26,26 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 17 of 22 (GPT-SoVITS Provider + Voice Presets)
-Plan: 1/7 complete
+Plan: 2/7 complete
 Status: Executing Phase 17 plans
-Last activity: 2026-05-09 - Completed Phase 17 plan 17-01 contract foundation
+Last activity: 2026-05-09 - Completed Phase 17 plan 17-02 preset persistence and reference-audio validation IPC
 
-Progress: [█░░░░░░░░░] 1/7 plans complete in Phase 17
+Progress: [██░░░░░░░░] 2/7 plans complete in Phase 17
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed in v3.0: 1
-- Average duration: 17 min
-- Total execution time: 17 min
+- Total plans completed in v3.0: 2
+- Average duration: 11 min
+- Total execution time: 22 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 16. Audio Contracts + TTS Provider Shell | 4/4 | same-session | same-session |
-| 17. GPT-SoVITS Provider + Voice Presets | 1/7 | 17 min | 17 min |
+| 17. GPT-SoVITS Provider + Voice Presets | 2/7 | 22 min | 11 min |
 | 18. Rich Voice Settings + Persistence | 0/TBD | - | - |
 | 19. STT Provider Abstraction + Local/Cloud Providers | 0/TBD | - | - |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | 0/TBD | - | - |
@@ -75,6 +75,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - AEC/no-headphones support is empirical and must not be promised before Phase 22 results.
 - Cloud STT must remain explicit opt-in with redacted credentials/logs and no silent fallback.
 - Phase 16 must not silently fall back between providers mid-turn; failures need typed health/failure states.
+- Phase 17 plan 17-02 added managed reference-audio validation IPC and preset/reference delete guards.
 
 ## Deferred Items
 
@@ -86,6 +87,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-09T23:35:22Z
-Stopped at: Completed 17-01-PLAN.md
+Last session: 2026-05-09T23:42:30Z
+Stopped at: Completed 17-02-PLAN.md
 Resume file: None
