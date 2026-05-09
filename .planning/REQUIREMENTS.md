@@ -36,11 +36,11 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 
 ### Plugin Developer Docs & Swap Hardening
 
-- [x] **PLUGDOC-01**: Human plugin developers can read a top-level plugin guide covering directory layout, `plugin.yaml`, `BodyMotionPlugin`, `ParamFrame`, trusted in-sidecar execution, dependency expectations, and local test workflow.
+- [ ] **PLUGDOC-01**: Human plugin developers can read a top-level plugin guide covering directory layout, `plugin.yaml`, `BodyMotionPlugin`, `ParamFrame`, trusted in-sidecar execution, dependency expectations, and local test workflow.
 - [x] **PLUGDOC-02**: AI plugin-author agents have a compact brief naming the source files to inspect, plugin invariants, forbidden patterns, and regression commands.
-- [x] **PLUGDOC-03**: Plugin selection clearly reflects the boot-time swap model: choosing a new active plugin either restarts the sidecar or shows an explicit restart-required state.
+- [ ] **PLUGDOC-03**: Plugin selection clearly reflects the boot-time swap model: choosing a new active plugin either restarts the sidecar or shows an explicit restart-required state.
 - [x] **PLUGDOC-04**: Invalid manifests, missing entrypoints, incompatible API versions, and `NullPlugin` fallback are surfaced through Settings/status/log surfaces with actionable copy.
-- [x] **PLUGDOC-05**: Automated tests cover plugin discovery/listing parity, active-plugin persistence, restart behavior, and invalid-plugin/fallback reporting.
+- [ ] **PLUGDOC-05**: Automated tests cover plugin discovery/listing parity, active-plugin persistence, restart behavior, and invalid-plugin/fallback reporting.
 
 ### Mock Boundary
 
@@ -94,11 +94,11 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 | HIST-03 | Phase 13 | Complete |
 | HIST-04 | Phase 13 | Complete |
 | HIST-05 | Phase 13 | Complete |
-| PLUGDOC-01 | Phase 14 | Complete |
+| PLUGDOC-01 | Phase 14 | Gap closure pending |
 | PLUGDOC-02 | Phase 14 | Complete |
-| PLUGDOC-03 | Phase 14 | Complete |
+| PLUGDOC-03 | Phase 14 | Gap closure pending |
 | PLUGDOC-04 | Phase 14 | Complete |
-| PLUGDOC-05 | Phase 14 | Complete |
+| PLUGDOC-05 | Phase 14 | Gap closure pending |
 | MOCK-01 | Phase 15 | Pending |
 | MOCK-02 | Phase 15 | Pending |
 | MOCK-03 | Phase 15 | Pending |
@@ -111,4 +111,4 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after Phase 14 execution completed*
+*Last updated: 2026-05-09 after Phase 14 UAT gaps diagnosed*
