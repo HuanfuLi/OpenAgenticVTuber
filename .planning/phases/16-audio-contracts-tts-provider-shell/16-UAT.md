@@ -6,7 +6,7 @@ source:
   - 16-02-SUMMARY.md
   - 16-03-SUMMARY.md
 started: 2026-05-09T18:38:56-04:00
-updated: 2026-05-09T19:05:00-04:00
+updated: 2026-05-09T19:08:00-04:00
 ---
 
 ## Current Test
@@ -70,3 +70,16 @@ blocked: 0
     - "Keep VTS RMS/lipsync behavior unchanged and avoid double-playing when sidecar playback is intentionally active."
     - "Add tests proving audio payloads with WAV data invoke renderer playback and silent/error payloads do not."
   debug_session: ".planning/debug/phase-16-no-audible-voice.md"
+
+## Gap Closure Retest
+
+### 1. Audible renderer playback while preserving VTS lipsync
+expected: Sending a normal chat message produces audible renderer playback from `AudioPayloadMessage.audio` while VTS lipsync continues from the existing RMS envelope.
+automated_evidence:
+  - `npm --workspace apps/renderer run test -- --run Chat.test.tsx ws-audio-player.test.ts ws-store-audio.test.ts` - passed, 18 tests.
+  - `npm --workspace apps/renderer run typecheck` - passed.
+result: pending human retest
+notes:
+  - Renderer now plays non-empty base64 WAV audio payloads.
+  - Silent/action-only envelopes with `audio: null` do not invoke playback.
+  - Chat text merge and speaking-state updates remain covered by regression tests.

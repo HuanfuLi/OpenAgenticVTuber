@@ -20,7 +20,7 @@
 
 ## Deviations Log
 
-- D-01: sidecar-side playback owns audio output; the renderer does not play Web Audio in the skeleton.
+- D-01: sidecar-side playback owns TTS stream ordering and timing. Phase 16 gap closure adds renderer playback of the emitted `AudioPayloadMessage.audio` WAV as the audible app path while preserving the sidecar stream/RMS envelope used by VTS lipsync.
 - D-09: let-finish plus queued next input replaces OLVT’s interrupt-and-abort path.
 - D-14: `chain-end` timing follows audio drain completion rather than WS send completion.
 
