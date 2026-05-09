@@ -747,3 +747,145 @@ textarea.input { height: auto; min-height: 36px; padding: 8px 12px; resize: none
 .grow { flex: 1; }
 .relative { position: relative; }
 .hidden { display: none; }
+
+/* HUD route */
+.hud-root {
+  position: relative;
+  height: 100%;
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: 8px;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.hud-header {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hud-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.hud-header .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: 0 0 10px;
+}
+
+.hud-filter-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.hud-list {
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding-right: 2px;
+}
+
+.hud-row {
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: minmax(96px, 1.1fr) 48px minmax(96px, 1.4fr) 32px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid color-mix(in oklab, var(--border), transparent 40%);
+  border-radius: 8px;
+  background: var(--card);
+  padding: 8px;
+}
+
+.hud-row.locked {
+  border-color: color-mix(in oklab, var(--primary), transparent 55%);
+  background: color-mix(in oklab, var(--primary), var(--card) 90%);
+}
+
+.hud-row-label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hud-row-label label {
+  font-size: 14px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-param-id,
+.hud-row-value,
+.hud-footer {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+
+.hud-row-value {
+  text-align: right;
+  color: var(--foreground);
+}
+
+.hud-slider {
+  width: 100%;
+  accent-color: color-mix(in oklab, var(--foreground), transparent 35%);
+}
+
+.hud-slider.locked {
+  accent-color: var(--primary);
+}
+
+.hud-lock-btn {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.hud-lock-btn:hover {
+  background: color-mix(in oklab, var(--foreground), transparent 92%);
+}
+
+.hud-lock-btn:focus-visible,
+.hud-slider:focus-visible,
+.hud-filter-chips .anchor-pill:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.hud-lock-btn.locked {
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary), transparent 85%);
+}
+
+.hud-footer {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid color-mix(in oklab, var(--border), transparent 55%);
+}

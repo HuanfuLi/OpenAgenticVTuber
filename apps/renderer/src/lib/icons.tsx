@@ -134,6 +134,18 @@ export const Search = makeIcon(
 export const Wrench = makeIcon(
   <path d="M14.7 6.3a4 4 0 1 0 4 6.6L21 21l-2.5 2.5-8.1-2.5a4 4 0 1 0-6.6-4L8 11" />
 )
+export const Lock = makeIcon(
+  <>
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </>
+)
+export const Unlock = makeIcon(
+  <>
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V7a4 4 0 0 1 7-2.5" />
+  </>
+)
 
 export const ICONS = {
   Menu,
@@ -152,5 +164,7 @@ export const ICONS = {
   Circle,
   Send,
   Search,
-  Wrench
+  Wrench,
+  Lock,
+  Unlock
 }

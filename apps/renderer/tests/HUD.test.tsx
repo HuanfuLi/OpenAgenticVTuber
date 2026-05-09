@@ -61,7 +61,6 @@ function renderHud() {
 
 describe('HudRoot', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
     MockWebSocket.instances = []
     ;(globalThis as any).WebSocket = MockWebSocket
     ;(globalThis as any).fetch = vi.fn().mockResolvedValue({
@@ -87,7 +86,6 @@ describe('HudRoot', () => {
   })
 
   afterEach(() => {
-    vi.useRealTimers()
     delete (globalThis as any).WebSocket
     delete (globalThis as any).fetch
     delete (window as any).api
@@ -143,9 +141,6 @@ describe('HudRoot', () => {
     renderHud()
     await waitFor(() => screen.getByText('Angle X'))
     const ws = MockWebSocket.instances[0]!
-    act(() => {
-      vi.runOnlyPendingTimers()
-    })
 
     fireEvent.pointerDown(screen.getByLabelText('Angle X value'))
     fireEvent.change(screen.getByLabelText('Angle X value'), { target: { value: '10' } })

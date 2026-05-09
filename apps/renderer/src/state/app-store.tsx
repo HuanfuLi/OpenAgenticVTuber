@@ -78,6 +78,7 @@ interface AppStoreValue {
   statusOverall: StatusOverall
   banners: Banners
   toasts: Toast[]
+  pushToast: (toast: { text: string; ttlMs?: number }) => void
   resetAll: () => void
 }
 
@@ -135,6 +136,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       }),
     []
   )
+
+  const pushToast = useCallback((toast: { text: string; ttlMs?: number }) => {
+    mockToasts.push({ text: toast.text }, toast.ttlMs ?? 3000)
+  }, [])
 
   // Phase 1 plan 01-01: bridge real sidecar events into the mockStatus
   // observable so the popover row stays consistent with the chrome icon.
@@ -212,6 +217,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       statusOverall: worstOf(status),
       banners,
       toasts,
+      pushToast,
       resetAll
     }),
     [
@@ -227,6 +233,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       status,
       banners,
       toasts,
+      pushToast,
       completeSetup,
       setLlmConfig,
       setLogsDrawer,
