@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: executing
-stopped_at: Completed 07-04-PLAN.md
-last_updated: "2026-05-09T00:19:34.483Z"
+stopped_at: Completed 07-05-PLAN.md
+last_updated: "2026-05-09T00:22:51.112Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 37
-  completed_plans: 32
+  completed_plans: 34
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 07 (three-category-code-parsing-dispatch) — EXECUTING
-Plan: 3 of 7
+Plan: 5 of 7
 Status: Ready to execute
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
@@ -102,6 +102,8 @@ Last activity: 2026-05-09
 | Phase 06-plugin-runtime-default-plugin P08 | 5 min | 3 tasks | 11 files |
 | Phase 07-three-category-code-parsing-dispatch P01 | 5min | 1 tasks | 10 files |
 | Phase 07-three-category-code-parsing-dispatch P04 | 3min | 1 tasks | 4 files |
+| Phase 07-three-category-code-parsing-dispatch P03 | 7min | 1 tasks | 7 files |
+| Phase 07-three-category-code-parsing-dispatch P05 | 6min | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -175,6 +177,11 @@ Recent decisions affecting current work:
 - [Phase 07-three-category-code-parsing-dispatch]: TriggerAnimation entries use real motion3 Meta.Duration only when finite and within 0 < duration <= 10.0; fallback entries carry duration_is_fallback=True.
 - [Phase 07-three-category-code-parsing-dispatch]: Reserved-name enforcement is exposed as a boot-time validation primitive; parser/runtime hot paths do not consult the reserved list.
 - [Phase 07-three-category-code-parsing-dispatch]: The reserved LLM protocol list is a fixed system invariant covering the PLG-06 floor plus the 28-entry Phase 7 research sweep.
+- [Phase 07-three-category-code-parsing-dispatch]: code_extractor leaves sentence.text unchanged so plugin-visible text keeps bracketed context.
+- [Phase 07-three-category-code-parsing-dispatch]: Leaked <think> is not stripped at parse time; it is treated as an unknown event and emits no dispatch.
+- [Phase 07-three-category-code-parsing-dispatch]: EventFire.duration_ms is computed from EventEntry at parse time, using 10s exactly for fallback entries and duration_seconds*1000+1000 otherwise.
+- [Phase 07-three-category-code-parsing-dispatch]: Variant state is session-local shadow state; idempotent re-emits no-op.
+- [Phase 07-three-category-code-parsing-dispatch]: EventCompletionTracker treats positive EventFire.duration_ms as the final completion delay with no blend pad or upper clamp.
 
 ### Pending Todos
 
@@ -197,6 +204,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-09T00:19:34.474Z
-Stopped at: Completed 07-04-PLAN.md
+Last session: 2026-05-09T00:22:51.104Z
+Stopped at: Completed 07-05-PLAN.md
 Resume file: None

@@ -217,9 +217,9 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md — Python Dispatch contract, EventEntry hotkey_id, VTS event extraction, and Python output model updates
 - [ ] 07-02-PLAN.md — Generated Dispatch/EventEntry/AudioPayload TS and JSON Schema mirrors with ActionIntent mirrors removed
-- [ ] 07-03-PLAN.md — `code_extractor`, all-syntax chat/TTS stripping, no parse-time think strip, and adversarial split-token fixtures
+- [x] 07-03-PLAN.md — `code_extractor`, all-syntax chat/TTS stripping, no parse-time think strip, and adversarial split-token fixtures
 - [x] 07-04-PLAN.md — Reserved-name and cross-category validation module with parser tests
-- [ ] 07-05-PLAN.md — VariantStateManager and EventCompletionTracker with radio-button and duration-pad tests
+- [x] 07-05-PLAN.md — VariantStateManager and EventCompletionTracker with radio-button and duration-pad tests
 - [ ] 07-06-PLAN.md — Runtime Dispatch routing, including active PluginAdapter/plugin ActionCode delivery and TTS payload dispatches
 - [ ] 07-07-PLAN.md — Boot validation/runtime manager wiring, shutdown cleanup, pyvts import guard, and `[DISPATCH]` renderer logs
 
