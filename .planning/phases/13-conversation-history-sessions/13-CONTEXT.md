@@ -6,20 +6,18 @@
 <domain>
 ## Phase Boundary
 
-Phase 13 adds real ChatGPT-style conversation history sessions and wires that real state into Settings. It replaces the current placeholder History sheet and single in-memory Conversation Settings copy with persistent local transcript sessions. A side feature also adds VTS cursor head-center calibration so cursor tracking can be re-centered after the user moves or resizes the model inside VTube Studio.
+Phase 13 adds real ChatGPT-style conversation history sessions and wires that real state into Settings. It replaces the current placeholder History sheet and single in-memory Conversation Settings copy with persistent local transcript sessions.
 
 In scope:
 - Create, switch, rename/title, search/filter, and delete sessions from the normal chat/history UI.
 - Persist active session transcripts locally across app restart.
 - Keep the existing LLM streaming, TTS, and VTS response pipeline intact.
 - Update Settings > Conversation to show truthful session/history status and supported reset controls.
-- Add VTS cursor-tracking head-center recalibration from Settings > VTube Studio, including a manual recompute action and an automatic recompute toggle where VTS model move/resize events are available.
 
 Out of scope:
 - Semantic memory, retrieval, per-avatar memory, and shared user-fact storage.
 - Agentic workflows or goal/task execution.
 - Cloud sync, account-based history, cross-device history, or history export/import.
-- New cursor-tracking math beyond recalibrating the existing Phase 10 head/eye projection center and preserving its namespaces/ranges.
 
 </domain>
 
@@ -60,19 +58,11 @@ Out of scope:
 - **D-18:** Settings should not list sessions or provide per-session switch/rename/delete; detailed session management stays in the History sheet.
 - **D-19:** Settings copy must clearly distinguish transcript/session persistence from Memory, which remains deferred to v4.0 with the agentic system.
 
-### VTS Cursor Calibration Side Feature
-
-- **D-20:** Cursor calibration belongs in Settings > VTube Studio because it is a VTS/model-position control, not part of conversation session management.
-- **D-21:** The manual control should recompute the cursor-tracking head center from the current VTS model/window state without requiring sidecar restart.
-- **D-22:** The automatic toggle should recompute on VTS model move/resize events only where those events or equivalent model-position data are available; otherwise the UI must report the feature as unavailable instead of pretending it is active.
-- **D-23:** Calibration must update the center used by `CursorDriver` while preserving Phase 10 output names, head/eye ranges, dead-zone behavior, and no renderer cursor-event hot path.
-
 ### the agent's Discretion
 
 - Exact visual layout for date grouping, row actions, empty state, and search/filter presentation inside the History sheet.
 - Exact local persistence schema and storage mechanism, provided it is real Electron/app persistence and supports migration-safe future extension.
 - Exact wording for destructive confirmations and Settings summary copy.
-- Exact VTS model-position primitive, provided it is based on sidecar-owned VTS/window data and truthfully exposes unsupported/error states.
 
 </decisions>
 
@@ -96,13 +86,10 @@ Out of scope:
 - `apps/renderer/src/screens/Chat/useStreamingMessages.ts` — current single-turn streaming reducer and chain-start/audio/force-new/chain-end state machine.
 - `apps/renderer/src/state/app-store.tsx` — current in-memory `chatMessages`, `setChatMessages`, `showThreadList`, reset behavior, and app-store patterns.
 - `apps/renderer/src/screens/Settings/Settings.tsx` — current Conversation section showing single in-memory thread; target surface for real history summary and clear-all.
-- `apps/renderer/src/screens/Settings/Settings.tsx` — existing VTube Studio section; target surface for cursor calibration recompute/toggle/status.
 - `apps/renderer/src/lib/copy.ts` — user-visible copy for Chat, History, and Settings that must stop describing conversation persistence as future work after Phase 13.
 - `apps/electron-main/src/window-store.ts` — current `electron-store` schema/patterns; no conversation history schema exists yet.
 - `apps/electron-main/src/ipc.ts` — IPC registration pattern for renderer-accessible persisted app state.
 - `apps/electron-main/preload/index.ts` — preload whitelist pattern for any new conversation-history API surface.
-- `sidecar/src/sidecar/compositor/cursor_driver.py` — current Phase 10 cursor tracking assumes `FACE_CENTER_FRAC = (0.5, 0.5)` and must be made calibration-aware without regressing VTS tracking-input outputs.
-- `sidecar/src/sidecar/vts/window_detect.py` — current sidecar-owned VTS window/cursor sampling authority.
 - `apps/renderer/tests/Chat.test.tsx` — existing chat behavior coverage; likely needs updates for persisted sessions and complete-turn commit behavior.
 - `apps/renderer/tests/Settings.test.tsx` — Phase 12 tests currently assert the old Conversation truth surface and must be updated for Phase 13.
 
@@ -117,7 +104,6 @@ Out of scope:
 - `useStreamingMessages` already identifies user bubbles, assistant bubbles, thinking state, force-new boundaries, input-disabled state, speaking state, and stream banners. It is the key integration point for detecting complete turns without changing the sidecar pipeline.
 - `window-store.ts` already uses typed `electron-store` schema defaults for durable local state such as chrome preferences, active avatar, and log level. Conversation persistence can follow that storage style or introduce a closely related store if schema size/shape warrants it.
 - Settings already has a `ConversationSection` with the right anchor and section placement; Phase 13 should upgrade that section rather than adding a new Settings area.
-- `CursorDriver` currently projects cursor position against the VTS window center, which drifts when the user grabs and moves the model within VTS. The side feature should replace that fixed center with a calibrated center derived from sidecar-owned VTS/model data.
 
 ### Established Patterns
 
@@ -133,10 +119,7 @@ Out of scope:
 - Decide how the active session's persisted transcript hydrates into the rendered chat view while keeping in-flight streaming messages separate until turn completion.
 - Add local persistence APIs for listing, creating, renaming, deleting, selecting, and clearing sessions.
 - Update `Settings > Conversation` to consume session count/active-session metadata and clear-all-history capability.
-- Add sidecar/admin and Electron/preload plumbing for VTS cursor calibration status, manual recompute, and automatic recompute preference.
-- Update `Settings > VTube Studio` with compact calibration controls and truthful unavailable/error copy.
 - Update tests around History sheet management, session persistence across reload/restart boundaries, complete-turn persistence semantics, Settings summary/reset, and copy regressions.
-- Update cursor-driver tests to prove calibrated centers affect head/eye projection without changing Phase 10 namespaces/ranges.
 
 </code_context>
 
@@ -146,7 +129,6 @@ Out of scope:
 - The target user experience is explicitly ChatGPT-style conversation sessions.
 - The user selected the richer manager shape for Phase 13, so search/filtering belongs in this phase rather than being deferred.
 - The user selected complete-turn persistence. Planners should treat partial-turn durability as intentionally out of scope unless needed for technical consistency.
-- The user identified a VTS-model-move drift case: if the model is grabbed and moved inside VTube Studio, window-centered cursor tracking can be wrong. Phase 13 should add manual recompute and an automatic recompute toggle as a side feature.
 
 </specifics>
 

@@ -34,13 +34,6 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 - [ ] **HIST-04**: Settings > Conversation reflects real session/history behavior and exposes truthful controls for retention/reset where supported.
 - [ ] **HIST-05**: Conversation history is transcript/session persistence only; semantic memory, retrieval, and per-avatar memory remain deferred to v4.0.
 
-### VTS Cursor Calibration
-
-- [ ] **VTCAL-01**: User can manually recompute the cursor-tracking head center after moving or resizing the VTS model, without restarting the sidecar.
-- [ ] **VTCAL-02**: User can enable or disable automatic head-center recomputation for VTS model move/resize events where the VTS API supports it.
-- [ ] **VTCAL-03**: Cursor tracking uses the calibrated head center instead of assuming the center of the VTS window, while preserving Phase 10 head/eye tracking ranges and namespaces.
-- [ ] **VTCAL-04**: Settings > VTube Studio reports the cursor-calibration status truthfully, including unavailable/error states when VTS model-position data cannot be read.
-
 ### Mock Boundary
 
 - [ ] **MOCK-01**: Production user flows do not import or mutate `mockStatus`, `mockBanners`, `mockToasts`, `mockSafeStorage`, or scripted conversation fixtures.
@@ -93,20 +86,16 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 | HIST-03 | Phase 13 | Pending |
 | HIST-04 | Phase 13 | Pending |
 | HIST-05 | Phase 13 | Pending |
-| VTCAL-01 | Phase 13 | Pending |
-| VTCAL-02 | Phase 13 | Pending |
-| VTCAL-03 | Phase 13 | Pending |
-| VTCAL-04 | Phase 13 | Pending |
 | MOCK-01 | Phase 14 | Pending |
 | MOCK-02 | Phase 14 | Pending |
 | MOCK-03 | Phase 14 | Pending |
 | MOCK-04 | Phase 14 | Pending |
 
 **Coverage:**
-- v2.1 requirements: 25 total
-- Mapped to phases: 25
+- v2.1 requirements: 21 total
+- Mapped to phases: 21
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after Phase 13 cursor-calibration side-feature insertion*
+*Last updated: 2026-05-09 after Phase 13 conversation-history insertion*

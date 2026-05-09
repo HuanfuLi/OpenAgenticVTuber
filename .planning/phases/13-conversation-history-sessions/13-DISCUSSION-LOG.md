@@ -5,7 +5,7 @@
 
 **Date:** 2026-05-09T07:39:23.7717936-04:00
 **Phase:** 13-Conversation History Sessions
-**Areas discussed:** Session UX shape, Title behavior, Persistence and retention, Streaming pipeline integration, Settings > Conversation controls, VTS cursor calibration side feature
+**Areas discussed:** Session UX shape, Title behavior, Persistence and retention, Streaming pipeline integration, Settings > Conversation controls
 
 ---
 
@@ -71,14 +71,6 @@
 
 **User's choice:** Summary plus clear-all.
 **Notes:** Settings should show real status/counts and a destructive clear-all action, while per-session management remains in the History sheet.
-
----
-
-## VTS Cursor Calibration Side Feature
-
-**User request:** Add a side feature to Phase 13 because the VTS model can be grabbed and moved inside VTube Studio, causing the current head-centered cursor tracking to drift.
-
-**Decision captured in CONTEXT.md:** Add manual cursor head-center recompute plus an automatic recompute toggle where VTS model move/resize events or equivalent model-position data are available. Put the controls in Settings > VTube Studio, keep the cursor pipeline sidecar-owned, and report unsupported/error states truthfully.
 
 ---
 

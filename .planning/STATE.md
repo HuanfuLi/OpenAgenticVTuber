@@ -9,7 +9,7 @@ last_activity: 2026-05-09
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 11
+  total_plans: 10
   completed_plans: 5
 ---
 
@@ -218,7 +218,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- v2.1 Phase 13: add ChatGPT-style conversation history sessions, wire real session/history state into Settings, and add VTS cursor head-center calibration controls.
+- v2.1 Phase 13: add ChatGPT-style conversation history sessions and wire real session/history state into Settings.
 - v2.1 Phase 14: isolate dev mocks and add mock-boundary regression coverage.
 
 ### Blockers/Concerns
