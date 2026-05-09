@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from contracts import ParamFrame
+from contracts import ActionCode, ParamFrame
 from contracts.avatar_overrides import AvatarOverrides
 from contracts.rig_capabilities import RigCapabilities
 from sidecar.plugins.api import BodyMotionPlugin
@@ -15,12 +15,16 @@ class _GoodPlugin(BodyMotionPlugin):
     def __init__(self) -> None:
         self.loaded = False
         self.unloaded = False
+        self.actions: list[ActionCode] = []
 
     def on_load(self, capabilities: RigCapabilities, overrides: AvatarOverrides) -> None:
         self.loaded = True
 
     async def on_token_stream(self, sentence: str):
         yield ParamFrame(add_params={"FaceAngleX": 0.25})
+
+    def on_action_code(self, action: ActionCode) -> None:
+        self.actions.append(action)
 
     def on_unload(self) -> None:
         self.unloaded = True
@@ -95,3 +99,17 @@ async def test_close_calls_unload_and_tolerates_exceptions() -> None:
     await supervisor.close()
 
     assert plugin.unloaded is True
+
+
+@pytest.mark.asyncio
+async def test_action_code_delegates_to_wrapped_plugin() -> None:
+    plugin = _GoodPlugin()
+    supervisor = await PluginSupervisor.load_or_null(
+        plugin,
+        RigCapabilities(),
+        AvatarOverrides(),
+    )
+
+    supervisor.on_action_code(ActionCode(name="smirk"))
+
+    assert plugin.actions == [ActionCode(name="smirk")]

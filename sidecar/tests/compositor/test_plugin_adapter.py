@@ -149,6 +149,37 @@ def test_supervised_default_plugin_render_frame_drives_smirk_ramp() -> None:
     asyncio.run(run())
 
 
+def test_supervised_default_plugin_action_code_drives_smirk_ramp() -> None:
+    async def run() -> None:
+        clock = _FakeClock()
+        plugin = DefaultPlugin(clock=clock)
+        supervisor = await PluginSupervisor.load_or_null(
+            plugin,
+            RigCapabilities(
+                writable_param_ids=[
+                    "FaceAngleZ",
+                    "FaceAngleY",
+                    "MouthSmile",
+                    "EyeOpenLeft",
+                    "EyeOpenRight",
+                ]
+            ),
+            AvatarOverrides(),
+            load_timeout_seconds=0.1,
+        )
+        adapter = PluginAdapter(supervisor)
+
+        assert adapter.enqueue_action_code(ActionCode(name="smirk")) is True
+
+        clock.now = 0.30
+        frame_300 = adapter.tick(0.30)
+
+        assert frame_300.add_params["FaceAngleZ"] > 0.0
+        assert frame_300.add_params["MouthSmile"] > 0.0
+
+    asyncio.run(run())
+
+
 def test_action_code_delivered_to_active_plugin() -> None:
     class Plugin(_Plugin):
         def __init__(self) -> None:
