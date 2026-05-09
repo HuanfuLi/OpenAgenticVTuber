@@ -16,7 +16,7 @@ tech-stack:
   patterns: [managed-reference-audio-storage, validation-before-save, preset-delete-guard, typed-preload-bridge]
 key-files:
   created: [apps/electron-main/src/reference-audio.ts, apps/electron-main/tests/reference-audio.test.ts, apps/electron-main/tests/safe-storage.test.ts, sidecar/tests/admin/test_reference_audio_validation_endpoint.py]
-  modified: [apps/electron-main/src/safe-storage.ts, apps/electron-main/src/ipc.ts, apps/electron-main/preload/index.ts, apps/electron-main/preload/index.d.ts, apps/electron-main/package.json, sidecar/src/sidecar/admin/audio.py, sidecar/pyproject.toml, sidecar/uv.lock]
+  modified: [apps/electron-main/src/safe-storage.ts, apps/electron-main/src/ipc.ts, apps/electron-main/preload/index.ts, apps/electron-main/preload/index.d.ts, apps/electron-main/package.json, package-lock.json, sidecar/src/sidecar/admin/audio.py, sidecar/pyproject.toml, sidecar/uv.lock]
 key-decisions:
   - "Reference audio is copied into app-managed userData storage and accepted only after sidecar soundfile validation succeeds."
   - "Preset and reference-audio deletion is blocked when active/in-use instead of falling back to Piper or cascade-deleting dependent presets."
@@ -39,7 +39,7 @@ completed: 2026-05-09
 - **Started:** 2026-05-09T23:37:31Z
 - **Completed:** 2026-05-09T23:42:30Z
 - **Tasks:** 3
-- **Files modified:** 12
+- **Files modified:** 13
 
 ## Accomplishments
 
@@ -58,8 +58,9 @@ Each task was committed atomically:
 4. **Task 2 GREEN: soundfile validation endpoint** - `3218e96` (feat)
 5. **Task 3 RED: reference-audio IPC/helper tests** - `1c4e342` (test)
 6. **Task 3 GREEN: reference-audio IPC/preload APIs** - `37b4dbf` (feat)
+7. **Lockfile sync: electron-main test dependency** - `6f4a1c5` (chore)
 
-**Plan metadata:** pending in final docs commit.
+**Plan metadata:** `8349702` (docs), follow-up summary correction pending.
 
 ## Files Created/Modified
 
@@ -70,7 +71,7 @@ Each task was committed atomically:
 - `apps/electron-main/preload/index.d.ts` - Adds typed bridge declarations including `validateReferenceAudio`.
 - `apps/electron-main/tests/safe-storage.test.ts` - Covers migration/defaults and active preset association/delete guard behavior.
 - `apps/electron-main/tests/reference-audio.test.ts` - Covers sanitized managed imports, validation proxying, delete guards, and preload exposure.
-- `apps/electron-main/package.json` - Adds the electron-main Vitest test script and dev dependency.
+- `apps/electron-main/package.json` / `package-lock.json` - Adds the electron-main Vitest test script and dev dependency.
 - `sidecar/src/sidecar/admin/audio.py` - Adds soundfile-backed reference-audio validation endpoint.
 - `sidecar/tests/admin/test_reference_audio_validation_endpoint.py` - Covers missing, unsupported, unreadable, too-short, too-long, and valid reference audio.
 - `sidecar/pyproject.toml` / `sidecar/uv.lock` - Adds `soundfile==0.13.1`.
@@ -136,7 +137,7 @@ None.
 - Found `apps/electron-main/tests/reference-audio.test.ts`.
 - Found `apps/electron-main/tests/safe-storage.test.ts`.
 - Found `sidecar/tests/admin/test_reference_audio_validation_endpoint.py`.
-- Found task commits `6c86153`, `b1048cd`, `cea5676`, `3218e96`, `1c4e342`, and `37b4dbf` in git log.
+- Found task commits `6c86153`, `b1048cd`, `cea5676`, `3218e96`, `1c4e342`, `37b4dbf`, and `6f4a1c5` in git log.
 - Verification commands passed as listed above.
 
 ---
