@@ -11,6 +11,8 @@ from contracts import ParamFrame
 from contracts.rig_capabilities import RigCapabilities
 from sidecar.avatar.overrides import BodySwayStrategyName
 from sidecar.compositor.clamp import clamp_and_validate
+from sidecar.compositor.hud_tap import HudTap
+from sidecar.compositor.lock_filter import SYSTEM_PRIMITIVE_OVERRIDES
 
 MOUTH_PARAM = "MouthOpen"
 
@@ -48,6 +50,8 @@ class Compositor:
         plugin_driver: PluginTickDriver,
         capabilities: RigCapabilities,
         cursor_driver: TickDriver | None = None,
+        lock_state: dict[str, float] | None = None,
+        hud_tap: HudTap | None = None,
     ) -> None:
         self._writer = writer
         self._idle = idle_driver
@@ -55,6 +59,8 @@ class Compositor:
         self._plugin = plugin_driver
         self._capabilities = capabilities
         self._cursor = cursor_driver
+        self._lock_state = lock_state if lock_state is not None else {}
+        self._hud_tap = hud_tap
         self._stop = False
         self._tick_count = 0
         self._dropped_frames = 0
@@ -108,6 +114,14 @@ class Compositor:
             for key, value in self._cursor.tick(now).items():
                 add_acc[key] = add_acc.get(key, 0.0) + value
 
+        # Apply locks LAST in merge per ARCH-05. SYSTEM_PRIMITIVE_OVERRIDES guard is
+        # defense-in-depth -- HUD already excludes those from the slider list (HUD-06).
+        for param_id, locked_value in self._lock_state.items():
+            if param_id in SYSTEM_PRIMITIVE_OVERRIDES:
+                continue
+            set_acc[param_id] = (locked_value, 1.0)
+            add_acc.pop(param_id, None)
+
         frame = clamp_and_validate(ParamFrame(
             add_params=add_acc,
             set_params=set_acc,
@@ -118,6 +132,13 @@ class Compositor:
             await self._writer.inject_params(frame)
         except Exception as exc:  # noqa: BLE001 - degraded until VTS handshake completes
             logger.warning(f"[COMPOSITOR] writer.inject_params failed: {exc!r}")
+
+        # 15 Hz HUD tap -- every 4th 60 Hz tick.
+        if self._hud_tap is not None and self._tick_count % 4 == 0:
+            try:
+                self._hud_tap.publish(frame, dict(self._lock_state))
+            except Exception:  # noqa: BLE001 -- HUD must never crash compositor
+                logger.exception("[HUD-TAP] publish failed")
 
     async def stop(self) -> None:
         self._stop = True
