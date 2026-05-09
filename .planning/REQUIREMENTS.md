@@ -10,11 +10,11 @@ This milestone does not add major new product capabilities. It removes misleadin
 
 ### Status & App State
 
-- [ ] **STAT-01**: User can see the configured LLM provider and model in the status popover without hardcoded `qwen2.5` or scripted latency text.
-- [ ] **STAT-02**: User can see sidecar readiness from the real Electron sidecar lifecycle, preserving existing crash/respawn banner behavior.
-- [ ] **STAT-03**: User can see VTube Studio connection/auth status derived from real sidecar or VTS health state, not from `mockStatus`.
-- [ ] **STAT-04**: Status retry/reconnect actions invoke real setup/restart/reconnect paths or are disabled with accurate copy; no mock timeout changes status to green.
-- [ ] **STAT-05**: Renderer app state persists through real Electron storage APIs where available; production flows do not rely on `mockSafeStorage`.
+- [x] **STAT-01**: User can see the configured LLM provider and model in the status popover without hardcoded `qwen2.5` or scripted latency text.
+- [x] **STAT-02**: User can see sidecar readiness from the real Electron sidecar lifecycle, preserving existing crash/respawn banner behavior.
+- [x] **STAT-03**: User can see VTube Studio connection/auth status derived from real sidecar or VTS health state, not from `mockStatus`.
+- [x] **STAT-04**: Status retry/reconnect actions invoke real setup/restart/reconnect paths or are disabled with accurate copy; no mock timeout changes status to green.
+- [x] **STAT-05**: Renderer app state persists through real Electron storage APIs where available; production flows do not rely on `mockSafeStorage`.
 
 ### Settings Reality
 
@@ -61,11 +61,11 @@ This milestone does not add major new product capabilities. It removes misleadin
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STAT-01 | Phase 11 | Pending |
-| STAT-02 | Phase 11 | Pending |
-| STAT-03 | Phase 11 | Pending |
-| STAT-04 | Phase 11 | Pending |
-| STAT-05 | Phase 11 | Pending |
+| STAT-01 | Phase 11 | Complete |
+| STAT-02 | Phase 11 | Complete |
+| STAT-03 | Phase 11 | Complete |
+| STAT-04 | Phase 11 | Complete |
+| STAT-05 | Phase 11 | Complete |
 | SET-01 | Phase 12 | Pending |
 | SET-02 | Phase 12 | Pending |
 | SET-03 | Phase 12 | Pending |
@@ -85,4 +85,4 @@ This milestone does not add major new product capabilities. It removes misleadin
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after v2.1 milestone initialization*
+*Last updated: 2026-05-09 after Phase 11 completion*

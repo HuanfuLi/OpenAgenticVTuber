@@ -42,7 +42,7 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-13 | 0/3 | Planned | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-13 | 1/3 | In Progress | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
@@ -54,10 +54,10 @@ v2.1 replaces remaining mocked or hardcoded user-facing surfaces with truthful s
 
 **Depends on:** v2.0 archive
 **Requirements:** STAT-01, STAT-02, STAT-03, STAT-04, STAT-05
-**Plans:** 1 planned
+**Plans:** 1 complete
 
 Plans:
-- [ ] 11-01-PLAN.md — Replace mock/hardcoded status and persistence paths with real app state.
+- [x] 11-01-PLAN.md — Replace mock/hardcoded status and persistence paths with real app state.
 
 **Success Criteria:**
 1. Status popover shows the configured provider/model from persisted setup state, not hardcoded `qwen2.5`.
@@ -112,4 +112,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 11 planning*
+*Last updated: 2026-05-09 after Phase 11 completion*
