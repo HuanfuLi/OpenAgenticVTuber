@@ -14,10 +14,10 @@ def test_idle_driver_emits_head_and_eye_params_every_tick():
     assert "Auto Breath" in out
 
 
-def test_idle_blink_reopens_after_short_closure_window():
+def test_idle_driver_never_emits_eye_open_blinks():
     driver = IdleDriver(seed=1)
-    driver._next_blink_at = 1.0
 
-    assert driver.tick(1.0)["EyeOpenLeft"] == 0.05
-    assert driver.tick(1.08)["EyeOpenLeft"] == 0.55
-    assert "EyeOpenLeft" not in driver.tick(1.30)
+    samples = [driver.tick(now / 10.0) for now in range(0, 120)]
+
+    assert all("EyeOpenLeft" not in sample for sample in samples)
+    assert all("EyeOpenRight" not in sample for sample in samples)

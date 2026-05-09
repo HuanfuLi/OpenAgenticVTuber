@@ -63,25 +63,6 @@ async def test_idle_runs_continuously_when_no_other_driver(recording_writer) -> 
 
 
 @pytest.mark.asyncio
-async def test_idle_eye_open_params_are_absolute_set_values(recording_writer) -> None:
-    compositor = Compositor(
-        writer=recording_writer,
-        idle_driver=StubDriver({"EyeOpenLeft": 0.05, "EyeOpenRight": 0.05}),
-        speech_driver=StubDriver(),
-        plugin_driver=StubPluginDriver(),
-        capabilities=_caps(),
-    )
-
-    await compositor._tick(0.0)
-
-    frame = recording_writer.frames[-1]
-    assert frame.set_params["EyeOpenLeft"] == pytest.approx((0.05, 1.0))
-    assert frame.set_params["EyeOpenRight"] == pytest.approx((0.05, 1.0))
-    assert "EyeOpenLeft" not in frame.add_params
-    assert "EyeOpenRight" not in frame.add_params
-
-
-@pytest.mark.asyncio
 async def test_lock_overrides_plugin_set_param(recording_writer) -> None:
     """HUD-05 / ARCH-05: lock applied LAST overrides plugin set_params."""
     lock_state = {"FaceAngleX": 0.7}

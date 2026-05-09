@@ -26,9 +26,9 @@
 - **Root cause fixed anyway:** production wraps `DefaultPlugin` in `PluginSupervisor`; `PluginAdapter.enqueue_action_code` called `on_action_code` on the supervisor, which inherited the base no-op implementation instead of delegating to the wrapped plugin. Commit `b39511d` delegates action codes through `PluginSupervisor`.
 - **Disposition:** resolved by Plan 10-03. `.planning/skeleton-verification.md` now records SC #2 as PASS.
 
-## Gap: BLINK-EYE-VISIBILITY
+## Resolved gap: BLINK-EYE-VISIBILITY
 
 - **Source:** Operator live UAT on 2026-05-09 while checking SC #2 and preparing SC #5.
-- **Observed:** Current blinking behavior sometimes keeps Teto's eyes closed too long, making it hard to inspect eye variants and cursor-driven eye tracking. Some blinks look correct; others obscure the eyes long enough to confuse visual verification.
-- **Current code path:** `IdleDriver` sets `EyeOpenLeft` and `EyeOpenRight` to `-1.0` for 150ms and has a 10% chance to schedule a second blink 80ms after the first blink, which can produce a longer apparent closure once VTS smoothing is applied.
-- **Disposition:** treat as a Phase 10 eye-verification support gap. Address alongside SC5 eye tracking rather than reopening SC2.
+- **Observed:** App-owned idle blinking fought VTS/model-owned blinking. Live behavior included half-blinks, open-to-close flicker, and eyes staying closed longer than expected.
+- **Ownership decision:** VTube Studio owns normal idle blinking. AgenticLLMVTuber must not emit routine `EyeOpenLeft` / `EyeOpenRight` from `IdleDriver`. Future deliberate eye gestures such as wink remain allowed as explicit plugin/action/variant output with a bounded duration; they are not idle motion.
+- **Disposition:** resolved in Plan 10-04 by deleting app-owned idle blinking and adding a regression that `IdleDriver` never emits eye-open blink params.

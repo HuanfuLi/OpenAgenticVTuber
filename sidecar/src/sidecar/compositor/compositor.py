@@ -16,7 +16,6 @@ from sidecar.compositor.lock_filter import SYSTEM_PRIMITIVE_OVERRIDES
 from sidecar.compositor.param_id_resolver import resolve_param_id
 
 MOUTH_PARAM = "MouthOpen"
-EYE_OPEN_PARAMS = frozenset({"EyeOpenLeft", "EyeOpenRight"})
 
 
 class TickDriver(Protocol):
@@ -100,10 +99,7 @@ class Compositor:
         set_acc: dict[str, tuple[float, float]] = {}
 
         for key, value in self._idle.tick(now).items():
-            if key in EYE_OPEN_PARAMS:
-                set_acc[key] = (value, 1.0)
-            else:
-                add_acc[key] = add_acc.get(key, 0.0) + value
+            add_acc[key] = add_acc.get(key, 0.0) + value
 
         for key, value in self._speech.tick(now).items():
             if key == MOUTH_PARAM:
