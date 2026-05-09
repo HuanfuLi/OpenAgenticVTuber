@@ -143,7 +143,7 @@ Five additional phases (6, 7, 8, 9, 10) refactoring the milestone-1 animation la
 
 - [x] **Phase 8: Avatar Import + Catalogs** — Type-detected auto-extraction (VTS / Cubism w-exp / Cubism bare / OLVT) + mandatory React review screen + `_avatar_overrides.yaml` writes + `RigCapabilities` + `AvatarOverrides` contract definition — **first in execution order (REVISED — produces schema Phase 6 builds against)** (2026-05-08)
 - [x] **Phase 6: Plugin Runtime + Default Plugin** — Plugin contracts (ABC, manifest), in-sidecar loader with supervisor + clamp + rate-limiter, default plugin absorbing milestone-1 IntentDriver + body-sway logic; consumes Phase 8's `RigCapabilities` + `AvatarOverrides` — **second in execution order** *(2026-05-08 PM passed re_verification_4 after 06-08 corrected active Teto joy vocabulary; 06-07 closed ARCH-05/06 split-writer violation + tracking-range fix closed F-3)*
-- [ ] **Phase 7: Three-Category Code Parsing + Dispatch** — `code_extractor` decorator dispatching `[xxx]` / `{xxx}` / `<xxx>` to plugin / variant-toggle / event-fire paths — third in execution order; execution in progress with plans 07-01 through 07-05 complete
+- [ ] **Phase 7: Three-Category Code Parsing + Dispatch** — `code_extractor` decorator dispatching `[xxx]` / `{xxx}` / `<xxx>` to plugin / variant-toggle / event-fire paths — third in execution order; execution in progress with plans 07-01 through 07-06 complete
 - [ ] **Phase 9: Slider HUD + Per-Param Lock** — Sidecar 15 Hz HUD-mode IPC tap + dedicated React route + per-param lock with auto-engage on drag — fourth in execution order
 - [ ] **Phase 10: Cursor Polish + §14 SC Re-Verification** — Optional cursor-driver in-canvas-gate drop + side-by-side §14 SC harness against milestone-1 baselines + skeleton-verification.md commit — last in execution order
 
@@ -220,7 +220,7 @@ Plans:
 - [x] 07-03-PLAN.md — `code_extractor`, all-syntax chat/TTS stripping, no parse-time think strip, and adversarial split-token fixtures
 - [x] 07-04-PLAN.md — Reserved-name and cross-category validation module with parser tests
 - [x] 07-05-PLAN.md — VariantStateManager and EventCompletionTracker with radio-button and duration-pad tests
-- [ ] 07-06-PLAN.md — Runtime Dispatch routing, including active PluginAdapter/plugin ActionCode delivery and TTS payload dispatches
+- [x] 07-06-PLAN.md — Runtime Dispatch routing, including active PluginAdapter/plugin ActionCode delivery and TTS payload dispatches
 - [ ] 07-07-PLAN.md — Boot validation/runtime manager wiring, shutdown cleanup, pyvts import guard, and `[DISPATCH]` renderer logs
 
 **UI hint**: no  <!-- Parser + dispatch lives in sidecar; renderer changes are limited to bracket-strip continuation, no new UI surface. -->
@@ -288,7 +288,7 @@ Milestone v2.0 phases execute in REVISED order: 8 → 6 → 7 → 9 → 10 (revi
 | 5. Polish, Contracts Codegen (scope reduced) | 1/1 | Complete — 05-02 deferred to M2 | 2026-05-08 |
 | 8. Avatar Import + Catalogs | 5/5 | Complete — VERIFICATION passed 5/5 must-haves | 2026-05-08 |
 | 6. Plugin Runtime + Default Plugin | 8/8 | Complete — re_verification_4 passed; F-1/F-2 closed by 06-07 writer consolidation; F-3 closed by tracking-range fix; joy vocabulary gap closed by 06-08 | 2026-05-08 |
-| 7. Three-Category Code Parsing + Dispatch | 5/7 | In Progress — 07-01 through 07-05 complete; next incomplete plan is 07-06 | - |
+| 7. Three-Category Code Parsing + Dispatch | 6/7 | In Progress — 07-01 through 07-06 complete; next incomplete plan is 07-07 | - |
 | 9. Slider HUD + Per-Param Lock | 0/2 (TBD) | Not started — fourth in v2.0 order | - |
 | 10. Cursor Polish + §14 SC Re-Verification | 0/1 (TBD) | Not started — last in v2.0 order | - |
 

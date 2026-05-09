@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: executing
-stopped_at: Completed 07-05-PLAN.md
-last_updated: "2026-05-09T00:23:56.583Z"
+stopped_at: Completed 07-06-PLAN.md
+last_updated: "2026-05-09T00:40:40.156Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 37
-  completed_plans: 35
+  completed_plans: 36
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 07 (three-category-code-parsing-dispatch) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
@@ -105,6 +105,7 @@ Last activity: 2026-05-09
 | Phase 07-three-category-code-parsing-dispatch P03 | 7min | 1 tasks | 7 files |
 | Phase 07-three-category-code-parsing-dispatch P05 | 6min | 1 tasks | 5 files |
 | Phase 07-three-category-code-parsing-dispatch P02 | 8min | 1 tasks | 14 files |
+| Phase 07-three-category-code-parsing-dispatch P06 | 250min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -185,6 +186,9 @@ Recent decisions affecting current work:
 - [Phase 07-three-category-code-parsing-dispatch]: EventCompletionTracker treats positive EventFire.duration_ms as the final completion delay with no blend pad or upper clamp.
 - [Phase 07-three-category-code-parsing-dispatch]: Generated TS mirrors expose a named Dispatch union rather than repeating ActionCode | VariantToggle | EventFire inline.
 - [Phase 07-three-category-code-parsing-dispatch]: Nested generated schemas for avatar import/overrides were committed because the global contract drift guard covers all packages/contracts/generated output.
+- [Phase 07-three-category-code-parsing-dispatch]: Plan 07-06 kept valid_expression_names as a backward-compatible constructor alias for plugin action code parsing while routing through Dispatch records.
+- [Phase 07-three-category-code-parsing-dispatch]: Plan 07-06 logs DISPATCH-DROP for missing plugin adapters, full action queues, and missing event hotkey IDs instead of raising from the orchestrator hot path.
+- [Phase 07-three-category-code-parsing-dispatch]: Plan 07-06 audio payload emission uses dispatches only; stale actions assertions were updated in directly affected orchestrator-turn tests.
 
 ### Pending Todos
 
@@ -207,6 +211,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-09T00:23:56.574Z
-Stopped at: Completed 07-05-PLAN.md
+Last session: 2026-05-09T00:40:40.148Z
+Stopped at: Completed 07-06-PLAN.md
 Resume file: None
