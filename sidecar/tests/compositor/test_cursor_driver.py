@@ -63,10 +63,10 @@ def test_driver_uses_sidecar_win32_sample_contract_without_renderer_event(monkey
     assert out["FaceAngleY"] == pytest.approx(0.0), (
         "sidecar Win32 sample contract should center vertical head deflection"
     )
-    assert out["EyeLeftX"] > 0.0, (
+    assert out["EyeLeftX"] < 0.0, (
         "sidecar Win32 sample contract should drive eye tracking"
     )
-    assert out["EyeRightX"] > 0.0, (
+    assert out["EyeRightX"] < 0.0, (
         "sidecar Win32 sample contract should drive both eyes horizontally"
     )
     assert out["EyeLeftY"] == pytest.approx(0.0), (

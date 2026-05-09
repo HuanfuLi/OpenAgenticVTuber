@@ -11,8 +11,10 @@ from opensimplex import OpenSimplex
 class IdleDriver:
     """Continuous low-amplitude head, eye, blink, and breath motion."""
 
-    BLINK_DURATION_S = 0.09
+    BLINK_DURATION_S = 0.07
+    BLINK_REOPEN_DURATION_S = 0.18
     BLINK_CLOSE_ADD = -0.45
+    BLINK_REOPEN_ADD = 0.22
 
     def __init__(self, seed: int = 42, breath_writeable: bool = False) -> None:
         self._noise = OpenSimplex(seed)
@@ -20,6 +22,7 @@ class IdleDriver:
         self._breath_writeable = breath_writeable
         self._next_blink_at = 0.0
         self._blink_until = 0.0
+        self._blink_reopen_until = 0.0
         self._schedule_next_blink(0.0)
 
     def _schedule_next_blink(self, now: float) -> None:
@@ -42,8 +45,12 @@ class IdleDriver:
 
         if now >= self._next_blink_at:
             self._blink_until = now + self.BLINK_DURATION_S
+            self._blink_reopen_until = self._blink_until + self.BLINK_REOPEN_DURATION_S
             self._schedule_next_blink(now)
         if now < self._blink_until:
             out["EyeOpenLeft"] = self.BLINK_CLOSE_ADD
             out["EyeOpenRight"] = self.BLINK_CLOSE_ADD
+        elif now < self._blink_reopen_until:
+            out["EyeOpenLeft"] = self.BLINK_REOPEN_ADD
+            out["EyeOpenRight"] = self.BLINK_REOPEN_ADD
         return out

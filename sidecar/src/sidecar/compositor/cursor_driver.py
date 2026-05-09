@@ -30,6 +30,9 @@ EYE_MAX_DEFLECTION_DEG = 13.5
 DEAD_ZONE_PX = 80.0
 EASE_BACK_DURATION_S = 0.800
 FACE_CENTER_FRAC = (0.5, 0.5)
+# Teto's VTS X EyeBall mapping is inverted:
+# EyeLeftX input -0.6..0.6 -> ParamEyeBallX output 1..-1.
+EYE_X_SIGN = -1.0
 
 
 def _cursor_to_param_angles(
@@ -64,7 +67,7 @@ def _cursor_to_param_angles(
 
     nx = max(-1.0, min(1.0, dx / (width * 0.5)))
     ny = max(-1.0, min(1.0, dy / (height * 0.5)))
-    eye_x = nx * eye_max_deg / head_max_deg
+    eye_x = EYE_X_SIGN * nx * eye_max_deg / head_max_deg
     eye_y = -ny * eye_max_deg / head_max_deg
     return {
         "FaceAngleX": nx * head_max_deg,

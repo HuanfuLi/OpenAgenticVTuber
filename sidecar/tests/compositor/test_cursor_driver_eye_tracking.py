@@ -12,7 +12,7 @@ def test_cursor_outputs_full_vts_eye_surface_for_horizontal_and_vertical_motion(
     assert FULL_EYE_SURFACE <= set(out)
     assert out["EyeLeftX"] == pytest.approx(out["EyeRightX"])
     assert out["EyeLeftY"] == pytest.approx(out["EyeRightY"])
-    assert out["EyeLeftX"] > 0.0
+    assert out["EyeLeftX"] < 0.0
     assert out["EyeLeftY"] > 0.0
 
 
