@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: executing
-stopped_at: Completed 06-08-PLAN.md
-last_updated: "2026-05-08T23:56:34.965Z"
-last_activity: 2026-05-08
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-05-09T00:11:11.275Z"
+last_activity: 2026-05-09
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 37
-  completed_plans: 30
+  completed_plans: 31
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon — v2.0 is infrastructure prep on the way there)
-**Current focus:** Phase 07 — three-category-code-parsing-dispatch (next; not started). RESEARCH.md drafted but uncommitted.
+**Current focus:** Phase 07 — three-category-code-parsing-dispatch
 
 ## Current Position
 
-Phase: 06 (plugin-runtime-default-plugin) — COMPLETE 2026-05-08 PM
-Plan: 8 of 8 — 06-01..06-08 all SUMMARY.md / status: completed
-Status:
+Phase: 07 (three-category-code-parsing-dispatch) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -36,7 +36,7 @@ Status:
   - Phase validation gate: 119 passed (pytest tests/plugins tests/compositor tests/architecture/... etc.)
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
 
-Last activity: 2026-05-08
+Last activity: 2026-05-09
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
 
@@ -100,6 +100,7 @@ Last activity: 2026-05-08
 | Phase 06-plugin-runtime-default-plugin P04 | 5min | 2 tasks | 8 files |
 | Phase 06-plugin-runtime-default-plugin P06 | 3min | 2 tasks | 3 files |
 | Phase 06-plugin-runtime-default-plugin P08 | 5 min | 3 tasks | 11 files |
+| Phase 07-three-category-code-parsing-dispatch P01 | 5min | 1 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -169,6 +170,8 @@ Recent decisions affecting current work:
 - [Phase 06-plugin-runtime-default-plugin]: Supervisor render failures fail closed to ParamFrame() and count toward the existing circuit breaker only when an event loop is available.
 - [Phase 06-plugin-runtime-default-plugin]: For active Teto, joy is obsolete/invalid production vocabulary because it is absent from avatars/重音テト/_avatar_overrides.yaml.
 - [Phase 06-plugin-runtime-default-plugin]: Phase 6 keeps default plugin action dispatch only; model-owned variant/event dispatch such as heart-eye remains Phase 7 work.
+- [Phase 07-three-category-code-parsing-dispatch]: ActionIntent was deleted from the Python contracts package rather than aliased; Dispatch is the sole Phase 7 contract surface.
+- [Phase 07-three-category-code-parsing-dispatch]: TriggerAnimation entries use real motion3 Meta.Duration only when finite and within 0 < duration <= 10.0; fallback entries carry duration_is_fallback=True.
 
 ### Pending Todos
 
@@ -191,6 +194,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-08T23:56:34.957Z
-Stopped at: Completed 06-08-PLAN.md
+Last session: 2026-05-09T00:11:11.268Z
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None

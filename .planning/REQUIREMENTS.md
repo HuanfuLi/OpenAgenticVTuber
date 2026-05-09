@@ -103,10 +103,10 @@ These are the load-bearing architectural invariants that make plug-and-play poss
 
 - [ ] **PARSE-01**: New `code_extractor` decorator replaces `actions_extractor` in the orchestrator chain; single-pass bracket walker dispatches on opener char (`[` → action, `{` → variant, `<` → event); handles split-token-boundary cases for all three syntaxes (the milestone-1 `[`/`jo`/`y]` adversarial fix extends to `{` and `<`)
 - [ ] **PARSE-02**: `display_processor.filter_brackets` extends to strip all three syntaxes from chat display + TTS text
-- [ ] **PARSE-03**: Dispatch routing: action codes (`[xxx]`) feed the active plugin's input queue; variant codes (`{xxx}`) dispatch via `PyvtsSafeWriter` toggle hotkey; event codes (`<xxx>`) dispatch via VTS motion hotkey (registered during Phase 8 import)
+- [x] **PARSE-03**: Dispatch routing: action codes (`[xxx]`) feed the active plugin's input queue; variant codes (`{xxx}`) dispatch via `PyvtsSafeWriter` toggle hotkey; event codes (`<xxx>`) dispatch via VTS motion hotkey (registered during Phase 8 import)
 - [ ] **PARSE-04**: Parser ordering is load-bearing: `<think>...</think>` reasoning-strip runs FIRST (before sentence-buffer, before three-category extractor) so DeepSeek-R1's reasoning never leaks into event-code dispatch
 - [ ] **PARSE-05**: Variant collision policy is **radio-button single-active** — when LLM emits a new variant code while a previous variant is still toggled, the new variant turns ON and the previous variant turns OFF (deterministic, no additive layering)
-- [ ] **PARSE-06**: Event auto-completion uses `motion3.json.Meta.Duration + 1s blend pad`; if `Meta.Duration` is missing or > 10s, hardcoded 10s ceiling fallback fires the auto-untoggle
+- [x] **PARSE-06**: Event auto-completion uses `motion3.json.Meta.Duration + 1s blend pad`; if `Meta.Duration` is missing or > 10s, hardcoded 10s ceiling fallback fires the auto-untoggle
 - [ ] **PARSE-07**: Cross-category uniqueness check at sidecar boot: `plugin_action_codes ∩ variant_codes ∩ event_codes = ∅`; loud failure (boot-blocking exception) if collision detected
 - [ ] **PARSE-08**: Adversarial test fixtures verify split-token reassembly for all three categories: `[`/`joy]` → ActionIntent, `{`/`hold-mic}` → VariantToggle, `<`/`wave>` → EventFire; no bracket character ever leaks to chat or TTS
 

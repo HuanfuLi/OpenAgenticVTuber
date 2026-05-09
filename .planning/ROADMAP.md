@@ -215,7 +215,7 @@ Plans:
 **Plans**: 7 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Python Dispatch contract, EventEntry hotkey_id, VTS event extraction, and Python output model updates
+- [x] 07-01-PLAN.md — Python Dispatch contract, EventEntry hotkey_id, VTS event extraction, and Python output model updates
 - [ ] 07-02-PLAN.md — Generated Dispatch/EventEntry/AudioPayload TS and JSON Schema mirrors with ActionIntent mirrors removed
 - [ ] 07-03-PLAN.md — `code_extractor`, all-syntax chat/TTS stripping, no parse-time think strip, and adversarial split-token fixtures
 - [ ] 07-04-PLAN.md — Reserved-name and cross-category validation module with parser tests
