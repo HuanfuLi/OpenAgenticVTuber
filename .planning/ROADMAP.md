@@ -62,7 +62,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 **Phase Numbering:** v3.0 continues after shipped v2.1 Phases 11-15. Planned work starts at Phase 16.
 
 - [x] **Phase 16: Audio Contracts + TTS Provider Shell** - Sidecar-owned audio contracts, versioned config migration, Piper adapter, and provider failure semantics. Complete after focused live audio retest passed on 2026-05-09.
-- [ ] **Phase 17: GPT-SoVITS Provider + Voice Presets** - GPT-SoVITS external/app-launched provider, test synthesis, reference audio, and named presets. In progress: 3/7 plans complete.
+- [ ] **Phase 17: GPT-SoVITS Provider + Voice Presets** - GPT-SoVITS external/app-launched provider, test synthesis, reference audio, and named presets. In progress: 4/7 plans complete.
 - [ ] **Phase 18: Rich Voice Settings + Persistence** - User-facing audio settings, provider catalog labels, privacy copy, credential redaction, and diagnostics.
 - [ ] **Phase 19: STT Provider Abstraction + Local/Cloud Providers** - FunASR, faster-whisper, OpenAI, and Groq through one lazy-loaded STT provider layer.
 - [ ] **Phase 20: Renderer Voice Capture + PTT/VAD Preview UX** - Microphone capture, push-to-talk, VAD controls, transcript preview, and final-text submission through the existing chat path.
@@ -110,7 +110,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - [x] 17-01-PLAN.md — Contracts and blocking Phase 16 UAT gate
 - [x] 17-02-PLAN.md — Preset persistence and reference-audio validation IPC
 - [x] 17-03-PLAN.md — GPT-SoVITS sidecar provider, health/test synthesis, and failure wiring
-- [ ] 17-04-PLAN.md — Electron GPT-SoVITS health/test IPC bridge
+- [x] 17-04-PLAN.md — Electron GPT-SoVITS health/test IPC bridge
 - [ ] 17-05-PLAN.md — App-managed GPT-SoVITS launch lifecycle
 - [ ] 17-06-PLAN.md — Settings provider, preset, reference-audio, and audible test UI
 - [ ] 17-07-PLAN.md — Chat failure surface, final regression, and UAT
@@ -220,7 +220,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 | 14. Plugin Developer Docs + Plugin Swap Hardening | v2.1 | 4/4 | Complete | 2026-05-09 |
 | 15. Mock Boundary Audit | v2.1 | 1/1 | Complete | 2026-05-09 |
 | 16. Audio Contracts + TTS Provider Shell | v3.0 | 4/4 | Complete | 2026-05-09 |
-| 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 3/7 | In Progress | - |
+| 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 4/7 | In Progress | - |
 | 18. Rich Voice Settings + Persistence | v3.0 | 0/3 | Planned | - |
 | 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 0/4 | Planned | - |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 0/TBD | Not started | - |
@@ -243,4 +243,4 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - v3.0 excludes GPT-SoVITS installer/training/voice cloning, wake-word activation, translation before LLM submission, barge-in interruption, silent cloud STT fallback, and any promise that no-headphones/AEC is solved before Phase 22 evidence.
 
 ---
-*Last updated: 2026-05-09 after Phase 19 planning*
+*Last updated: 2026-05-09 after Phase 17 plan 17-04 execution*
