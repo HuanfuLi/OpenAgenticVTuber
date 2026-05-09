@@ -25,6 +25,7 @@ export interface ProviderConfig {
 
 export interface BodyMotionPluginConfig {
   activePluginName: string
+  cursorTrackingEnabled?: boolean
 }
 
 export interface StoredConfig {

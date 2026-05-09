@@ -514,13 +514,14 @@ function PluginSection() {
   }, [])
 
   const activePlugin = storedCfg?.plugin?.activePluginName || 'default'
+  const cursorTrackingEnabled = storedCfg?.plugin?.cursorTrackingEnabled !== false
 
   const selectPlugin = async (name: string): Promise<void> => {
     if (!storedCfg || name === activePlugin) return
     const selected = plugins.find((plugin) => plugin.name === name)
     const nextCfg: StoredConfig = {
       ...storedCfg,
-      plugin: { activePluginName: name }
+      plugin: { ...(storedCfg.plugin ?? { activePluginName: 'default' }), activePluginName: name }
     }
     setStoredCfg(nextCfg)
     setStatus(C.PLUGINS_SAVING)
@@ -537,6 +538,29 @@ function PluginSection() {
           ? `${C.PLUGINS_ERROR} ${selected.statusSummary ?? ''}`.trim()
           : C.PLUGINS_ERROR
       )
+    }
+  }
+
+  const setCursorTracking = async (enabled: boolean): Promise<void> => {
+    if (!storedCfg || enabled === cursorTrackingEnabled) return
+    const nextCfg: StoredConfig = {
+      ...storedCfg,
+      plugin: {
+        ...(storedCfg.plugin ?? { activePluginName: activePlugin }),
+        activePluginName: activePlugin,
+        cursorTrackingEnabled: enabled
+      }
+    }
+    setStoredCfg(nextCfg)
+    setStatus(C.PLUGINS_SAVING)
+    try {
+      await window.api.saveStoredConfig(nextCfg)
+      await refreshStatus()
+      await refreshPlugins()
+      setStatus(C.PLUGINS_SAVED)
+    } catch {
+      setStoredCfg(storedCfg)
+      setStatus(C.PLUGINS_ERROR)
     }
   }
 
@@ -587,6 +611,22 @@ function PluginSection() {
           </div>
         </details>
       )}
+      <div className="kv-row" style={{ alignItems: 'flex-start' }}>
+        <div>
+          <div className="v">{C.PLUGINS_CURSOR_TRACKING}</div>
+          <div className="tx-sm muted" style={{ marginTop: 2 }}>
+            {C.PLUGINS_CURSOR_TRACKING_HELP}
+          </div>
+        </div>
+        <button
+          className={`switch${cursorTrackingEnabled ? ' on' : ''}`}
+          aria-label={C.PLUGINS_CURSOR_TRACKING}
+          aria-checked={cursorTrackingEnabled}
+          role="switch"
+          onClick={() => void setCursorTracking(!cursorTrackingEnabled)}
+          disabled={!storedCfg}
+        />
+      </div>
       <div className="row mt-2" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <button
           type="button"

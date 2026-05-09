@@ -147,6 +147,8 @@ export const COPY = {
     PLUGINS_SAVING: 'Saving...',
     PLUGINS_SAVED: 'Saved. Sidecar restarted.',
     PLUGINS_ERROR: 'Could not save plugin selection.',
+    PLUGINS_CURSOR_TRACKING: 'Cursor tracking',
+    PLUGINS_CURSOR_TRACKING_HELP: 'Use cursor position for head and eye tracking. Changing this restarts the sidecar.',
     VTS_HEADER: 'VTube Studio',
     VTS_HELP: 'Compact status mirror. Use the upper-right Status menu for the primary live status view.',
     VTS_STATUS: 'Status',

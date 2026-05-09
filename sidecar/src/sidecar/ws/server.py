@@ -120,6 +120,10 @@ def _active_plugin_id() -> str:
     return os.environ.get("AGENTICLLMVTUBER_ACTIVE_PLUGIN") or "default"
 
 
+def _cursor_tracking_enabled() -> bool:
+    return os.environ.get("AGENTICLLMVTUBER_CURSOR_TRACKING_ENABLED", "1") != "0"
+
+
 def _load_plugin_instance(manifest_path: Path, entrypoint: str) -> BodyMotionPlugin:
     module_path, class_name = resolve_entrypoint(manifest_path, entrypoint)
     spec = importlib.util.spec_from_file_location(
@@ -379,7 +383,9 @@ async def lifespan(app: FastAPI):
                 overrides,
                 avatar_dir,
             )
-            cursor_drv = CursorDriver()
+            cursor_drv = CursorDriver() if _cursor_tracking_enabled() else None
+            if cursor_drv is None:
+                loguru_logger.info("[CURSOR] tracking disabled by stored Settings toggle.")
             compositor = Compositor(
                 writer=writer,
                 idle_driver=idle_drv,

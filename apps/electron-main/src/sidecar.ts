@@ -85,6 +85,10 @@ export function activeBodyMotionPluginName(stored: StoredConfig | null): string 
   return configured || 'default'
 }
 
+export function cursorTrackingEnabled(stored: StoredConfig | null): boolean {
+  return stored?.plugin?.cursorTrackingEnabled !== false
+}
+
 function parseYamlScalar(text: string, key: string): string | null {
   const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = text.match(new RegExp(`^${escapedKey}:\\s*(?:"([^"]*)"|'([^']*)'|([^#\\r\\n]+))`, 'm'))
@@ -190,6 +194,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
   const storedConfig = loadConfig()
   const llmConfigJson = buildSidecarConfigEnv(storedConfig)
   const activePluginName = activeBodyMotionPluginName(storedConfig)
+  const cursorTracking = cursorTrackingEnabled(storedConfig)
   const activeAvatarId = resolveCurrentAvatarId(repoRoot) || NO_ACTIVE_AVATAR_ID
   const child = spawn('uv', ['run', 'python', '-m', 'sidecar'], {
     cwd: sidecarRoot,
@@ -212,6 +217,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
       AGENTICLLMVTUBER_REPO_ROOT: repoRoot,
       AGENTICLLMVTUBER_USER_DATA: app.getPath('userData'),
       AGENTICLLMVTUBER_ACTIVE_PLUGIN: activePluginName,
+      AGENTICLLMVTUBER_CURSOR_TRACKING_ENABLED: cursorTracking ? '1' : '0',
       AGENTICLLMVTUBER_ACTIVE_AVATAR: activeAvatarId,
       ...(llmConfigJson ? { AGENTICLLMVTUBER_LLM_CONFIG_JSON: llmConfigJson } : {})
     },

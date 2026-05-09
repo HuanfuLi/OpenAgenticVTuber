@@ -528,6 +528,27 @@ describe('Settings TTS section', () => {
     expect(await screen.findByText(COPY.HUD.OPEN_HUD_HELP)).toBeInTheDocument()
   })
 
+  it('persists cursor tracking toggle under body-motion plugin settings', async () => {
+    renderSettings()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.PLUGINS_HEADER })
+      .then((heading) => heading.closest('section')!)
+    const toggle = await within(section).findByRole('switch', {
+      name: COPY.SETTINGS.PLUGINS_CURSOR_TRACKING
+    })
+    expect(toggle).toHaveAttribute('aria-checked', 'true')
+
+    fireEvent.click(toggle)
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith({
+        ...storedConfig,
+        plugin: { activePluginName: 'default', cursorTrackingEnabled: false }
+      })
+    })
+    expect(screen.getByText(COPY.SETTINGS.PLUGINS_SAVED)).toBeInTheDocument()
+  })
+
   it('refreshes connection status through real APIs without scripted model text', async () => {
     renderSettings()
 
