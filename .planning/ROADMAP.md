@@ -105,7 +105,15 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
   3. User can create, rename, select, and delete named voice presets with backend-specific tuning controls.
   4. User can import GPT-SoVITS reference audio into sanitized app-managed storage and see validation failures before using it.
   5. When GPT-SoVITS fails, the user sees a visible failure/fallback state and the app never silently changes provider mid-turn.
-**Plans**: TBD
+**Plans**: 7 plans
+**Plan list**:
+- [x] 17-01-PLAN.md — Contracts and blocking Phase 16 UAT gate
+- [ ] 17-02-PLAN.md — Preset persistence and reference-audio validation IPC
+- [ ] 17-03-PLAN.md — GPT-SoVITS sidecar provider, health/test synthesis, and failure wiring
+- [ ] 17-04-PLAN.md — Electron GPT-SoVITS health/test IPC bridge
+- [ ] 17-05-PLAN.md — App-managed GPT-SoVITS launch lifecycle
+- [ ] 17-06-PLAN.md — Settings provider, preset, reference-audio, and audible test UI
+- [ ] 17-07-PLAN.md — Chat failure surface, final regression, and UAT
 **UI hint**: yes
 
 ### Phase 18: Rich Voice Settings + Persistence
@@ -199,7 +207,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 | 14. Plugin Developer Docs + Plugin Swap Hardening | v2.1 | 4/4 | Complete | 2026-05-09 |
 | 15. Mock Boundary Audit | v2.1 | 1/1 | Complete | 2026-05-09 |
 | 16. Audio Contracts + TTS Provider Shell | v3.0 | 4/4 | Complete | 2026-05-09 |
-| 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 0/TBD | Not started | - |
+| 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 1/7 | In Progress | - |
 | 18. Rich Voice Settings + Persistence | v3.0 | 0/3 | Planned | - |
 | 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 0/TBD | Not started | - |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 0/TBD | Not started | - |

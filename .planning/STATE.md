@@ -1,16 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v3.0
-milestone_name: Rich Voice Configuration + Voice Input
-status: ready_for_next_phase
+milestone_name: milestone
+status: executing
 stopped_at: Phase 19 context gathered
-last_updated: "2026-05-09T23:33:34.120Z"
-last_activity: 2026-05-09
+last_updated: "2026-05-09T23:35:22Z"
+last_activity: 2026-05-09 - Completed Phase 17 plan 17-01 contract foundation
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 14
+  completed_plans: 5
+  percent: 14
 ---
 
 # Project State
@@ -25,25 +26,26 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 17 of 22 (GPT-SoVITS Provider + Voice Presets)
-Plan: Ready to execute when Phase 17 planning is accepted
-Status: Phase 16 complete after focused live audio retest passed
-Last activity: 2026-05-09 - Phase 16 completed with audio contracts, Piper provider shell, renderer WAV playback, and passed live retest
+Plan: 1/7 complete
+Status: Executing Phase 17 plans
+Last activity: 2026-05-09 - Completed Phase 17 plan 17-01 contract foundation
 
-Progress: [█---------] 1/7 phases complete in v3.0
+Progress: [█░░░░░░░░░] 1/7 plans complete in Phase 17
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed in v3.0: 0
-- Average duration: -
-- Total execution time: -
+
+- Total plans completed in v3.0: 1
+- Average duration: 17 min
+- Total execution time: 17 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 16. Audio Contracts + TTS Provider Shell | 4/4 | same-session | same-session |
-| 17. GPT-SoVITS Provider + Voice Presets | 0/TBD | - | - |
+| 17. GPT-SoVITS Provider + Voice Presets | 1/7 | 17 min | 17 min |
 | 18. Rich Voice Settings + Persistence | 0/TBD | - | - |
 | 19. STT Provider Abstraction + Local/Cloud Providers | 0/TBD | - | - |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | 0/TBD | - | - |
@@ -61,10 +63,11 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Preserve app invariants: Piper fallback, ordered sentence playback, renderer audio payloads, RMS/lipsync, VTS compositor, and conversation-history semantics.
 - Open-LLM-VTuber is the implementation reference for ASR provider shape, VAD state machine, and audio capture integration patterns.
 - Phase 16 was planned without a CONTEXT.md at user direction; plans are based on roadmap, requirements, codebase research, and v3.0 research artifacts.
+- Phase 17 plan 17-01 established generated GPT-SoVITS provider, test-synthesis, voice preset, reference-audio, and failed-audio contracts.
 
 ### Pending Todos
 
-- Phase 17 planning artifacts are present locally and ready for review/execution.
+- Execute Phase 17 plans 17-02 through 17-07.
 
 ### Blockers/Concerns
 
@@ -83,6 +86,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-09T23:33:34.113Z
-Stopped at: Phase 19 context gathered
-Resume file: .planning/phases/19-stt-provider-abstraction-local-cloud-providers/19-CONTEXT.md
+Last session: 2026-05-09T23:35:22Z
+Stopped at: Completed 17-01-PLAN.md
+Resume file: None
