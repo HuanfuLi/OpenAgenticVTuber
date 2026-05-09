@@ -34,8 +34,15 @@ class MockWebSocket {
 }
 
 const MOCK_RIG_CAPS = {
-  writable_param_ids: ['ParamAngleX', 'ParamBHandIN', 'MouthOpen', 'ParamMouthOpenY'],
+  writable_param_ids: [
+    'FaceAngleX',
+    'ParamAngleX',
+    'ParamBHandIN',
+    'MouthOpen',
+    'ParamMouthOpenY'
+  ],
   param_ranges: {
+    FaceAngleX: [-30, 30],
     ParamAngleX: [-30, 30],
     ParamBHandIN: [0, 1],
     MouthOpen: [0, 1],
@@ -46,7 +53,8 @@ const MOCK_RIG_CAPS = {
   cdi3_display_names: { ParamAngleX: 'Angle X' },
   sign_inversions: [],
   default_plugin_action_bindings: [],
-  hud_excluded_param_ids: ['MouthOpen', 'ParamMouthOpenY']
+  hud_excluded_param_ids: ['MouthOpen', 'ParamMouthOpenY'],
+  hud_visible_param_ids: ['FaceAngleX']
 }
 
 function renderHud() {
@@ -96,14 +104,14 @@ describe('HudRoot', () => {
     expect(screen.getByText('Loading rig parameters…')).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText('Angle X')).toBeInTheDocument()
-      expect(screen.getByText('ParamBHandIN')).toBeInTheDocument()
+      expect(screen.getByText('FaceAngleX')).toBeInTheDocument()
+      expect(screen.queryByText('ParamBHandIN')).toBeNull()
     })
   })
 
   it('NEVER renders MouthOpen or ParamMouthOpenY rows', async () => {
     renderHud()
-    await waitFor(() => screen.getByText('Angle X'))
+    await waitFor(() => screen.getByText('FaceAngleX'))
 
     expect(screen.queryByText('MouthOpen')).toBeNull()
     expect(screen.queryByText('ParamMouthOpenY')).toBeNull()
@@ -120,7 +128,7 @@ describe('HudRoot', () => {
 
   it('updates row value when param-frame arrives', async () => {
     renderHud()
-    await waitFor(() => screen.getByText('Angle X'))
+    await waitFor(() => screen.getByText('FaceAngleX'))
     const ws = MockWebSocket.instances[0]!
 
     act(() => {
@@ -128,7 +136,7 @@ describe('HudRoot', () => {
         data: JSON.stringify({
           kind: 'param-frame',
           tick_n: 1,
-          params: { ParamAngleX: 0.5, ParamBHandIN: 0 },
+          params: { FaceAngleX: 0.5, ParamBHandIN: 0 },
           locked_ids: []
         })
       })
@@ -139,11 +147,11 @@ describe('HudRoot', () => {
 
   it('sends set-lock on drag and clear-lock on locked toggle', async () => {
     renderHud()
-    await waitFor(() => screen.getByText('Angle X'))
+    await waitFor(() => screen.getByText('FaceAngleX'))
     const ws = MockWebSocket.instances[0]!
 
-    fireEvent.pointerDown(screen.getByLabelText('Angle X value'))
-    fireEvent.change(screen.getByLabelText('Angle X value'), { target: { value: '10' } })
+    fireEvent.pointerDown(screen.getByLabelText('FaceAngleX value'))
+    fireEvent.change(screen.getByLabelText('FaceAngleX value'), { target: { value: '10' } })
 
     await waitFor(() => {
       expect(ws.sent.some((msg) => msg.includes('"kind":"set-lock"'))).toBe(true)
@@ -154,19 +162,19 @@ describe('HudRoot', () => {
         data: JSON.stringify({
           kind: 'param-frame',
           tick_n: 2,
-          params: { ParamAngleX: 10 },
-          locked_ids: ['ParamAngleX']
+          params: { FaceAngleX: 10 },
+          locked_ids: ['FaceAngleX']
         })
       })
     })
 
-    fireEvent.click(screen.getByRole('switch', { name: 'Unlock Angle X' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Unlock FaceAngleX' }))
     expect(ws.sent.some((msg) => msg.includes('"kind":"clear-lock"'))).toBe(true)
   })
 
   it('fires Avatar-changed toast when locked_ids drops from non-empty to empty', async () => {
     renderHud()
-    await waitFor(() => screen.getByText('Angle X'))
+    await waitFor(() => screen.getByText('FaceAngleX'))
     const ws = MockWebSocket.instances[0]!
 
     act(() => {
@@ -174,15 +182,15 @@ describe('HudRoot', () => {
         data: JSON.stringify({
           kind: 'param-frame',
           tick_n: 1,
-          params: { ParamAngleX: 0.5 },
-          locked_ids: ['ParamAngleX']
+          params: { FaceAngleX: 0.5 },
+          locked_ids: ['FaceAngleX']
         })
       })
       ws.onmessage?.({
         data: JSON.stringify({
           kind: 'param-frame',
           tick_n: 2,
-          params: { ParamAngleX: 0 },
+          params: { FaceAngleX: 0 },
           locked_ids: []
         })
       })
@@ -195,7 +203,7 @@ describe('HudRoot', () => {
 
   it('shows reconnecting banner when WS closes', async () => {
     renderHud()
-    await waitFor(() => screen.getByText('Angle X'))
+    await waitFor(() => screen.getByText('FaceAngleX'))
     const ws = MockWebSocket.instances[0]!
 
     act(() => {

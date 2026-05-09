@@ -11,6 +11,7 @@ VTS-form override). Single source of truth: SYSTEM_PRIMITIVE_OVERRIDES.
 
 from __future__ import annotations
 
+from contracts.rig_capabilities import RigCapabilities
 from sidecar.compositor.param_id_resolver import _VTS_INPUT_PARAM_MAP
 
 
@@ -49,3 +50,27 @@ def hud_excluded_param_ids(writable_param_ids: list[str]) -> set[str]:
         if vts_form and vts_form in SYSTEM_PRIMITIVE_OVERRIDES:
             excluded.add(param_id)
     return excluded
+
+
+def hud_visible_param_ids(capabilities: RigCapabilities) -> set[str]:
+    """Return the lockable, meaningful HUD slider IDs for a rig.
+
+    When VTS parameter settings are available, Phase 8 now records bounded VTS
+    input params in param_ranges. Prefer that smaller writer-compatible surface
+    over every Cubism/CDI3 output param, which can include hundreds of internal
+    rig controls. If no bounded params exist, fall back to the original Phase 9
+    contract: writable ids minus system-primitive exclusions.
+    """
+    excluded = hud_excluded_param_ids(capabilities.writable_param_ids)
+    ranged = {
+        param_id
+        for param_id in capabilities.writable_param_ids
+        if param_id not in excluded and capabilities.param_ranges.get(param_id) is not None
+    }
+    if ranged:
+        return ranged
+    return {
+        param_id
+        for param_id in capabilities.writable_param_ids
+        if param_id not in excluded
+    }

@@ -13,6 +13,7 @@ from sidecar.avatar.overrides import BodySwayStrategyName
 from sidecar.compositor.clamp import clamp_and_validate
 from sidecar.compositor.hud_tap import HudTap
 from sidecar.compositor.lock_filter import SYSTEM_PRIMITIVE_OVERRIDES
+from sidecar.compositor.param_id_resolver import resolve_param_id
 
 MOUTH_PARAM = "MouthOpen"
 
@@ -117,10 +118,11 @@ class Compositor:
         # Apply locks LAST in merge per ARCH-05. SYSTEM_PRIMITIVE_OVERRIDES guard is
         # defense-in-depth -- HUD already excludes those from the slider list (HUD-06).
         for param_id, locked_value in self._lock_state.items():
-            if param_id in SYSTEM_PRIMITIVE_OVERRIDES:
+            resolved_param_id = resolve_param_id(param_id, "vts")
+            if resolved_param_id in SYSTEM_PRIMITIVE_OVERRIDES:
                 continue
-            set_acc[param_id] = (locked_value, 1.0)
-            add_acc.pop(param_id, None)
+            set_acc[resolved_param_id] = (locked_value, 1.0)
+            add_acc.pop(resolved_param_id, None)
 
         frame = clamp_and_validate(ParamFrame(
             add_params=add_acc,

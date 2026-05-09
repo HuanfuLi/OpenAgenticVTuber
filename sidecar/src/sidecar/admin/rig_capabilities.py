@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 
 from contracts.rig_capabilities import RigCapabilities
-from sidecar.compositor.lock_filter import hud_excluded_param_ids
+from sidecar.compositor.lock_filter import hud_excluded_param_ids, hud_visible_param_ids
 
 
 router = APIRouter(prefix="/admin")
@@ -22,11 +22,14 @@ async def get_rig_capabilities(request: Request) -> dict[str, Any]:
         return {
             **empty.model_dump(mode="json"),
             "hud_excluded_param_ids": [],
+            "hud_visible_param_ids": [],
         }
 
     caps: RigCapabilities = compositor._capabilities
     excluded = sorted(hud_excluded_param_ids(caps.writable_param_ids))
+    visible = sorted(hud_visible_param_ids(caps))
     return {
         **caps.model_dump(mode="json"),
         "hud_excluded_param_ids": excluded,
+        "hud_visible_param_ids": visible,
     }

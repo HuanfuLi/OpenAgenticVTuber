@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Lock, Unlock } from '@/lib/icons'
 
 export interface HudParamRowProps {
@@ -33,6 +33,10 @@ export function HudParamRow({
   const dragStartRef = useRef<number | null>(null)
   const currentValue = localValue ?? value
   const sliderId = `hud-slider-${paramId.replace(/[^a-zA-Z0-9_-]/g, '-')}`
+
+  useEffect(() => {
+    if (!isLocked) setLocalValue(null)
+  }, [isLocked, value])
 
   const engage = (nextValue: number): void => {
     setLocalValue(nextValue)

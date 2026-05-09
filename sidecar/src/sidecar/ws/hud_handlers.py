@@ -18,6 +18,7 @@ from contracts import (
     HudSetLockMessage,
 )
 from sidecar.compositor.lock_filter import SYSTEM_PRIMITIVE_OVERRIDES
+from sidecar.compositor.param_id_resolver import resolve_param_id
 
 
 _C2S = TypeAdapter(HudMessageC2S)
@@ -42,7 +43,8 @@ async def route_hud_c2s(ws: WebSocket, raw: dict[str, Any], app_state: Any) -> N
 
     lock_state: dict[str, float] = app_state.lock_state
     if isinstance(msg, HudSetLockMessage):
-        if msg.param_id in SYSTEM_PRIMITIVE_OVERRIDES:
+        resolved_param_id = resolve_param_id(msg.param_id, "vts")
+        if resolved_param_id in SYSTEM_PRIMITIVE_OVERRIDES:
             logger.error(
                 "[HUD-WS] set-lock rejected for system primitive {} -- HUD-06 should have prevented this",
                 msg.param_id,
@@ -54,14 +56,19 @@ async def route_hud_c2s(ws: WebSocket, raw: dict[str, Any], app_state: Any) -> N
                 ).model_dump(mode="json")
             )
             return
-        lock_state[msg.param_id] = msg.value
-        logger.info("[HUD-LOCK] set-lock {} -> {}", msg.param_id, msg.value)
+        lock_state[resolved_param_id] = msg.value
+        logger.info("[HUD-LOCK] set-lock {} -> {}", resolved_param_id, msg.value)
         await ws.send_json(
-            HudLockConfirmedMessage(param_id=msg.param_id, value=msg.value).model_dump(mode="json")
+            HudLockConfirmedMessage(
+                param_id=resolved_param_id,
+                value=msg.value,
+            ).model_dump(mode="json")
         )
     elif isinstance(msg, HudClearLockMessage):
+        resolved_param_id = resolve_param_id(msg.param_id, "vts")
         lock_state.pop(msg.param_id, None)
-        logger.info("[HUD-LOCK] clear-lock {}", msg.param_id)
+        lock_state.pop(resolved_param_id, None)
+        logger.info("[HUD-LOCK] clear-lock {}", resolved_param_id)
 
 
 async def hud_push_loop(ws: WebSocket, queue: asyncio.Queue) -> None:

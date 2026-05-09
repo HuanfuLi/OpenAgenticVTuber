@@ -47,9 +47,16 @@ def test_get_returns_payload_with_excluded_ids() -> None:
         assert "param_ranges" in body
         assert "cdi3_display_names" in body
         assert "hud_excluded_param_ids" in body
+        assert "hud_visible_param_ids" in body
         assert sorted(body["hud_excluded_param_ids"]) == ["MouthOpen", "ParamMouthOpenY"]
         assert "ParamAngleX" not in body["hud_excluded_param_ids"]
         assert "ParamJoy" not in body["hud_excluded_param_ids"]
+        assert body["hud_visible_param_ids"] == [
+            "ParamAngleX",
+            "ParamAngleY",
+            "ParamBHandIN",
+            "ParamJoy",
+        ]
         assert "MouthOpen" in body["writable_param_ids"]
         assert "ParamMouthOpenY" in body["writable_param_ids"]
         assert body["cdi3_display_names"]["ParamAngleX"] == "Angle X"
@@ -72,6 +79,7 @@ def test_get_boot_degraded_returns_empty_payload() -> None:
         body = resp.json()
         assert body["writable_param_ids"] == []
         assert body["hud_excluded_param_ids"] == []
+        assert body["hud_visible_param_ids"] == []
     finally:
         if original is not None:
             app.state.compositor = original

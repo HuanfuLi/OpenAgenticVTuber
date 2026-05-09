@@ -28,6 +28,9 @@ def build_rig_capabilities(overrides: AvatarOverrides, rig_dir: Path) -> RigCapa
     if vtube is not None:
         data = json.loads(vtube.read_text(encoding="utf-8"))
         for setting in data.get("ParameterSettings", []):
+            input_param = setting.get("Input")
+            if input_param:
+                writable_ids.add(str(input_param))
             output = setting.get("OutputLive2D")
             if output:
                 writable_ids.add(str(output))
@@ -36,6 +39,16 @@ def build_rig_capabilities(overrides: AvatarOverrides, rig_dir: Path) -> RigCapa
     cdi3_names = read_cdi3_display_names(cdi3) if cdi3 is not None else {}
     writable_ids.update(cdi3_names)
     param_ranges: dict[str, tuple[float, float] | None] = {param_id: None for param_id in writable_ids}
+    if vtube is not None:
+        data = json.loads(vtube.read_text(encoding="utf-8"))
+        for setting in data.get("ParameterSettings", []):
+            input_param = setting.get("Input")
+            if not input_param:
+                continue
+            lower = setting.get("InputRangeLower")
+            upper = setting.get("InputRangeUpper")
+            if isinstance(lower, (int, float)) and isinstance(upper, (int, float)):
+                param_ranges[str(input_param)] = (float(lower), float(upper))
 
     expressions = [
         Expression(name=variant.code, file=variant.source_name)

@@ -12,7 +12,10 @@ import { HudLoadingState } from './HudLoadingState'
 import { HudParamRow } from './HudParamRow'
 import { getHudHttpBase, useHudStream } from './useHudStream'
 
-type HudRigCapabilities = RigCapabilities & { hud_excluded_param_ids?: string[] }
+type HudRigCapabilities = RigCapabilities & {
+  hud_excluded_param_ids?: string[]
+  hud_visible_param_ids?: string[]
+}
 
 interface HudParam {
   id: string
@@ -32,7 +35,10 @@ async function fetchRigCapabilities(): Promise<HudRigCapabilities> {
 
 function paramsFromCaps(caps: HudRigCapabilities): HudParam[] {
   const excluded = new Set(caps.hud_excluded_param_ids ?? [])
-  return caps.writable_param_ids
+  const sourceIds = caps.hud_visible_param_ids?.length
+    ? caps.hud_visible_param_ids
+    : caps.writable_param_ids
+  return sourceIds
     .filter((id) => !excluded.has(id))
     .map((id) => ({
       id,

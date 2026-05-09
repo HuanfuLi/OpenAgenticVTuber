@@ -12,8 +12,13 @@ def test_build_from_teto(teto_dir) -> None:
     caps = build_rig_capabilities(overrides, teto_dir)
     assert len(caps.writable_param_ids) > 50
     assert len(caps.cdi3_display_names) > 50
+    assert "FaceAngleX" in caps.writable_param_ids
     assert "ParamMouthOpenY" in caps.writable_param_ids
-    assert all(isinstance(r, type(None)) or isinstance(r, tuple) for r in caps.param_ranges.values())
+    assert caps.param_ranges["FaceAngleX"] == (-30.0, 30.0)
+    assert all(
+        isinstance(r, type(None)) or isinstance(r, tuple)
+        for r in caps.param_ranges.values()
+    )
     assert caps.sign_inversions == overrides.sign_inversions
     assert caps.default_plugin_action_bindings == overrides.default_plugin_action_bindings
 
