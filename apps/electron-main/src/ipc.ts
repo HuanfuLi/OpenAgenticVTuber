@@ -27,6 +27,18 @@ import {
 import { loadConfig, saveConfig, clearConfig, type StoredConfig } from './safe-storage'
 import { createHudWindow } from './hud-window'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
+import {
+  clearConversationHistory,
+  commitConversationTurn,
+  createConversationSession,
+  deleteConversationSession,
+  getActiveConversationSession,
+  getConversationStats,
+  listConversationSessions,
+  renameConversationSession,
+  selectConversationSession,
+  type CommitConversationTurnInput
+} from './conversation-store'
 
 function resolveRepoRoot(): string {
   return path.resolve(app.getAppPath(), '..', '..')
@@ -153,6 +165,19 @@ export function registerIpc(window: BrowserWindow): () => void {
   })
   ipcMain.handle('log:getLevel', () => getLogLevel())
   ipcMain.handle('log:saveLevel', (_e, level) => saveLogLevel(level))
+  ipcMain.handle('conversation:listSessions', () => listConversationSessions())
+  ipcMain.handle('conversation:getActive', () => getActiveConversationSession())
+  ipcMain.handle('conversation:create', () => createConversationSession())
+  ipcMain.handle('conversation:select', (_e, id: string) => selectConversationSession(id))
+  ipcMain.handle('conversation:rename', (_e, id: string, title: string) =>
+    renameConversationSession(id, title)
+  )
+  ipcMain.handle('conversation:delete', (_e, id: string) => deleteConversationSession(id))
+  ipcMain.handle('conversation:clear', () => clearConversationHistory())
+  ipcMain.handle('conversation:commitTurn', (_e, input: CommitConversationTurnInput) =>
+    commitConversationTurn(input)
+  )
+  ipcMain.handle('conversation:getStats', () => getConversationStats())
 
   const offReady = onReady((url) => {
     if (!window.isDestroyed()) window.webContents.send('sidecar:ready', url)
@@ -189,5 +214,14 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('hud:open')
     ipcMain.removeHandler('log:getLevel')
     ipcMain.removeHandler('log:saveLevel')
+    ipcMain.removeHandler('conversation:listSessions')
+    ipcMain.removeHandler('conversation:getActive')
+    ipcMain.removeHandler('conversation:create')
+    ipcMain.removeHandler('conversation:select')
+    ipcMain.removeHandler('conversation:rename')
+    ipcMain.removeHandler('conversation:delete')
+    ipcMain.removeHandler('conversation:clear')
+    ipcMain.removeHandler('conversation:commitTurn')
+    ipcMain.removeHandler('conversation:getStats')
   }
 }

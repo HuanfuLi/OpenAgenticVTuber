@@ -5,6 +5,12 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { StoredConfig } from '../src/safe-storage'
 import type { ChromeState, LogLevel, ThemePreference } from '../src/window-store'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
+import type {
+  CommitConversationTurnInput,
+  ConversationSession,
+  ConversationSessionSummary,
+  ConversationStats
+} from '../src/conversation-store'
 
 type Unsubscribe = () => void
 
@@ -87,7 +93,27 @@ const api = {
 
   // Diagnostics preferences
   getLogLevel: (): Promise<LogLevel> => ipcRenderer.invoke('log:getLevel'),
-  saveLogLevel: (level: LogLevel): Promise<LogLevel> => ipcRenderer.invoke('log:saveLevel', level)
+  saveLogLevel: (level: LogLevel): Promise<LogLevel> => ipcRenderer.invoke('log:saveLevel', level),
+
+  // Conversation history
+  listConversationSessions: (): Promise<ConversationSessionSummary[]> =>
+    ipcRenderer.invoke('conversation:listSessions'),
+  getActiveConversationSession: (): Promise<ConversationSession> =>
+    ipcRenderer.invoke('conversation:getActive'),
+  createConversationSession: (): Promise<ConversationSession> =>
+    ipcRenderer.invoke('conversation:create'),
+  selectConversationSession: (id: string): Promise<ConversationSession> =>
+    ipcRenderer.invoke('conversation:select', id),
+  renameConversationSession: (id: string, title: string): Promise<ConversationSession> =>
+    ipcRenderer.invoke('conversation:rename', id, title),
+  deleteConversationSession: (id: string): Promise<ConversationSession> =>
+    ipcRenderer.invoke('conversation:delete', id),
+  clearConversationHistory: (): Promise<ConversationSession> =>
+    ipcRenderer.invoke('conversation:clear'),
+  commitConversationTurn: (input: CommitConversationTurnInput): Promise<ConversationSession> =>
+    ipcRenderer.invoke('conversation:commitTurn', input),
+  getConversationStats: (): Promise<ConversationStats> =>
+    ipcRenderer.invoke('conversation:getStats')
 }
 
 contextBridge.exposeInMainWorld('api', api)
@@ -95,3 +121,12 @@ contextBridge.exposeInMainWorld('api', api)
 export type RendererApi = typeof api
 export type { StoredConfig, ProviderConfig, Provider } from '../src/safe-storage'
 export type { ChromeState, LogLevel, ThemePreference } from '../src/window-store'
+export type {
+  CommitConversationTurnInput,
+  ConversationMessage,
+  ConversationRole,
+  ConversationSession,
+  ConversationSessionSummary,
+  ConversationStats,
+  ConversationTitleSource
+} from '../src/conversation-store'

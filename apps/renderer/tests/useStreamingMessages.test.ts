@@ -9,6 +9,8 @@ import {
   appendUserMessage,
   setThinking,
   appendAssistantSentence,
+  getCompletedTurnCandidate,
+  markCompletedTurnConsumed,
   setForceNewMessage,
   setInputDisabled,
   setBanner,
@@ -163,5 +165,30 @@ describe('useStreamingMessages reducer', () => {
     expect(_internalState().banner).not.toBeNull()
     setBanner(null)
     expect(_internalState().banner).toBeNull()
+  })
+
+  it('exposes a one-shot completed turn candidate and clears it after commit', () => {
+    appendUserMessage('save this turn')
+    setThinking(true)
+    appendAssistantSentence('Saved locally.', 1)
+
+    expect(getCompletedTurnCandidate()).toMatchObject({
+      userText: 'save this turn',
+      assistantText: 'Saved locally.'
+    })
+
+    markCompletedTurnConsumed()
+
+    expect(getCompletedTurnCandidate()).toBeNull()
+    expect(_internalState().messages).toHaveLength(0)
+  })
+
+  it('does not expose failed or interrupted turns for persistence', () => {
+    appendUserMessage('will fail')
+    setThinking(true)
+    appendAssistantSentence('Partial', 1)
+    setBanner('STREAM_ERROR')
+
+    expect(getCompletedTurnCandidate()).toBeNull()
   })
 })

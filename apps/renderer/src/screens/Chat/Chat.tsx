@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Send } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
+import { useConversationHistory } from '@/state/conversation-history'
 import { mockBanners, SCRIPTED_CONVO } from '@/dev/__mocks__/mock-backend'
 import { send } from '@/ws/client'
 import { appendUserMessage, useWSConnected } from '@/ws/store'
@@ -23,6 +24,7 @@ import {
 
 export function Chat() {
   const { status, banners, chatMessages, setChatMessages } = useStore()
+  const { activeSession } = useConversationHistory()
   const messages = useStreamingMessages()
   const streamBanner = useStreamingBanner()
   const turnInFlight = useInputDisabled()
@@ -46,17 +48,26 @@ export function Chat() {
   // Combine the (DEV-injected) scripted convo with the streaming chat reducer.
   // Live messages always render after any scripted ones, in order.
   const merged = [
+    ...activeSession.messages.map((m) => ({
+      id: m.id,
+      role: m.role,
+      text: m.text,
+      isThinking: false,
+      createdAt: m.createdAt
+    })),
     ...chatMessages.map((m) => ({
       id: String(m.id),
       role: m.role,
       text: m.text,
-      isThinking: false
+      isThinking: false,
+      createdAt: new Date(m.id).toISOString()
     })),
     ...messages.map((m) => ({
       id: m.id,
       role: m.role,
       text: m.text,
-      isThinking: m.isThinking ?? false
+      isThinking: m.isThinking ?? false,
+      createdAt: null
     }))
   ]
 
@@ -78,7 +89,7 @@ export function Chat() {
     if (!text) return
     if (banners.llm || turnInFlight) return // disabled by banner or turn-in-flight
     setInput('')
-    appendUserMessage(text)
+    appendUserMessage(text, activeSession.id)
     // OLVT-shape envelope per packages/contracts/ts/ws-message.ts.
     const ok = send({ type: 'text-input', text })
     if (!ok) {
@@ -122,12 +133,14 @@ export function Chat() {
             // numeric ids come from prototype scripted convo; UUID strings come
             // from the streaming reducer. Both are stable for the bubble's life.
             const numericTs = Number(m.id)
-            const ts = !Number.isNaN(numericTs)
-              ? new Date(numericTs).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })
-              : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            const date =
+              m.createdAt ? new Date(m.createdAt) :
+              !Number.isNaN(numericTs) ? new Date(numericTs) :
+              new Date()
+            const ts = date.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })
             return (
               <div key={m.id} className={`bubble ${m.role}`}>
                 <div className="meta">

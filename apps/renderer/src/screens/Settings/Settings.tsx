@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Folder } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
+import { useConversationHistory } from '@/state/conversation-history'
 import { saveCompletedSetupConfig, type Provider, type ProviderConfig } from '@/state/setup-store'
 import { useTheme, type ThemeMode, type LightAccent, type DarkBg, type DarkAccent } from '@/state/theme-provider'
 import type { BodyMotionPluginSummary, StoredConfig } from '@preload-types'
@@ -778,6 +779,9 @@ function VTubeStudioSection() {
 // -------- §7 Conversation -------------------------------------------------
 function ConversationSection() {
   const C = COPY.SETTINGS
+  const { activeSession, stats, clearAll } = useConversationHistory()
+  const [clearOpen, setClearOpen] = useState(false)
+  const [notice, setNotice] = useState('')
   return (
     <section className="section" id="sec-conversation">
       <h2>{C.CONVERSATION_HEADER}</h2>
@@ -786,10 +790,36 @@ function ConversationSection() {
         <span className="v">{C.CONVERSATION_MODE_VAL}</span>
       </div>
       <div className="kv-row">
+        <span className="k">{C.CONVERSATION_ACTIVE}</span>
+        <span className="v">{activeSession.title}</span>
+      </div>
+      <div className="kv-row">
+        <span className="k">{C.CONVERSATION_SESSIONS}</span>
+        <span className="v">{stats.sessionCount}</span>
+      </div>
+      <div className="kv-row">
+        <span className="k">{C.CONVERSATION_MESSAGES}</span>
+        <span className="v">{stats.messageCount}</span>
+      </div>
+      <div className="kv-row">
         <span className="k">{C.CONVERSATION_RESET}</span>
         <span className="v">{C.CONVERSATION_RESET_VAL}</span>
       </div>
       <div className="tx-sm muted mt-2">{C.CONVERSATION_HELP}</div>
+      <button className="btn btn-destructive mt-2" onClick={() => setClearOpen(true)}>
+        {C.CONVERSATION_CLEAR}
+      </button>
+      {notice && <div className="tx-sm muted mt-2">{notice}</div>}
+      <ConversationClearDialog
+        open={clearOpen}
+        onCancel={() => setClearOpen(false)}
+        onConfirm={() => {
+          void clearAll().then(() => {
+            setNotice(C.CONVERSATION_CLEAR_DONE)
+            setClearOpen(false)
+          })
+        }}
+      />
     </section>
   )
 }
@@ -1019,6 +1049,40 @@ function ResetDialog({
           </button>
           <button className="btn btn-destructive" onClick={onConfirm}>
             {C.CONFIRM}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ConversationClearDialog({
+  open,
+  onCancel,
+  onConfirm
+}: {
+  open: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  if (!open) return null
+  const C = COPY.SETTINGS
+  return (
+    <div
+      className="dialog-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onCancel()
+      }}
+    >
+      <div className="dialog" data-theme-surface role="alertdialog" aria-labelledby="conversation-clear-title">
+        <h3 id="conversation-clear-title">{C.CONVERSATION_CLEAR_TITLE}</h3>
+        <p>{C.CONVERSATION_CLEAR_BODY}</p>
+        <div className="actions">
+          <button className="btn btn-secondary" onClick={onCancel}>
+            {COPY.RESET.CANCEL}
+          </button>
+          <button className="btn btn-destructive" onClick={onConfirm}>
+            {C.CONVERSATION_CLEAR_CONFIRM}
           </button>
         </div>
       </div>

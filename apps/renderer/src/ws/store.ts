@@ -24,11 +24,14 @@ import {
   appendUserMessage as _appendUserMessage,
   setThinking,
   appendAssistantSentence,
+  getCompletedTurnCandidate,
+  markCompletedTurnConsumed,
   setForceNewMessage,
   setInputDisabled,
   setBanner,
   setSpeaking
 } from '@/screens/Chat/useStreamingMessages'
+import { commitConversationTurnFromDispatcher } from '@/state/conversation-history'
 
 // -- log channel: sidecar log envelopes flow through here to AppShell --------
 
@@ -50,6 +53,12 @@ subscribe((msg: WSMessage) => {
       setInputDisabled(true)
       setSpeaking(false)
     } else if (msg.text === 'conversation-chain-end') {
+      const completedTurn = getCompletedTurnCandidate()
+      if (completedTurn) {
+        void commitConversationTurnFromDispatcher(completedTurn).then((session) => {
+          if (session) markCompletedTurnConsumed()
+        })
+      }
       setInputDisabled(false)
       setSpeaking(false)
     }
@@ -100,8 +109,8 @@ subscribe((msg: WSMessage) => {
  * Append a user message to the streaming chat reducer. Phase 1 callers used
  * this to push a local user bubble immediately on Enter.
  */
-export function appendUserMessage(text: string): void {
-  _appendUserMessage(text)
+export function appendUserMessage(text: string, sessionId?: string): void {
+  _appendUserMessage(text, sessionId)
 }
 
 /** Phase 1 connection-state hook -- still consumed by Chat.tsx. */

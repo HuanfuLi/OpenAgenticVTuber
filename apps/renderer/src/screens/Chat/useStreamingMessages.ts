@@ -36,12 +36,29 @@ export interface BannerState {
   text: string
 }
 
+export interface CompletedTurnCandidate {
+  sessionId?: string
+  userText: string
+  assistantText: string
+  createdAt: string
+}
+
+interface PendingTurn {
+  userMessageId: string
+  sessionId?: string
+  userText: string
+  createdAt: string
+  failed: boolean
+  consumed: boolean
+}
+
 interface StreamingState {
   messages: StreamingMessage[]
   forceNewMessage: boolean
   inputDisabled: boolean
   banner: BannerState | null
   isSpeaking: boolean
+  pendingTurn: PendingTurn | null
 }
 
 let state: StreamingState = {
@@ -49,7 +66,8 @@ let state: StreamingState = {
   forceNewMessage: false,
   inputDisabled: false,
   banner: null,
-  isSpeaking: false
+  isSpeaking: false,
+  pendingTurn: null
 }
 
 const subs = new Set<(s: StreamingState) => void>()
@@ -76,11 +94,19 @@ function genId(): string {
  * assistant turn (a hung Thinking bubble will simply remain in the history;
  * a banner if any stays visible).
  */
-export function appendUserMessage(text: string): void {
+export function appendUserMessage(text: string, sessionId?: string): void {
   const next: StreamingMessage = { id: genId(), role: 'user', text }
   setState({
     messages: [...state.messages, next],
-    inputDisabled: true
+    inputDisabled: true,
+    pendingTurn: {
+      userMessageId: next.id,
+      sessionId,
+      userText: text,
+      createdAt: new Date().toISOString(),
+      failed: false,
+      consumed: false
+    }
   })
 }
 
@@ -183,7 +209,37 @@ export function setBanner(kind: BannerKind | null): void {
     return
   }
   const text = kind === 'STREAM_ERROR' ? COPY.CHAT.STREAM_ERROR : COPY.CHAT.CONTEXT_OVERFLOW
-  setState({ banner: { kind, text } })
+  setState({
+    banner: { kind, text },
+    pendingTurn: state.pendingTurn ? { ...state.pendingTurn, failed: true } : null
+  })
+}
+
+export function getCompletedTurnCandidate(): CompletedTurnCandidate | null {
+  const pending = state.pendingTurn
+  if (!pending || pending.failed || pending.consumed) return null
+  const userIndex = state.messages.findIndex((message) => message.id === pending.userMessageId)
+  if (userIndex < 0) return null
+  const assistantText = state.messages
+    .slice(userIndex + 1)
+    .filter((message) => message.role === 'assistant' && !message.isThinking)
+    .map((message) => message.text)
+    .join('')
+    .trim()
+  const userText = pending.userText.trim()
+  if (!userText || !assistantText) return null
+  return { sessionId: pending.sessionId, userText, assistantText, createdAt: pending.createdAt }
+}
+
+export function markCompletedTurnConsumed(): void {
+  const pending = state.pendingTurn
+  if (!pending) return
+  const userIndex = state.messages.findIndex((message) => message.id === pending.userMessageId)
+  setState({
+    messages: userIndex >= 0 ? state.messages.slice(0, userIndex) : state.messages,
+    pendingTurn: { ...pending, consumed: true },
+    forceNewMessage: false
+  })
 }
 
 /** Reset all streaming state -- used on WS reconnect or test cleanup. */
@@ -193,7 +249,8 @@ export function resetStreaming(): void {
     forceNewMessage: false,
     inputDisabled: false,
     banner: null,
-    isSpeaking: false
+    isSpeaking: false,
+    pendingTurn: null
   }
   notify()
 }

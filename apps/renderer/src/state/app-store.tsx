@@ -21,6 +21,7 @@ import {
 } from '@/dev/__mocks__/mock-backend'
 import { worstOf, type StatusOverall, type StatusSnapshot, type StatusValue } from './status-types'
 import type { Provider, StoredConfig, VtsStatus } from '@preload-types'
+import { ConversationHistoryProvider } from './conversation-history'
 
 export type ChatRole = 'user' | 'assistant'
 export interface ChatMessage {
@@ -385,7 +386,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     ]
   )
 
-  return <AppStoreContext.Provider value={value}>{children}</AppStoreContext.Provider>
+  return (
+    <AppStoreContext.Provider value={value}>
+      <ConversationHistoryProvider>{children}</ConversationHistoryProvider>
+    </AppStoreContext.Provider>
+  )
 }
 
 export function useStore(): AppStoreValue {

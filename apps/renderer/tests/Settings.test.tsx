@@ -131,6 +131,55 @@ describe('Settings TTS section', () => {
           }
         ]),
         openHud: vi.fn().mockResolvedValue(undefined),
+        listConversationSessions: vi.fn().mockResolvedValue([
+          {
+            id: 's1',
+            title: 'Croissant plan',
+            titleSource: 'manual',
+            createdAt: '2026-05-09T12:00:00.000Z',
+            updatedAt: '2026-05-09T12:01:00.000Z',
+            lastMessageAt: '2026-05-09T12:01:00.000Z',
+            messageCount: 2,
+            preview: 'Fresh croissants.'
+          }
+        ]),
+        getActiveConversationSession: vi.fn().mockResolvedValue({
+          id: 's1',
+          title: 'Croissant plan',
+          titleSource: 'manual',
+          createdAt: '2026-05-09T12:00:00.000Z',
+          updatedAt: '2026-05-09T12:01:00.000Z',
+          lastMessageAt: '2026-05-09T12:01:00.000Z',
+          messages: [
+            {
+              id: 'u1',
+              role: 'user',
+              text: 'Any croissants?',
+              createdAt: '2026-05-09T12:00:00.000Z'
+            },
+            {
+              id: 'a1',
+              role: 'assistant',
+              text: 'Fresh croissants.',
+              createdAt: '2026-05-09T12:01:00.000Z'
+            }
+          ]
+        }),
+        clearConversationHistory: vi.fn().mockResolvedValue({
+          id: 's2',
+          title: 'New chat',
+          titleSource: 'auto',
+          createdAt: '2026-05-09T12:02:00.000Z',
+          updatedAt: '2026-05-09T12:02:00.000Z',
+          lastMessageAt: null,
+          messages: []
+        }),
+        getConversationStats: vi.fn().mockResolvedValue({
+          sessionCount: 1,
+          messageCount: 2,
+          activeSessionId: 's1',
+          persistence: 'local'
+        }),
         onSidecarReady: vi.fn().mockReturnValue(() => undefined),
         onSidecarCrash: vi.fn().mockReturnValue(() => undefined)
       }
@@ -346,6 +395,25 @@ describe('Settings TTS section', () => {
     const memory = screen.getByRole('heading', { name: COPY.SETTINGS.MEMORY_HEADER }).closest('section')!
     expect(memory).toHaveAttribute('aria-disabled', 'true')
     expect(within(memory).getByText(/v4\.0 agentic system plus memory/i)).toBeInTheDocument()
+  })
+
+  it('shows real conversation history counts and clears all after confirmation', async () => {
+    renderSettings()
+
+    const conversation = await screen.findByRole('heading', { name: COPY.SETTINGS.CONVERSATION_HEADER })
+      .then((heading) => heading.closest('section')!)
+    expect(within(conversation).getByText('Croissant plan')).toBeInTheDocument()
+    expect(within(conversation).getByText('2')).toBeInTheDocument()
+    expect(within(conversation).getByText(COPY.SETTINGS.CONVERSATION_HELP)).toBeInTheDocument()
+
+    fireEvent.click(within(conversation).getByRole('button', { name: COPY.SETTINGS.CONVERSATION_CLEAR }))
+    expect(screen.getByRole('alertdialog', { name: COPY.SETTINGS.CONVERSATION_CLEAR_TITLE })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.CONVERSATION_CLEAR_CONFIRM }))
+
+    await waitFor(() => {
+      expect(window.api.clearConversationHistory).toHaveBeenCalledTimes(1)
+    })
+    expect(await screen.findByText(COPY.SETTINGS.CONVERSATION_CLEAR_DONE)).toBeInTheDocument()
   })
 
   it('persists diagnostics log level and removes targeted stale milestone-2 copy', async () => {

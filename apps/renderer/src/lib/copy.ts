@@ -62,8 +62,7 @@ export const COPY = {
     EMPTY_VTS_LINK: 'Open VTube Studio docs ↗',
     EMPTY_READY_HEAD: 'Your avatar is ready.',
     EMPTY_READY_BODY: 'Type below to start a conversation.',
-    EMPTY_READY_FOOTER:
-      'Closing the app clears this conversation — persistence comes in a later milestone.',
+    EMPTY_READY_FOOTER: 'Completed turns are saved locally in conversation history.',
     INPUT_PLACEHOLDER: 'Type a message...',
     // Phase 2 (plan 02-03) -- streaming-chat affordances. Single-char ellipsis
     // (U+2026) per UI-SPEC §Typography (italic --muted-foreground).
@@ -71,14 +70,28 @@ export const COPY = {
     SPEAKING: 'Teto is still speaking…',
     STREAM_ERROR: "The model couldn't finish that reply. Try again.",
     CONTEXT_OVERFLOW:
-      "Conversation got too long and won't fit in the model anymore. Close the app to start fresh."
+      "Conversation got too long and won't fit in the model anymore. Start a new chat to continue."
   },
   HISTORY: {
     HEADER: 'History',
-    PLACEHOLDER_HEAD: 'Conversation history arrives in milestone-2.',
-    PLACEHOLDER_BODY: 'This conversation clears when you close the app.',
-    NEW_THREAD: '+ New thread',
-    SEARCH: 'search threads'
+    NEW_THREAD: 'New chat',
+    SEARCH: 'Search sessions',
+    SEARCH_LABEL: 'Search conversation sessions',
+    LOADING: 'Loading local history...',
+    ERROR: 'Could not load local history.',
+    EMPTY_HEAD: 'No matching sessions.',
+    EMPTY_BODY: 'Create a new chat or change the search.',
+    EMPTY_PREVIEW: 'No messages yet',
+    GROUP_TODAY: 'Today',
+    GROUP_YESTERDAY: 'Yesterday',
+    GROUP_PREVIOUS_7: 'Previous 7 days',
+    GROUP_OLDER: 'Older',
+    RENAME: 'Rename',
+    RENAME_INPUT_LABEL: 'Session title',
+    RENAME_SAVE: 'Save',
+    RENAME_CANCEL: 'Cancel',
+    DELETE: 'Delete',
+    DELETE_CONFIRM: 'Delete this conversation session?'
   },
   AGENT: {
     PLACEHOLDER_HEAD: 'Agent mode arrives in milestone-3.',
@@ -203,11 +216,19 @@ export const COPY = {
     TTS_LIPSYNC_VAL: 'VTube Studio ParamMouthOpenY from RMS volume',
     TTS_HELP: 'Phase 3 is active: replies synthesize locally and play through the default audio device. Broader STT/TTS settings continue in v3.0.',
     CONVERSATION_HEADER: 'Conversation',
-    CONVERSATION_MODE: 'Current behavior',
-    CONVERSATION_MODE_VAL: 'Single in-memory thread',
-    CONVERSATION_RESET: 'Persistence',
-    CONVERSATION_RESET_VAL: 'Conversation clears when the app relaunches.',
-    CONVERSATION_HELP: 'Saved chat histories and session switching are not implemented in this phase.',
+    CONVERSATION_MODE: 'History',
+    CONVERSATION_MODE_VAL: 'Local transcript sessions',
+    CONVERSATION_ACTIVE: 'Active session',
+    CONVERSATION_SESSIONS: 'Sessions',
+    CONVERSATION_MESSAGES: 'Messages',
+    CONVERSATION_RESET: 'Retention',
+    CONVERSATION_RESET_VAL: 'Saved locally until you delete a session or clear history.',
+    CONVERSATION_HELP: 'History stores transcript sessions only. Memory, retrieval, and per-avatar facts remain v4.0 scope.',
+    CONVERSATION_CLEAR: 'Clear all history',
+    CONVERSATION_CLEAR_TITLE: 'Clear conversation history?',
+    CONVERSATION_CLEAR_BODY: 'This deletes all saved conversation sessions and creates a fresh New chat. Provider settings and memory settings are not changed.',
+    CONVERSATION_CLEAR_CONFIRM: 'Clear history',
+    CONVERSATION_CLEAR_DONE: 'Conversation history cleared.',
     MEMORY_HEADER: 'Memory',
     MEMORY_STATUS: 'Status',
     MEMORY_STATUS_VAL: 'Disabled',
