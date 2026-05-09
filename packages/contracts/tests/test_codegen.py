@@ -64,6 +64,50 @@ def test_generated_outputs_export_default_plugin_action_binding() -> None:
         assert pattern in path.read_text(encoding="utf-8")
 
 
+def test_hud_message_generated_outputs_exist() -> None:
+    required = {
+        "packages/contracts/generated/json-schema/hud-message-s2c.schema.json": "HudMessageS2C",
+        "packages/contracts/generated/json-schema/hud-message-c2s.schema.json": "HudMessageC2S",
+        "packages/contracts/ts/hud-message-s2c.ts": "HudMessageS2C",
+        "packages/contracts/ts/hud-message-c2s.ts": "HudMessageC2S",
+        "packages/contracts/ts/index.ts": "HudMessageS2C",
+    }
+    for rel_path, pattern in required.items():
+        path = REPO_ROOT / rel_path
+        assert path.exists(), f"missing generated file: {rel_path}"
+        assert pattern in path.read_text(encoding="utf-8")
+
+
+def test_hud_message_pydantic_discriminator_validates() -> None:
+    from contracts import HudMessageC2S, HudMessageS2C
+    from pydantic import TypeAdapter
+
+    s2c = TypeAdapter(HudMessageS2C)
+    c2s = TypeAdapter(HudMessageC2S)
+
+    assert s2c.validate_python(
+        {"kind": "param-frame", "tick_n": 1, "params": {"ParamAngleX": 0.5}, "locked_ids": []}
+    ).kind == "param-frame"
+    assert s2c.validate_python(
+        {"kind": "lock-confirmed", "param_id": "ParamAngleX", "value": 0.5}
+    ).kind == "lock-confirmed"
+    assert s2c.validate_python(
+        {"kind": "lock-rejected", "param_id": "X", "reason": "test"}
+    ).kind == "lock-rejected"
+
+    assert c2s.validate_python(
+        {"kind": "set-lock", "param_id": "ParamAngleX", "value": 0.5}
+    ).kind == "set-lock"
+    assert c2s.validate_python(
+        {"kind": "clear-lock", "param_id": "ParamAngleX"}
+    ).kind == "clear-lock"
+
+    with pytest.raises(Exception):
+        s2c.validate_python({"kind": "set-lock", "param_id": "X", "value": 0.5})
+    with pytest.raises(Exception):
+        c2s.validate_python({"kind": "param-frame", "tick_n": 1, "params": {}, "locked_ids": []})
+
+
 def test_sidecar_avatar_overrides_schema_validates_default_plugin_action_bindings() -> None:
     schema_path = REPO_ROOT / "sidecar/schemas/avatar_overrides.schema.json"
     schema: dict[str, Any] = json.loads(schema_path.read_text(encoding="utf-8"))
