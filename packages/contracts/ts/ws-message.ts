@@ -1,8 +1,8 @@
 // GENERATED FROM packages/contracts/py/contracts/ws_message.py - do not edit;
 // run packages/contracts/codegen.sh to regenerate.
 
-import type { Dispatch } from './dispatch';
 import type { AudioPayloadMessage, DisplayTextField } from './audio-payload';
+import type { ActionIntent } from './action-intent';
 export type WSMessage = TextInputMessage
   | DisplayTextMessage
   | ShutdownMessage

@@ -1,23 +1,50 @@
 {
   "$defs": {
-    "ActionCode": {
+    "ActionIntent": {
       "properties": {
+        "avatar_id": {
+          "title": "Avatar Id",
+          "type": "string"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
         "kind": {
-          "const": "action",
-          "default": "action",
+          "enum": [
+            "expression",
+            "action",
+            "reaction"
+          ],
           "title": "Kind",
           "type": "string"
         },
         "name": {
           "title": "Name",
           "type": "string"
+        },
+        "strength": {
+          "default": 1.0,
+          "title": "Strength",
+          "type": "number"
         }
       },
       "required": [
+        "avatar_id",
+        "duration_ms",
         "kind",
-        "name"
+        "name",
+        "strength"
       ],
-      "title": "ActionCode",
+      "title": "ActionIntent",
       "type": "object"
     },
     "DisplayTextField": {
@@ -45,64 +72,17 @@
       ],
       "title": "DisplayTextField",
       "type": "object"
-    },
-    "EventFire": {
-      "properties": {
-        "duration_ms": {
-          "title": "Duration Ms",
-          "type": "integer"
-        },
-        "hotkey_id": {
-          "title": "Hotkey Id",
-          "type": "string"
-        },
-        "kind": {
-          "const": "event",
-          "default": "event",
-          "title": "Kind",
-          "type": "string"
-        },
-        "name": {
-          "title": "Name",
-          "type": "string"
-        }
-      },
-      "required": [
-        "duration_ms",
-        "hotkey_id",
-        "kind",
-        "name"
-      ],
-      "title": "EventFire",
-      "type": "object"
-    },
-    "VariantToggle": {
-      "properties": {
-        "hotkey_id": {
-          "title": "Hotkey Id",
-          "type": "string"
-        },
-        "kind": {
-          "const": "variant",
-          "default": "variant",
-          "title": "Kind",
-          "type": "string"
-        },
-        "name": {
-          "title": "Name",
-          "type": "string"
-        }
-      },
-      "required": [
-        "hotkey_id",
-        "kind",
-        "name"
-      ],
-      "title": "VariantToggle",
-      "type": "object"
     }
   },
   "properties": {
+    "actions": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ActionIntent"
+      },
+      "title": "Actions",
+      "type": "array"
+    },
     "audio": {
       "anyOf": [
         {
@@ -114,32 +94,6 @@
       ],
       "default": null,
       "title": "Audio"
-    },
-    "dispatches": {
-      "default": [],
-      "items": {
-        "discriminator": {
-          "mapping": {
-            "action": "#/$defs/ActionCode",
-            "event": "#/$defs/EventFire",
-            "variant": "#/$defs/VariantToggle"
-          },
-          "propertyName": "kind"
-        },
-        "oneOf": [
-          {
-            "$ref": "#/$defs/ActionCode"
-          },
-          {
-            "$ref": "#/$defs/VariantToggle"
-          },
-          {
-            "$ref": "#/$defs/EventFire"
-          }
-        ]
-      },
-      "title": "Dispatches",
-      "type": "array"
     },
     "display_text": {
       "$ref": "#/$defs/DisplayTextField"
@@ -174,8 +128,8 @@
     }
   },
   "required": [
+    "actions",
     "audio",
-    "dispatches",
     "display_text",
     "forwarded",
     "sentence_id",

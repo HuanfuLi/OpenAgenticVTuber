@@ -4,19 +4,9 @@
       "title": "Code",
       "type": "string"
     },
-    "duration_is_fallback": {
-      "default": false,
-      "title": "Duration Is Fallback",
-      "type": "boolean"
-    },
     "duration_seconds": {
       "title": "Duration Seconds",
       "type": "number"
-    },
-    "hotkey_id": {
-      "default": "",
-      "title": "Hotkey Id",
-      "type": "string"
     },
     "is_loop": {
       "default": false,
@@ -35,9 +25,7 @@
   },
   "required": [
     "code",
-    "duration_is_fallback",
     "duration_seconds",
-    "hotkey_id",
     "is_loop",
     "is_placeholder",
     "motion_file"

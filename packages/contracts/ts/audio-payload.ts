@@ -1,10 +1,10 @@
 // GENERATED FROM packages/contracts/py/contracts/audio_payload.py - do not edit;
 // run packages/contracts/codegen.sh to regenerate.
 
-import type { Dispatch } from './dispatch';
+import type { ActionIntent } from './action-intent';
 export interface AudioPayloadMessage {
+  actions: ActionIntent[];
   audio: string | null;
-  dispatches: Dispatch[];
   display_text: DisplayTextField;
   forwarded: boolean;
   sentence_id: number;
@@ -12,7 +12,6 @@ export interface AudioPayloadMessage {
   type: 'audio';
   volumes: number[]
 }
-
 
 export interface DisplayTextField {
   avatar: string;
