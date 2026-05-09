@@ -18,13 +18,13 @@ This milestone does not add major new product capabilities. It removes misleadin
 
 ### Settings Reality
 
-- [ ] **SET-01**: Settings > Avatars shows the active avatar identity and links to the existing Avatar Import/review flow instead of a generic milestone placeholder.
-- [ ] **SET-02**: Settings > per-avatar settings shows real editable avatar override/catalog state when available, or a precise disabled state when editing is not yet implemented.
-- [ ] **SET-03**: Settings > VTube Studio shows real connection/auth/token state and available re-auth/reconnect actions where supported.
-- [ ] **SET-04**: Settings > Conversation shows truthful current conversation behavior: single in-memory thread, reset-on-relaunch, provider/model, and no fake conversation-history controls.
-- [ ] **SET-05**: Settings > Memory is disabled/deferred with copy that states memory ships with the agentic system in v4.0.
-- [ ] **SET-06**: Settings > Log level is wired to a real log-level preference/effect or is disabled with accurate copy; it must not say "Coming in milestone-2."
-- [ ] **SET-07**: Settings copy references current milestone intent accurately: v3.0 for STT/TTS, v4.0 for agentic system plus memory.
+- [x] **SET-01**: Settings > Avatars shows the active avatar identity and links to the existing Avatar Import/review flow instead of a generic milestone placeholder.
+- [x] **SET-02**: Settings > per-avatar settings shows real editable avatar override/catalog state when available, or a precise disabled state when editing is not yet implemented.
+- [x] **SET-03**: Settings > VTube Studio shows real connection/auth/token state and available re-auth/reconnect actions where supported.
+- [x] **SET-04**: Settings > Conversation shows truthful current conversation behavior: single in-memory thread, reset-on-relaunch, provider/model, and no fake conversation-history controls.
+- [x] **SET-05**: Settings > Memory is disabled/deferred with copy that states memory ships with the agentic system in v4.0.
+- [x] **SET-06**: Settings > Log level is wired to a real log-level preference/effect or is disabled with accurate copy; it must not say "Coming in milestone-2."
+- [x] **SET-07**: Settings copy references current milestone intent accurately: v3.0 for STT/TTS, v4.0 for agentic system plus memory.
 
 ### Mock Boundary
 
@@ -66,13 +66,13 @@ This milestone does not add major new product capabilities. It removes misleadin
 | STAT-03 | Phase 11 | Complete |
 | STAT-04 | Phase 11 | Complete |
 | STAT-05 | Phase 11 | Complete |
-| SET-01 | Phase 12 | Pending |
-| SET-02 | Phase 12 | Pending |
-| SET-03 | Phase 12 | Pending |
-| SET-04 | Phase 12 | Pending |
-| SET-05 | Phase 12 | Pending |
-| SET-06 | Phase 12 | Pending |
-| SET-07 | Phase 12 | Pending |
+| SET-01 | Phase 12 | Complete |
+| SET-02 | Phase 12 | Complete |
+| SET-03 | Phase 12 | Complete |
+| SET-04 | Phase 12 | Complete |
+| SET-05 | Phase 12 | Complete |
+| SET-06 | Phase 12 | Complete |
+| SET-07 | Phase 12 | Complete |
 | MOCK-01 | Phase 13 | Pending |
 | MOCK-02 | Phase 13 | Pending |
 | MOCK-03 | Phase 13 | Pending |
@@ -85,4 +85,4 @@ This milestone does not add major new product capabilities. It removes misleadin
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after Phase 11 completion*
+*Last updated: 2026-05-09 after Phase 12 execution*

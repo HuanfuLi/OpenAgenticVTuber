@@ -14,7 +14,7 @@ This is the **v1-horizon** core value. The v1.0 walking skeleton shipped the sin
 
 **Shipped:** v1.0 Walking Skeleton on 2026-05-08; v2.0 Plugin + Animation Control on 2026-05-09.
 
-The app now boots as an Electron desktop shell with a Python sidecar, speaks via local Piper TTS, streams LLM replies sentence-by-sentence, and drives VTube Studio through a sidecar-owned compositor. Teto remains the dev rig. Animation control is now plugin-driven: avatar imports produce `AvatarOverrides` and `RigCapabilities`, the default plugin owns action-code motion, the parser routes `[action]` / `{variant}` / `<event>` codes, and a HUD exposes a focused live parameter/lock surface for operator discovery. Status chrome now reports persisted provider/model, real sidecar lifecycle, and real VTS status/unavailable state instead of hardcoded mock values.
+The app now boots as an Electron desktop shell with a Python sidecar, speaks via local Piper TTS, streams LLM replies sentence-by-sentence, and drives VTube Studio through a sidecar-owned compositor. Teto remains the dev rig. Animation control is now plugin-driven: avatar imports produce `AvatarOverrides` and `RigCapabilities`, the default plugin owns action-code motion, the parser routes `[action]` / `{variant}` / `<event>` codes, and a HUD exposes a focused live parameter/lock surface for operator discovery. Status chrome now reports persisted provider/model, real sidecar lifecycle, and real VTS status/unavailable state instead of hardcoded mock values. Settings now shows truthful Avatars, VTube Studio, Conversation, Memory, and Diagnostics log-level state instead of the Phase 12 placeholder surfaces.
 
 The §14 ceremony has been re-run under the refactored architecture. All six success criteria are PASS in `.planning/skeleton-verification.md` after gap closure for smirk rendering, cursor eye tracking, and blink ownership.
 
@@ -54,11 +54,10 @@ The §14 ceremony has been re-run under the refactored architecture. All six suc
 - [x] Three-category code system routes `[action]` to plugin logic, `{variant}` to persistent avatar variants, and `<event>` to one-shot motion/event hotkeys — *Validated in Phase 7 (PARSE-01..PARSE-08); live event UAT is catalog-gated by current Teto `events: []`*
 - [x] v2.0 §14 re-verification records all six success criteria as PASS under the refactored plugin architecture — *Validated in Phase 10 (VFY-01..VFY-05)*
 - [x] Status and app chrome use real provider/model, sidecar, and VTS state instead of mocks or hardcoded copy — *Validated in Phase 11 (STAT-01..STAT-05)*
+- [x] Settings sections for existing v2.0 systems are wired to real data/actions, while Conversation and Memory are labeled by shipped/deferred reality — *Validated in Phase 12 (SET-01..SET-07)*
 
 ### Active
 
-- [ ] Settings sections for existing v2.0 systems are wired to real data and actions.
-- [ ] Settings sections for deferred systems are visibly disabled and accurately labeled by future milestone intent.
 - [ ] Development mocks are isolated from production user flows and documented as dev-only.
 
 ### Out of Scope (this milestone — deferred to later v1 milestones)

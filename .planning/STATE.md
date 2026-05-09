@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Mock/Reality Cleanup
 status: planning
-stopped_at: Phase 11 UAT gap resolved
-last_updated: "2026-05-09T07:12:13-04:00"
+stopped_at: Phase 12 complete
+last_updated: "2026-05-09T07:24:29-04:00"
 last_activity: 2026-05-09
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: 11 (Status & App State Reality) — COMPLETE
-Plan: 2 of 2 complete
-Status: Ready for Phase 12
-Next: Run `$gsd-execute-phase 12` when ready.
+Phase: 12 (Settings Reality Pass) — COMPLETE
+Plan: 1 of 1 complete
+Status: Ready for Phase 13
+Next: Run `$gsd-plan-phase 13` when ready.
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -39,7 +39,7 @@ Next: Run `$gsd-execute-phase 12` when ready.
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
   - Phase 10 gap closure complete: Plan 10-03 resolved SC2-SMIRK-RENDERING, and Plan 10-04 resolved SC5-EYE-TRACKING plus BLINK-EYE-VISIBILITY. Operator confirmed cursor eye tracking works and blink behavior passes after app-owned idle blinking was removed so VTS owns normal blinking.
 
-Last activity: 2026-05-09 — closed Phase 11 UAT gap by restoring post-setup LLM provider/model reconfiguration in Settings.
+Last activity: 2026-05-09 — completed Phase 12 Settings Reality Pass with truthful Avatars, VTube Studio, Conversation, Memory, and Diagnostics log-level Settings sections.
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
 
@@ -218,7 +218,6 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- v2.1 Phase 12: replace Settings placeholders with real or accurately disabled states.
 - v2.1 Phase 13: isolate dev mocks and add mock-boundary regression coverage.
 
 ### Blockers/Concerns
