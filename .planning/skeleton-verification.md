@@ -17,7 +17,7 @@ Phase 10 re-runs all six §14 success criteria from `PROJECT_DESIGN.md §14` aga
 | # | Criterion | Verdict | Observation | Evidence |
 |---|-----------|---------|-------------|----------|
 | 1 | Lipsync RMS-vs-MouthOpen tracking (TTS-04 / AVT-03 carry-through) | PASS | pearson_r=0.9747730195034283 (1.39× over 0.7 threshold) from Phase 10 replay | `.planning/baselines/v2.0/lipsync-phase10-replay.json` |
-| 2 | `[smirk]` smooth blend (operator-judged; replaces M1 `[joy]` per 06-08) | FAIL | 0/3 visual checks: `[smirk]` parsed and routed as action dispatch, but Teto's face showed no visible smirk. | This file, §"SC #2 Ceremony Log" |
+| 2 | `[smirk]` smooth blend (operator-judged; replaces M1 `[joy]` per 06-08) | PASS | Operator confirmed the smirk face is visible after Plan 10-03 fixed supervised action-code dispatch. | This file, §"SC #2 Ceremony Log" |
 | 3 | Idle micro-motion non-zero variance (AVT-02 carry-through) | PASS | variance_sum=0.06643749130899018 (0 < x < 0.5; 7.5× under ceiling) from Phase 10 replay | `.planning/baselines/v2.0/idle-phase10-replay.json` |
 | 4 | Body sway through full utterance (operator-judged) | PASS | Operator reported SC #4 pass; speech/body-sway behavior accepted for v2.0 close. | This file, §"SC #4 Ceremony Log" |
 | 5 | Cursor tracking (operator-judged post-Plan 10-01 fix) | PARTIAL | Head tracks the cursor, including outside the VTS canvas, but eyes do not visibly track; whole-screen tracking is acceptable and likely preferable. | `.planning/phases/10-cursor-polish-14-sc-re-verification/10-01-SUMMARY.md` + this file §"SC #5 Ceremony Log" |
@@ -61,9 +61,9 @@ uv run python scripts/plumbing_harness.py --mode lipsync --out ../.planning/base
 - 1-2/3 → PARTIAL
 - 0/3 → FAIL
 
-**Recorded verdict:** FAIL
-**Recorded observation:** 0/3 visual checks. The log shows `[DISPATCH] kind=action name=smirk` at 2026-05-09 02:37:29.915 and the orchestrator routed the action, but Teto's face did not visibly show a smirk. This isolates the failure after parse/dispatch, in the plugin/rendered-expression path.
-**Evidence link:** Operator log excerpt from 2026-05-09 02:37:29.903-02:37:34.582, including `[DISPATCH] kind=action name=smirk` and TTS drain for the response.
+**Recorded verdict:** PASS
+**Recorded observation:** Operator initially reported no visible smirk, then corrected the report after observing that Teto's smirk face is visible. Plan 10-03 still found and fixed the production path that could prevent action dispatch from reaching the wrapped default plugin: `PluginAdapter` calls `on_action_code`, production wraps `DefaultPlugin` in `PluginSupervisor`, and `PluginSupervisor` previously inherited the base no-op `on_action_code`. Commit `b39511d` delegates action codes through the supervisor; focused tests now cover direct plugin, adapter, and supervised-plugin smirk dispatch.
+**Evidence link:** Operator live UAT correction on 2026-05-09 plus commits `134ed76`, `3733271`, `8d9135f`, and `b39511d`.
 
 ### SC #3 Ceremony Log (automated)
 
@@ -204,14 +204,14 @@ Cross-reference table — does NOT duplicate verdicts. Verdicts live in each pha
 
 **Recorded verdict:** PARTIAL
 
-**Decision basis:** Four of six §14 checks pass; SC #5 is partial because head tracking works but eye tracking remains head-only/no visible eye response; SC #2 is a real visual failure because `[smirk]` is parsed and dispatched yet does not visibly affect Teto's face. v2.0 is therefore closed as PARTIAL with both visible-animation gaps documented for follow-up instead of hidden.
+**Decision basis:** Five of six §14 checks pass; SC #5 remains partial because head tracking works but eye tracking remains head-only/no visible eye response. SC #2 is resolved after Plan 10-03 and operator correction. v2.0 remains PARTIAL until the cursor eye-tracking gap is resolved or explicitly deferred with fresh evidence.
 
 ### Open issues for next milestone
 
 - **DPI awareness** — cursor projection on high-DPI displays uses raw pixel coordinates; on 200% scaling the synthetic-canvas projection skews toward one corner (VFY-02 deferred this).
 - **Multi-monitor cursor robustness** — current synthetic-canvas fallback projects against primary monitor only; users on multi-monitor setups will see cursor tracking only when cursor is on primary screen.
 - **SC5-EYE-TRACKING** — cursor now drives visible head tracking, including outside the VTS canvas, but live UAT shows eyes do not visibly track. Likely follow-up area: eye-input routing/tuning around `EyeLeftX` / `EyeRightY` versus the full `EyeLeftX` / `EyeLeftY` / `EyeRightX` / `EyeRightY` input surface or direct `ParamEyeBallX/Y` writes for this rig.
-- **SC2-SMIRK-RENDERING** — `[smirk]` reaches the orchestrator dispatch path, but the active Teto face did not visibly show smirk during live UAT. Follow-up should inspect default-plugin action binding output, expression/variant ownership, and whether the active rig has a visible smirk target.
+- **Blink timing affects eye verification** — idle blink currently sometimes holds the eyes closed long enough to make eye-variant and cursor-eye checks difficult. This is separate from SC2 smirk rendering and should be addressed with the SC5 eye-tracking work.
 - **Native Cubism rendering integration** — VTube Studio + pyvts is the v1 rendering path; native Cubism (alongside pixi-live2d-display-advanced) is a v1.5 / v2 candidate per CLAUDE.md "What NOT to Use" + PROJECT_DESIGN.md §11.
 - **Body-sway physics-chain investigation** — head_only ship state acknowledged as mediocre per Phase 6 discuss-phase decision; AVT-06 R-OPEN-1 remains open. Future milestone may investigate `<model>.vtube.json` physics-chain proxy or `.exp3.json` body-pose modulation by RMS.
 - **Multi-avatar identity persistence** — v1-horizon HEADLINE value, NOT v2.0. Per-avatar episodic Chroma stores + shared user-facts bucket + RRF-hybrid retrieval + write-on-promotion are the next milestone's deliverable (REQUIREMENTS MEM-01..MEM-07).

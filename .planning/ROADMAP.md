@@ -267,7 +267,7 @@ Plans:
 Plans:
 - [x] 10-01-PLAN.md — Cursor diagnose + namespace fix + drop in-VTS-window gate + synthetic-canvas fallback + regression test (VFY-01, VFY-02). Wave 1, autonomous.
 - [ ] 10-02-PLAN.md — §14 SC ceremony script + skeleton-verification.md commit + plumbing harness replay (lipsync + idle) + operator-judged SC #2 [smirk] / SC #4 body sway / SC #5 cursor verdicts + milestone v2.0 close decision (VFY-03, VFY-04, VFY-05). Wave 2, has checkpoint:human-verify task.
-- [ ] 10-03-PLAN.md — GAP: close SC2-SMIRK-RENDERING by making routed `ActionCode(name="smirk")` visibly activate the default plugin and rerunning SC #2 UAT. Wave 3, gap_closure.
+- [x] 10-03-PLAN.md — GAP: close SC2-SMIRK-RENDERING by making routed `ActionCode(name="smirk")` visibly activate the default plugin and rerunning SC #2 UAT. Wave 3, gap_closure. Completed 2026-05-09.
 - [ ] 10-04-PLAN.md — GAP: close SC5-EYE-TRACKING by fixing cursor eye routing/tuning and rerunning SC #5 UAT. Wave 4, gap_closure.
 
 **UI hint**: no  <!-- Verification ceremony is observational; cursor polish is sidecar-only. -->

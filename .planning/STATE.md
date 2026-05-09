@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
-status: ready
-stopped_at: Phase 10 gap closure plans ready
-last_updated: "2026-05-09T06:25:25.090Z"
+status: executing
+stopped_at: Completed Phase 10 Plan 03 smirk gap closure
+last_updated: "2026-05-09T07:43:00Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
   completed_phases: 9
   total_plans: 44
-  completed_plans: 41
+  completed_plans: 42
 ---
 
 # Project State
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 10 (cursor-polish-14-sc-re-verification) — EXECUTING
-Plan: 2 of 4
-Status: Gap closure planned — run `$gsd-execute-phase 10 --gaps-only`
+Plan: 3 of 4
+Status: Gap closure executing — SC2 resolved; SC5 eye tracking remains
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -36,7 +36,7 @@ Status: Gap closure planned — run `$gsd-execute-phase 10 --gaps-only`
   - 07-08 focused verification passed: 52 passed (`tests/plugins/test_prompt_section.py`, `tests/test_orchestrator_turn.py`, `tests/test_sidecar_boot.py`, `tests/plugins/test_manifest_watcher.py`, `tests/orchestrator/test_dispatch_routing.py`)
   - Live UAT confirmed `{heart-eye}` visibly switches the rig and persists by design; event UAT remains blocked until an active avatar catalog declares events
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
-  - Phase 10 operator UAT recorded two visible-animation gaps: SC2-SMIRK-RENDERING (`[smirk]` dispatches but does not visibly change Teto face) and SC5-EYE-TRACKING (cursor head tracking works, eyes do not visibly track). Gap-closure plans 10-03 and 10-04 are ready.
+  - Phase 10 Plan 10-03 resolved SC2-SMIRK-RENDERING: operator corrected that Teto's smirk face is visible, and production action-code dispatch now delegates through PluginSupervisor to DefaultPlugin (`b39511d`). SC5-EYE-TRACKING remains open; blink timing is tracked as an eye-verification support issue for 10-04.
 
 Last activity: 2026-05-09
 
