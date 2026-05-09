@@ -4,8 +4,8 @@
  * - resolveThemeClass: maps preferences + prefers-color-scheme to one of 7 classes
  * - ThemeProvider: applies class to <html>; subscribes to OS dark-mode changes
  *
- * In Phase 1 plan 01-01 we keep persistence in-memory via the dev-mock
- * safeStorage shim. Plan 01-02 will swap that for window.api.setStoredValue.
+ * Theme preferences persist through Electron-store IPC. First paint uses the
+ * default preference, then hydrates asynchronously when the bridge is present.
  */
 import {
   createContext,
@@ -16,7 +16,6 @@ import {
   useState,
   type ReactNode
 } from 'react'
-import { mockSafeStorage } from '@/dev/__mocks__/mock-backend'
 
 export type ThemeMode = 'auto' | 'light' | 'dark'
 export type LightAccent = 'blush' | 'sunrise' | 'ember'
@@ -58,8 +57,7 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const stored = mockSafeStorage.get('themePreference') as ThemePrefs | undefined
-  const [prefs, setPrefsState] = useState<ThemePrefs>(stored ?? DEFAULT_PREFS)
+  const [prefs, setPrefsState] = useState<ThemePrefs>(DEFAULT_PREFS)
   const [prefersDark, setPrefersDark] = useState<boolean>(() =>
     typeof window !== 'undefined' && window.matchMedia
       ? window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -75,6 +73,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mq.removeEventListener('change', onChange)
   }, [])
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.api?.getThemePreference) return
+    let cancelled = false
+    window.api
+      .getThemePreference()
+      .then((stored) => {
+        if (!cancelled && stored) setPrefsState(stored)
+      })
+      .catch(() => {
+        /* keep default theme */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const themeClass = useMemo(() => resolveThemeClass(prefs, prefersDark), [prefs, prefersDark])
 
   // Apply to <html>.
@@ -85,7 +99,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setPrefs = useCallback((patch: Partial<ThemePrefs>) => {
     setPrefsState((cur) => {
       const next = { ...cur, ...patch }
-      mockSafeStorage.set('themePreference', next)
+      void window.api?.saveThemePreference?.(next)
       return next
     })
   }, [])

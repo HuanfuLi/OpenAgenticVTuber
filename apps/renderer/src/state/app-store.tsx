@@ -1,13 +1,5 @@
-/* SPEC §State machine — single store hydrated from mockSafeStorage (Phase 1)
- * or Electron safeStorage IPC (Phase 1 plan 01-02 onwards).
- *
- * Ported from prototype src/lib/store.jsx (2026-05-06). Plan 01-02 will swap
- * mockSafeStorage.get/set for window.api.getStoredValue/setStoredValue.
- *
- * The chrome's status icon is wired to the real sidecar lifecycle in
- * AppStoreProvider — onSidecarReady -> sidecar=green, onSidecarCrash with
- * willRespawn -> amber, otherwise red. LLM/VTS rows stay on mockStatus
- * until LLM-01 (plan 01-02) and AVT-04 (Phase 4) wire them.
+/* SPEC §State machine — single store hydrated from Electron safeStorage IPC,
+ * Electron-store preferences, and real sidecar lifecycle/status APIs.
  */
 import {
   createContext,
@@ -21,17 +13,13 @@ import {
   type SetStateAction
 } from 'react'
 import {
-  mockSafeStorage,
-  mockStatus,
-  worstOf,
   mockBanners,
   mockToasts,
-  type StatusValue,
-  type StatusOverall,
-  type StatusSnapshot,
   type Banners,
   type Toast
 } from '@/dev/__mocks__/mock-backend'
+import { worstOf, type StatusOverall, type StatusSnapshot, type StatusValue } from './status-types'
+import type { Provider, StoredConfig, VtsStatus } from '@preload-types'
 
 export type ChatRole = 'user' | 'assistant'
 export interface ChatMessage {
@@ -76,6 +64,8 @@ interface AppStoreValue {
   setChatMessages: Dispatch<SetStateAction<ChatMessage[]>>
   status: StatusSnapshot
   statusOverall: StatusOverall
+  refreshStatus: () => Promise<void>
+  restartSidecar: () => Promise<void>
   banners: Banners
   toasts: Toast[]
   pushToast: (toast: { text: string; ttlMs?: number }) => void
@@ -91,32 +81,146 @@ const DEFAULT_LLM_CONFIG: LLMConfig = {
   apiKey: ''
 }
 
-export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const initialSetup = mockSafeStorage.get('hasCompletedSetup') === true
-  const initialConn = (mockSafeStorage.get('llmConfig') as LLMConfig | undefined) ?? DEFAULT_LLM_CONFIG
-  // Default OFF; persisted state is layered on top but `enabled` is force-defaulted off on every fresh load.
-  const persistedLogs = (mockSafeStorage.get('logsDrawer') as Partial<LogsDrawerState>) ?? {}
-  // The trailing `enabled: false` re-overrides any persisted enabled=true so
-  // the drawer always defaults off on a fresh launch (matches prototype).
-  const initialLogs: LogsDrawerState = {
-    open: false,
-    height: 200,
-    ...persistedLogs,
-    enabled: false
-  }
+const DEFAULT_LOGS: LogsDrawerState = {
+  enabled: false,
+  open: false,
+  height: 200
+}
 
-  const [hasCompletedSetup, setHasCompletedSetup] = useState<boolean>(initialSetup)
-  const [llmConfig, setLlmConfigState] = useState<LLMConfig>(initialConn)
+const DEFAULT_STATUS: StatusSnapshot = {
+  llm: 'amber',
+  vts: 'amber',
+  sidecar: 'amber',
+  llmDetail: 'loading setup',
+  vtsDetail: 'checking VTS status',
+  sidecarDetail: 'starting...'
+}
+
+function providerLabel(provider: string): string {
+  if (provider === 'lm_studio' || provider === 'lmstudio') return 'LM Studio'
+  if (provider === 'custom_openai' || provider === 'custom') return 'Custom OpenAI-compatible'
+  if (provider === 'openai') return 'OpenAI'
+  if (provider === 'anthropic') return 'Anthropic'
+  if (provider === 'gemini') return 'Gemini'
+  return provider || 'unknown provider'
+}
+
+function storedToLlmConfig(cfg: StoredConfig): LLMConfig {
+  return {
+    provider: cfg.provider.provider,
+    endpoint: cfg.provider.endpointUrl,
+    model: cfg.provider.modelName,
+    apiKey: cfg.provider.apiKey
+  }
+}
+
+function llmConfigToStoredConfig(cfg: LLMConfig, completed: boolean): StoredConfig {
+  const provider =
+    cfg.provider === 'lmstudio'
+      ? 'lm_studio'
+      : cfg.provider === 'custom'
+        ? 'custom_openai'
+        : cfg.provider
+  return {
+    provider: {
+      provider: provider as Provider,
+      endpointUrl: cfg.endpoint,
+      apiKey: cfg.apiKey,
+      modelName: cfg.model
+    },
+    plugin: { activePluginName: 'default' },
+    hasCompletedSetup: completed,
+    schemaVersion: 1
+  }
+}
+
+function llmStatusFromConfig(cfg: StoredConfig | null): Pick<StatusSnapshot, 'llm' | 'llmDetail'> {
+  if (!cfg || !cfg.hasCompletedSetup) {
+    return { llm: 'amber', llmDetail: 'setup not complete' }
+  }
+  const model = cfg.provider.modelName.trim() || 'auto-detect'
+  return { llm: 'green', llmDetail: `${model} · ${providerLabel(cfg.provider.provider)}` }
+}
+
+function vtsStatusToSnapshot(vts: VtsStatus): Pick<StatusSnapshot, 'vts' | 'vtsDetail'> {
+  if (vts.state === 'authenticated') {
+    return { vts: 'green', vtsDetail: vts.detail }
+  }
+  if (vts.state === 'auth_pending' || vts.state === 'sidecar_unconfigured') {
+    return { vts: 'amber', vtsDetail: vts.detail }
+  }
+  return { vts: 'red', vtsDetail: vts.detail }
+}
+
+export function AppStoreProvider({ children }: { children: ReactNode }) {
+  const [hasCompletedSetup, setHasCompletedSetup] = useState<boolean>(false)
+  const [llmConfig, setLlmConfigState] = useState<LLMConfig>(DEFAULT_LLM_CONFIG)
   const [view, setView] = useState<View>('chat')
   const [historyOpen, setHistoryOpen] = useState<boolean>(false)
   const [statusOpen, setStatusOpen] = useState<boolean>(false)
   const [agentToggle, setAgentToggle] = useState<boolean>(false)
-  const [logsDrawer, setLogsDrawerState] = useState<LogsDrawerState>(initialLogs)
+  const [logsDrawer, setLogsDrawerState] = useState<LogsDrawerState>(DEFAULT_LOGS)
   const [showThreadList, setShowThreadList] = useState<boolean>(false)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
 
-  const [status, setStatus] = useState<StatusSnapshot>(mockStatus.get())
-  useEffect(() => mockStatus.subscribe(setStatus), [])
+  const [status, setStatus] = useState<StatusSnapshot>(DEFAULT_STATUS)
+
+  const patchStatus = useCallback((patch: Partial<StatusSnapshot>) => {
+    setStatus((cur) => ({ ...cur, ...patch }))
+  }, [])
+
+  const refreshStatus = useCallback(async () => {
+    if (typeof window === 'undefined' || !window.api) return
+    const [cfg, readyUrl, vts] = await Promise.all([
+      window.api.getStoredConfig ? window.api.getStoredConfig().catch(() => null) : Promise.resolve(null),
+      window.api.getReadyUrl ? window.api.getReadyUrl().catch(() => null) : Promise.resolve(null),
+      window.api.getVtsStatus
+        ? window.api.getVtsStatus().catch(() => ({
+            state: 'unavailable' as const,
+            detail: 'VTS status unavailable.',
+            authenticated: false,
+            windowDetected: false
+          }))
+        : Promise.resolve(null)
+    ])
+    if (cfg?.hasCompletedSetup) {
+      setHasCompletedSetup(true)
+      setLlmConfigState(storedToLlmConfig(cfg))
+    } else if (cfg === null) {
+      setHasCompletedSetup(false)
+    }
+    patchStatus({
+      ...llmStatusFromConfig(cfg ?? null),
+      sidecar: readyUrl ? 'green' : 'amber',
+      sidecarDetail: readyUrl ?? 'starting...',
+      ...(vts ? vtsStatusToSnapshot(vts) : {})
+    })
+  }, [patchStatus])
+
+  useEffect(() => {
+    void refreshStatus()
+  }, [refreshStatus])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.api?.getChromeState) return
+    let cancelled = false
+    window.api
+      .getChromeState()
+      .then((chrome) => {
+        if (cancelled) return
+        setLogsDrawerState({
+          enabled: chrome.logsDrawerEnabled,
+          open: !chrome.logsDrawerCollapsed,
+          height: chrome.logsDrawerHeight
+        })
+      })
+      .catch(() => {
+        /* keep defaults */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const [banners, setBanners] = useState<Banners>({
     llm: false,
@@ -141,55 +245,83 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     mockToasts.push({ text: toast.text }, toast.ttlMs ?? 3000)
   }, [])
 
-  // Phase 1 plan 01-01: bridge real sidecar events into the mockStatus
-  // observable so the popover row stays consistent with the chrome icon.
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.api) return
+    if (
+      typeof window === 'undefined' ||
+      !window.api?.onSidecarReady ||
+      !window.api?.onSidecarCrash
+    ) return
     const setSidecar = (value: StatusValue, detail: string): void => {
-      mockStatus.set({ sidecar: value, sidecarDetail: detail })
+      patchStatus({ sidecar: value, sidecarDetail: detail })
     }
-    const offReady = window.api.onSidecarReady((url) => setSidecar('green', url))
+    const offReady = window.api.onSidecarReady((url) => {
+      setSidecar('green', url)
+      void refreshStatus()
+    })
     const offCrash = window.api.onSidecarCrash((info) => {
       if (info.willRespawn) setSidecar('amber', 'restarting…')
       else setSidecar('red', `exited code ${info.code}`)
+      patchStatus({ vts: 'amber', vtsDetail: 'waiting for sidecar' })
     })
     return () => {
       offReady()
       offCrash()
     }
-  }, [])
+  }, [patchStatus, refreshStatus])
 
-  const setLlmConfig = useCallback((cfg: LLMConfig) => {
+  const setLlmConfig = useCallback(async (cfg: LLMConfig) => {
     setLlmConfigState(cfg)
-    mockSafeStorage.set('llmConfig', cfg)
-  }, [])
+    patchStatus(llmStatusFromConfig(llmConfigToStoredConfig(cfg, true)))
+    if (window.api?.saveStoredConfig) {
+      await window.api.saveStoredConfig(llmConfigToStoredConfig(cfg, hasCompletedSetup))
+    }
+  }, [hasCompletedSetup, patchStatus])
 
   const setLogsDrawer = useCallback((patch: Partial<LogsDrawerState>) => {
     setLogsDrawerState((cur) => {
       const next = { ...cur, ...patch }
-      mockSafeStorage.set('logsDrawer', next)
+      void window.api?.saveChromeState?.({
+        logsDrawerEnabled: next.enabled,
+        logsDrawerCollapsed: !next.open,
+        logsDrawerHeight: next.height
+      })
       return next
     })
   }, [])
 
   const completeSetup = useCallback(
     (cfg: LLMConfig) => {
-      setLlmConfig(cfg)
-      mockSafeStorage.set('hasCompletedSetup', true)
+      void setLlmConfig(cfg)
+      void window.api?.saveStoredConfig?.(llmConfigToStoredConfig(cfg, true))
       setHasCompletedSetup(true)
     },
     [setLlmConfig]
   )
 
+  const restartSidecarAction = useCallback(async () => {
+    if (!window.api?.restartSidecar) {
+      await refreshStatus()
+      return
+    }
+    patchStatus({ sidecar: 'amber', sidecarDetail: 'restarting...' })
+    await window.api.restartSidecar()
+    await refreshStatus()
+  }, [patchStatus, refreshStatus])
+
   const resetAll = useCallback(() => {
-    mockSafeStorage.clear()
+    void window.api?.clearStoredConfig?.()
+    void window.api?.saveChromeState?.({
+      logsDrawerEnabled: false,
+      logsDrawerCollapsed: true,
+      logsDrawerHeight: 200
+    })
     setHasCompletedSetup(false)
     setLlmConfigState(DEFAULT_LLM_CONFIG)
     setView('chat')
     setHistoryOpen(false)
     setStatusOpen(false)
     setAgentToggle(false)
-    setLogsDrawerState({ enabled: false, open: false, height: 200 })
+    setLogsDrawerState(DEFAULT_LOGS)
     setChatMessages([])
   }, [])
 
@@ -215,6 +347,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setChatMessages,
       status,
       statusOverall: worstOf(status),
+      refreshStatus,
+      restartSidecar: restartSidecarAction,
       banners,
       toasts,
       pushToast,
@@ -237,6 +371,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       completeSetup,
       setLlmConfig,
       setLogsDrawer,
+      refreshStatus,
+      restartSidecarAction,
       resetAll
     ]
   )

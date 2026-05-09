@@ -1,3 +1,3 @@
-"""Admin endpoints: avatar import and future rig capability tools."""
+"""Admin endpoints: avatar import, status, and rig capability tools."""
 
-from . import rig_capabilities
+from . import rig_capabilities, status

@@ -92,13 +92,16 @@ export const COPY = {
     VTS: 'VTS',
     SIDECAR: 'Sidecar',
     RETEST: 'Re-test connection',
-    TESTING: 'Testing...'
+    TESTING: 'Testing...',
+    REFRESH: 'Refresh status',
+    REFRESHING: 'Refreshing...'
   },
   SETTINGS: {
     HEADER: 'Settings',
     ANCHORS_HINT: 'Connection · Avatars · VTube Studio · …',
     CONN_HEADER: 'Connection / Models',
     CONN_RETEST: 'Re-test',
+    CONN_REFRESH: 'Refresh status',
     CONN_CHANGE: 'Change provider →',
     CONN_CHANGE_DISABLED_TT: 'Re-configure provider lands in v1.',
     AVATAR_CATALOGS_HEADER: 'Avatar catalogs',

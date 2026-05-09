@@ -3,9 +3,23 @@
 // is whitelisted here.
 import { contextBridge, ipcRenderer } from 'electron'
 import type { StoredConfig } from '../src/safe-storage'
+import type { ChromeState, ThemePreference } from '../src/window-store'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
 
 type Unsubscribe = () => void
+
+export interface VtsStatus {
+  state:
+    | 'authenticated'
+    | 'auth_pending'
+    | 'not_authenticated'
+    | 'sidecar_unconfigured'
+    | 'vts_window_not_found'
+    | 'unavailable'
+  detail: string
+  authenticated: boolean
+  windowDetected: boolean
+}
 
 export interface BodyMotionPluginSummary {
   name: string
@@ -39,12 +53,21 @@ const api = {
   // Window state
   getWindowState: (): Promise<{ width: number; height: number; x?: number; y?: number }> =>
     ipcRenderer.invoke('window:getState'),
+  getChromeState: (): Promise<ChromeState> => ipcRenderer.invoke('chrome:getState'),
+  saveChromeState: (patch: Partial<ChromeState>): Promise<ChromeState> =>
+    ipcRenderer.invoke('chrome:saveState', patch),
+  getThemePreference: (): Promise<ThemePreference | null> =>
+    ipcRenderer.invoke('theme:getPreference'),
+  saveThemePreference: (prefs: ThemePreference): Promise<void> =>
+    ipcRenderer.invoke('theme:savePreference', prefs),
 
   // SafeStorage credential gate (01-02 / PLUMB-04 / D-07 / D-09)
   getStoredConfig: (): Promise<StoredConfig | null> => ipcRenderer.invoke('config:load'),
   saveStoredConfig: (cfg: StoredConfig): Promise<void> =>
     ipcRenderer.invoke('config:save', cfg),
   clearStoredConfig: (): Promise<void> => ipcRenderer.invoke('config:clear'),
+  getVtsStatus: (): Promise<VtsStatus> => ipcRenderer.invoke('sidecar:getVtsStatus'),
+  restartSidecar: (): Promise<void> => ipcRenderer.invoke('sidecar:restart'),
   listBodyMotionPlugins: (): Promise<BodyMotionPluginSummary[]> =>
     ipcRenderer.invoke('plugin:listBodyMotionPlugins'),
 
@@ -63,3 +86,4 @@ contextBridge.exposeInMainWorld('api', api)
 
 export type RendererApi = typeof api
 export type { StoredConfig, ProviderConfig, Provider } from '../src/safe-storage'
+export type { ChromeState, ThemePreference } from '../src/window-store'

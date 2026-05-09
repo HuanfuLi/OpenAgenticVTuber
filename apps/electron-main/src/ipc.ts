@@ -12,7 +12,13 @@ import {
   listBodyMotionPlugins,
   restartSidecar
 } from './sidecar'
-import { store } from './window-store'
+import {
+  getChromeState,
+  getThemePreference,
+  saveChromeState,
+  saveThemePreference,
+  store
+} from './window-store'
 import { loadConfig, saveConfig, clearConfig, type StoredConfig } from './safe-storage'
 import { createHudWindow } from './hud-window'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
@@ -21,6 +27,45 @@ export function registerIpc(window: BrowserWindow): () => void {
   // Existing from 01-01:
   ipcMain.handle('sidecar:getReadyUrl', () => getReadyUrl())
   ipcMain.handle('window:getState', () => store.get('window'))
+  ipcMain.handle('chrome:getState', () => getChromeState())
+  ipcMain.handle('chrome:saveState', (_e, patch) => saveChromeState(patch))
+  ipcMain.handle('theme:getPreference', () => getThemePreference())
+  ipcMain.handle('theme:savePreference', (_e, prefs) => saveThemePreference(prefs))
+  ipcMain.handle('sidecar:restart', async () => {
+    await restartSidecar()
+  })
+  ipcMain.handle('sidecar:getVtsStatus', async () => {
+    let baseUrl: string
+    try {
+      baseUrl = getSidecarHttpUrl()
+    } catch {
+      return {
+        state: 'unavailable',
+        detail: 'Sidecar is not ready.',
+        authenticated: false,
+        windowDetected: false
+      }
+    }
+    try {
+      const resp = await fetch(`${baseUrl}/admin/vts-status`)
+      if (!resp.ok) {
+        return {
+          state: 'unavailable',
+          detail: `VTS status unavailable: HTTP ${resp.status}`,
+          authenticated: false,
+          windowDetected: false
+        }
+      }
+      return await resp.json()
+    } catch (err) {
+      return {
+        state: 'unavailable',
+        detail: `VTS status unavailable: ${err instanceof Error ? err.message : String(err)}`,
+        authenticated: false,
+        windowDetected: false
+      }
+    }
+  })
 
   // New for 01-02 (safeStorage credential gate, PLUMB-04 / D-07 / D-09):
   ipcMain.handle('config:load', () => loadConfig())
@@ -96,6 +141,12 @@ export function registerIpc(window: BrowserWindow): () => void {
     offLog()
     ipcMain.removeHandler('sidecar:getReadyUrl')
     ipcMain.removeHandler('window:getState')
+    ipcMain.removeHandler('chrome:getState')
+    ipcMain.removeHandler('chrome:saveState')
+    ipcMain.removeHandler('theme:getPreference')
+    ipcMain.removeHandler('theme:savePreference')
+    ipcMain.removeHandler('sidecar:restart')
+    ipcMain.removeHandler('sidecar:getVtsStatus')
     ipcMain.removeHandler('config:load')
     ipcMain.removeHandler('config:save')
     ipcMain.removeHandler('config:clear')

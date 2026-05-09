@@ -4,18 +4,15 @@
  * Replaced window.ICONS / window.useStore / window.COPY with ESM imports
  * (DELTA conversion rule 3).
  *
- * Phase 1 plan 01-01 wires the sidecar status to real lifecycle events via
- * window.api.onSidecarReady / onSidecarCrash (the AppStoreProvider does this
- * in app-store.tsx — this component just reads the resulting status snapshot).
+ * Phase 11 uses real persisted setup, sidecar lifecycle, and VTS status APIs.
  */
 import { useEffect, useRef, useState } from 'react'
 import { Hexagon } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
-import { mockStatus } from '@/dev/__mocks__/mock-backend'
 
 export function StatusIcon() {
-  const { status, statusOpen, setStatusOpen, statusOverall } = useStore()
+  const { status, statusOpen, setStatusOpen, statusOverall, refreshStatus } = useStore()
   const popoverRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -52,10 +49,11 @@ export function StatusIcon() {
   const [retesting, setRetesting] = useState(false)
   const onRetest = async (): Promise<void> => {
     setRetesting(true)
-    mockStatus.set({ llm: 'amber', llmDetail: 'reconnecting…' })
-    await new Promise((r) => setTimeout(r, 600))
-    mockStatus.set({ llm: 'green', llmDetail: 'qwen2.5-7b · LM Studio · last reply 423ms' })
-    setRetesting(false)
+    try {
+      await refreshStatus()
+    } finally {
+      setRetesting(false)
+    }
   }
 
   return (
@@ -112,7 +110,7 @@ export function StatusIcon() {
             onClick={onRetest}
             style={{ marginTop: 4 }}
           >
-            {retesting ? COPY.STATUS.TESTING : COPY.STATUS.RETEST}
+            {retesting ? COPY.STATUS.REFRESHING : COPY.STATUS.REFRESH}
           </button>
         </div>
       )}

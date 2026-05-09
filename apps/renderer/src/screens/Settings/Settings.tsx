@@ -9,7 +9,6 @@ import { Folder } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
 import { useTheme, type ThemeMode, type LightAccent, type DarkBg, type DarkAccent } from '@/state/theme-provider'
-import { mockStatus } from '@/dev/__mocks__/mock-backend'
 import type { BodyMotionPluginSummary, StoredConfig } from '@preload-types'
 
 // -------- Swatch resolvers ------------------------------------------------
@@ -224,7 +223,7 @@ function AppearanceSection() {
 // "lm_studio" Provider type.
 function ConnectionSection() {
   const C = COPY.SETTINGS
-  const { llmConfig } = useStore()
+  const { llmConfig, refreshStatus } = useStore()
   const [retesting, setRetesting] = useState(false)
   const [storedCfg, setStoredCfg] = useState<{
     provider: string
@@ -267,10 +266,11 @@ function ConnectionSection() {
 
   const onRetest = async (): Promise<void> => {
     setRetesting(true)
-    mockStatus.set({ llm: 'amber', llmDetail: 'reconnecting…' })
-    await new Promise((r) => setTimeout(r, 600))
-    mockStatus.set({ llm: 'green', llmDetail: 'qwen2.5-7b · LM Studio · last reply 423ms' })
-    setRetesting(false)
+    try {
+      await refreshStatus()
+    } finally {
+      setRetesting(false)
+    }
   }
   return (
     <section className="section" id="sec-connection">
@@ -289,7 +289,7 @@ function ConnectionSection() {
       </div>
       <div className="row mt-2" style={{ display: 'flex', gap: 8 }}>
         <button className="btn btn-secondary" onClick={onRetest} disabled={retesting}>
-          {retesting ? COPY.STATUS.TESTING : C.CONN_RETEST}
+          {retesting ? COPY.STATUS.REFRESHING : C.CONN_REFRESH}
         </button>
         <span className="tt" data-tt={C.CONN_CHANGE_DISABLED_TT} style={{ display: 'inline-flex' }}>
           <button className="btn btn-secondary" disabled style={{ pointerEvents: 'none' }}>

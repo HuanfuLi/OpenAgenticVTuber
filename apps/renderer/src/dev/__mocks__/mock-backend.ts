@@ -1,3 +1,5 @@
+import type { StatusSnapshot } from '@/state/status-types'
+
 // Mock backend — single source of mocked IPC/safeStorage/network. DEV-only.
 //
 // Ported from prototype src/lib/mock.js (2026-05-06).
@@ -56,16 +58,7 @@ export function mockEcho(text: string, delayMs = 200): Promise<string> {
 }
 
 // ---------------- mockStatus (observable) ----------------
-export type StatusValue = 'green' | 'amber' | 'red'
-export type StatusOverall = StatusValue
-export interface StatusSnapshot {
-  llm: StatusValue
-  vts: StatusValue
-  sidecar: StatusValue
-  llmDetail: string
-  vtsDetail: string
-  sidecarDetail: string
-}
+export type { StatusOverall, StatusSnapshot, StatusValue } from '@/state/status-types'
 
 const statusListeners = new Set<(s: StatusSnapshot) => void>()
 const statusState: StatusSnapshot = {
@@ -96,12 +89,6 @@ export const mockStatus = {
     Object.assign(statusState, patch)
     emitStatus()
   }
-}
-
-export function worstOf(s: StatusSnapshot): StatusOverall {
-  if (s.llm === 'red' || s.vts === 'red' || s.sidecar === 'red') return 'red'
-  if (s.llm === 'amber' || s.vts === 'amber' || s.sidecar === 'amber') return 'amber'
-  return 'green'
 }
 
 // ---------------- Banners / toasts ----------------

@@ -34,6 +34,26 @@ describe('Settings TTS section', () => {
       value: {
         getStoredConfig: vi.fn().mockResolvedValue(storedConfig),
         saveStoredConfig: vi.fn().mockResolvedValue(undefined),
+        clearStoredConfig: vi.fn().mockResolvedValue(undefined),
+        getReadyUrl: vi.fn().mockResolvedValue('ws://127.0.0.1:54321/ws'),
+        getVtsStatus: vi.fn().mockResolvedValue({
+          state: 'authenticated',
+          detail: 'VTS authenticated and window detected.',
+          authenticated: true,
+          windowDetected: true
+        }),
+        getChromeState: vi.fn().mockResolvedValue({
+          logsDrawerEnabled: false,
+          logsDrawerHeight: 200,
+          logsDrawerCollapsed: true
+        }),
+        saveChromeState: vi.fn().mockResolvedValue({
+          logsDrawerEnabled: false,
+          logsDrawerHeight: 200,
+          logsDrawerCollapsed: true
+        }),
+        getThemePreference: vi.fn().mockResolvedValue(null),
+        saveThemePreference: vi.fn().mockResolvedValue(undefined),
         listBodyMotionPlugins: vi.fn().mockResolvedValue([
           {
             name: 'default',
@@ -110,5 +130,18 @@ describe('Settings TTS section', () => {
     renderSettings()
 
     expect(await screen.findByText(COPY.HUD.OPEN_HUD_HELP)).toBeInTheDocument()
+  })
+
+  it('refreshes connection status through real APIs without scripted model text', async () => {
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('button', { name: COPY.SETTINGS.CONN_REFRESH }))
+
+    await waitFor(() => {
+      expect(window.api.getStoredConfig).toHaveBeenCalled()
+      expect(window.api.getVtsStatus).toHaveBeenCalled()
+    })
+    expect(screen.queryByText(/qwen2\.5/i)).toBeNull()
+    expect(screen.queryByText(/last reply/i)).toBeNull()
   })
 })
