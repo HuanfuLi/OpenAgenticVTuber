@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { AppStoreProvider } from '@/state/app-store'
+import { AppStoreProvider, useStore } from '@/state/app-store'
 import { ThemeProvider } from '@/state/theme-provider'
 import { COPY } from '@/lib/copy'
 import { Settings } from '@/screens/Settings/Settings'
@@ -12,6 +12,27 @@ function renderSettings() {
     <AppStoreProvider>
       <ThemeProvider>
         <Settings />
+      </ThemeProvider>
+    </AppStoreProvider>
+  )
+}
+
+function StoreProbe() {
+  const { avatarImportPlan, view } = useStore()
+  return (
+    <div>
+      <span data-testid="store-view">{view}</span>
+      <span data-testid="store-avatar-plan">{avatarImportPlan?.avatar_id ?? 'none'}</span>
+    </div>
+  )
+}
+
+function renderSettingsWithProbe() {
+  return render(
+    <AppStoreProvider>
+      <ThemeProvider>
+        <Settings />
+        <StoreProbe />
       </ThemeProvider>
     </AppStoreProvider>
   )
@@ -144,6 +165,32 @@ describe('Settings TTS section', () => {
     expect(within(section).getByRole('button', { name: COPY.SETTINGS.AVATARS_IMPORT_REPLACE })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Avatar catalogs' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Per-avatar settings' })).toBeNull()
+  })
+
+  it('routes Edit current to Avatar Import with the current avatar plan loaded', async () => {
+    renderSettingsWithProbe()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
+      .then((heading) => heading.closest('section')!)
+    fireEvent.click(within(section).getByRole('button', { name: COPY.SETTINGS.AVATARS_EDIT_CURRENT }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('store-view')).toHaveTextContent('avatar-import')
+      expect(screen.getByTestId('store-avatar-plan')).toHaveTextContent('akari')
+    })
+  })
+
+  it('routes Import/replace to Avatar Import without carrying the current plan', async () => {
+    renderSettingsWithProbe()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
+      .then((heading) => heading.closest('section')!)
+    fireEvent.click(within(section).getByRole('button', { name: COPY.SETTINGS.AVATARS_IMPORT_REPLACE }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('store-view')).toHaveTextContent('avatar-import')
+      expect(screen.getByTestId('store-avatar-plan')).toHaveTextContent('none')
+    })
   })
 
   it('shows degraded avatar state without assuming Teto when metadata is unavailable', async () => {
