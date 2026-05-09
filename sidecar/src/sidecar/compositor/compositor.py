@@ -65,6 +65,7 @@ class Compositor:
         self._stop = False
         self._tick_count = 0
         self._dropped_frames = 0
+        self._writer_task: asyncio.Task[None] | None = None
         self._pending_strategy_swap: BodySwayStrategyName | None = None
 
     def request_strategy_swap(self, name: BodySwayStrategyName) -> None:
@@ -130,17 +131,37 @@ class Compositor:
             tick_n=self._tick_count,
             emitted_at_monotonic=now,
         ), self._capabilities)
-        try:
-            await self._writer.inject_params(frame)
-        except Exception as exc:  # noqa: BLE001 - degraded until VTS handshake completes
-            logger.warning(f"[COMPOSITOR] writer.inject_params failed: {exc!r}")
-
-        # 15 Hz HUD tap -- every 4th 60 Hz tick.
+        # Publish HUD snapshots before awaiting VTS I/O. The HUD is a view of the
+        # compositor's authoritative frame and must keep updating even if VTS is
+        # slow, disconnected, or waiting on a request timeout.
         if self._hud_tap is not None and self._tick_count % 4 == 0:
             try:
                 self._hud_tap.publish(frame, dict(self._lock_state))
             except Exception:  # noqa: BLE001 -- HUD must never crash compositor
                 logger.exception("[HUD-TAP] publish failed")
 
+        self._schedule_writer_inject(frame)
+        await asyncio.sleep(0)
+
+    def _schedule_writer_inject(self, frame: ParamFrame) -> None:
+        """Schedule at most one VTS write so compositor/HUD ticks never stall."""
+        if self._writer_task is not None and not self._writer_task.done():
+            return
+        self._writer_task = asyncio.create_task(self._inject_frame(frame))
+
+    async def _inject_frame(self, frame: ParamFrame) -> None:
+        try:
+            await self._writer.inject_params(frame)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - degraded until VTS handshake completes
+            logger.warning(f"[COMPOSITOR] writer.inject_params failed: {exc!r}")
+
     async def stop(self) -> None:
         self._stop = True
+        if self._writer_task is not None and not self._writer_task.done():
+            self._writer_task.cancel()
+            try:
+                await self._writer_task
+            except asyncio.CancelledError:
+                pass

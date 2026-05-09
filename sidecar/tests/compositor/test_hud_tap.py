@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from contracts import ParamFrame
@@ -77,6 +79,37 @@ async def test_compositor_publishes_at_15hz_decimation(recording_writer) -> None
     compositor._tick_count = 4
     await compositor._tick(4 / 60.0)
     assert q.qsize() == 2
+
+
+@pytest.mark.asyncio
+async def test_compositor_publishes_hud_frame_before_writer_finishes() -> None:
+    """HUD stream must not stall behind slow VTS writer I/O."""
+    class BlockingWriter:
+        def __init__(self) -> None:
+            self.release = asyncio.Event()
+
+        async def inject_params(self, frame: ParamFrame) -> None:
+            await self.release.wait()
+
+    writer = BlockingWriter()
+    tap = HudTap()
+    q = tap.subscribe()
+    compositor = Compositor(
+        writer=writer,
+        idle_driver=StubDriver({"FaceAngleX": 0.1}),
+        speech_driver=StubDriver(),
+        plugin_driver=StubPluginDriver(),
+        capabilities=_caps(),
+        hud_tap=tap,
+    )
+
+    compositor._tick_count = 0
+    tick_task = asyncio.create_task(compositor._tick(0.0))
+    frame, _locks = await asyncio.wait_for(q.get(), timeout=0.5)
+    assert frame.add_params["FaceAngleX"] == pytest.approx(0.1)
+
+    writer.release.set()
+    await tick_task
 
 
 @pytest.mark.asyncio
