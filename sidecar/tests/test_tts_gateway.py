@@ -6,7 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from contracts import AudioConfig, GptSoVitsActivationGate, GptSoVitsProviderConfig, GptSoVitsPresetConfig, VoicePreset
 from sidecar.tts.tts_gateway import TTSGateway
+from sidecar.tts.tts_gateway import build_tts_gateway
+from sidecar.tts.gpt_sovits_provider import GptSoVitsProvider
 
 
 def _model_path() -> Path:
@@ -41,6 +44,53 @@ def test_shutdown_idempotent_when_stream_none():
     gateway = TTSGateway(Path("does/not/exist.onnx"))
     gateway.shutdown()
     gateway.shutdown()
+
+
+def test_build_tts_gateway_requires_gpt_sovits_activation_gates(tmp_path: Path):
+    audio_config = AudioConfig()
+    audio_config.tts.active_provider = "gpt_sovits"
+    audio_config.tts.gpt_sovits = GptSoVitsProviderConfig(
+        enabled=True,
+        activation=GptSoVitsActivationGate(
+            health_check_passed=True,
+            test_synthesis_passed=False,
+            active_allowed=False,
+        ),
+    )
+
+    with pytest.raises(ValueError, match="health check and test synthesis"):
+        build_tts_gateway(audio_config=audio_config, repo_root=tmp_path, avatar_voice_model="en_US-amy-medium")
+
+
+def test_build_tts_gateway_constructs_gpt_sovits_provider_when_gates_pass(tmp_path: Path):
+    audio_config = AudioConfig()
+    audio_config.tts.active_provider = "gpt_sovits"
+    audio_config.tts.gpt_sovits = GptSoVitsProviderConfig(
+        enabled=True,
+        activation=GptSoVitsActivationGate(
+            health_check_passed=True,
+            test_synthesis_passed=True,
+            active_allowed=True,
+        ),
+    )
+    reference = tmp_path / "ref.wav"
+    reference.write_bytes(b"RIFF")
+    preset = VoicePreset(
+        preset_id="preset-1",
+        name="GPT",
+        provider_id="gpt_sovits",
+        gpt_sovits=GptSoVitsPresetConfig(prompt_text="hello", prompt_lang="en", text_lang="en"),
+    )
+
+    gateway = build_tts_gateway(
+        audio_config=audio_config,
+        repo_root=tmp_path,
+        avatar_voice_model="en_US-amy-medium",
+        active_voice_preset=preset,
+        reference_audio_path=reference,
+    )
+
+    assert isinstance(gateway.provider, GptSoVitsProvider)
 
 
 @pytest.mark.skipif(

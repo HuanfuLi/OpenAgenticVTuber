@@ -12,7 +12,7 @@ import pytest
 from loguru import logger
 
 from contracts import ActionCode, Dispatch, DisplayTextField
-from sidecar.tts.provider import TTSSynthesisRequest, TTSSynthesisResult
+from sidecar.tts.provider import TTSProviderError, TTSSynthesisRequest, TTSSynthesisResult
 from sidecar.tts.tts_manager import TTSTaskManager
 
 
@@ -442,3 +442,49 @@ async def test_provider_failure_sends_silent_payload_and_keeps_order():
     assert ws.writes[0]["audio"] is None
     assert ws.writes[1]["audio"] is not None
     assert len(stream.writes) == 1
+
+
+@pytest.mark.asyncio
+async def test_gpt_sovits_failure_sends_failed_audio_metadata_and_no_piper_fallback():
+    class FailingGptProvider(_BlockingProvider):
+        provider_id = "gpt_sovits"
+
+        def synthesize(self, request: TTSSynthesisRequest) -> TTSSynthesisResult:
+            self.calls.append(request)
+            raise TTSProviderError(
+                provider_id="gpt_sovits",
+                state="external_service_failure",
+                summary="GPT-SoVITS synthesis failed.",
+                retryable=True,
+            )
+
+    stream = _FakeStream()
+    ws = _FakeWS()
+    speech_queue: asyncio.Queue = asyncio.Queue()
+    provider = FailingGptProvider()
+    manager = TTSTaskManager(stream=stream, compositor_speech_queue=speech_queue, provider=provider)
+
+    await manager.speak("first.", _display("first."), _dispatches(), 1, ws)
+    await manager.wait_for_all_audio_complete()
+
+    assert len(provider.calls) == 1
+    assert stream.writes == []
+    assert ws.writes == [
+        {
+            "type": "audio",
+            "audio": None,
+            "volumes": [],
+            "slice_length": 20,
+            "display_text": {"text": "first.", "name": "Teto", "avatar": "teto"},
+            "dispatches": [{"name": "joy"}],
+            "sentence_id": 1,
+            "forwarded": False,
+            "failed_audio": {
+                "provider_id": "gpt_sovits",
+                "state": "external_service_failure",
+                "summary": "GPT-SoVITS synthesis failed.",
+                "retryable": True,
+                "redacted_diagnostics": None,
+            },
+        }
+    ]
