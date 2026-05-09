@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 Walking Skeleton** — Phases 1-5 shipped 2026-05-08. Archive: `.planning/milestones/v1.0-ROADMAP.md`
 - ✅ **v2.0 Plugin + Animation Control** — Phases 8, 6, 7, 9, 10 shipped 2026-05-09. Archive: `.planning/milestones/v2.0-ROADMAP.md`
-- 🚧 **v2.1 Mock/Reality Cleanup** — Phases 11-15 planned.
+- ✅ **v2.1 Mock/Reality Cleanup** — Phases 11-15 complete; ready for milestone completion.
 
 ## Shipped Phases
 
@@ -42,7 +42,7 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-15 | 14/15 | In Progress; Phase 15 planned | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-15 | 15/15 | Complete; ready for milestone completion | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
@@ -135,16 +135,16 @@ Post-completion fixes:
 4. Invalid manifests, missing entrypoints, incompatible API versions, and `NullPlugin` fallback are visible through Settings/status/log surfaces with truthful copy.
 5. Tests cover plugin discovery/listing parity, active-plugin persistence, restart behavior, and invalid-plugin/fallback reporting.
 
-### Phase 15: Mock Boundary Audit
+### Phase 15: Mock Boundary Audit ✅ Complete
 
 **Goal:** Normal user flows no longer depend on dev mocks, scripted fixtures, or mock alert actions; remaining mocks are isolated to dev/test surfaces.
 
 **Depends on:** Phase 14
 **Requirements:** MOCK-01, MOCK-02, MOCK-03, MOCK-04
-**Plans:** 1 planned
+**Plans:** 1 complete
 
 Plans:
-- [ ] 15-01-PLAN.md — Audit and enforce mock boundaries with tests and production-flow cleanup.
+- [x] 15-01-PLAN.md — Audit and enforce mock boundaries with tests and production-flow cleanup.
 
 **Success Criteria:**
 1. `mockStatus`, `mockBanners`, `mockToasts`, `mockSafeStorage`, and scripted conversation fixtures are absent from normal production chrome/user flows.
@@ -165,4 +165,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 15 planning*
+*Last updated: 2026-05-09 after Phase 15 execution*

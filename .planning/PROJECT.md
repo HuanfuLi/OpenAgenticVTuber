@@ -14,7 +14,7 @@ This is the **v1-horizon** core value. The v1.0 walking skeleton shipped the sin
 
 **Shipped:** v1.0 Walking Skeleton on 2026-05-08; v2.0 Plugin + Animation Control on 2026-05-09.
 
-The app now boots as an Electron desktop shell with a Python sidecar, speaks via local Piper TTS, streams LLM replies sentence-by-sentence, and drives VTube Studio through a sidecar-owned compositor. Teto remains the dev rig. Animation control is now plugin-driven: avatar imports produce `AvatarOverrides` and `RigCapabilities`, the default plugin owns action-code motion, the parser routes `[action]` / `{variant}` / `<event>` codes, and a HUD exposes a focused live parameter/lock surface for operator discovery. Status chrome now reports persisted provider/model, real sidecar lifecycle, and real VTS status/unavailable state instead of hardcoded mock values. Settings now shows truthful Avatars, VTube Studio, Conversation, Memory, and Diagnostics log-level state instead of the Phase 12 placeholder surfaces.
+The app now boots as an Electron desktop shell with a Python sidecar, speaks via local Piper TTS, streams LLM replies sentence-by-sentence, and drives VTube Studio through a sidecar-owned compositor. Teto remains the dev rig. Animation control is now plugin-driven: avatar imports produce `AvatarOverrides` and `RigCapabilities`, the default plugin owns action-code motion, the parser routes `[action]` / `{variant}` / `<event>` codes, and a HUD exposes a focused live parameter/lock surface for operator discovery. Status chrome now reports persisted provider/model, real sidecar lifecycle, and real VTS status/unavailable state instead of hardcoded mock values. Settings now shows truthful Avatars, VTube Studio, Conversation, Memory, and Diagnostics log-level state instead of the Phase 12 placeholder surfaces. Conversation history sessions persist locally, and production renderer flows no longer depend on dev mock modules, scripted chat fixtures, or mock alert actions.
 
 The §14 ceremony has been re-run under the refactored architecture. All six success criteria are PASS in `.planning/skeleton-verification.md` after gap closure for smirk rendering, cursor eye tracking, and blink ownership.
 
@@ -59,8 +59,8 @@ The §14 ceremony has been re-run under the refactored architecture. All six suc
 
 ### Active
 
-- [ ] Conversation history sessions provide persistent ChatGPT-style transcripts and real Settings wiring.
-- [ ] Development mocks are isolated from production user flows and documented as dev-only.
+- [x] Conversation history sessions provide persistent ChatGPT-style transcripts and real Settings wiring. — *Validated in Phase 13 (HIST-01..HIST-05)*
+- [x] Development mocks are isolated from production user flows and documented as dev-only. — *Validated in Phase 15 (MOCK-01..MOCK-04)*
 
 ### Out of Scope (this milestone — deferred to later v1 milestones)
 
@@ -163,4 +163,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-09 after Phase 13 conversation-history insertion*
+*Last updated: 2026-05-09 after Phase 15 mock-boundary audit*

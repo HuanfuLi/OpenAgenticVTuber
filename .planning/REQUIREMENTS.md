@@ -44,10 +44,10 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 
 ### Mock Boundary
 
-- [ ] **MOCK-01**: Production user flows do not import or mutate `mockStatus`, `mockBanners`, `mockToasts`, `mockSafeStorage`, or scripted conversation fixtures.
-- [ ] **MOCK-02**: Dev-only mock controls remain isolated to development panels or test utilities and cannot be reached from normal app chrome in production mode.
-- [ ] **MOCK-03**: Alert-only mock actions such as "would open logs/docs" are replaced with real actions or disabled controls with truthful copy.
-- [ ] **MOCK-04**: Automated tests cover the removal or isolation of mocks for status, Settings, app state persistence, and placeholder/deferred sections.
+- [x] **MOCK-01**: Production user flows do not import or mutate `mockStatus`, `mockBanners`, `mockToasts`, `mockSafeStorage`, or scripted conversation fixtures.
+- [x] **MOCK-02**: Dev-only mock controls remain isolated to development panels or test utilities and cannot be reached from normal app chrome in production mode.
+- [x] **MOCK-03**: Alert-only mock actions such as "would open logs/docs" are replaced with real actions or disabled controls with truthful copy.
+- [x] **MOCK-04**: Automated tests cover the removal or isolation of mocks for status, Settings, app state persistence, and placeholder/deferred sections.
 
 ## Future Requirements
 
@@ -99,10 +99,10 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 | PLUGDOC-03 | Phase 14 | Complete |
 | PLUGDOC-04 | Phase 14 | Complete |
 | PLUGDOC-05 | Phase 14 | Complete |
-| MOCK-01 | Phase 15 | Pending |
-| MOCK-02 | Phase 15 | Pending |
-| MOCK-03 | Phase 15 | Pending |
-| MOCK-04 | Phase 15 | Pending |
+| MOCK-01 | Phase 15 | Complete |
+| MOCK-02 | Phase 15 | Complete |
+| MOCK-03 | Phase 15 | Complete |
+| MOCK-04 | Phase 15 | Complete |
 
 **Coverage:**
 - v2.1 requirements: 26 total
