@@ -1,0 +1,364 @@
+{
+  "$defs": {
+    "ActivePresetAssociation": {
+      "properties": {
+        "avatar_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Avatar Id"
+        },
+        "preset_id": {
+          "minLength": 1,
+          "title": "Preset Id",
+          "type": "string"
+        },
+        "scope": {
+          "default": "global",
+          "enum": [
+            "global",
+            "avatar",
+            "session",
+            "avatar_session"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        }
+      },
+      "required": [
+        "avatar_id",
+        "preset_id",
+        "scope",
+        "session_id"
+      ],
+      "title": "ActivePresetAssociation",
+      "type": "object"
+    },
+    "GptSoVitsPresetConfig": {
+      "properties": {
+        "batch_size": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Batch Size",
+          "type": "integer"
+        },
+        "media_type": {
+          "const": "wav",
+          "default": "wav",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "prompt_lang": {
+          "default": "ja",
+          "enum": [
+            "zh",
+            "en",
+            "ja",
+            "ko",
+            "yue",
+            "auto"
+          ],
+          "title": "Prompt Lang",
+          "type": "string"
+        },
+        "prompt_text": {
+          "default": "",
+          "title": "Prompt Text",
+          "type": "string"
+        },
+        "reference_audio_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Audio Id"
+        },
+        "repetition_penalty": {
+          "default": 1.35,
+          "minimum": 0.0,
+          "title": "Repetition Penalty",
+          "type": "number"
+        },
+        "speed_factor": {
+          "default": 1.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Speed Factor",
+          "type": "number"
+        },
+        "streaming_mode": {
+          "default": false,
+          "title": "Streaming Mode",
+          "type": "boolean"
+        },
+        "temperature": {
+          "default": 1.0,
+          "minimum": 0.0,
+          "title": "Temperature",
+          "type": "number"
+        },
+        "text_lang": {
+          "default": "ja",
+          "enum": [
+            "zh",
+            "en",
+            "ja",
+            "ko",
+            "yue",
+            "auto"
+          ],
+          "title": "Text Lang",
+          "type": "string"
+        },
+        "text_split_method": {
+          "default": "cut5",
+          "title": "Text Split Method",
+          "type": "string"
+        },
+        "top_k": {
+          "default": 15,
+          "minimum": 1,
+          "title": "Top K",
+          "type": "integer"
+        },
+        "top_p": {
+          "default": 1.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Top P",
+          "type": "number"
+        }
+      },
+      "required": [
+        "batch_size",
+        "media_type",
+        "prompt_lang",
+        "prompt_text",
+        "reference_audio_id",
+        "repetition_penalty",
+        "speed_factor",
+        "streaming_mode",
+        "temperature",
+        "text_lang",
+        "text_split_method",
+        "top_k",
+        "top_p"
+      ],
+      "title": "GptSoVitsPresetConfig",
+      "type": "object"
+    },
+    "ReferenceAudioAsset": {
+      "properties": {
+        "asset_id": {
+          "minLength": 1,
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "display_basename": {
+          "minLength": 1,
+          "title": "Display Basename",
+          "type": "string"
+        },
+        "duration_ms": {
+          "minimum": 1,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "format": {
+          "enum": [
+            "wav",
+            "flac",
+            "mp3",
+            "ogg",
+            "m4a"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "language": {
+          "enum": [
+            "zh",
+            "en",
+            "ja",
+            "ko",
+            "yue",
+            "auto"
+          ],
+          "title": "Language",
+          "type": "string"
+        },
+        "managed_path_token": {
+          "minLength": 1,
+          "title": "Managed Path Token",
+          "type": "string"
+        },
+        "transcript_text": {
+          "minLength": 1,
+          "title": "Transcript Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asset_id",
+        "display_basename",
+        "duration_ms",
+        "format",
+        "language",
+        "managed_path_token",
+        "transcript_text"
+      ],
+      "title": "ReferenceAudioAsset",
+      "type": "object"
+    },
+    "VoicePreset": {
+      "properties": {
+        "created_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created At"
+        },
+        "gpt_sovits": {
+          "$ref": "#/$defs/GptSoVitsPresetConfig",
+          "default": {
+            "batch_size": 1,
+            "media_type": "wav",
+            "prompt_lang": "ja",
+            "prompt_text": "",
+            "reference_audio_id": null,
+            "repetition_penalty": 1.35,
+            "speed_factor": 1.0,
+            "streaming_mode": false,
+            "temperature": 1.0,
+            "text_lang": "ja",
+            "text_split_method": "cut5",
+            "top_k": 15,
+            "top_p": 1.0
+          }
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "piper_voice_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Piper Voice Model"
+        },
+        "preset_id": {
+          "minLength": 1,
+          "title": "Preset Id",
+          "type": "string"
+        },
+        "provider_id": {
+          "default": "piper",
+          "enum": [
+            "piper",
+            "gpt_sovits"
+          ],
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updated At"
+        }
+      },
+      "required": [
+        "created_at",
+        "gpt_sovits",
+        "name",
+        "piper_voice_model",
+        "preset_id",
+        "provider_id",
+        "updated_at"
+      ],
+      "title": "VoicePreset",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "active_associations": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ActivePresetAssociation"
+      },
+      "title": "Active Associations",
+      "type": "array"
+    },
+    "presets": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/VoicePreset"
+      },
+      "title": "Presets",
+      "type": "array"
+    },
+    "reference_audio_assets": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ReferenceAudioAsset"
+      },
+      "title": "Reference Audio Assets",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "active_associations",
+    "presets",
+    "reference_audio_assets",
+    "schema_version"
+  ],
+  "title": "VoicePresetLibrary",
+  "type": "object"
+}

@@ -12,6 +12,16 @@ export type WSMessage = TextInputMessage
   | ForceNewMessageMessage
   | ErrorMessage
   | LogMessage;
+export type RedactedDiagnostics = {
+  [k: string]: string
+} | null;
+export type State =
+  | 'ok'
+  | 'unavailable'
+  | 'missing_credential'
+  | 'external_service_failure'
+  | 'timeout'
+  | 'misconfigured';
 
 export interface TextInputMessage {
   history: TextInputHistoryMessage[];

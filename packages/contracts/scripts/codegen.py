@@ -237,7 +237,7 @@ def inline_aliases(ts: str) -> str:
 
 def declaration_pattern(name: str) -> re.Pattern[str]:
     return re.compile(
-        rf"\n?export (?:interface|type) {re.escape(name)}[\s\S]*?(?=\nexport (?:interface|type|const) |\Z)"
+        rf"\n?export (?:interface|type) {re.escape(name)}(?=\s)[\s\S]*?(?=\nexport (?:interface|type|const) |\Z)"
     )
 
 
@@ -351,6 +351,15 @@ def main() -> int:
             )
         if ts_name == "audio-payload":
             ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "Dispatch", "./dispatch")
+        if ts_name == "audio-provider":
+            ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "VoicePreset", "./voice-preset")
+            ts_by_file[ts_name] = ts_by_file[ts_name].replace(
+                "import type { GptSoVitsPresetConfig, VoicePreset } from './voice-preset';",
+                "import type { VoicePreset } from './voice-preset';",
+            ).replace(
+                "import type { GptSoVitsPresetConfig } from './voice-preset';\n",
+                "",
+            )
         if ts_name == "ws-message":
             ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "Dispatch", "./dispatch")
             ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "DisplayTextField", "./audio-payload")

@@ -76,6 +76,67 @@
       "title": "EventFire",
       "type": "object"
     },
+    "FailedAudioMetadata": {
+      "properties": {
+        "provider_id": {
+          "enum": [
+            "piper",
+            "gpt_sovits",
+            "funasr",
+            "faster_whisper",
+            "openai",
+            "groq"
+          ],
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "redacted_diagnostics": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redacted Diagnostics"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "ok",
+            "unavailable",
+            "missing_credential",
+            "external_service_failure",
+            "timeout",
+            "misconfigured"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider_id",
+        "redacted_diagnostics",
+        "retryable",
+        "state",
+        "summary"
+      ],
+      "title": "FailedAudioMetadata",
+      "type": "object"
+    },
     "VariantToggle": {
       "properties": {
         "hotkey_id": {
@@ -144,6 +205,17 @@
     "display_text": {
       "$ref": "#/$defs/DisplayTextField"
     },
+    "failed_audio": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FailedAudioMetadata"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "forwarded": {
       "default": false,
       "title": "Forwarded",
@@ -177,6 +249,7 @@
     "audio",
     "dispatches",
     "display_text",
+    "failed_audio",
     "forwarded",
     "sentence_id",
     "slice_length",
