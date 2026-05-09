@@ -42,7 +42,7 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-14 | 3/5 | In Progress | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-14 | 3/6 | In Progress | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
@@ -73,10 +73,11 @@ Plans:
 
 **Depends on:** Phase 11
 **Requirements:** SET-01, SET-02, SET-03, SET-04, SET-05, SET-06, SET-07
-**Plans:** 1 complete
+**Plans:** 1 complete, 1 gap closure planned
 
 Plans:
 - [x] 12-01-PLAN.md — Replace Settings placeholders with real section content or accurate deferred states.
+- [ ] 12-02-PLAN.md — Close UAT gaps for Avatar current-edit loading and log-level descriptions.
 
 **Success Criteria:**
 1. Avatar and VTube Studio settings link to existing import/review and real connection/auth state.
