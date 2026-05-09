@@ -169,6 +169,39 @@ def test_action_code_delivered_to_active_plugin() -> None:
     asyncio.run(run())
 
 
+def test_enqueue_action_code_smirk_renders_nonzero_timed_frames() -> None:
+    async def run() -> None:
+        clock = _FakeClock()
+        plugin = DefaultPlugin(clock=clock)
+        plugin.on_load(
+            RigCapabilities(
+                writable_param_ids=[
+                    "FaceAngleZ",
+                    "FaceAngleY",
+                    "MouthSmile",
+                    "EyeOpenLeft",
+                    "EyeOpenRight",
+                ]
+            ),
+            AvatarOverrides(),
+        )
+        adapter = PluginAdapter(plugin)
+
+        assert adapter.enqueue_action_code(ActionCode(name="smirk")) is True
+
+        clock.now = 0.15
+        frame_150 = adapter.tick(0.15)
+        clock.now = 0.30
+        frame_300 = adapter.tick(0.30)
+
+        assert frame_150.add_params["FaceAngleZ"] > 0.0
+        assert frame_150.add_params["MouthSmile"] > 0.0
+        assert frame_300.add_params["FaceAngleZ"] >= frame_150.add_params["FaceAngleZ"]
+        assert frame_300.add_params["MouthSmile"] >= frame_150.add_params["MouthSmile"]
+
+    asyncio.run(run())
+
+
 def test_action_code_queue_full_returns_false() -> None:
     class Plugin(_Plugin):
         def __init__(self) -> None:

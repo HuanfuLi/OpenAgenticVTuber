@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from contracts import ActionCode
 from contracts.action_binding import DefaultPluginActionBinding
 from contracts.avatar_overrides import AvatarOverrides
 from contracts.rig_capabilities import RigCapabilities
@@ -85,6 +86,43 @@ async def test_smirk_ramps_in_and_out_over_expected_windows() -> None:
     assert frame_300.add_params["FaceAngleZ"] == pytest.approx(0.07)
     assert frame_900.add_params["FaceAngleZ"] == pytest.approx(0.0)
     assert plugin.active_action is None
+
+
+def test_on_action_code_smirk_activates_visible_composition() -> None:
+    clock = FakeClock()
+    plugin = _load_plugin_class()(clock=clock)
+    plugin.on_load(
+        RigCapabilities(
+            writable_param_ids=[
+                "FaceAngleZ",
+                "FaceAngleY",
+                "MouthSmile",
+                "EyeOpenLeft",
+                "EyeOpenRight",
+            ]
+        ),
+        AvatarOverrides(),
+    )
+
+    plugin.on_action_code(ActionCode(name="smirk"))
+    clock.now = 0.3
+    frame = plugin.render_frame()
+
+    assert plugin.active_action == "smirk"
+    assert frame.add_params["FaceAngleZ"] > 0.0
+    assert frame.add_params["MouthSmile"] > 0.0
+    assert frame.add_params["EyeOpenLeft"] < 0.0
+    assert frame.add_params["EyeOpenRight"] < 0.0
+
+
+def test_on_action_code_unsupported_joy_is_ignored() -> None:
+    plugin = _load_plugin_class()(clock=lambda: 0.3)
+    plugin.on_load(RigCapabilities(writable_param_ids=["FaceAngleZ"]), AvatarOverrides())
+
+    plugin.on_action_code(ActionCode(name="joy"))
+
+    assert plugin.active_action is None
+    assert plugin.render_frame().add_params == {}
 
 
 @pytest.mark.asyncio
