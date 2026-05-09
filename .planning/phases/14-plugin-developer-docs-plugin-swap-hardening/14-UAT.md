@@ -1,11 +1,11 @@
 ---
-status: gap_closure_implemented
+status: complete
 phase: 14-plugin-developer-docs-plugin-swap-hardening
 source:
   - 14-01-SUMMARY.md
   - 14-02-SUMMARY.md
 started: 2026-05-09T09:59:18-04:00
-updated: 2026-05-09T10:41:00-04:00
+updated: 2026-05-09T10:45:00-04:00
 ---
 
 ## Current Test
@@ -52,7 +52,7 @@ blocked: 1
 ## Gaps
 
 - truth: "Plugin docs clearly explain AvatarOverrides contents, when plugins should use it, and how it relates to action bindings/default avatar behavior."
-  status: failed
+  status: resolved
   reason: "User reported: The missing/confusing part is AvatarOverrides usage. It appears in the on_load signature and the AI playbook tells agents to read the contract file, but the docs do not clearly explain what AvatarOverrides contains, when a plugin should use it, or how it relates to action bindings/default avatar behavior. RigCapabilities usage is clear enough; AvatarOverrides is only named, not explained."
   severity: major
   test: 1
@@ -68,7 +68,7 @@ blocked: 1
     - "Explain how default_plugin_action_bindings relate to the default plugin and when custom plugins can ignore or consume them."
 
 - truth: "Selecting sample_motion restarts the sidecar cleanly and Settings/Status report sample_motion active without accumulating VTS plugin connections."
-  status: failed
+  status: resolved
   reason: "User reported: I don't know. The log shows app restarted, but in VTS I don't see connected plugin to zero, I also did not see the motion control ever disconnected as a sign of restart. Instead, each time I switch plugin, the number of connected plugins shown in VTS is increase."
   severity: major
   test: 3
@@ -100,22 +100,21 @@ note: "User reported pass, although the designed broken plugin actually worked."
 
 ### R4. Chat Input After Sidecar Restart
 expected: After plugin-switch sidecar restarts settle, the chat input textarea should be enabled whenever no turn is actively running, without requiring a full app restart.
-result: issue
-reported: "Sometimes user input textarea is disabled after sidecar restart. This is a pre-existing issue but was able to resolve by restart, but now it is often triggered by switching plugins."
-severity: major
+result: pass
+note: "Previously reported issue resolved after 14-04 gap closure."
 
 ## Recheck Summary
 
 total: 4
-passed: 3
-issues: 1
+passed: 4
+issues: 0
 pending: 0
 blocked: 0
 
 ## Recheck Gaps
 
 - truth: "After plugin-switch sidecar restarts settle, the chat input textarea should be enabled whenever no turn is actively running."
-  status: implemented_pending_recheck
+  status: resolved
   reason: "User reported: Sometimes user input textarea is disabled after sidecar restart. This is a pre-existing issue but was able to resolve by restart, but now it is often triggered by switching plugins."
   severity: major
   test: R4
