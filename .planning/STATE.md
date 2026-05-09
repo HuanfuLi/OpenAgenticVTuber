@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
-status: verifying
-stopped_at: Phase 10 context gathered
-last_updated: "2026-05-09T03:59:28.600Z"
+status: executing
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-05-09T04:45:40.034Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
   completed_phases: 8
-  total_plans: 40
-  completed_plans: 38
+  total_plans: 42
+  completed_plans: 39
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon — v2.0 is infrastructure prep on the way there)
-**Current focus:** Phase 07 — three-category-code-parsing-dispatch
+**Current focus:** Phase 09 — slider-hud-per-param-lock
 
 ## Current Position
 
-Phase: 07 (three-category-code-parsing-dispatch) — COMPLETE
-Plan: 8 of 8
-Status: Phase complete — ready for verification
+Phase: 09 (slider-hud-per-param-lock) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -109,6 +109,7 @@ Last activity: 2026-05-09
 | Phase 07-three-category-code-parsing-dispatch P06 | 250min | 2 tasks | 11 files |
 | Phase 07-three-category-code-parsing-dispatch P07 | 9min | 2 tasks | 7 files |
 | Phase 07-three-category-code-parsing-dispatch P08 | 39min | 3 tasks | 10 files |
+| Phase 09-slider-hud-per-param-lock P01 | 24min | 5 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -198,6 +199,10 @@ Recent decisions affecting current work:
 - [Phase 07-three-category-code-parsing-dispatch]: Plan 07-08 boot-freezes the LLM dispatch prompt catalog from the same active plugin and avatar catalogs used by runtime parsing.
 - [Phase 07-three-category-code-parsing-dispatch]: Plan 07-08 records variant codes as persistent radio-button state; timed completion applies only to event codes.
 - [Phase 07-three-category-code-parsing-dispatch]: Plan 07-08 treats current Teto events: [] as a live event UAT prerequisite block, not a parser or routing failure.
+- [Phase 09-slider-hud-per-param-lock]: HUD locks are sidecar process-memory only and are shared by reference between /hud/ws handlers and the Compositor.
+- [Phase 09-slider-hud-per-param-lock]: Mouth-related HUD exclusion stays derived from SYSTEM_PRIMITIVE_OVERRIDES; ParamMouthOpenY is excluded by resolver mapping instead of adding a second override key.
+- [Phase 09-slider-hud-per-param-lock]: The HUD WebSocket pre-filters system-primitive params from param-frame payloads so the renderer does not duplicate exclusion logic.
+- [Phase 09-slider-hud-per-param-lock]: The contract codegen needed HUD-specific union title and alias handling for Annotated discriminated unions.
 
 ### Pending Todos
 
@@ -220,6 +225,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-09T03:59:28.577Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-cursor-polish-14-sc-re-verification/10-CONTEXT.md
+Last session: 2026-05-09T04:45:40.025Z
+Stopped at: Completed 09-01-PLAN.md
+Resume file: None
