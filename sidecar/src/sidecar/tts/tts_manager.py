@@ -10,7 +10,7 @@ import numpy as np
 from fastapi import WebSocket
 from loguru import logger
 
-from contracts import ActionIntent, AudioPayloadMessage, DisplayTextField, SpeechEnvelopePayload
+from contracts import AudioPayloadMessage, Dispatch, DisplayTextField, SpeechEnvelopePayload
 
 from .audio_payload_helpers import synthesize_and_prepare_payload
 
@@ -54,7 +54,7 @@ class TTSTaskManager:
         self,
         tts_text: str,
         display_text: DisplayTextField,
-        actions: list[ActionIntent],
+        dispatches: list[Dispatch],
         sentence_id: int,
         ws: WebSocket,
     ) -> None:
@@ -66,7 +66,7 @@ class TTSTaskManager:
             self._process_tts(
                 tts_text=tts_text,
                 display_text=display_text,
-                actions=actions,
+                dispatches=dispatches,
                 sentence_id=sentence_id,
                 sequence_number=sequence_number,
             )
@@ -107,7 +107,7 @@ class TTSTaskManager:
         *,
         tts_text: str,
         display_text: DisplayTextField,
-        actions: list[ActionIntent],
+        dispatches: list[Dispatch],
         sentence_id: int,
         sequence_number: int,
     ) -> None:
@@ -120,7 +120,7 @@ class TTSTaskManager:
         payload, pcm_bytes, _sample_rate = await self._synthesize_payload(
             tts_text=tts_text,
             display_text=display_text,
-            actions=actions,
+            dispatches=dispatches,
             sentence_id=sentence_id,
         )
         if isinstance(payload, dict):
@@ -143,7 +143,7 @@ class TTSTaskManager:
         *,
         tts_text: str,
         display_text: DisplayTextField,
-        actions: list[ActionIntent],
+        dispatches: list[Dispatch],
         sentence_id: int,
     ) -> tuple[AudioPayloadMessage, bytes, int]:
         if len(_WHITESPACE_ONLY_RE.sub("", tts_text)) == 0:
@@ -153,7 +153,7 @@ class TTSTaskManager:
                     volumes=[],
                     slice_length=20,
                     display_text=display_text,
-                    actions=actions,
+                    dispatches=dispatches,
                     sentence_id=sentence_id,
                     forwarded=False,
                 ),
@@ -166,7 +166,7 @@ class TTSTaskManager:
             self._voice,
             tts_text,
             display_text,
-            actions,
+            dispatches,
             sentence_id,
         )
 

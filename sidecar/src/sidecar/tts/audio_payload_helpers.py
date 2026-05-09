@@ -6,7 +6,7 @@ from io import BytesIO
 
 import numpy as np
 
-from contracts import ActionIntent, AudioPayloadMessage, DisplayTextField
+from contracts import AudioPayloadMessage, Dispatch, DisplayTextField
 
 
 def get_volume_by_chunks(
@@ -52,7 +52,7 @@ def synthesize_and_prepare_payload(
     voice,
     tts_text: str,
     display_text: DisplayTextField,
-    actions: list[ActionIntent],
+    dispatches: list[Dispatch],
     sentence_id: int,
     chunk_length_ms: int = 20,
 ) -> tuple[AudioPayloadMessage, bytes, int]:
@@ -73,7 +73,7 @@ def synthesize_and_prepare_payload(
     if len(re.sub(r'[\s.,!?，。！？\'"』」）】\s]+', "", tts_text)) == 0:
         msg = AudioPayloadMessage(
             audio=None, volumes=[], slice_length=chunk_length_ms,
-            display_text=display_text, actions=actions, sentence_id=sentence_id,
+            display_text=display_text, dispatches=dispatches, sentence_id=sentence_id,
             forwarded=False,
         )
         return msg, b"", voice.config.sample_rate
@@ -103,7 +103,7 @@ def synthesize_and_prepare_payload(
         volumes=volumes,
         slice_length=chunk_length_ms,
         display_text=display_text,
-        actions=actions,
+        dispatches=dispatches,
         sentence_id=sentence_id,
         forwarded=False,
     )

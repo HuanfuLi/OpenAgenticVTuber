@@ -26,7 +26,15 @@ from fastapi import WebSocket
 from litellm.exceptions import ContextWindowExceededError
 from loguru import logger
 
-from contracts import AudioPayloadMessage, DisplayTextField, SpeechEnvelopePayload
+from contracts import (
+    ActionCode,
+    AudioPayloadMessage,
+    Dispatch,
+    DisplayTextField,
+    EventFire,
+    SpeechEnvelopePayload,
+    VariantToggle,
+)
 from sidecar.llm.gateway import LLMGateway
 from sidecar.tts.tts_manager import TTSTaskManager
 from sidecar.ws.emit import (
@@ -41,7 +49,7 @@ from sidecar.ws.emit import (
 from .output_types import SentenceOutput
 from .prompt_loader import load_util
 from .transformers import (
-    actions_extractor,
+    code_extractor,
     display_processor,
     sentence_divider,
     tts_filter,
@@ -81,14 +89,25 @@ class Orchestrator:
         compositor_sentence_complete_queue: asyncio.Queue[int] | None = None,
         pending_inputs: asyncio.Queue[str] | None = None,
         plugin_adapter=None,
+        variant_state_manager=None,
+        discrete_dispatcher=None,
+        event_completion_tracker=None,
+        plugin_action_codes: set[str] | None = None,
+        variants=None,
+        events=None,
         valid_expression_names: set[str] | None = None,
     ):
         self._gateway = gateway
         # SYSTEM PROMPT FROZEN AT BOOT -- D-17, D-19, Pitfall 6.
         # Bytes-identical across all turns of this orchestrator's lifetime.
         self._system_prompt: str = _build_system_prompt(persona_text, action_codes_section)
-        self._valid_expression_names = valid_expression_names or set()
+        self._plugin_action_codes = plugin_action_codes or valid_expression_names or set()
+        self._variants = variants or []
+        self._events = events or []
         self._plugin_adapter = plugin_adapter
+        self._variant_state_manager = variant_state_manager
+        self._discrete_dispatcher = discrete_dispatcher
+        self._event_completion_tracker = event_completion_tracker
         self._memory: list[dict] = []           # APPEND-ONLY -- D-19
         self._head_idx: int = 0                 # FORWARD-ONLY -- D-19
         self._tts_pp = tts_preprocessor_config or TTSPreprocessorConfig()
@@ -175,7 +194,7 @@ class Orchestrator:
             await self._tts_manager.speak(
                 tts_text=sentence_output.tts_text,
                 display_text=display_text,
-                actions=sentence_output.actions,
+                dispatches=sentence_output.dispatches,
                 sentence_id=sentence_id,
                 ws=ws,
             )
@@ -185,7 +204,7 @@ class Orchestrator:
                 volumes=[],
                 slice_length=20,
                 display_text=display_text,
-                actions=sentence_output.actions,
+                dispatches=sentence_output.dispatches,
                 sentence_id=sentence_id,
                 forwarded=False,
             )
@@ -195,14 +214,56 @@ class Orchestrator:
                 f'text="{sentence_output.tts_text}"'
             )
 
-        # ActionIntent log lines -- D-14, surfaces in Logs drawer.
-        for intent in sentence_output.actions:
-            logger.info(
-                f"[INTENT] kind={intent.kind} name={intent.name} "
-                f"strength={intent.strength} avatar={intent.avatar_id}"
-            )
         if self._plugin_adapter is not None:
             self._plugin_adapter.enqueue_sentence(sentence_output.plugin_text)
+        await self._route_dispatches(sentence_output.dispatches)
+
+    async def _route_dispatches(self, dispatches: list[Dispatch]) -> None:
+        for dispatch in dispatches:
+            if isinstance(dispatch, ActionCode):
+                if self._plugin_adapter is None:
+                    logger.info(
+                        f"[DISPATCH-DROP] kind=action name={dispatch.name} "
+                        "reason=plugin-adapter-unavailable"
+                    )
+                    continue
+                accepted = self._plugin_adapter.enqueue_action_code(dispatch)
+                if accepted:
+                    logger.info(f"[DISPATCH] kind=action name={dispatch.name}")
+                else:
+                    logger.info(
+                        f"[DISPATCH-DROP] kind=action name={dispatch.name} "
+                        "reason=action-code-queue-full"
+                    )
+                continue
+
+            if isinstance(dispatch, VariantToggle):
+                if self._variant_state_manager is not None:
+                    await self._variant_state_manager.apply(dispatch)
+                logger.info(
+                    f"[DISPATCH] kind=variant name={dispatch.name} "
+                    f"hotkey_id={dispatch.hotkey_id}"
+                )
+                continue
+
+            if isinstance(dispatch, EventFire):
+                if not dispatch.hotkey_id:
+                    logger.info(
+                        f"[DISPATCH-DROP] kind=event name={dispatch.name} "
+                        "reason=missing-hotkey-id"
+                    )
+                    continue
+                if self._discrete_dispatcher is not None:
+                    await self._discrete_dispatcher.fire(
+                        dispatch.hotkey_id,
+                        name=dispatch.name,
+                    )
+                if self._event_completion_tracker is not None:
+                    self._event_completion_tracker.track(dispatch)
+                logger.info(
+                    f"[DISPATCH] kind=event name={dispatch.name} "
+                    f"hotkey_id={dispatch.hotkey_id} duration_ms={dispatch.duration_ms}"
+                )
 
     def _run_pipeline(
         self, send_window: list[dict]
@@ -214,7 +275,11 @@ class Orchestrator:
 
         @tts_filter(tts_pp)
         @display_processor()
-        @actions_extractor(self._valid_expression_names)
+        @code_extractor(
+            plugin_action_codes=self._plugin_action_codes,
+            variants=self._variants,
+            events=self._events,
+        )
         @sentence_divider(
             faster_first_response=True,
             segment_method="pysbd",
