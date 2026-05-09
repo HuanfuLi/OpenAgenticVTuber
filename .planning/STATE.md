@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Mock/Reality Cleanup
-status: ready_for_phase_15
-stopped_at: Phase 14 UAT recheck passed; Phase 15 is next
-last_updated: "2026-05-09T10:45:00-04:00"
+status: ready_for_phase_15_execute
+stopped_at: Phase 15 planned; ready to execute mock-boundary audit
+last_updated: "2026-05-09T11:45:00-04:00"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: 15 (Mock Boundary Audit) — READY
-Plan: 0 of 1 complete
-Status: Phase 14 UAT recheck passed; plugin docs and swap hardening are complete.
-Next: Run `$gsd-execute-phase 15` or `$gsd-plan-phase 15` if you want to refresh the plan first.
+Phase: 15 (Mock Boundary Audit) — READY TO EXECUTE
+Plan: 1 planned, 0 of 1 complete
+Status: Phase 15 research and plan are written. No CONTEXT.md was created because the user chose to continue without context.
+Next: Run `$gsd-execute-phase 15`.
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -39,7 +39,7 @@ Next: Run `$gsd-execute-phase 15` or `$gsd-plan-phase 15` if you want to refresh
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
   - Phase 10 gap closure complete: Plan 10-03 resolved SC2-SMIRK-RENDERING, and Plan 10-04 resolved SC5-EYE-TRACKING plus BLINK-EYE-VISIBILITY. Operator confirmed cursor eye tracking works and blink behavior passes after app-owned idle blinking was removed so VTS owns normal blinking.
 
-Last activity: 2026-05-09 — Phase 14 UAT recheck passed. Renderer WS client follows replacement sidecar ready URLs, suppresses stale reconnects, and clears transient chat streaming state after sidecar reconnect.
+Last activity: 2026-05-09 — Phase 15 planned from roadmap requirements and code research. The plan targets remaining dev mock imports in normal renderer flows, scripted Chat fixtures, mock alert actions, and static regression guards.
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
 
