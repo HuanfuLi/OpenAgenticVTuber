@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT / "packages/contracts/py"))
 sys.path.insert(0, str(ROOT / "packages/contracts/scripts"))
 
 from codegen import force_required  # noqa: E402
-from contracts import ActionIntent, AudioPayloadMessage, WSMessage  # noqa: E402
+from contracts import ActionCode, AudioPayloadMessage, EventFire, VariantToggle, WSMessage  # noqa: E402
 
 
 def test_audio_payload_all_fields_required() -> None:
@@ -21,7 +21,7 @@ def test_audio_payload_all_fields_required() -> None:
         "type",
         "audio",
         "volumes",
-        "actions",
+        "dispatches",
         "forwarded",
         "display_text",
         "sentence_id",
@@ -29,17 +29,27 @@ def test_audio_payload_all_fields_required() -> None:
     }
 
 
-def test_action_intent_defaulted_and_nullable_fields_required() -> None:
-    schema = ActionIntent.model_json_schema()
+def test_action_code_defaulted_fields_required() -> None:
+    schema = ActionCode.model_json_schema()
 
     force_required(schema)
 
-    assert set(schema["required"]) == {
+    assert set(schema["required"]) == {"kind", "name"}
+
+
+def test_dispatch_variant_fields_required() -> None:
+    variant_schema = VariantToggle.model_json_schema()
+    event_schema = EventFire.model_json_schema()
+
+    force_required(variant_schema)
+    force_required(event_schema)
+
+    assert set(variant_schema["required"]) == {"kind", "name", "hotkey_id"}
+    assert set(event_schema["required"]) == {
         "kind",
         "name",
-        "strength",
+        "hotkey_id",
         "duration_ms",
-        "avatar_id",
     }
 
 
@@ -77,7 +87,7 @@ def test_force_required_recurses_into_nested_defs() -> None:
 
 
 def test_force_required_preserves_existing_required_order_deterministically() -> None:
-    schema = ActionIntent.model_json_schema()
+    schema = EventFire.model_json_schema()
 
     force_required(schema)
 
