@@ -1,0 +1,10 @@
+name: sample_motion
+version: 1.0.0
+entrypoint: __init__.py:SampleMotionPlugin
+api_version: "1.0"
+description: "Minimal sample body-motion plugin for plugin authors."
+action_codes:
+  - code: nod
+    description: "Add a small affirmative nod."
+  - code: lean
+    description: "Lean the avatar forward slightly."
