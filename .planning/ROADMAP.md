@@ -265,7 +265,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Cursor diagnose + namespace fix + drop in-VTS-window gate + synthetic-canvas fallback + regression test (VFY-01, VFY-02). Wave 1, autonomous.
+- [x] 10-01-PLAN.md — Cursor diagnose + namespace fix + drop in-VTS-window gate + synthetic-canvas fallback + regression test (VFY-01, VFY-02). Wave 1, autonomous.
 - [ ] 10-02-PLAN.md — §14 SC ceremony script + skeleton-verification.md commit + plumbing harness replay (lipsync + idle) + operator-judged SC #2 [smirk] / SC #4 body sway / SC #5 cursor verdicts + milestone v2.0 close decision (VFY-03, VFY-04, VFY-05). Wave 2, has checkpoint:human-verify task.
 
 **UI hint**: no  <!-- Verification ceremony is observational; cursor polish is sidecar-only. -->
@@ -292,7 +292,7 @@ Milestone v2.0 phases execute in REVISED order: 8 → 6 → 7 → 9 → 10 (revi
 | 6. Plugin Runtime + Default Plugin | 8/8 | Complete — re_verification_4 passed; F-1/F-2 closed by 06-07 writer consolidation; F-3 closed by tracking-range fix; joy vocabulary gap closed by 06-08 | 2026-05-08 |
 | 7. Three-Category Code Parsing + Dispatch | 8/8 | Complete — 07-08 gap closure exposed active dispatch codes in prompt; live `{heart-eye}` variant confirmed; event UAT prerequisite-gated by current Teto `events: []` | 2026-05-09 |
 | 9. Slider HUD + Per-Param Lock | 2/2 | Complete — live HUD UAT approved after visible-param and stream-liveness fixes | 2026-05-09 |
-| 10. Cursor Polish + §14 SC Re-Verification | 0/2 | Not started — last in v2.0 order | - |
+| 10. Cursor Polish + §14 SC Re-Verification | 1/2 | In Progress|  |
 
 ## Coverage
 

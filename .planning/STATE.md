@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
-status: ready
-stopped_at: Phase 09 complete; Phase 10 ready
-last_updated: "2026-05-09T06:04:00.000Z"
+status: executing
+stopped_at: Completed 10-cursor-polish-14-sc-re-verification-01-PLAN.md
+last_updated: "2026-05-09T06:25:25.090Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
   completed_phases: 9
   total_plans: 42
-  completed_plans: 40
+  completed_plans: 41
 ---
 
 # Project State
@@ -24,9 +24,9 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 ## Current Position
 
-Phase: 10 (cursor-polish-14-sc-re-verification) — NOT STARTED
-Plan: 0 of 2
-Status: Phase 9 complete — ready to execute Phase 10
+Phase: 10 (cursor-polish-14-sc-re-verification) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -111,6 +111,7 @@ Last activity: 2026-05-09
 | Phase 07-three-category-code-parsing-dispatch P08 | 39min | 3 tasks | 10 files |
 | Phase 09-slider-hud-per-param-lock P01 | 24min | 5 tasks | 24 files |
 | Phase 09-slider-hud-per-param-lock P02 | 62min | 5 tasks | 27 files |
+| Phase 10-cursor-polish-14-sc-re-verification P01 | 5 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -208,6 +209,8 @@ Recent decisions affecting current work:
 - [Phase 09-slider-hud-per-param-lock]: The HUD route is hash-routed at #/hud and intentionally bypasses AppShell so the secondary window has no main chrome.
 - [Phase 09-slider-hud-per-param-lock]: The HUD displays the sidecar-provided hud_visible_param_ids subset instead of every writable RigCapabilities row, keeping the operator surface to real VTS input params.
 - [Phase 09-slider-hud-per-param-lock]: The HUD stream is independent of VTS writer availability so operator discovery and lock telemetry do not go dead when VTS is not actively writable.
+- [Phase 10-cursor-polish-14-sc-re-verification]: Plan 10-01 applies cursor Cubism-to-VTS tracking-input translation at the CursorDriver edge via resolve_param_id.
+- [Phase 10-cursor-polish-14-sc-re-verification]: Plan 10-01 removes the in-VTS-window cursor gate and uses primary-monitor synthetic-canvas fallback when VTS bounds are unavailable.
 
 ### Pending Todos
 
@@ -230,6 +233,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-09T06:04:00.000Z
-Stopped at: Phase 09 complete; Phase 10 ready
+Last session: 2026-05-09T06:25:25.082Z
+Stopped at: Completed 10-cursor-polish-14-sc-re-verification-01-PLAN.md
 Resume file: None
