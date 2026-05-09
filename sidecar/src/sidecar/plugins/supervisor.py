@@ -7,7 +7,7 @@ from contextlib import suppress
 
 from loguru import logger
 
-from contracts import ParamFrame
+from contracts import ActionCode, ParamFrame
 from contracts.avatar_overrides import AvatarOverrides
 from contracts.rig_capabilities import RigCapabilities
 from sidecar.plugins.api import BodyMotionPlugin
@@ -67,6 +67,16 @@ class PluginSupervisor(BodyMotionPlugin):
         except Exception as exc:  # noqa: BLE001 - isolate plugin stream failures
             logger.warning("[PLUGIN] token stream failed: {!r}", exc)
             self._record_failure()
+
+    def on_action_code(self, action: ActionCode) -> None:
+        if self._circuit_open:
+            return
+        try:
+            self.plugin.on_action_code(action)
+        except Exception as exc:  # noqa: BLE001 - isolate plugin action failures
+            logger.warning("[PLUGIN] action code failed: {!r}", exc)
+            with suppress(RuntimeError):
+                self._record_failure()
 
     def render_frame(self, now: float) -> ParamFrame:
         if self._circuit_open:
