@@ -80,7 +80,18 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
   2. Audio settings persist through a versioned config migration without breaking existing LLM, VTS, conversation history, or avatar catalog settings.
   3. Provider health checks return clear unavailable, missing credential, external-service failure, and timeout states instead of empty turns or silent fallback.
   4. Slow or failed provider work cannot block the chat WebSocket, compositor, HUD traffic, or ordered TTS queue.
-**Plans**: TBD
+**Plans**:
+- **Wave 1**:
+  - `16-01`: Audio Contracts and Config Migration - shared provider/config/health contracts, schemaVersion 2 migration, and sidecar audio-config env handoff.
+- **Wave 2** *(blocked on Wave 1 completion)*:
+  - `16-02`: TTS Provider Shell and Piper Adapter - provider-neutral synthesis surface while preserving ordered Piper playback/RMS payload behavior.
+- **Wave 3** *(blocked on Wave 2 completion)*:
+  - `16-03`: Provider Health, Failure Semantics, and Non-Blocking Regression - typed health endpoint, queue-safe failure behavior, compact diagnostics, and final evidence.
+**Cross-cutting constraints:**
+- Existing Piper ordered playback, renderer `AudioPayloadMessage`, and `SpeechEnvelopePayload`/RMS lipsync path must remain the regression baseline.
+- Config migration must preserve existing LLM, plugin, VTS, conversation history, and avatar catalog behavior.
+- Provider failure states must be explicit and typed; no silent mid-turn provider fallback.
+- Provider synthesis and stream writes must not block chat WebSocket, compositor, HUD, or ordered queue traffic.
 
 ### Phase 17: GPT-SoVITS Provider + Voice Presets
 **Goal**: Users can choose GPT-SoVITS for character voice output, validate it before use, and organize voice presets without losing Piper fallback safety.
@@ -104,7 +115,14 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
   2. Cloud STT providers remain disabled by default and require separate explicit credentials and consent before any audio can be sent.
   3. Settings, logs, and diagnostics redact STT credentials, reference-audio paths, transcripts, and provider errors where appropriate.
   4. User can inspect TTS/STT latency, timeout, and provider-failure diagnostics without exposing secrets.
-**Plans**: TBD
+**Plans**: 3
+  - [ ] 18-01 Audio Settings Persistence, Consent, And Redaction
+  - [ ] 18-02 Voice Output And Voice Input Settings UI
+  - [ ] 18-03 Audio Diagnostics, Provider Tests, And Redaction Regression
+**Wave dependencies**:
+  - Wave 1: 18-01 can execute after Phase 17 is complete.
+  - Wave 2: 18-02 depends on 18-01 typed settings/status APIs.
+  - Wave 3: 18-03 depends on 18-01 persistence/redaction and 18-02 UI surfaces.
 **UI hint**: yes
 
 ### Phase 19: STT Provider Abstraction + Local/Cloud Providers
@@ -178,9 +196,9 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 | 13. Conversation History Sessions | v2.1 | 4/4 | Complete | 2026-05-09 |
 | 14. Plugin Developer Docs + Plugin Swap Hardening | v2.1 | 4/4 | Complete | 2026-05-09 |
 | 15. Mock Boundary Audit | v2.1 | 1/1 | Complete | 2026-05-09 |
-| 16. Audio Contracts + TTS Provider Shell | v3.0 | 0/TBD | Not started | - |
+| 16. Audio Contracts + TTS Provider Shell | v3.0 | 0/3 | Planned | - |
 | 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 0/TBD | Not started | - |
-| 18. Rich Voice Settings + Persistence | v3.0 | 0/TBD | Not started | - |
+| 18. Rich Voice Settings + Persistence | v3.0 | 0/3 | Planned | - |
 | 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 0/TBD | Not started | - |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 0/TBD | Not started | - |
 | 21. Code-Switch Evaluation + Hardening | v3.0 | 0/TBD | Not started | - |
@@ -202,4 +220,4 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - v3.0 excludes GPT-SoVITS installer/training/voice cloning, wake-word activation, translation before LLM submission, barge-in interruption, silent cloud STT fallback, and any promise that no-headphones/AEC is solved before Phase 22 evidence.
 
 ---
-*Last updated: 2026-05-09 after v3.0 roadmap creation*
+*Last updated: 2026-05-09 after Phase 18 planning*
