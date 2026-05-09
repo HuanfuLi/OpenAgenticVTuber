@@ -476,7 +476,7 @@ async def test_gpt_sovits_failure_sends_failed_audio_metadata_and_no_piper_fallb
             "volumes": [],
             "slice_length": 20,
             "display_text": {"text": "first.", "name": "Teto", "avatar": "teto"},
-            "dispatches": [{"name": "joy"}],
+            "dispatches": [{"kind": "action", "name": "joy"}],
             "sentence_id": 1,
             "forwarded": False,
             "failed_audio": {

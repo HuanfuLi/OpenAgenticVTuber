@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import base64
+import wave
+from io import BytesIO
 from pathlib import Path
 from typing import Literal
 
@@ -9,7 +12,9 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 import soundfile
 
-from contracts import AudioProviderHealth
+from contracts import AudioProviderHealth, GptSoVitsProviderConfig, VoicePreset
+from sidecar.tts.gpt_sovits_provider import GptSoVitsProvider
+from sidecar.tts.provider import TTSProviderError, TTSSynthesisRequest
 
 
 router = APIRouter(prefix="/admin/audio")
@@ -47,6 +52,13 @@ class ReferenceAudioValidationResponse(BaseModel):
     channels: int | None = None
     errors: list[ReferenceAudioValidationError] = Field(default_factory=list)
     redacted_diagnostics: str
+
+
+class GptSoVitsCandidateRequest(BaseModel):
+    config: GptSoVitsProviderConfig
+    preset: VoicePreset
+    reference_audio_path: str = Field(min_length=1)
+    text: str = Field(default="hello", min_length=1)
 
 
 def _redacted_diagnostics(display_basename: str, summary: str) -> str:
@@ -91,6 +103,17 @@ def _fallback_health(request: Request) -> AudioProviderHealth:
     )
 
 
+def _pcm_to_wav_base64(pcm_int16: bytes, sample_rate: int) -> tuple[str, int]:
+    buf = BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframes(pcm_int16)
+    duration_ms = int((len(pcm_int16) / 2) / sample_rate * 1000) if sample_rate > 0 else 0
+    return base64.b64encode(buf.getvalue()).decode("utf-8"), duration_ms
+
+
 @router.get("/status")
 async def get_audio_status(request: Request) -> dict[str, object]:
     health = getattr(request.app.state, "audio_provider_health", None)
@@ -101,6 +124,56 @@ async def get_audio_status(request: Request) -> dict[str, object]:
     if provider is not None and hasattr(provider, "health"):
         return provider.health().model_dump()
     return _fallback_health(request).model_dump()
+
+
+@router.post("/gpt-sovits/health")
+async def post_gpt_sovits_health(payload: GptSoVitsCandidateRequest) -> dict[str, object]:
+    try:
+        provider = GptSoVitsProvider(
+            config=payload.config,
+            preset=payload.preset,
+            reference_audio=payload.reference_audio_path,
+        )
+    except TTSProviderError as exc:
+        return exc.health().model_dump()
+    return provider.health().model_dump()
+
+
+@router.post("/test-synthesis")
+async def post_test_synthesis(payload: GptSoVitsCandidateRequest) -> dict[str, object]:
+    try:
+        provider = GptSoVitsProvider(
+            config=payload.config,
+            preset=payload.preset,
+            reference_audio=payload.reference_audio_path,
+        )
+        result = provider.synthesize(
+            TTSSynthesisRequest(text=payload.text, sentence_id=-1)
+        )
+        audio_base64, duration_ms = _pcm_to_wav_base64(result.pcm_int16, result.sample_rate)
+        return {
+            "provider_id": "gpt_sovits",
+            "ok": True,
+            "activation_allowed": True,
+            "audio_base64": audio_base64,
+            "media_type": "wav",
+            "sample_rate_hz": result.sample_rate,
+            "duration_ms": duration_ms,
+            "summary": "GPT-SoVITS test synthesis succeeded.",
+            "failure": None,
+        }
+    except TTSProviderError as exc:
+        return {
+            "provider_id": "gpt_sovits",
+            "ok": False,
+            "activation_allowed": False,
+            "audio_base64": None,
+            "media_type": "wav",
+            "sample_rate_hz": None,
+            "duration_ms": None,
+            "summary": exc.summary,
+            "failure": exc.health().model_dump(),
+        }
 
 
 @router.post("/reference-audio/validate")

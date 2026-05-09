@@ -46,7 +46,7 @@ class GptSoVitsProvider:
     def boot(self) -> None:
         # External GPT-SoVITS is not app-owned here; definitive readiness is
         # proven by health/test endpoints and chat synthesis attempts.
-        self.sample_rate = 0
+        self.sample_rate = self.sample_rate or 24_000
 
     def synthesize(self, request: TTSSynthesisRequest) -> TTSSynthesisResult:
         self._validate_reference_audio()

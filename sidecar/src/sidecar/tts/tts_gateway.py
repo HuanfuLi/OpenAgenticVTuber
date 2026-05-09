@@ -15,6 +15,9 @@ from pathlib import Path
 import sounddevice as sd
 from loguru import logger
 
+from contracts import VoicePreset
+
+from .gpt_sovits_provider import GptSoVitsProvider
 from .piper_provider import PiperTTSProvider
 from .provider import TTSProvider
 
@@ -76,10 +79,35 @@ def build_tts_gateway(
     audio_config,
     repo_root: Path,
     avatar_voice_model: str,
+    active_voice_preset: VoicePreset | None = None,
+    reference_audio_path: str | Path | None = None,
 ) -> TTSGateway:
     provider_id = audio_config.tts.active_provider
+    if provider_id == "gpt_sovits":
+        gpt_config = audio_config.tts.gpt_sovits
+        if gpt_config is None or not gpt_config.enabled:
+            raise ValueError("GPT-SoVITS provider is not enabled in audio config.")
+        activation = gpt_config.activation
+        if not (
+            activation.health_check_passed
+            and activation.test_synthesis_passed
+            and activation.active_allowed
+        ):
+            raise ValueError(
+                "GPT-SoVITS requires health check and test synthesis gates before activation."
+            )
+        if active_voice_preset is None or reference_audio_path is None:
+            raise ValueError("GPT-SoVITS activation requires an active voice preset and reference audio.")
+        return TTSGateway(
+            repo_root / "sidecar" / "models" / "piper" / f"{avatar_voice_model}.onnx",
+            provider=GptSoVitsProvider(
+                config=gpt_config,
+                preset=active_voice_preset,
+                reference_audio=reference_audio_path,
+            ),
+        )
     if provider_id != "piper":
-        raise ValueError(f"Unsupported TTS provider for Phase 16: {provider_id}")
+        raise ValueError(f"Unsupported TTS provider: {provider_id}")
     configured_voice = audio_config.tts.piper.voice_model
     voice_model = configured_voice if configured_voice != "en_US-amy-medium" else avatar_voice_model
     model_path = repo_root / "sidecar" / "models" / "piper" / f"{voice_model}.onnx"

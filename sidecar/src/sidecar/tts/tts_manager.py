@@ -10,7 +10,7 @@ import numpy as np
 from fastapi import WebSocket
 from loguru import logger
 
-from contracts import AudioPayloadMessage, Dispatch, DisplayTextField, SpeechEnvelopePayload
+from contracts import AudioPayloadMessage, Dispatch, DisplayTextField, FailedAudioMetadata, SpeechEnvelopePayload
 
 from .audio_payload_helpers import prepare_payload_from_pcm, synthesize_and_prepare_payload
 from .provider import TTSProvider, TTSProviderError, TTSSynthesisRequest
@@ -145,6 +145,13 @@ class TTSTaskManager:
                     dispatches=dispatches,
                     sentence_id=sentence_id,
                     forwarded=False,
+                    failed_audio=FailedAudioMetadata(
+                        provider_id=exc.provider_id,
+                        state=exc.state,
+                        summary=exc.summary,
+                        retryable=exc.retryable,
+                        redacted_diagnostics={"detail": exc.detail} if exc.detail else None,
+                    ),
                 ),
                 b"",
                 0,
@@ -166,6 +173,12 @@ class TTSTaskManager:
                     dispatches=dispatches,
                     sentence_id=sentence_id,
                     forwarded=False,
+                    failed_audio=FailedAudioMetadata(
+                        provider_id=provider_id,
+                        state="external_service_failure",
+                        summary=str(exc),
+                        retryable=True,
+                    ),
                 ),
                 b"",
                 0,
