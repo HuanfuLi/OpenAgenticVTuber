@@ -35,7 +35,7 @@ Phase 10 closes milestone v2.0 with two parallel deliveries: a mandatory cursor 
 #### C. v2.0 Surfaces in §14 Ceremony
 
 - **D-C1:** §14 ceremony **strictly re-runs the original M1 6 SCs**. v2.0-new surfaces (variant dispatch, event dispatch, HUD lock, plugin runtime, avatar import) are NOT re-tested in §14 ceremony.
-- **D-C2:** skeleton-verification.md contains a **cross-reference table** under "v2.0 Surfaces Verified in Their Own Phases" pointing to Phase 6/7/8/9 VERIFICATION + HUMAN-UAT artifacts.
+- **D-C2:** skeleton-verification.md contains a **cross-reference table** under "v2.0 Surfaces Verified in Their Own Phases" pointing to Phase 6/7/8/9 VERIFICATION + UAT/summary artifacts. Phase 9's live HUD UAT is recorded in `09-02-SUMMARY.md` and `09-VERIFICATION.md`, not a separate HUMAN-UAT file.
 - **D-C3:** Cross-reference table does NOT duplicate verdicts — only navigates.
 
 #### D. skeleton-verification.md Structure + Milestone-Close Decision
@@ -254,7 +254,7 @@ The harness's `passed` boolean encodes the threshold check (`pearson_r >= 0.7` /
 |------|--------|-------------|
 | `[smirk]` is in active vocabulary | **CONFIRMED** | `plugins/default/plugin.yaml:17-18` declares `code: smirk`. `plugins/default/__init__.py:20` lists `smirk` in the action-code set. `plugins/default/__init__.py:29` defines `smirk: {"FaceAngleZ": (0.07, 0.55), "FaceAngleY": (0.05, 0.40)}`. |
 | Active Teto avatar `_avatar_overrides.yaml` ready | **CONFIRMED** | `avatars/重音テト/_avatar_overrides.yaml` exists; 14 variants registered (sv-microphone, heart-eye, etc.); events: []; default_plugin_action_bindings: []; body_sway_strategy: head_only. |
-| HUD-closed precondition for SC #2/#4 | **NEEDED** | Per `## Specific Ideas` D-* "Lock means lock" carryover: HUD closed during SC #2/#4 observation. Operator step 0: "Confirm HUD window is closed (Settings → Open HUD button shows the open-action label)." |
+| HUD-closed precondition for SC #2/#4 | **NEEDED** | Per `## Specific Ideas` D-* "Lock means lock" carryover: HUD closed during SC #2/#4 observation. Operator step 0: "If the separate HUD window is open, clear any locks and close it before judging `[smirk]` or body sway." |
 | LM Studio (or active LLM provider) running | **OPERATOR PRECONDITION** | Without an active LLM, no `[smirk]` token can be produced. Document as step 0.5. |
 | VTube Studio + Teto rig loaded + plugin authenticated | **OPERATOR PRECONDITION** | Without VTS running, no rig moves. Document as step 0.6. |
 
@@ -266,7 +266,7 @@ The script is an `.md` file at `.planning/skeleton-verification-ceremony.md` (or
 ### SC #2: [smirk] smooth blend (operator-judged)
 
 **Precondition checks:**
-- [ ] HUD window closed
+- [ ] Separate HUD window closed; if it was opened for setup smoke, any locks have been cleared first
 - [ ] LM Studio running (or active provider passes /admin/llm-test)
 - [ ] VTube Studio running with Teto rig loaded
 - [ ] Sidecar [READY] line visible in logs drawer
@@ -362,7 +362,7 @@ Replay JSON files committed at `.planning/baselines/v2.0/lipsync-phase10-replay.
 | Plugin runtime + default plugin (`[smirk]` action-code dispatch path; ARCH-01..12; PLG-01..10) | 6 | `06-VERIFICATION.md` (re_verification_4 passed) | `06-HUMAN-UAT.md`, `06-UAT.md` |
 | Three-category dispatch (`{variant}` radio-button + `<event>` motion auto-completion; PARSE-01..08) | 7 | `07-VERIFICATION.md` | `07-HUMAN-UAT.md` |
 | Avatar import + catalogs (`AvatarOverrides` schema; review screen; IMP-01..10) | 8 | `08-VERIFICATION.md` | `08-HUMAN-UAT.md` |
-| HUD slider + per-param lock (`/hud/ws`, `set-lock`, system-primitive exclusion; HUD-01..08) | 9 | `09-VERIFICATION.md` | `09-HUMAN-UAT.md` |
+| HUD slider + per-param lock (`/hud/ws`, `set-lock`, system-primitive exclusion; HUD-01..08) | 9 | `09-VERIFICATION.md` | `09-02-SUMMARY.md` |
 
 This table NAVIGATES; verdicts live in each phase's own VERIFICATION.md per D-C3.
 
@@ -388,7 +388,7 @@ This table NAVIGATES; verdicts live in each phase's own VERIFICATION.md per D-C3
 
 ### v1-horizon progress note
 
-The v2.0 milestone delivers the architectural foundation needed for v1-horizon multi-avatar identity persistence: plugin-driven motion (Phase 6 — different avatars can have different motion plugins or share defaults), formalized three-category code system (Phase 7 — avatars own variants/events; plugins own actions), avatar-import flow with curated catalogs (Phase 8 — `_avatar_overrides.yaml` per avatar is the persistence anchor), and HUD/lock primitives (Phase 9 — discovery + tuning surface for new rigs).
+The v2.0 milestone delivers the architectural foundation needed for v1-horizon multi-avatar identity persistence: plugin-driven motion (Phase 6 — different avatars can have different motion plugins or share defaults), formalized three-category code system (Phase 7 — avatars own variants/events; plugins own actions), avatar-import flow with curated catalogs (Phase 8 — `_avatar_overrides.yaml` per avatar is the persistence anchor), and HUD/lock primitives (Phase 9 — focused `hud_visible_param_ids` discovery/tuning surface for new rigs, with non-blocking `/hud/ws` telemetry and session-only locks).
 
 The v2.0 milestone does NOT yet ship multi-avatar episodic memory or the shared user-facts bucket. Single-avatar walking skeleton works end-to-end with refactored architecture; per-avatar Chroma stores + RRF-hybrid retrieval + write-on-promotion are the next milestone's headline value (REQUIREMENTS MEM-01..MEM-07).
 ```
@@ -748,6 +748,7 @@ uv run python scripts/plumbing_harness.py --mode idle    --out ../.planning/base
 ### Secondary (MEDIUM confidence — established pattern, no live runtime check needed)
 
 - `.planning/phases/06-plugin-runtime-default-plugin/06-HUMAN-UAT.md` — operator UAT report shape (frontmatter + per-test-block + gaps section)
+- `.planning/phases/09-slider-hud-per-param-lock/09-02-SUMMARY.md` + `09-VERIFICATION.md` — Phase 9 live UAT approval, 529-row to 18-row HUD-visible fix, non-blocking HUD stream, and FaceAngleX lock smoke
 - `.planning/phases/06-plugin-runtime-default-plugin/06-VERIFICATION.md` — verification artifact shape (re_verification_N progressive records)
 - VTube Studio API spec — `InjectParameterDataRequest` mode="add" semantics for both VTS tracking-input names and Cubism-native param IDs (referenced in CLAUDE.md sources)
 

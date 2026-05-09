@@ -13,7 +13,7 @@ Two parallel deliveries closing milestone v2.0:
 2. **§14 SC re-verification ceremony** — the deferred milestone-1 SC-01 deliverable lands here against the refactored architecture. All six §14 SCs receive PASS / PARTIAL / FAIL verdicts in `.planning/skeleton-verification.md`. SC #2 (`[smirk]`, replacing the removed `[joy]`) and SC #4 (body sway) are operator-judged via a Phase 10 visual-review ceremony script. SC #1 (lipsync) and SC #3 (idle) replay against the existing Phase 6 06-02 baseline harness. SC #5 (cursor) verdict comes from the cursor-fix outcome above. SC #6 (OLVT WS shape) records PASS with "M1-verified, v2.0 unchanged" rationale.
 
 **NOT in scope (kept out by scope guardrail):**
-- Re-verification of v2.0-new surfaces (variant / event dispatch, HUD slider lock, plugin runtime, avatar import) — each phase's own VERIFICATION + HUMAN-UAT documents stand. skeleton-verification.md cross-references them but does not duplicate verdicts.
+- Re-verification of v2.0-new surfaces (variant / event dispatch, HUD slider lock, plugin runtime, avatar import) — each phase's own VERIFICATION + UAT/summary documents stand. skeleton-verification.md cross-references them but does not duplicate verdicts.
 - Multi-avatar identity persistence — that is v1-horizon value for the next milestone.
 - DPI awareness, multi-monitor robustness for cursor — explicitly deferred per VFY-02; v2.0 doesn't bet on this.
 - Native Cubism rendering integration — deferred to a later milestone alongside global cursor improvements.
@@ -53,7 +53,7 @@ Two parallel deliveries closing milestone v2.0:
   - Phase 6 plugin runtime + default plugin → `06-VERIFICATION.md`, `06-HUMAN-UAT.md`, `06-UAT.md`
   - Phase 7 three-category dispatch → `07-VERIFICATION.md`, `07-HUMAN-UAT.md`
   - Phase 8 avatar import + catalogs → `08-VERIFICATION.md`, `08-HUMAN-UAT.md`
-  - Phase 9 HUD + per-param lock → `09-VERIFICATION.md`, `09-HUMAN-UAT.md`
+  - Phase 9 HUD + per-param lock → `09-VERIFICATION.md`, `09-02-SUMMARY.md` (live UAT approval and the 529-row → 18-row HUD-visible fix are recorded there)
 - **D-C3:** Cross-reference table does NOT duplicate verdicts — only navigates. Each phase's own UAT artifacts remain authoritative for that phase's surface.
 
 ### D. skeleton-verification.md Structure + Milestone-Close Decision
@@ -115,7 +115,7 @@ None — todo match-phase returned 0 matches.
 - `.planning/phases/06-plugin-runtime-default-plugin/06-VERIFICATION.md`, `06-HUMAN-UAT.md`, `06-UAT.md`
 - `.planning/phases/07-three-category-code-parsing-dispatch/07-VERIFICATION.md`, `07-HUMAN-UAT.md` (Phase 7 in execution as of 2026-05-08)
 - `.planning/phases/08-avatar-import-catalogs/08-VERIFICATION.md`, `08-HUMAN-UAT.md`
-- `.planning/phases/09-slider-hud-per-param-lock/09-VERIFICATION.md`, `09-HUMAN-UAT.md` (Phase 9 not yet executed as of 2026-05-08)
+- `.planning/phases/09-slider-hud-per-param-lock/09-VERIFICATION.md`, `09-02-SUMMARY.md` (Phase 9 completed 2026-05-09; live UAT approved after `hud_visible_param_ids` and non-blocking `/hud/ws` fixes)
 
 ### Code Anchors
 - `sidecar/src/sidecar/compositor/cursor_driver.py:30-32` — in-VTS-window gate to be dropped after fix
@@ -137,7 +137,7 @@ None — todo match-phase returned 0 matches.
 - **Phase 6 ARCH-06 CI test** (`sidecar/tests/test_arch06_single_writer.py`): asserts single pyvts writer; cursor fix must keep this green (don't introduce a second writer).
 
 ### Established Patterns
-- **Operator UAT script as markdown deliverable**: Phase 6 + Phase 7 + Phase 9 each shipped a HUMAN-UAT.md with reporter-style entries; ceremony script for Phase 10 follows the same shape (numbered steps + checklist + verdict).
+- **Operator UAT script as markdown deliverable**: Phase 6 + Phase 7 shipped HUMAN-UAT.md files with reporter-style entries; Phase 9 recorded live UAT in `09-02-SUMMARY.md` and `09-VERIFICATION.md`. The ceremony script for Phase 10 follows the same numbered steps + checklist + verdict shape.
 - **Skeleton-verification deliverable as markdown**: M1 SC-01 deferred this to Phase 10; the file does not yet exist. Format per D-D1 above.
 - **Cross-reference rather than duplication**: 06-HUMAN-UAT.md links 06-VERIFICATION.md re_verification_3; this discuss-phase reuses that pattern for v2.0 surface coverage.
 
@@ -151,7 +151,8 @@ None — todo match-phase returned 0 matches.
 <specifics>
 ## Specific Ideas
 
-- **"Lock means lock" principle from Phase 9 carries into ceremony**: SC #2 ceremony observes `[smirk]` smooth blend WITHOUT user lock — the goal is to verify the underlying compositor + plugin path produces smooth output. If a lock is engaged on relevant params (eye/mouth), it would mask the SC #2 mechanism. Operator instructions: ensure HUD is closed during SC #2 / SC #4 observation.
+- **"Lock means lock" principle from Phase 9 carries into ceremony**: SC #2 ceremony observes `[smirk]` smooth blend WITHOUT user lock — the goal is to verify the underlying compositor + plugin path produces smooth output. If a lock is engaged on relevant params (eye/mouth), it would mask the SC #2 mechanism. Operator instructions: if the HUD is open, clear any locks and close the separate HUD window before SC #2 / SC #4 observation.
+- **Phase 9 carry-forward smoke is preflight, not a new §14 verdict**: Before the ceremony, a quick HUD smoke may be recorded as setup evidence: `/admin/rig-capabilities` exposes the focused `hud_visible_param_ids` surface (18 rows on live Teto), `/hud/ws` emits `param-frame`, and `FaceAngleX` can be locked/cleared. This confirms the approved Phase 9 state without duplicating HUD verdicts in skeleton-verification.md.
 - **Cursor diagnosis needs to be honest**: if root cause turns out to be something fundamental (e.g., VTS doesn't accept ParamAngleX writes from non-Cubism-rig clients on the user's setup), Phase 10 records a FAIL verdict with the diagnosis, not a forced PASS. Per D-A6.
 - **§14 SC #6 (WS protocol shape) is bookkeeping**: M1 Phase 1+2 verified OLVT envelope shape; v2.0 added `Dispatch` (Phase 7) and `HudMessageS2C/C2S` (Phase 9) but those are NEW message types under the same envelope, not OLVT-shape changes. SC #6 records PASS with "verified M1, v2.0 surfaces extend without changing OLVT envelope shape" rationale — no re-test needed.
 
