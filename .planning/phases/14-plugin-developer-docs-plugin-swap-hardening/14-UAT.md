@@ -1,11 +1,11 @@
 ---
-status: diagnosed
+status: gap_closure_implemented
 phase: 14-plugin-developer-docs-plugin-swap-hardening
 source:
   - 14-01-SUMMARY.md
   - 14-02-SUMMARY.md
 started: 2026-05-09T09:59:18-04:00
-updated: 2026-05-09T10:36:00-04:00
+updated: 2026-05-09T10:41:00-04:00
 ---
 
 ## Current Test
@@ -115,11 +115,15 @@ blocked: 0
 ## Recheck Gaps
 
 - truth: "After plugin-switch sidecar restarts settle, the chat input textarea should be enabled whenever no turn is actively running."
-  status: failed
+  status: implemented_pending_recheck
   reason: "User reported: Sometimes user input textarea is disabled after sidecar restart. This is a pre-existing issue but was able to resolve by restart, but now it is often triggered by switching plugins."
   severity: major
   test: R4
   root_cause: "Renderer chat disables input when `!wsOpen`. The singleton WS client in apps/renderer/src/ws/client.ts initializes once and stores one `state.url`; it only waits for sidecar:ready when no ready URL exists at startup. During plugin-switch restart, Electron emits a new sidecar:ready URL, but the WS client does not subscribe globally to replace the old URL/socket. A stale close/reconnect can continue targeting the old sidecar URL, leaving wsOpen false after the new sidecar is ready."
+  fixed_by:
+    - plan: "14-04"
+      commit: "3b384cf"
+      summary: "Renderer WS client follows replacement sidecar ready URLs, suppresses stale reconnects, and resets transient chat streaming state after sidecar reconnect."
   artifacts:
     - path: "apps/renderer/src/ws/client.ts"
       issue: "Does not actively switch to the latest sidecar:ready URL after sidecar restart."

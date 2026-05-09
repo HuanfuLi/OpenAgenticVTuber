@@ -96,9 +96,9 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 | HIST-05 | Phase 13 | Complete |
 | PLUGDOC-01 | Phase 14 | Recheck pending |
 | PLUGDOC-02 | Phase 14 | Complete |
-| PLUGDOC-03 | Phase 14 | Gap closure pending |
+| PLUGDOC-03 | Phase 14 | Recheck pending |
 | PLUGDOC-04 | Phase 14 | Complete |
-| PLUGDOC-05 | Phase 14 | Gap closure pending |
+| PLUGDOC-05 | Phase 14 | Recheck pending |
 | MOCK-01 | Phase 15 | Pending |
 | MOCK-02 | Phase 15 | Pending |
 | MOCK-03 | Phase 15 | Pending |
@@ -111,4 +111,4 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after Phase 14 restart recheck gap diagnosed*
+*Last updated: 2026-05-09 after Phase 14 restart gap closure execution; UAT recheck pending*
