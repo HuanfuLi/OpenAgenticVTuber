@@ -28,11 +28,11 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 
 ### Conversation History
 
-- [ ] **HIST-01**: User can create, switch, rename/title, and delete ChatGPT-style conversation sessions from normal chat/history UI.
-- [ ] **HIST-02**: Active session messages persist across app restart and restore without relying on scripted conversation fixtures.
-- [ ] **HIST-03**: Sending a message appends to the active session while preserving the existing LLM streaming, TTS, and VTS response pipeline.
-- [ ] **HIST-04**: Settings > Conversation reflects real session/history behavior and exposes truthful controls for retention/reset where supported.
-- [ ] **HIST-05**: Conversation history is transcript/session persistence only; semantic memory, retrieval, and per-avatar memory remain deferred to v4.0.
+- [x] **HIST-01**: User can create, switch, rename/title, and delete ChatGPT-style conversation sessions from normal chat/history UI.
+- [x] **HIST-02**: Active session messages persist across app restart and restore without relying on scripted conversation fixtures.
+- [x] **HIST-03**: Sending a message appends to the active session while preserving the existing LLM streaming, TTS, and VTS response pipeline.
+- [x] **HIST-04**: Settings > Conversation reflects real session/history behavior and exposes truthful controls for retention/reset where supported.
+- [x] **HIST-05**: Conversation history is transcript/session persistence only; semantic memory, retrieval, and per-avatar memory remain deferred to v4.0.
 
 ### Plugin Developer Docs & Swap Hardening
 
@@ -89,11 +89,11 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 | SET-05 | Phase 12 | Complete |
 | SET-06 | Phase 12 | Complete |
 | SET-07 | Phase 12 | Complete |
-| HIST-01 | Phase 13 | Pending |
-| HIST-02 | Phase 13 | Pending |
-| HIST-03 | Phase 13 | Pending |
-| HIST-04 | Phase 13 | Pending |
-| HIST-05 | Phase 13 | Pending |
+| HIST-01 | Phase 13 | Implemented; UAT pending |
+| HIST-02 | Phase 13 | Implemented; restart UAT pending |
+| HIST-03 | Phase 13 | Implemented; live pipeline UAT pending |
+| HIST-04 | Phase 13 | Implemented; UAT pending |
+| HIST-05 | Phase 13 | Complete |
 | PLUGDOC-01 | Phase 14 | Pending |
 | PLUGDOC-02 | Phase 14 | Pending |
 | PLUGDOC-03 | Phase 14 | Pending |
@@ -111,4 +111,4 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after inserting Phase 14 plugin docs/swap hardening and deferring mock audit to Phase 15*
+*Last updated: 2026-05-09 after Phase 13 implementation; live UAT pending*

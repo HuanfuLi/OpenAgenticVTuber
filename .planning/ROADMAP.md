@@ -42,7 +42,7 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-15 | 6/12 | In Progress | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-15 | 9/12 | In Progress; Phase 13 UAT pending | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
@@ -93,12 +93,12 @@ Plans:
 
 **Depends on:** Phase 12
 **Requirements:** HIST-01, HIST-02, HIST-03, HIST-04, HIST-05
-**Plans:** 3 planned
+**Plans:** 3 complete
 
 Plans:
-- [ ] 13-01-PLAN.md — Add durable local conversation store, typed IPC/preload bridge, and renderer state surface.
-- [ ] 13-02-PLAN.md — Wire Chat and History sheet to real sessions with complete-turn persistence.
-- [ ] 13-03-PLAN.md — Wire Settings Conversation summary/reset, copy, regression tests, and UAT checklist.
+- [x] 13-01-PLAN.md — Add durable local conversation store, typed IPC/preload bridge, and renderer state surface.
+- [x] 13-02-PLAN.md — Wire Chat and History sheet to real sessions with complete-turn persistence.
+- [x] 13-03-PLAN.md — Wire Settings Conversation summary/reset, copy, regression tests, and UAT checklist.
 
 **Success Criteria:**
 1. Users can create, switch, rename/title, and delete conversation sessions from normal chat/history UI.
@@ -156,4 +156,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after inserting Phase 14 plugin docs/swap hardening and deferring mock audit to Phase 15*
+*Last updated: 2026-05-09 after Phase 13 implementation; live UAT pending*
