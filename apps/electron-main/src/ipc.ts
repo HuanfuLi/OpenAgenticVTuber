@@ -37,6 +37,11 @@ import {
 } from './reference-audio'
 import { createHudWindow } from './hud-window'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
+import type {
+  GptSoVitsHealthRequest,
+  GptSoVitsTestSynthesisRequest,
+  GptSoVitsTestSynthesisResult
+} from '../../../packages/contracts/ts/audio-provider'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
 import {
@@ -54,6 +59,65 @@ import {
 
 function resolveRepoRoot(): string {
   return path.resolve(app.getAppPath(), '..', '..')
+}
+
+function unavailableGptSoVitsHealth(summary: string, state: AudioProviderHealth['state'] = 'unavailable'): AudioProviderHealth {
+  return {
+    provider_id: 'gpt_sovits',
+    kind: 'tts',
+    state,
+    summary,
+    detail: null,
+    retryable: true,
+    latency_ms: null,
+    redacted_diagnostics: null
+  }
+}
+
+function failedGptSoVitsTestSynthesis(summary: string, state: AudioProviderHealth['state'] = 'external_service_failure'): GptSoVitsTestSynthesisResult {
+  return {
+    ok: false,
+    provider_id: 'gpt_sovits',
+    media_type: 'wav',
+    audio_base64: null,
+    sample_rate_hz: null,
+    duration_ms: null,
+    summary,
+    failure: unavailableGptSoVitsHealth(summary, state)
+  }
+}
+
+async function postSidecarAdminJson<TResponse>(
+  pathSuffix: string,
+  body: unknown,
+  onUnavailable: () => TResponse,
+  onHttpFailure: (status: number) => TResponse,
+  onFetchFailure: () => TResponse
+): Promise<TResponse> {
+  let baseUrl: string
+  try {
+    baseUrl = getSidecarHttpUrl()
+  } catch {
+    return onUnavailable()
+  }
+  try {
+    const resp = await fetch(`${baseUrl}${pathSuffix}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    if (!resp.ok) {
+      try {
+        await resp.text()
+      } catch {
+        // Ignore response body; diagnostics may contain user paths or provider internals.
+      }
+      return onHttpFailure(resp.status)
+    }
+    return (await resp.json()) as TResponse
+  } catch {
+    return onFetchFailure()
+  }
 }
 
 async function openPathOrThrow(targetPath: string): Promise<void> {
@@ -193,6 +257,29 @@ export function registerIpc(window: BrowserWindow): () => void {
       }
     }
   })
+  ipcMain.handle(
+    'gptSovits:checkHealth',
+    async (_e, request: GptSoVitsHealthRequest): Promise<AudioProviderHealth> =>
+      postSidecarAdminJson<AudioProviderHealth>(
+        '/admin/audio/gpt-sovits/health',
+        request,
+        () => unavailableGptSoVitsHealth('Sidecar is not ready.'),
+        (status) =>
+          unavailableGptSoVitsHealth(`GPT-SoVITS health check failed: HTTP ${status}`, 'external_service_failure'),
+        () => unavailableGptSoVitsHealth('GPT-SoVITS health check failed: sidecar request failed.')
+      )
+  )
+  ipcMain.handle(
+    'gptSovits:testSynthesis',
+    async (_e, request: GptSoVitsTestSynthesisRequest): Promise<GptSoVitsTestSynthesisResult> =>
+      postSidecarAdminJson<GptSoVitsTestSynthesisResult>(
+        '/admin/audio/test-synthesis',
+        request,
+        () => failedGptSoVitsTestSynthesis('Sidecar is not ready.', 'unavailable'),
+        (status) => failedGptSoVitsTestSynthesis(`GPT-SoVITS test synthesis failed: HTTP ${status}`),
+        () => failedGptSoVitsTestSynthesis('GPT-SoVITS test synthesis failed: sidecar request failed.')
+      )
+  )
 
   // New for 01-02 (safeStorage credential gate, PLUMB-04 / D-07 / D-09):
   ipcMain.handle('config:load', () => loadConfig())
@@ -397,6 +484,8 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('sidecar:getVtsStatus')
     ipcMain.removeHandler('sidecar:getPluginStatus')
     ipcMain.removeHandler('sidecar:getAudioStatus')
+    ipcMain.removeHandler('gptSovits:checkHealth')
+    ipcMain.removeHandler('gptSovits:testSynthesis')
     ipcMain.removeHandler('config:load')
     ipcMain.removeHandler('config:save')
     ipcMain.removeHandler('config:clear')
