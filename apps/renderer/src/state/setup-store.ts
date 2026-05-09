@@ -38,6 +38,10 @@ export async function bootSetupStore(): Promise<void> {
 }
 
 export async function completeSetup(cfg: StoredConfig): Promise<void> {
+  await saveCompletedSetupConfig(cfg)
+}
+
+export async function saveCompletedSetupConfig(cfg: StoredConfig): Promise<void> {
   const final: StoredConfig = { ...cfg, hasCompletedSetup: true, schemaVersion: 1 }
   await window.api.saveStoredConfig(final)
   state = { phase: 'ready', cfg: final }

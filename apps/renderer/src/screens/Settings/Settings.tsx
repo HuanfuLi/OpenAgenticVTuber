@@ -8,8 +8,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Folder } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
+import { saveCompletedSetupConfig, type Provider, type ProviderConfig } from '@/state/setup-store'
 import { useTheme, type ThemeMode, type LightAccent, type DarkBg, type DarkAccent } from '@/state/theme-provider'
 import type { BodyMotionPluginSummary, StoredConfig } from '@preload-types'
+import { ProviderSelect } from '@/screens/LLMSetup/ProviderSelect'
+import { TestLog } from '@/screens/LLMSetup/TestLog'
 
 // -------- Swatch resolvers ------------------------------------------------
 function lightAccentSwatchColor(id: LightAccent): string {
@@ -221,15 +224,35 @@ function AppearanceSection() {
 // (DPAPI on Windows). Falls back to llmConfig from the legacy app-store on
 // the loading frame. The prototype's "lmstudio" id maps to safeStorage's
 // "lm_studio" Provider type.
+function normalizeProvider(providerId: string): Provider {
+  if (providerId === 'lmstudio') return 'lm_studio'
+  if (providerId === 'custom') return 'custom_openai'
+  if (
+    providerId === 'lm_studio' ||
+    providerId === 'custom_openai' ||
+    providerId === 'openai' ||
+    providerId === 'anthropic' ||
+    providerId === 'gemini'
+  ) return providerId
+  return 'lm_studio'
+}
+
 function ConnectionSection() {
   const C = COPY.SETTINGS
   const { llmConfig, refreshStatus } = useStore()
   const [retesting, setRetesting] = useState(false)
-  const [storedCfg, setStoredCfg] = useState<{
-    provider: string
-    endpointUrl: string
-    modelName: string
-  } | null>(null)
+  const [storedCfg, setStoredCfg] = useState<StoredConfig | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [notice, setNotice] = useState<string>('')
+  const [testPhase, setTestPhase] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
+  const [logKey, setLogKey] = useState(0)
+  const [form, setForm] = useState<ProviderConfig>({
+    provider: 'lm_studio',
+    endpointUrl: 'http://localhost:1234/v1',
+    apiKey: '',
+    modelName: ''
+  })
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.api) return
@@ -239,64 +262,213 @@ function ConnectionSection() {
       .then((cfg) => {
         if (cancelled) return
         if (cfg && cfg.hasCompletedSetup) {
-          setStoredCfg({
-            provider: cfg.provider.provider,
-            endpointUrl: cfg.provider.endpointUrl,
-            modelName: cfg.provider.modelName
-          })
+          setStoredCfg(cfg)
+          setForm(cfg.provider)
         }
       })
       .catch(() => {
-        /* leave storedCfg null; render mock fallback */
+        /* leave storedCfg null; render store fallback */
       })
     return () => {
       cancelled = true
     }
   }, [])
 
-  const providerId = storedCfg?.provider ?? llmConfig.provider
-  const endpoint = storedCfg?.endpointUrl ?? llmConfig.endpoint
-  const model = storedCfg?.modelName ?? llmConfig.model
+  const providerId = storedCfg?.provider.provider ?? llmConfig.provider
+  const endpoint = storedCfg?.provider.endpointUrl ?? llmConfig.endpoint
+  const model = storedCfg?.provider.modelName ?? llmConfig.model
   const providerLabel =
     providerId === 'lm_studio' || providerId === 'lmstudio'
       ? 'LM Studio'
-      : providerId === 'custom_openai'
+      : providerId === 'custom_openai' || providerId === 'custom'
         ? 'Custom OpenAI-compat'
         : providerId
 
   const onRetest = async (): Promise<void> => {
     setRetesting(true)
+    setNotice('')
     try {
       await refreshStatus()
     } finally {
       setRetesting(false)
     }
   }
+
+  const onEdit = (): void => {
+    setForm(
+      storedCfg?.provider ?? {
+        provider: normalizeProvider(providerId),
+        endpointUrl: endpoint,
+        apiKey: llmConfig.apiKey,
+        modelName: model
+      }
+    )
+    setNotice('')
+    setTestPhase('idle')
+    setEditing(true)
+  }
+
+  const onProviderChange = (provider: Provider): void => {
+    setForm((cur) => ({
+      ...cur,
+      provider,
+      endpointUrl:
+        provider === 'lm_studio' && !cur.endpointUrl ? 'http://localhost:1234/v1' : cur.endpointUrl,
+      apiKey: provider === 'lm_studio' ? '' : cur.apiKey
+    }))
+  }
+
+  const onTest = (): void => {
+    setLogKey((k) => k + 1)
+    setNotice('')
+    setTestPhase('testing')
+  }
+
+  const onSave = async (): Promise<void> => {
+    setSaving(true)
+    setNotice('')
+    try {
+      const nextCfg: StoredConfig = {
+        ...(storedCfg ?? {}),
+        provider: {
+          ...form,
+          endpointUrl: form.endpointUrl.trim(),
+          modelName: form.modelName.trim()
+        },
+        plugin: storedCfg?.plugin ?? { activePluginName: 'default' },
+        hasCompletedSetup: true,
+        schemaVersion: 1
+      }
+      await saveCompletedSetupConfig(nextCfg)
+      setStoredCfg(nextCfg)
+      setEditing(false)
+      setTestPhase('idle')
+      await refreshStatus()
+      setNotice(C.CONN_SAVED)
+    } catch {
+      setNotice(C.CONN_ERROR)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <section className="section" id="sec-connection">
       <h2>{C.CONN_HEADER}</h2>
-      <div className="kv-row">
-        <span className="k">Provider</span>
-        <span className="v">{providerLabel}</span>
-      </div>
-      <div className="kv-row">
-        <span className="k">Endpoint</span>
-        <span className="v">{endpoint}</span>
-      </div>
-      <div className="kv-row">
-        <span className="k">Model</span>
-        <span className="v">{model || 'auto-detect'}</span>
-      </div>
-      <div className="row mt-2" style={{ display: 'flex', gap: 8 }}>
-        <button className="btn btn-secondary" onClick={onRetest} disabled={retesting}>
-          {retesting ? COPY.STATUS.REFRESHING : C.CONN_REFRESH}
-        </button>
-        <span className="tt" data-tt={C.CONN_CHANGE_DISABLED_TT} style={{ display: 'inline-flex' }}>
-          <button className="btn btn-secondary" disabled style={{ pointerEvents: 'none' }}>
-            {C.CONN_CHANGE}
-          </button>
-        </span>
-      </div>
+      {!editing ? (
+        <>
+          <div className="kv-row">
+            <span className="k">Provider</span>
+            <span className="v">{providerLabel}</span>
+          </div>
+          <div className="kv-row">
+            <span className="k">Endpoint</span>
+            <span className="v">{endpoint}</span>
+          </div>
+          <div className="kv-row">
+            <span className="k">Model</span>
+            <span className="v">{model || 'auto-detect'}</span>
+          </div>
+          <div className="row mt-2" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button className="btn btn-secondary" onClick={onRetest} disabled={retesting}>
+              {retesting ? COPY.STATUS.REFRESHING : C.CONN_REFRESH}
+            </button>
+            <button className="btn btn-secondary" onClick={onEdit}>
+              {C.CONN_CHANGE}
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="settings-form">
+          <div className="field">
+            <label className="label" htmlFor="provider">
+              {COPY.LLM_SETUP.PROVIDER_LABEL}
+            </label>
+            <ProviderSelect value={form.provider} onChange={onProviderChange} />
+          </div>
+
+          <div className="field">
+            <div className="field-row">
+              <label className="label" htmlFor="settings-endpoint">
+                {COPY.LLM_SETUP.ENDPOINT_LABEL}
+              </label>
+              <span className="helper">{COPY.SETUP.ENDPOINT_HELP}</span>
+            </div>
+            <input
+              id="settings-endpoint"
+              className="input"
+              value={form.endpointUrl}
+              onChange={(e) => setForm((f) => ({ ...f, endpointUrl: e.target.value }))}
+              placeholder={COPY.LLM_SETUP.ENDPOINT_PLACEHOLDER}
+            />
+          </div>
+
+          <div className="field">
+            <div className="field-row">
+              <label className="label" htmlFor="settings-model">
+                {COPY.LLM_SETUP.MODEL_LABEL}
+              </label>
+              <span className="helper">{COPY.LLM_SETUP.MODEL_HELPER}</span>
+            </div>
+            <input
+              id="settings-model"
+              className="input"
+              value={form.modelName}
+              onChange={(e) => setForm((f) => ({ ...f, modelName: e.target.value }))}
+              placeholder={COPY.LLM_SETUP.MODEL_PLACEHOLDER}
+            />
+          </div>
+
+          <div className="field">
+            <div className="field-row">
+              <label className="label" htmlFor="settings-api-key">
+                {COPY.LLM_SETUP.APIKEY_LABEL}
+              </label>
+              {form.provider === 'lm_studio' && (
+                <span className="helper">{COPY.LLM_SETUP.APIKEY_HELPER_LMSTUDIO}</span>
+              )}
+            </div>
+            <input
+              id="settings-api-key"
+              type="password"
+              className="input"
+              value={form.apiKey}
+              onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
+              disabled={form.provider === 'lm_studio'}
+              placeholder={form.provider === 'lm_studio' ? COPY.SETUP.APIKEY_PLACEHOLDER : 'sk-...'}
+            />
+          </div>
+
+          <div className="row mt-2" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button className="btn btn-primary" onClick={onSave} disabled={saving}>
+              {saving ? C.CONN_SAVING : C.CONN_SAVE}
+            </button>
+            <button className="btn btn-secondary" onClick={onTest} disabled={testPhase === 'testing'}>
+              {testPhase === 'success' ? C.CONN_TEST_AGAIN : C.CONN_TEST}
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setEditing(false)
+                setTestPhase('idle')
+                setNotice('')
+              }}
+              disabled={saving}
+            >
+              {C.CONN_CANCEL}
+            </button>
+          </div>
+
+          {testPhase !== 'idle' && (
+            <TestLog
+              key={logKey}
+              form={form}
+              onResult={(success) => setTestPhase(success ? 'success' : 'error')}
+            />
+          )}
+        </div>
+      )}
+      {notice && <div className="tx-sm muted mt-2">{notice}</div>}
     </section>
   )
 }

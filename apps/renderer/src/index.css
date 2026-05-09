@@ -558,6 +558,21 @@ textarea.input { height: auto; min-height: 36px; padding: 8px 12px; resize: none
 .kv-row + .kv-row { border-top: 1px solid color-mix(in oklab, var(--border), transparent 60%); }
 .kv-row .k { color: var(--muted-foreground); font-size: 14px; }
 .kv-row .v { font-size: 14px; }
+.settings-form { margin-top: 8px; }
+.settings-form .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.settings-form .field-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+}
+.settings-form .label { font-size: 14px; font-weight: 600; }
+.settings-form .helper { font-size: 12px; color: var(--muted-foreground); }
+.settings-form .provider-list {
+  display: flex; flex-direction: column; gap: 4px;
+  margin: 4px 0 12px 6px;
+  font-size: 12px; color: var(--muted-foreground);
+}
+.settings-form .provider-list .row { display: flex; gap: 6px; }
+.settings-form .provider-list .row .name { color: var(--foreground); width: 180px; }
+.settings-form .provider-list .row.disabled { opacity: 0.7; }
 
 .radio-group {
   display: flex; flex-direction: column; gap: 4px;

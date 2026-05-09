@@ -11,7 +11,7 @@
  *     body.getReader()). The streaming consumption lives in <TestLog />,
  *     which is mounted with a `key={logKey}` so each [Test] press remounts
  *     with a fresh line buffer (RESEARCH.md Open Q #4).
- *  3. mockSafeStorage.set -> window.api.saveStoredConfig via setup-store.
+ *  3. prototype storage -> window.api.saveStoredConfig via setup-store.
  *
  * UI-SPEC verbatim copy shown by this screen (sourced from `@/lib/copy`):
  *   header:        "Connect a language model"

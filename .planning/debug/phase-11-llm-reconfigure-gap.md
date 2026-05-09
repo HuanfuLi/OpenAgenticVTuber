@@ -1,7 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 phase: 11-status-app-state-reality
 created: 2026-05-09T07:01:15-04:00
+updated: 2026-05-09T07:12:13-04:00
 ---
 
 # Phase 11 LLM Reconfiguration Gap
@@ -24,3 +25,7 @@ Phase 11 removed fake status mutation and made status display real persisted set
 ## Fix Direction
 
 Create a Phase 11 gap-closure plan that adds a real Settings reconfiguration flow. It should persist through the existing Electron safeStorage path, preserve unrelated stored config like active plugin selection, refresh status after save, and keep auto-detect as the intentional display for a blank model field rather than a hardcoded model.
+
+## Resolution
+
+Plan 11-02 implemented the Settings reconfiguration flow. The editor reuses the existing provider selector and connection test log, saves through `saveCompletedSetupConfig`, preserves plugin config, refreshes status, and is covered by focused Settings regression tests.

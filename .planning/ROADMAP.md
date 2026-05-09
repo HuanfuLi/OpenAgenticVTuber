@@ -42,7 +42,7 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-13 | 1/3 | In Progress; Phase 11 UAT gap planned | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-13 | 2/4 | In Progress | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
@@ -54,17 +54,18 @@ v2.1 replaces remaining mocked or hardcoded user-facing surfaces with truthful s
 
 **Depends on:** v2.0 archive
 **Requirements:** STAT-01, STAT-02, STAT-03, STAT-04, STAT-05
-**Plans:** 1 complete, 1 gap closure planned
+**Plans:** 2 complete
 
 Plans:
 - [x] 11-01-PLAN.md — Replace mock/hardcoded status and persistence paths with real app state.
-- [ ] 11-02-PLAN.md — Restore post-setup LLM provider/model reconfiguration in Settings.
+- [x] 11-02-PLAN.md — Restore post-setup LLM provider/model reconfiguration in Settings.
 
 **Success Criteria:**
 1. Status popover shows the configured provider/model from persisted setup state, not hardcoded `qwen2.5`.
 2. Sidecar status remains driven by Electron sidecar lifecycle events.
 3. VTS status is real or truthfully disabled/unavailable; normal chrome no longer mutates `mockStatus`.
 4. Production state persistence no longer depends on `mockSafeStorage`.
+5. Settings > Connection / Models can edit and save provider/model settings after first-run setup.
 
 ### Phase 12: Settings Reality Pass
 
@@ -113,4 +114,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 11 UAT gap diagnosis*
+*Last updated: 2026-05-09 after Phase 11 UAT gap closure*

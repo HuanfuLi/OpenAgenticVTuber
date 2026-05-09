@@ -1,10 +1,10 @@
 ---
-status: diagnosed
+status: resolved
 phase: 11-status-app-state-reality
 source:
   - 11-01-SUMMARY.md
 started: 2026-05-09T06:52:57-04:00
-updated: 2026-05-09T07:01:15-04:00
+updated: 2026-05-09T07:12:13-04:00
 ---
 
 ## Current Test
@@ -49,7 +49,7 @@ blocked: 0
 ## Gaps
 
 - truth: "The LLM status reflects configurable provider/model settings, and the user can update those provider/model settings after initial setup."
-  status: failed
+  status: resolved
   reason: "User reported: Pass but: I cannot reconfigure LLM? I was able to configure it before. I should be able to change provider and configure provider settings like LM Studio models, but now it is hardcoded auto-detect"
   severity: major
   test: 1
@@ -66,9 +66,10 @@ blocked: 0
     - "Persist changes through window.api.saveStoredConfig with hasCompletedSetup true while preserving unrelated StoredConfig fields such as the active body motion plugin."
     - "Refresh app status after saving so the status popover reflects the newly saved provider/model without mock mutations."
     - "Cover Settings reconfiguration with focused renderer tests, including the blank-model auto-detect case and a nonblank saved model."
+  resolution: "Closed by 11-02: Settings now exposes editable provider/endpoint/model/API key controls, saves via safeStorage-backed StoredConfig, preserves plugin config, refreshes status, and has renderer regression tests."
   debug_session: ".planning/debug/phase-11-llm-reconfigure-gap.md"
 - truth: "Settings > Connection / Models shows and preserves configurable provider/model settings instead of appearing hardcoded to LM Studio auto-detect."
-  status: failed
+  status: resolved
   reason: "User reported: As I said in test 1, it is basically hardcoded as LM Studio + auto-detect. Fail"
   severity: major
   test: 4
@@ -85,4 +86,5 @@ blocked: 0
     - "Use existing provider choices and LLM test behavior where practical so Settings does not introduce a second provider contract."
     - "Keep auto-detect as explicit blank-model behavior, not a hardcoded model value."
     - "Remove stale deferred copy and test that Settings save preserves the selected provider/model after reload."
+  resolution: "Closed by 11-02: the disabled deferred button and copy were removed; Settings now saves changed LLM config and keeps blank model as explicit auto-detect behavior."
   debug_session: ".planning/debug/phase-11-llm-reconfigure-gap.md"

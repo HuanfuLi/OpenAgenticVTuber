@@ -4,6 +4,7 @@ import { AppStoreProvider } from '@/state/app-store'
 import { ThemeProvider } from '@/state/theme-provider'
 import { COPY } from '@/lib/copy'
 import { Settings } from '@/screens/Settings/Settings'
+import type { StoredConfig } from '@preload-types'
 
 function renderSettings() {
   return render(
@@ -16,7 +17,7 @@ function renderSettings() {
 }
 
 describe('Settings TTS section', () => {
-  const storedConfig = {
+  const storedConfig: StoredConfig = {
     provider: {
       provider: 'lm_studio',
       endpointUrl: 'http://localhost:1234/v1',
@@ -143,5 +144,61 @@ describe('Settings TTS section', () => {
     })
     expect(screen.queryByText(/qwen2\.5/i)).toBeNull()
     expect(screen.queryByText(/last reply/i)).toBeNull()
+  })
+
+  it('lets the stored auto-detect model remain editable after setup', async () => {
+    renderSettings()
+
+    expect(await screen.findByText('auto-detect')).toBeInTheDocument()
+    const editButton = await screen.findByRole('button', { name: COPY.SETTINGS.CONN_CHANGE })
+    expect(editButton).not.toBeDisabled()
+
+    fireEvent.click(editButton)
+
+    expect(await screen.findByLabelText(COPY.LLM_SETUP.MODEL_LABEL)).toHaveValue('')
+    expect(screen.getByPlaceholderText(COPY.LLM_SETUP.MODEL_PLACEHOLDER)).toBeInTheDocument()
+    expect(screen.queryByText(/Re-configure provider lands/i)).toBeNull()
+  })
+
+  it('saves edited LLM provider settings and preserves plugin config', async () => {
+    const preservedConfig = {
+      ...storedConfig,
+      plugin: { activePluginName: 'test-motion' }
+    }
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue(preservedConfig)
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('button', { name: COPY.SETTINGS.CONN_CHANGE }))
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Provider' }), {
+      target: { value: 'custom' }
+    })
+    fireEvent.change(screen.getByLabelText(COPY.LLM_SETUP.ENDPOINT_LABEL), {
+      target: { value: 'https://llm.example.test/v1' }
+    })
+    fireEvent.change(screen.getByLabelText(COPY.LLM_SETUP.MODEL_LABEL), {
+      target: { value: 'teto-test-model' }
+    })
+    fireEvent.change(screen.getByLabelText(COPY.LLM_SETUP.APIKEY_LABEL), {
+      target: { value: 'test-api-key' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.CONN_SAVE }))
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith({
+        ...preservedConfig,
+        provider: {
+          provider: 'custom_openai',
+          endpointUrl: 'https://llm.example.test/v1',
+          apiKey: 'test-api-key',
+          modelName: 'teto-test-model'
+        },
+        plugin: { activePluginName: 'test-motion' },
+        hasCompletedSetup: true,
+        schemaVersion: 1
+      })
+    })
+    expect(await screen.findByText(COPY.SETTINGS.CONN_SAVED)).toBeInTheDocument()
+    expect(screen.getByText('teto-test-model')).toBeInTheDocument()
+    expect(screen.queryByText(/qwen2\.5/i)).toBeNull()
   })
 })
