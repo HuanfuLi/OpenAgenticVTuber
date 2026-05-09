@@ -70,6 +70,43 @@
 - `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 - `.planning/milestones/v2.0-phases/`
 
-**What's next:** Start the next milestone with `$gsd-new-milestone`; it will create fresh requirements for the next scope.
+**What's next:** v2.1 Mock/Reality Cleanup.
+
+---
+
+## v2.1 Mock/Reality Cleanup (Shipped: 2026-05-09)
+
+**Delivered:** A cleanup milestone that replaced remaining mocked or hardcoded user-facing surfaces with truthful app state, added durable conversation history sessions, hardened plugin developer workflows, and enforced a production/dev mock boundary before v3.0 voice work.
+
+**Phases completed:** 11-15 (15 plans total)
+
+**Key accomplishments:**
+
+- Replaced hardcoded status chrome with persisted provider/model, real sidecar lifecycle, and real VTube Studio state or truthful unavailable states.
+- Converted Settings surfaces for Avatars, per-avatar settings, VTube Studio, Conversation, Memory, and Diagnostics log level from placeholders into real or accurately deferred controls.
+- Added ChatGPT-style conversation sessions with create/switch/rename/delete flows, persisted transcripts, restored follow-up context, and Settings wiring.
+- Added plugin developer documentation, an AI plugin-author playbook, sample/helper assets, plugin selection restart semantics, invalid-plugin diagnostics, and fallback visibility.
+- Removed production-flow dependency on dev mock modules, scripted chat fixtures, mock persistence, mock status, and mock alert actions; added regression coverage for the boundary.
+
+**Known deferred items at close:**
+
+- Memory, semantic retrieval, and per-avatar identity remain deferred to v4.0 with the agentic system.
+- v3.0 is reserved for STT and TTS work.
+
+**Stats:**
+
+- 5 phases complete
+- 15 plans complete
+- 26 v2.1 requirements satisfied
+- Audit status: complete
+
+**Archive:**
+
+- `.planning/milestones/v2.1-ROADMAP.md`
+- `.planning/milestones/v2.1-REQUIREMENTS.md`
+- `.planning/milestones/v2.1-MILESTONE-AUDIT.md`
+- `.planning/milestones/v2.1-phases/`
+
+**What's next:** Start v3.0 STT/TTS planning.
 
 ---

@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 Walking Skeleton** — Phases 1-5 shipped 2026-05-08. Archive: `.planning/milestones/v1.0-ROADMAP.md`
 - ✅ **v2.0 Plugin + Animation Control** — Phases 8, 6, 7, 9, 10 shipped 2026-05-09. Archive: `.planning/milestones/v2.0-ROADMAP.md`
-- ✅ **v2.1 Mock/Reality Cleanup** — Phases 11-15 complete; ready for milestone completion.
+- ✅ **v2.1 Mock/Reality Cleanup** — Phases 11-15 shipped 2026-05-09. Archive: `.planning/milestones/v2.1-ROADMAP.md`
 
 ## Shipped Phases
 
@@ -36,133 +36,49 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 
 </details>
 
+<details>
+<summary>✅ v2.1 Mock/Reality Cleanup (Phases 11-15) — SHIPPED 2026-05-09</summary>
+
+- [x] Phase 11: Status & App State Reality — 2/2 plans complete
+- [x] Phase 12: Settings Reality Pass — 4/4 plans complete
+- [x] Phase 13: Conversation History Sessions — 4/4 plans complete
+- [x] Phase 14: Plugin Developer Docs + Plugin Swap Hardening — 4/4 plans complete
+- [x] Phase 15: Mock Boundary Audit — 1/1 plan complete
+
+Full details: `.planning/milestones/v2.1-ROADMAP.md`
+Requirements archive: `.planning/milestones/v2.1-REQUIREMENTS.md`
+Phase execution archive: `.planning/milestones/v2.1-phases/`
+Audit: `.planning/milestones/v2.1-MILESTONE-AUDIT.md`
+
+</details>
+
 ## Progress
 
 | Milestone | Scope | Plans Complete | Status | Shipped |
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-15 | 15/15 | Complete; ready for milestone completion | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-15 | 15/15 | Complete | 2026-05-09 |
 
-## Current Milestone: v2.1 Mock/Reality Cleanup
+## Next Milestone Intent
 
-v2.1 replaces remaining mocked or hardcoded user-facing surfaces with truthful state before v3.0 STT/TTS work, adds first-class conversation history sessions, and documents/hardens the plugin developer path so v2.0's plugin architecture is operable before audit. It does not implement memory or the agentic system; memory is deferred to v4.0 with agentic workflows.
+v3.0 should focus on STT and TTS: voice input, configurable TTS voice/backend settings, and integration with the existing conversation, history, TTS, and VTS lipsync pipeline.
 
-### Phase 11: Status & App State Reality
-
-**Goal:** The status bar, app store, and setup-derived state report real provider/model, sidecar, and VTS status instead of mock or hardcoded values.
-
-**Depends on:** v2.0 archive
-**Requirements:** STAT-01, STAT-02, STAT-03, STAT-04, STAT-05
-**Plans:** 2 complete
-
-Plans:
-- [x] 11-01-PLAN.md — Replace mock/hardcoded status and persistence paths with real app state.
-- [x] 11-02-PLAN.md — Restore post-setup LLM provider/model reconfiguration in Settings.
-
-**Success Criteria:**
-1. Status popover shows the configured provider/model from persisted setup state, not hardcoded `qwen2.5`.
-2. Sidecar status remains driven by Electron sidecar lifecycle events.
-3. VTS status is real or truthfully disabled/unavailable; normal chrome no longer mutates `mockStatus`.
-4. Production state persistence no longer depends on `mockSafeStorage`.
-5. Settings > Connection / Models can edit and save provider/model settings after first-run setup.
-
-### Phase 12: Settings Reality Pass
-
-**Goal:** Settings sections for Avatars, per-avatar settings, VTube Studio, Conversation, Memory, and Log level become wired or truthfully disabled based on shipped capabilities.
-
-**Depends on:** Phase 11
-**Requirements:** SET-01, SET-02, SET-03, SET-04, SET-05, SET-06, SET-07
-**Plans:** 4 complete
-
-Plans:
-- [x] 12-01-PLAN.md — Replace Settings placeholders with real section content or accurate deferred states.
-- [x] 12-02-PLAN.md — Close UAT gaps for Avatar current-edit loading and log-level descriptions.
-- [x] 12-03-PLAN.md — Close UAT gaps for current avatar re-edit reliability and About version copy.
-- [x] 12-04-PLAN.md — Clarify known-ID avatar degraded warning copy.
-
-**Success Criteria:**
-1. Avatar and VTube Studio settings link to existing import/review and real connection/auth state.
-2. Conversation settings accurately describe the current single in-memory thread behavior.
-3. Memory is disabled/deferred with copy naming v4.0 agentic + memory scope.
-4. Log level is either functional or disabled with accurate copy; no "Coming in milestone-2" wording remains.
-
-### Phase 13: Conversation History Sessions
-
-**Goal:** Add ChatGPT-style conversation history sessions and wire the real session state into Settings.
-
-**Depends on:** Phase 12
-**Requirements:** HIST-01, HIST-02, HIST-03, HIST-04, HIST-05
-**Plans:** 4 complete
-
-Plans:
-- [x] 13-01-PLAN.md — Add durable local conversation store, typed IPC/preload bridge, and renderer state surface.
-- [x] 13-02-PLAN.md — Wire Chat and History sheet to real sessions with complete-turn persistence.
-- [x] 13-03-PLAN.md — Wire Settings Conversation summary/reset, copy, regression tests, and UAT checklist.
-- [x] 13-04-PLAN.md — Close UAT gap: title-first History rows without visible assistant-response preview and add close animation.
-
-Post-completion fixes:
-- [x] Recovered session follow-up context — restored transcripts are sent with `text-input` and used to seed sidecar LLM memory before processing a follow-up turn.
-
-**Success Criteria:**
-1. Users can create, switch, rename/title, and delete conversation sessions from normal chat/history UI.
-2. Active session messages persist across app restart, restore without relying on scripted conversation fixtures, and are provided as LLM context for follow-up turns in reopened sessions.
-3. Sending a message appends to the active session while preserving the existing LLM/TTS/VTS response pipeline.
-4. Settings > Conversation reflects real session/history behavior and exposes truthful controls for retention/reset where supported.
-5. Conversation history remains transcript/session persistence only; memory and retrieval remain deferred to v4.0.
-
-### Phase 14: Plugin Developer Docs + Plugin Swap Hardening ✅ Complete
-
-**Goal:** Motion plugin developers have accurate human and AI-facing documentation, and the app's plugin selection/swap path exposes real validation, restart, and fallback state instead of silently accepting broken plugins.
-
-**Depends on:** Phase 13
-**Requirements:** PLUGDOC-01, PLUGDOC-02, PLUGDOC-03, PLUGDOC-04, PLUGDOC-05
-**Plans:** 4 complete
-
-Plans:
-- [x] 14-01-PLAN.md — Add the plugin helper kit, sample plugin, human docs, and tool-neutral AI playbook.
-- [x] 14-02-PLAN.md — Harden plugin listing, selection restart, runtime health, and invalid/fallback reporting.
-- [x] 14-03-PLAN.md — Close UAT gaps for AvatarOverrides docs and Windows sidecar process-tree restart cleanup.
-- [x] 14-04-PLAN.md — Reconnect chat WebSocket after plugin-switch sidecar restart so the input re-enables.
-
-Post-completion fixes:
-- [x] Cursor tracking toggle — Settings > Body motion plugin can enable/disable cursor tracking, persists the choice in stored plugin config, and restarts the sidecar so the compositor boots with or without `CursorDriver`.
-
-**Success Criteria:**
-1. Human plugin developers can find the plugin directory layout, manifest schema, lifecycle hooks, `ParamFrame` semantics, dependency expectations, and testing workflow in top-level docs.
-2. AI coding agents have a compact implementation brief naming the plugin invariants, required source files, forbidden patterns, and regression commands.
-3. Selecting a different plugin clearly applies through a sidecar restart or an explicit restart-required state; users are not left thinking a boot-time setting hot-swapped live.
-4. Invalid manifests, missing entrypoints, incompatible API versions, and `NullPlugin` fallback are visible through Settings/status/log surfaces with truthful copy.
-5. Tests cover plugin discovery/listing parity, active-plugin persistence, restart behavior, and invalid-plugin/fallback reporting.
-
-### Phase 15: Mock Boundary Audit ✅ Complete
-
-**Goal:** Normal user flows no longer depend on dev mocks, scripted fixtures, or mock alert actions; remaining mocks are isolated to dev/test surfaces.
-
-**Depends on:** Phase 14
-**Requirements:** MOCK-01, MOCK-02, MOCK-03, MOCK-04
-**Plans:** 1 complete
-
-Plans:
-- [x] 15-01-PLAN.md — Audit and enforce mock boundaries with tests and production-flow cleanup.
-
-**Success Criteria:**
-1. `mockStatus`, `mockBanners`, `mockToasts`, `mockSafeStorage`, and scripted conversation fixtures are absent from normal production chrome/user flows.
-2. Dev-only mock controls remain available only through explicit development utilities.
-3. Mock alert actions for logs/docs are replaced with real actions or disabled truthful controls.
-4. Tests cover status, Settings, persistence, and mock-boundary regressions.
+v4.0 remains the agentic system plus memory milestone: agent mode, goal loop, scheduler/skills bridge, and per-avatar/shared memory.
 
 ## Coverage
 
 - v1.0 requirements archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 - v2.0 requirements archived in `.planning/milestones/v2.0-REQUIREMENTS.md`.
+- v2.1 requirements archived in `.planning/milestones/v2.1-REQUIREMENTS.md`.
 - v2.0 audit result: functionally complete with tech debt, 53/53 requirements satisfied, 5/5 phases complete, Nyquist compliant.
-- v2.1 requirements live in `.planning/REQUIREMENTS.md` with all active requirements mapped to phases 11-15.
+- v2.1 audit result: complete, 26/26 requirements satisfied, 5/5 phases complete, no open critical gaps.
 
 ## Accepted Deferred Items
 
 - Phase 7 live `<event>` UAT is catalog-gated because active Teto currently has `events: []`; parser, routing, and completion tracking are covered by automated tests.
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
+- Memory and per-avatar identity remain deferred to v4.0 with the agentic system.
 
 ---
-*Last updated: 2026-05-09 after Phase 15 execution*
+*Last updated: 2026-05-09 after v2.1 milestone completion*

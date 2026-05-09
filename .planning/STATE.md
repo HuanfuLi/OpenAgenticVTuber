@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Mock/Reality Cleanup
-status: ready_for_milestone_completion
-stopped_at: Phase 15 complete; v2.1 is ready for milestone completion
-last_updated: "2026-05-09T12:30:00-04:00"
+milestone: v3.0
+milestone_name: STT/TTS
+status: ready_for_new_milestone
+stopped_at: v2.1 Mock/Reality Cleanup completed and archived
+last_updated: "2026-05-09T13:00:00-04:00"
 last_activity: 2026-05-09
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 15
-  completed_plans: 15
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -19,15 +19,15 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-05-09)
 
-**Core value:** Multi-avatar identity persistence (v1 horizon — v2.1 makes the current product surface truthful before voice and agentic milestones)
-**Current focus:** v2.1 Mock/Reality Cleanup
+**Core value:** Multi-avatar identity persistence (v1 horizon — v2.1 made the current product surface truthful before voice and agentic milestones)
+**Current focus:** Prepare v3.0 STT/TTS milestone
 
 ## Current Position
 
-Phase: 15 (Mock Boundary Audit) — COMPLETE
-Plan: 1 of 1 complete
-Status: Phase 15 passed automated verification. v2.1 has 15/15 plans complete and is ready for milestone completion.
-Next: Run `$gsd-complete-milestone 2.1`.
+Phase: none active
+Plan: none active
+Status: v2.1 Mock/Reality Cleanup is complete and archived.
+Next: Run `$gsd-new-milestone v3.0 STT/TTS` or plan the next selected milestone scope.
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -50,6 +50,8 @@ Last activity: 2026-05-09 — Phase 15 completed. Production renderer source no 
 **Milestone archive:** v1.0 Walking Skeleton archived on 2026-05-08. See `.planning/MILESTONES.md`, `.planning/v1.0-MILESTONE-AUDIT.md`, and `.planning/milestones/v1.0-ROADMAP.md`.
 
 **Milestone archive:** v2.0 Plugin + Animation Control archived on 2026-05-09. See `.planning/MILESTONES.md`, `.planning/milestones/v2.0-MILESTONE-AUDIT.md`, `.planning/milestones/v2.0-ROADMAP.md`, `.planning/milestones/v2.0-REQUIREMENTS.md`, and `.planning/milestones/v2.0-phases/`.
+
+**Milestone archive:** v2.1 Mock/Reality Cleanup archived on 2026-05-09. See `.planning/MILESTONES.md`, `.planning/milestones/v2.1-MILESTONE-AUDIT.md`, `.planning/milestones/v2.1-ROADMAP.md`, `.planning/milestones/v2.1-REQUIREMENTS.md`, and `.planning/milestones/v2.1-phases/`.
 
 **Note on v2.0 order (REVISED 2026-05-08):** v2.0 execution order changed from 6→8→7→9→10 to **8→6→7→9→10**. Phase 8 ran first because it produced the data + defined the `RigCapabilities` and `AvatarOverrides` Pydantic contracts that Phase 6 plugin runtime consumes. ARCH-02 requirement moved from Phase 6 → Phase 8. Decision is preserved in `.planning/milestones/v2.0-ROADMAP.md` and `.planning/milestones/v2.0-REQUIREMENTS.md`.
 
@@ -221,7 +223,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- v2.1 Phase 15: isolate dev mocks and add mock-boundary regression coverage.
+- No active v2.1 todos.
 
 ### Blockers/Concerns
 
@@ -240,23 +242,24 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Deferred Items
 
-Items acknowledged and deferred at v2.0 milestone close on 2026-05-09:
+Items acknowledged and deferred at milestone close:
 
 | Category | Item | Status |
 |----------|------|--------|
 | phase-7-uat | Live `<event>` UAT requires an active avatar catalog with events; current Teto has `events: []` | deferred |
 | phase-10-cursor | No-VTS-rect synthetic fallback projects against primary monitor only; live DPI-aware secondary-monitor VTS path is validated | deferred |
+| v2.1-memory | Memory, semantic retrieval, and per-avatar identity remain deferred to v4.0 with the agentic system | deferred |
 
 ## Upcoming Milestone Intent
 
 | Version | Intent | Notes |
 |---------|--------|-------|
-| v2.1 | Mock/Reality Cleanup | Current active milestone; no major new product capability. |
-| v3.0 | STT and TTS | Voice input and TTS settings/backends. |
+| v2.1 | Mock/Reality Cleanup | Completed and archived 2026-05-09. |
+| v3.0 | STT and TTS | Next milestone intent: voice input and TTS settings/backends. |
 | v4.0 | Agentic system + memory | Agent mode, goal loop, scheduler/skills bridge, and per-avatar/shared memory. |
 
 ## Session Continuity
 
-Last session: 2026-05-09T11:15:00-04:00
-Stopped at: Phase 13 UAT recheck passed; Phase 14 is next
-Resume file: .planning/phases/14-plugin-developer-docs-plugin-swap-hardening/14-CONTEXT.md
+Last session: 2026-05-09T13:00:00-04:00
+Stopped at: v2.1 milestone completed and archived; ready to start v3.0 STT/TTS planning
+Resume file: .planning/STATE.md

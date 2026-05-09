@@ -70,10 +70,46 @@ v2.0 moved animation control out of one-off compositor intent logic and into a p
 - A plugin supervisor must proxy the full production plugin surface, not only lifecycle methods; otherwise tests can pass while live action dispatch is a no-op.
 - Multi-monitor cursor support is mostly solved by the authoritative VTS HWND rect. The remaining robustness issue is only the fallback path when no VTS rect is available.
 
+## Milestone: v2.1 — Mock/Reality Cleanup
+
+**Shipped:** 2026-05-09
+**Phases:** 5
+**Plans:** 15
+
+### What Was Built
+
+v2.1 made the existing product surface truthful before voice and agentic work. Status chrome now reflects real provider/model, sidecar, and VTS state; Settings sections are wired to shipped capabilities or accurately deferred; conversation history sessions persist locally and feed restored context back into the sidecar; plugin authoring and plugin switching are documented and diagnosable; and production renderer flows no longer rely on development mocks or scripted fixtures.
+
+### What Worked
+
+- UAT quickly caught the important product-level mismatches: provider/model reconfiguration, avatar re-edit behavior, history row design, plugin restart fallout, and mock leakage.
+- Adding conversation history before STT/TTS gives voice work a real session model to integrate with instead of another placeholder.
+- Treating plugin swap as a restart-driven operation made user expectations and runtime behavior match.
+- Mock-boundary tests are a useful guardrail now that development controls still exist but production chrome must stay real.
+
+### What Was Inefficient
+
+- Some settings copy and history behavior needed multiple small gap closures because the first implementation matched data availability more than standard user expectations.
+- The old mock/demo surfaces were spread across state, UI, and shell bridge layers, so the cleanup needed both static greps and behavioral tests.
+- The unavailable `gsd-sdk query` path means milestone-close audits still need a local/manual fallback in this repo.
+
+### Patterns Established
+
+- Settings must either call real shipped behavior or explicitly say why a capability is deferred.
+- History rows should be title-first and avoid exposing assistant-response previews by default.
+- Dev mock modules can remain in the tree only when production import boundaries are tested.
+- Sidecar restarts must reconnect chat clients to the newest ready URL; otherwise plugin changes can strand the input.
+
+### Key Lessons
+
+- A cleanup milestone can be strategically valuable when it removes product ambiguity before larger capability work.
+- User-facing truthfulness is a feature: hardcoded status, fake alerts, and optimistic placeholders create real UAT failures even when core pipelines work.
+- Archiving phase evidence immediately after completion keeps future planning cleaner and reduces stale active-milestone context.
+
 ## Cross-Milestone Trends
 
-| Trend | v1.0 Observation | v2.0 Observation |
-|-------|------------------|------------------|
-| Live-runtime dependencies | VTS, audio devices, and LM Studio require human/UAT checkpoints. | VTS rig catalogs also gate what can be live-tested; event UAT needs an event-bearing avatar. |
-| Contract drift | Generated contracts plus drift checks are worth keeping as a required gate. | Contract codegen had to handle nested generated schemas and discriminated HUD unions; drift checks stayed useful. |
-| Logging | Any 60 Hz loop can become unusable without throttling and opt-in evidence flags. | Dispatch logs and HUD stream telemetry were useful, but validation docs must be refreshed immediately after UAT gap fixes. |
+| Trend | v1.0 Observation | v2.0 Observation | v2.1 Observation |
+|-------|------------------|------------------|------------------|
+| Live-runtime dependencies | VTS, audio devices, and LM Studio require human/UAT checkpoints. | VTS rig catalogs also gate what can be live-tested; event UAT needs an event-bearing avatar. | Real provider/model, sidecar restart, VTS state, and persisted settings need UAT because mocks can hide product drift. |
+| Contract drift | Generated contracts plus drift checks are worth keeping as a required gate. | Contract codegen had to handle nested generated schemas and discriminated HUD unions; drift checks stayed useful. | IPC/preload/state tests are the practical contract guard for renderer/Electron truthfulness. |
+| Logging and diagnostics | Any 60 Hz loop can become unusable without throttling and opt-in evidence flags. | Dispatch logs and HUD stream telemetry were useful, but validation docs must be refreshed immediately after UAT gap fixes. | Diagnostics and Settings copy should expose real fallback/restart states instead of forcing users to infer them from logs. |

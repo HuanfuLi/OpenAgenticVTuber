@@ -12,25 +12,22 @@ This is the **v1-horizon** core value. The v1.0 walking skeleton shipped the sin
 
 ## Current State
 
-**Shipped:** v1.0 Walking Skeleton on 2026-05-08; v2.0 Plugin + Animation Control on 2026-05-09.
+**Shipped:** v1.0 Walking Skeleton on 2026-05-08; v2.0 Plugin + Animation Control on 2026-05-09; v2.1 Mock/Reality Cleanup on 2026-05-09.
 
 The app now boots as an Electron desktop shell with a Python sidecar, speaks via local Piper TTS, streams LLM replies sentence-by-sentence, and drives VTube Studio through a sidecar-owned compositor. Teto remains the dev rig. Animation control is now plugin-driven: avatar imports produce `AvatarOverrides` and `RigCapabilities`, the default plugin owns action-code motion, the parser routes `[action]` / `{variant}` / `<event>` codes, and a HUD exposes a focused live parameter/lock surface for operator discovery. Status chrome now reports persisted provider/model, real sidecar lifecycle, and real VTS status/unavailable state instead of hardcoded mock values. Settings now shows truthful Avatars, VTube Studio, Conversation, Memory, and Diagnostics log-level state instead of the Phase 12 placeholder surfaces. Conversation history sessions persist locally, and production renderer flows no longer depend on dev mock modules, scripted chat fixtures, or mock alert actions.
 
 The §14 ceremony has been re-run under the refactored architecture. All six success criteria are PASS in `.planning/skeleton-verification.md` after gap closure for smirk rendering, cursor eye tracking, and blink ownership.
 
-## Current Milestone: v2.1 Mock/Reality Cleanup
+## Current Milestone: v3.0 STT/TTS
 
-**Goal:** Replace remaining mocked or hardcoded user-facing surfaces with real app, sidecar, and configuration state before larger v3.0 feature work, and add real conversation history sessions so the Conversation UI is no longer placeholder-only.
+**Goal:** Add voice input and improve TTS configurability while preserving the existing conversation history, TTS playback, and VTube Studio lipsync pipeline.
 
 **Target features:**
-- Status bar and popover reflect real configured provider/model, real sidecar lifecycle, and real VTube Studio reachability/auth state instead of hardcoded `qwen2.5` or `mockStatus` values.
-- Settings panel sections for Avatars, per-avatar settings, VTube Studio, Conversation, Memory, and Log level become truthful: wired to real state where v2.0 already has backend support, or explicitly disabled/deferred where the real system is not built yet.
-- Conversation history becomes real ChatGPT-style session persistence: create/switch/rename/delete sessions, restore the active transcript after restart, and wire the behavior into Settings.
-- Dev/demo mocks remain available only behind development affordances; production user flows stop depending on `mockSafeStorage`, `mockStatus`, `mockBanners`, scripted conversation history, or mock alert actions.
-- Memory is not implemented in v2.1. Its Settings surface should show a truthful disabled/deferred state because memory will ship with the agentic system.
+- Speech-to-text input with explicit push-to-talk or an equivalent intentional activation model.
+- Configurable TTS voice/backend settings beyond the current fixed Piper path.
+- Voice and TTS settings integrated with the existing persisted conversation sessions and VTS lipsync flow.
 
 **Next milestone intent:**
-- v3.0 shifts to STT and TTS work.
 - v4.0 carries the agentic system plus memory.
 
 **Accepted deferred items:**
@@ -56,13 +53,17 @@ The §14 ceremony has been re-run under the refactored architecture. All six suc
 - [x] v2.0 §14 re-verification records all six success criteria as PASS under the refactored plugin architecture — *Validated in Phase 10 (VFY-01..VFY-05)*
 - [x] Status and app chrome use real provider/model, sidecar, and VTS state instead of mocks or hardcoded copy — *Validated in Phase 11 (STAT-01..STAT-05)*
 - [x] Settings sections for existing v2.0 systems are wired to real data/actions, while Conversation and Memory are labeled by shipped/deferred reality — *Validated in Phase 12 (SET-01..SET-07)*
+- [x] Conversation history sessions provide persistent ChatGPT-style transcripts and real Settings wiring. — *Validated in Phase 13 (HIST-01..HIST-05)*
+- [x] Plugin developer documentation and plugin swap hardening make the motion-plugin path operable and diagnosable. — *Validated in Phase 14 (PLUGDOC-01..PLUGDOC-05)*
+- [x] Development mocks are isolated from production user flows and documented as dev-only. — *Validated in Phase 15 (MOCK-01..MOCK-04)*
 
 ### Active
 
-- [x] Conversation history sessions provide persistent ChatGPT-style transcripts and real Settings wiring. — *Validated in Phase 13 (HIST-01..HIST-05)*
-- [x] Development mocks are isolated from production user flows and documented as dev-only. — *Validated in Phase 15 (MOCK-01..MOCK-04)*
+- [ ] Voice input / STT activation and transcription — *v3.0 candidate requirement*
+- [ ] TTS voice/backend configuration — *v3.0 candidate requirement*
+- [ ] Voice/TTS settings integration with conversation history and VTS lipsync — *v3.0 candidate requirement*
 
-### Out of Scope (this milestone — deferred to later v1 milestones)
+### Out of Scope (deferred to later v1 milestones)
 
 - **Agent mode and goal-loop** — entire §9; deferred to v4.0 agentic-system milestone
 - **Saved goals + scheduler (APScheduler)** — depends on agent runtime
@@ -72,9 +73,7 @@ The §14 ceremony has been re-run under the refactored architecture. All six suc
 - **Multi-avatar switching** — import/catalog infrastructure exists, but relationship identity, per-avatar memory, and first-class switching remain deferred
 - **Pet mode (form-factor toggle and click-through)** — windowed mode only for skeleton
 - **Audio-to-params learned drivers (v1.5)** — rule-based DSP only
-- **Voice input / STT** — deferred to v3.0 STT/TTS milestone
 - **Image input (paste/drag/picker)** — text only
-- **TTS expansion and voice settings** — deferred to v3.0 STT/TTS milestone; v2.1 may only make existing TTS settings truthful
 - **Telemetry, auto-update, audit log, i18n strings, settings UI surfaces beyond LLM setup** — out of skeleton
 
 ### Out of Scope (v1 entirely — never in this project)
@@ -163,4 +162,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-09 after Phase 15 mock-boundary audit*
+*Last updated: 2026-05-09 after v2.1 milestone completion*
