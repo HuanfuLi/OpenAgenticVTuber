@@ -4,7 +4,7 @@
 **Milestone:** v2.1 Mock/Reality Cleanup
 **Core Value:** Multi-avatar identity persistence (v1 horizon; v2.1 makes the current UI truthful before larger v3/v4 features)
 
-This milestone removes misleading mocks and hardcoded user-facing state so the app accurately reflects what has shipped through v2.0 and clearly labels what remains deferred. It also adds first-class conversation history sessions so the Conversation surface becomes real before v3.0 voice work.
+This milestone removes misleading mocks and hardcoded user-facing state so the app accurately reflects what has shipped through v2.0 and clearly labels what remains deferred. It also adds first-class conversation history sessions and makes the v2.0 plugin developer path documented, swappable, and diagnosable before v3.0 voice work.
 
 ## v2.1 Requirements
 
@@ -33,6 +33,14 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 - [ ] **HIST-03**: Sending a message appends to the active session while preserving the existing LLM streaming, TTS, and VTS response pipeline.
 - [ ] **HIST-04**: Settings > Conversation reflects real session/history behavior and exposes truthful controls for retention/reset where supported.
 - [ ] **HIST-05**: Conversation history is transcript/session persistence only; semantic memory, retrieval, and per-avatar memory remain deferred to v4.0.
+
+### Plugin Developer Docs & Swap Hardening
+
+- [ ] **PLUGDOC-01**: Human plugin developers can read a top-level plugin guide covering directory layout, `plugin.yaml`, `BodyMotionPlugin`, `ParamFrame`, trusted in-sidecar execution, dependency expectations, and local test workflow.
+- [ ] **PLUGDOC-02**: AI plugin-author agents have a compact brief naming the source files to inspect, plugin invariants, forbidden patterns, and regression commands.
+- [ ] **PLUGDOC-03**: Plugin selection clearly reflects the boot-time swap model: choosing a new active plugin either restarts the sidecar or shows an explicit restart-required state.
+- [ ] **PLUGDOC-04**: Invalid manifests, missing entrypoints, incompatible API versions, and `NullPlugin` fallback are surfaced through Settings/status/log surfaces with actionable copy.
+- [ ] **PLUGDOC-05**: Automated tests cover plugin discovery/listing parity, active-plugin persistence, restart behavior, and invalid-plugin/fallback reporting.
 
 ### Mock Boundary
 
@@ -86,16 +94,21 @@ This milestone removes misleading mocks and hardcoded user-facing state so the a
 | HIST-03 | Phase 13 | Pending |
 | HIST-04 | Phase 13 | Pending |
 | HIST-05 | Phase 13 | Pending |
-| MOCK-01 | Phase 14 | Pending |
-| MOCK-02 | Phase 14 | Pending |
-| MOCK-03 | Phase 14 | Pending |
-| MOCK-04 | Phase 14 | Pending |
+| PLUGDOC-01 | Phase 14 | Pending |
+| PLUGDOC-02 | Phase 14 | Pending |
+| PLUGDOC-03 | Phase 14 | Pending |
+| PLUGDOC-04 | Phase 14 | Pending |
+| PLUGDOC-05 | Phase 14 | Pending |
+| MOCK-01 | Phase 15 | Pending |
+| MOCK-02 | Phase 15 | Pending |
+| MOCK-03 | Phase 15 | Pending |
+| MOCK-04 | Phase 15 | Pending |
 
 **Coverage:**
-- v2.1 requirements: 21 total
-- Mapped to phases: 21
+- v2.1 requirements: 26 total
+- Mapped to phases: 26
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after Phase 13 conversation-history insertion*
+*Last updated: 2026-05-09 after inserting Phase 14 plugin docs/swap hardening and deferring mock audit to Phase 15*

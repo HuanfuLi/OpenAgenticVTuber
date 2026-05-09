@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Mock/Reality Cleanup
 status: planning
-stopped_at: Phase 12 UAT passed
-last_updated: "2026-05-09T08:29:34-04:00"
+stopped_at: Phase 13 execution in progress; Phase 14 inserted before audit
+last_updated: "2026-05-09T09:00:00-04:00"
 last_activity: 2026-05-09
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 2
-  total_plans: 10
+  total_plans: 12
   completed_plans: 6
 ---
 
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: 13 (Conversation History Sessions) — PLANNED
+Phase: 13 (Conversation History Sessions) — EXECUTING
 Plan: 0 of 3 complete
-Status: Ready for Phase 13 execution
-Next: Run `$gsd-execute-phase 13` when ready.
+Status: Phase 13 execution is in progress
+Next: Complete and verify Phase 13, then run `$gsd-plan-phase 14`.
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -39,7 +39,7 @@ Next: Run `$gsd-execute-phase 13` when ready.
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
   - Phase 10 gap closure complete: Plan 10-03 resolved SC2-SMIRK-RENDERING, and Plan 10-04 resolved SC5-EYE-TRACKING plus BLINK-EYE-VISIBILITY. Operator confirmed cursor eye tracking works and blink behavior passes after app-owned idle blinking was removed so VTS owns normal blinking.
 
-Last activity: 2026-05-09 — Phase 12 re-UAT passed all 6 checks after 12-04 warning-copy cleanup. Phase 12 Settings Reality Pass is complete; Phase 13 conversation history sessions are planned and ready for execution.
+Last activity: 2026-05-09 — Phase 14 inserted for plugin developer documentation and plugin swap/status hardening; the existing mock-boundary audit moved to Phase 15. Phase 13 conversation history execution is in progress.
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
 
@@ -219,7 +219,8 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 - v2.1 Phase 13: add ChatGPT-style conversation history sessions and wire real session/history state into Settings.
-- v2.1 Phase 14: isolate dev mocks and add mock-boundary regression coverage.
+- v2.1 Phase 14: write human/AI plugin developer docs and harden plugin swap/status gaps.
+- v2.1 Phase 15: isolate dev mocks and add mock-boundary regression coverage.
 
 ### Blockers/Concerns
 

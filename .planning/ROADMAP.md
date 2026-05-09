@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 Walking Skeleton** — Phases 1-5 shipped 2026-05-08. Archive: `.planning/milestones/v1.0-ROADMAP.md`
 - ✅ **v2.0 Plugin + Animation Control** — Phases 8, 6, 7, 9, 10 shipped 2026-05-09. Archive: `.planning/milestones/v2.0-ROADMAP.md`
-- 🚧 **v2.1 Mock/Reality Cleanup** — Phases 11-14 planned.
+- 🚧 **v2.1 Mock/Reality Cleanup** — Phases 11-15 planned.
 
 ## Shipped Phases
 
@@ -42,11 +42,11 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-14 | 6/10 | In Progress | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-15 | 6/12 | In Progress | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
-v2.1 replaces remaining mocked or hardcoded user-facing surfaces with truthful state before v3.0 STT/TTS work, and adds first-class conversation history sessions so the Conversation surface is no longer a placeholder. It does not implement memory or the agentic system; memory is deferred to v4.0 with agentic workflows.
+v2.1 replaces remaining mocked or hardcoded user-facing surfaces with truthful state before v3.0 STT/TTS work, adds first-class conversation history sessions, and documents/hardens the plugin developer path so v2.0's plugin architecture is operable before audit. It does not implement memory or the agentic system; memory is deferred to v4.0 with agentic workflows.
 
 ### Phase 11: Status & App State Reality
 
@@ -107,16 +107,35 @@ Plans:
 4. Settings > Conversation reflects real session/history behavior and exposes truthful controls for retention/reset where supported.
 5. Conversation history remains transcript/session persistence only; memory and retrieval remain deferred to v4.0.
 
-### Phase 14: Mock Boundary Audit
+### Phase 14: Plugin Developer Docs + Plugin Swap Hardening
+
+**Goal:** Motion plugin developers have accurate human and AI-facing documentation, and the app's plugin selection/swap path exposes real validation, restart, and fallback state instead of silently accepting broken plugins.
+
+**Depends on:** Phase 13
+**Requirements:** PLUGDOC-01, PLUGDOC-02, PLUGDOC-03, PLUGDOC-04, PLUGDOC-05
+**Plans:** 2 planned
+
+Plans:
+- [ ] 14-01-PLAN.md — Write code-verified plugin developer docs, AI-agent brief, and default-plugin worked example.
+- [ ] 14-02-PLAN.md — Harden plugin listing/selection/restart/status behavior and cover invalid/fallback cases with tests.
+
+**Success Criteria:**
+1. Human plugin developers can find the plugin directory layout, manifest schema, lifecycle hooks, `ParamFrame` semantics, dependency expectations, and testing workflow in top-level docs.
+2. AI coding agents have a compact implementation brief naming the plugin invariants, required source files, forbidden patterns, and regression commands.
+3. Selecting a different plugin clearly applies through a sidecar restart or an explicit restart-required state; users are not left thinking a boot-time setting hot-swapped live.
+4. Invalid manifests, missing entrypoints, incompatible API versions, and `NullPlugin` fallback are visible through Settings/status/log surfaces with truthful copy.
+5. Tests cover plugin discovery/listing parity, active-plugin persistence, restart behavior, and invalid-plugin/fallback reporting.
+
+### Phase 15: Mock Boundary Audit
 
 **Goal:** Normal user flows no longer depend on dev mocks, scripted fixtures, or mock alert actions; remaining mocks are isolated to dev/test surfaces.
 
-**Depends on:** Phase 13
+**Depends on:** Phase 14
 **Requirements:** MOCK-01, MOCK-02, MOCK-03, MOCK-04
 **Plans:** 1 planned
 
 Plans:
-- [ ] 14-01-PLAN.md — Audit and enforce mock boundaries with tests and production-flow cleanup.
+- [ ] 15-01-PLAN.md — Audit and enforce mock boundaries with tests and production-flow cleanup.
 
 **Success Criteria:**
 1. `mockStatus`, `mockBanners`, `mockToasts`, `mockSafeStorage`, and scripted conversation fixtures are absent from normal production chrome/user flows.
@@ -129,7 +148,7 @@ Plans:
 - v1.0 requirements archived in `.planning/milestones/v1.0-REQUIREMENTS.md`.
 - v2.0 requirements archived in `.planning/milestones/v2.0-REQUIREMENTS.md`.
 - v2.0 audit result: functionally complete with tech debt, 53/53 requirements satisfied, 5/5 phases complete, Nyquist compliant.
-- v2.1 requirements live in `.planning/REQUIREMENTS.md` with all active requirements mapped to phases 11-14.
+- v2.1 requirements live in `.planning/REQUIREMENTS.md` with all active requirements mapped to phases 11-15.
 
 ## Accepted Deferred Items
 
@@ -137,4 +156,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 12 UAT passed*
+*Last updated: 2026-05-09 after inserting Phase 14 plugin docs/swap hardening and deferring mock audit to Phase 15*
