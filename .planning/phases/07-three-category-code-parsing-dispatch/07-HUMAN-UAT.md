@@ -12,6 +12,14 @@ updated: 2026-05-08T22:50:51.8225985-04:00
 
 [testing complete]
 
+## Live Dispatch Prerequisites
+
+- Use an active avatar whose `_avatar_overrides.yaml` contains the variant and event codes under test.
+- For current imported Teto variant testing, start the app with `AGENTICLLMVTUBER_ACTIVE_AVATAR=重音テト` so `{heart-eye}` resolves from `avatars/重音テト/_avatar_overrides.yaml`.
+- Current imported Teto has `events: []`, so event dispatch and `[EVENT-COMPLETE]` verification are blocked until an event-bearing avatar catalog is selected or imported.
+- If startup logs include `[DISPATCH-CATALOG-BLOCKED]`, absence of `<event>` output from the LLM is not a parser/routing failure.
+- Proceed with live variant verification when `[DISPATCH-CATALOG]` reports nonzero `actions` and `variants`; proceed with live event verification only when it reports `events` greater than zero.
+
 ## Tests
 
 ### 1. Live VTS dispatch confirmation

@@ -30,7 +30,7 @@ from sidecar.parser.reserved import (
 )
 from sidecar.plugins.api import BodyMotionPlugin
 from sidecar.plugins.loader import (
-    build_action_codes_section,
+    build_dispatch_codes_section,
     discover_manifests,
     load_manifest,
     resolve_entrypoint,
@@ -256,9 +256,18 @@ async def lifespan(app: FastAPI):
             pending_inputs: asyncio.Queue[str] = asyncio.Queue()
             plugin_supervisor = await PluginSupervisor.load_or_null(plugin, capabilities, overrides)
             plugin_adapter = PluginAdapter(plugin_supervisor)
-            action_codes_section = (
-                build_action_codes_section(plugin_manifest) if plugin_manifest is not None else ""
+            dispatch_codes_section = build_dispatch_codes_section(plugin_manifest, overrides)
+            loguru_logger.info(
+                "[DISPATCH-CATALOG] active_avatar={} actions={} variants={} events={}",
+                active_avatar_id,
+                len(plugin_action_codes),
+                len(overrides.variants),
+                len(overrides.events),
             )
+            if not overrides.events:
+                loguru_logger.info(
+                    "[DISPATCH-CATALOG-BLOCKED] live event UAT requires an active avatar catalog with at least one event."
+                )
             tts_manager = TTSTaskManager(
                 stream=tts_gateway.stream,
                 voice=tts_gateway.voice,
@@ -284,7 +293,7 @@ async def lifespan(app: FastAPI):
             app.state.orchestrator = Orchestrator(
                 gateway=gateway,
                 persona_text=persona,
-                action_codes_section=action_codes_section,
+                action_codes_section=dispatch_codes_section,
                 tts_manager=tts_manager,
                 compositor_speech_queue=compositor_speech_queue,
                 compositor_sentence_complete_queue=compositor_sentence_complete_queue,

@@ -67,13 +67,13 @@ _CONTEXT_OVERFLOW_COPY = (
 )
 
 
-def _build_system_prompt(persona_text: str, action_codes_section: str) -> str:
+def _build_system_prompt(persona_text: str, dispatch_codes_section: str) -> str:
     """Persona + utility-prompt append (CONTEXT D-06; OLVT
     service_context.py:436-477 pattern). Bytes-identical at boot per Pitfall 6.
     """
     expression_prompt = load_util("live2d_expression_prompt")
     expression_prompt = expression_prompt.replace(
-        "[<insert_action_codes_section>]", action_codes_section
+        "[<insert_dispatch_codes_section>]", dispatch_codes_section
     )
     return persona_text + "\n\n" + expression_prompt
 
@@ -84,6 +84,7 @@ class Orchestrator:
         gateway: LLMGateway,
         persona_text: str,
         action_codes_section: str = "",
+        dispatch_codes_section: str | None = None,
         tts_preprocessor_config: TTSPreprocessorConfig | None = None,
         tts_manager: TTSTaskManager | None = None,
         compositor_speech_queue: asyncio.Queue[SpeechEnvelopePayload] | None = None,
@@ -102,7 +103,12 @@ class Orchestrator:
         self._gateway = gateway
         # SYSTEM PROMPT FROZEN AT BOOT -- D-17, D-19, Pitfall 6.
         # Bytes-identical across all turns of this orchestrator's lifetime.
-        self._system_prompt: str = _build_system_prompt(persona_text, action_codes_section)
+        prompt_codes_section = (
+            action_codes_section
+            if dispatch_codes_section is None
+            else dispatch_codes_section
+        )
+        self._system_prompt: str = _build_system_prompt(persona_text, prompt_codes_section)
         self._plugin_action_codes = plugin_action_codes or valid_expression_names or set()
         self._avatar_overrides = avatar_overrides
         self._variants = (
