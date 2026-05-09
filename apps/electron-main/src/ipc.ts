@@ -10,12 +10,15 @@ import {
   onCrash,
   onLog,
   listBodyMotionPlugins,
-  restartSidecar
+  restartSidecar,
+  resetVtsAuthToken
 } from './sidecar'
 import {
   getChromeState,
+  getLogLevel,
   getThemePreference,
   saveChromeState,
+  saveLogLevel,
   saveThemePreference,
   store
 } from './window-store'
@@ -32,6 +35,10 @@ export function registerIpc(window: BrowserWindow): () => void {
   ipcMain.handle('theme:getPreference', () => getThemePreference())
   ipcMain.handle('theme:savePreference', (_e, prefs) => saveThemePreference(prefs))
   ipcMain.handle('sidecar:restart', async () => {
+    await restartSidecar()
+  })
+  ipcMain.handle('vts:resetAuth', async () => {
+    await resetVtsAuthToken()
     await restartSidecar()
   })
   ipcMain.handle('sidecar:getVtsStatus', async () => {
@@ -83,6 +90,19 @@ export function registerIpc(window: BrowserWindow): () => void {
   })
   ipcMain.handle('config:clear', () => clearConfig())
   ipcMain.handle('plugin:listBodyMotionPlugins', () => listBodyMotionPlugins())
+  ipcMain.handle('avatar:getCurrentId', () => store.get('currentAvatarId') || 'teto')
+  ipcMain.handle('avatar:getCurrentPlan', async (): Promise<AvatarImportPlan | null> => {
+    const currentAvatarId = store.get('currentAvatarId') || 'teto'
+    try {
+      const resp = await fetch(
+        `${getSidecarHttpUrl()}/admin/avatar/import/current?avatar_id=${encodeURIComponent(currentAvatarId)}`
+      )
+      if (!resp.ok) return null
+      return (await resp.json()) as AvatarImportPlan
+    } catch {
+      return null
+    }
+  })
   ipcMain.handle('avatar:pickFolder', async (): Promise<string | null> => {
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory'],
@@ -124,6 +144,8 @@ export function registerIpc(window: BrowserWindow): () => void {
   ipcMain.handle('hud:open', () => {
     createHudWindow()
   })
+  ipcMain.handle('log:getLevel', () => getLogLevel())
+  ipcMain.handle('log:saveLevel', (_e, level) => saveLogLevel(level))
 
   const offReady = onReady((url) => {
     if (!window.isDestroyed()) window.webContents.send('sidecar:ready', url)
@@ -146,14 +168,19 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('theme:getPreference')
     ipcMain.removeHandler('theme:savePreference')
     ipcMain.removeHandler('sidecar:restart')
+    ipcMain.removeHandler('vts:resetAuth')
     ipcMain.removeHandler('sidecar:getVtsStatus')
     ipcMain.removeHandler('config:load')
     ipcMain.removeHandler('config:save')
     ipcMain.removeHandler('config:clear')
     ipcMain.removeHandler('plugin:listBodyMotionPlugins')
+    ipcMain.removeHandler('avatar:getCurrentId')
+    ipcMain.removeHandler('avatar:getCurrentPlan')
     ipcMain.removeHandler('avatar:pickFolder')
     ipcMain.removeHandler('avatar:requestImportPlan')
     ipcMain.removeHandler('avatar:commitOverrides')
     ipcMain.removeHandler('hud:open')
+    ipcMain.removeHandler('log:getLevel')
+    ipcMain.removeHandler('log:saveLevel')
   }
 }

@@ -3,7 +3,7 @@
 // is whitelisted here.
 import { contextBridge, ipcRenderer } from 'electron'
 import type { StoredConfig } from '../src/safe-storage'
-import type { ChromeState, ThemePreference } from '../src/window-store'
+import type { ChromeState, LogLevel, ThemePreference } from '../src/window-store'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
 
 type Unsubscribe = () => void
@@ -68,10 +68,14 @@ const api = {
   clearStoredConfig: (): Promise<void> => ipcRenderer.invoke('config:clear'),
   getVtsStatus: (): Promise<VtsStatus> => ipcRenderer.invoke('sidecar:getVtsStatus'),
   restartSidecar: (): Promise<void> => ipcRenderer.invoke('sidecar:restart'),
+  resetVtsAuth: (): Promise<void> => ipcRenderer.invoke('vts:resetAuth'),
   listBodyMotionPlugins: (): Promise<BodyMotionPluginSummary[]> =>
     ipcRenderer.invoke('plugin:listBodyMotionPlugins'),
 
   // Avatar import
+  getCurrentAvatarId: (): Promise<string> => ipcRenderer.invoke('avatar:getCurrentId'),
+  getCurrentAvatarPlan: (): Promise<AvatarImportPlan | null> =>
+    ipcRenderer.invoke('avatar:getCurrentPlan'),
   pickAvatarFolder: (): Promise<string | null> => ipcRenderer.invoke('avatar:pickFolder'),
   requestImportPlan: (folder: string): Promise<AvatarImportPlan> =>
     ipcRenderer.invoke('avatar:requestImportPlan', folder),
@@ -79,11 +83,15 @@ const api = {
     ipcRenderer.invoke('avatar:commitOverrides', plan),
 
   // HUD entry (Phase 9)
-  openHud: (): Promise<void> => ipcRenderer.invoke('hud:open')
+  openHud: (): Promise<void> => ipcRenderer.invoke('hud:open'),
+
+  // Diagnostics preferences
+  getLogLevel: (): Promise<LogLevel> => ipcRenderer.invoke('log:getLevel'),
+  saveLogLevel: (level: LogLevel): Promise<LogLevel> => ipcRenderer.invoke('log:saveLevel', level)
 }
 
 contextBridge.exposeInMainWorld('api', api)
 
 export type RendererApi = typeof api
 export type { StoredConfig, ProviderConfig, Provider } from '../src/safe-storage'
-export type { ChromeState, ThemePreference } from '../src/window-store'
+export type { ChromeState, LogLevel, ThemePreference } from '../src/window-store'

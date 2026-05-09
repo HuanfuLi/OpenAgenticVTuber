@@ -20,11 +20,14 @@ export interface ThemePreference {
   darkAccent: 'sky' | 'pewter'
 }
 
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug'
+
 export interface StoreSchema {
   window: WindowState
   chrome: ChromeState
   themePreference: ThemePreference | null
   currentAvatarId: string
+  logLevel: LogLevel
 }
 
 // Defaults per UI-SPEC §Spacing: 400×700 default window, drawer disabled, 200px height.
@@ -37,7 +40,8 @@ export const store = new Store<StoreSchema>({
       logsDrawerCollapsed: true
     },
     themePreference: null,
-    currentAvatarId: 'teto'
+    currentAvatarId: 'teto',
+    logLevel: 'info'
   }
 })
 
@@ -58,4 +62,19 @@ export function getThemePreference(): ThemePreference | null {
 
 export function saveThemePreference(prefs: ThemePreference): void {
   store.set('themePreference', prefs)
+}
+
+const LOG_LEVELS = new Set<LogLevel>(['error', 'warn', 'info', 'debug'])
+
+export function getLogLevel(): LogLevel {
+  const level = store.get('logLevel')
+  return LOG_LEVELS.has(level) ? level : 'info'
+}
+
+export function saveLogLevel(level: LogLevel): LogLevel {
+  if (!LOG_LEVELS.has(level)) {
+    throw new Error(`Invalid log level: ${level}`)
+  }
+  store.set('logLevel', level)
+  return level
 }

@@ -264,6 +264,14 @@ export function getSidecarHttpUrl(): string {
   return state.readyUrl.replace(/^ws:/, 'http:').replace(/\/ws$/, '')
 }
 
+export function getVtsTokenPath(): string {
+  return path.join(resolveSidecarRoot(), '.vts_token.txt')
+}
+
+export async function resetVtsAuthToken(): Promise<void> {
+  await fs.promises.rm(getVtsTokenPath(), { force: true })
+}
+
 export function onReady(cb: (url: string) => void): () => void {
   subscribers.ready.add(cb)
   return () => {
