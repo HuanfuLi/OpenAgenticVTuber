@@ -114,8 +114,8 @@ These are the load-bearing architectural invariants that make plug-and-play poss
 
 - [x] **HUD-01**: Sidecar exposes a separate WebSocket endpoint `/hud/ws` that is opened only when the renderer's HUD route is mounted; closed on unmount; preserves the AVT-01 "renderer never sees 60 Hz traffic" rule for non-HUD operation
 - [x] **HUD-02**: Compositor taps its emit step at 15 Hz throttle (sidecar-side gate, not renderer-side); ParamFrame deltas are pushed to `/hud/ws` connected clients
-- [ ] **HUD-03**: Renderer HUD shows a scrollable list of writable params from `RigCapabilities`, *excluding* any param ID claimed by `compositor/lock_filter.py:SYSTEM_PRIMITIVE_OVERRIDES` (currently `MouthOpen`). Each row contains: param name, value display, slider, lock toggle. Slider value range is bounded by `RigCapabilities.ranges[param_id]` so the user cannot drag past a writable bound.
-- [ ] **HUD-04**: Slider drag fires `set-lock(param_id, value)` over `/hud/ws`; lock auto-engages renderer-side optimistically; sidecar confirms within the next 15 Hz frame; the sidecar is single-source-of-truth for `compositor.lock_state`. Lock persists until the user explicitly clicks the lock toggle off (releasing the slider does NOT release the lock).
+- [x] **HUD-03**: Renderer HUD shows a scrollable list of writable params from `RigCapabilities`, *excluding* any param ID claimed by `compositor/lock_filter.py:SYSTEM_PRIMITIVE_OVERRIDES` (currently `MouthOpen`). Each row contains: param name, value display, slider, lock toggle. Slider value range is bounded by `RigCapabilities.ranges[param_id]` so the user cannot drag past a writable bound.
+- [x] **HUD-04**: Slider drag fires `set-lock(param_id, value)` over `/hud/ws`; lock auto-engages renderer-side optimistically; sidecar confirms within the next 15 Hz frame; the sidecar is single-source-of-truth for `compositor.lock_state`. Lock persists until the user explicitly clicks the lock toggle off (releasing the slider does NOT release the lock).
 - [x] **HUD-05**: Compositor merge applies locks LAST in the merge order; system primitives (lipsync writing `MouthOpen`) override locks for safety — speech without mouth movement looks broken. Locks always win against LLM-driven `{variant}` / `<event>` writes by virtue of compositor 60Hz re-injection (no extension to `SYSTEM_PRIMITIVE_OVERRIDES` needed for variant/event).
 - [x] **HUD-06**: HUD param list excludes any param ID present in `compositor/lock_filter.py:SYSTEM_PRIMITIVE_OVERRIDES`. This makes lock-override conflicts impossible by construction rather than handling them with badge UX. (Was: override-badge UX; superseded 2026-05-08 by Phase 9 discuss-phase decision — if the user cannot meaningfully lock a param, do not expose it in the HUD at all. `lock-rejected` WS message is retained as an ERROR-log channel for code-bug detection but does not surface in UI.)
 - [x] **HUD-07**: Lock state is session-only — process memory in sidecar, cleared on app restart (locks are a discovery tool, not a persistent preference)
@@ -317,14 +317,14 @@ Populated by the roadmapper during ROADMAP.md creation (2026-05-06). Maintained 
 | PARSE-06 | Phase 7 | Complete — 07-03 computes final event delays and 07-05 `EventCompletionTracker` uses them directly with 10s fallback |
 | PARSE-07 | Phase 7 | Pending — cross-category uniqueness check at boot (loud failure) |
 | PARSE-08 | Phase 7 | Pending — split-token reassembly fixtures for all three categories |
-| HUD-01 | Phase 9 | Pending — dedicated `/hud/ws` WebSocket endpoint |
-| HUD-02 | Phase 9 | Pending — sidecar 15 Hz throttle gate |
-| HUD-03 | Phase 9 | Pending — scrollable param list from `RigCapabilities` |
-| HUD-04 | Phase 9 | Pending — drag → optimistic lock + sidecar single-source-of-truth |
-| HUD-05 | Phase 9 | Pending — locks LAST in merge; system-primitive override list |
-| HUD-06 | Phase 9 | Pending — override-badge UX surfaces lock-overridden rows |
-| HUD-07 | Phase 9 | Pending — session-only lock persistence |
-| HUD-08 | Phase 9 | Pending — `GET /admin/rig-capabilities` HTTP endpoint |
+| HUD-01 | Phase 9 | Complete — 09-01 dedicated `/hud/ws` WebSocket endpoint |
+| HUD-02 | Phase 9 | Complete — 09-01 sidecar 15 Hz HUD tap |
+| HUD-03 | Phase 9 | Complete — 09-02 scrollable HUD param list from RigCapabilities/hud_visible_param_ids |
+| HUD-04 | Phase 9 | Complete — 09-02 drag → optimistic lock + sidecar single-source-of-truth |
+| HUD-05 | Phase 9 | Complete — 09-01 locks LAST in merge; system-primitive override list |
+| HUD-06 | Phase 9 | Complete — 09-01/09-02 excludes primitive-owned mouth params from HUD rows |
+| HUD-07 | Phase 9 | Complete — 09-01 session-only lock persistence |
+| HUD-08 | Phase 9 | Complete — 09-01 `GET /admin/rig-capabilities` HTTP endpoint |
 | VFY-01 | Phase 10 | Pending — cursor polish OPTIONAL; SC #4 may be PARTIAL |
 | VFY-02 | Phase 10 | Pending — if cursor lands: drop in-canvas gate + synthetic fallback |
 | VFY-03 | Phase 10 | Pending — re-run all six §14 SCs against refactored architecture |

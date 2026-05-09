@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Walking Skeleton** — Phases 1-5 shipped 2026-05-08. Archive: `.planning/milestones/v1.0-ROADMAP.md`
-- 🚧 **v2.0 Plugin + Animation Control** — Phase 8 ✅, Phase 6 ✅ (re_verification_4 passed 2026-05-08 PM after 06-07 writer consolidation + F-3 tracking-range fix + 06-08 active-Teto joy vocabulary correction), Phases 7/9/10 not started.
+- 🚧 **v2.0 Plugin + Animation Control** — Phase 8 ✅, Phase 6 ✅ (re_verification_4 passed 2026-05-08 PM after 06-07 writer consolidation + F-3 tracking-range fix + 06-08 active-Teto joy vocabulary correction), Phase 7 ✅, Phase 9 ✅, Phase 10 remaining.
 
 ## Overview
 
@@ -144,7 +144,7 @@ Five additional phases (6, 7, 8, 9, 10) refactoring the milestone-1 animation la
 - [x] **Phase 8: Avatar Import + Catalogs** — Type-detected auto-extraction (VTS / Cubism w-exp / Cubism bare / OLVT) + mandatory React review screen + `_avatar_overrides.yaml` writes + `RigCapabilities` + `AvatarOverrides` contract definition — **first in execution order (REVISED — produces schema Phase 6 builds against)** (2026-05-08)
 - [x] **Phase 6: Plugin Runtime + Default Plugin** — Plugin contracts (ABC, manifest), in-sidecar loader with supervisor + clamp + rate-limiter, default plugin absorbing milestone-1 IntentDriver + body-sway logic; consumes Phase 8's `RigCapabilities` + `AvatarOverrides` — **second in execution order** *(2026-05-08 PM passed re_verification_4 after 06-08 corrected active Teto joy vocabulary; 06-07 closed ARCH-05/06 split-writer violation + tracking-range fix closed F-3)*
 - [x] **Phase 7: Three-Category Code Parsing + Dispatch** — `code_extractor` decorator dispatching `[xxx]` / `{xxx}` / `<xxx>` to plugin / variant-toggle / event-fire paths — third in execution order; complete after 07-08 prompt-catalog gap closure and live `{heart-eye}` UAT confirmation
-- [ ] **Phase 9: Slider HUD + Per-Param Lock** — Sidecar 15 Hz HUD-mode IPC tap + dedicated React route + per-param lock with auto-engage on drag — fourth in execution order
+- [x] **Phase 9: Slider HUD + Per-Param Lock** — Sidecar 15 Hz HUD-mode IPC tap + dedicated React route + per-param lock with auto-engage on drag — fourth in execution order (2026-05-09)
 - [ ] **Phase 10: Cursor Fix + §14 SC Re-Verification** — Mandatory cursor namespace fix (per 2026-05-08 discuss-phase amendment) + drop in-VTS-window gate + synthetic-canvas fallback + side-by-side §14 SC harness replay (lipsync + idle) + operator ceremony for SC #2 [smirk] / SC #4 body sway / SC #5 cursor + skeleton-verification.md commit — last in execution order; 2 plans
 
 ### Phase 6: Plugin Runtime + Default Plugin
@@ -244,7 +244,7 @@ Plans:
 
 Plans:
 - [x] 09-01-PLAN.md — Sidecar HUD foundation: HudMessage{S2C,C2S} Pydantic contracts + Phase 7 codegen integration; `compositor/hud_tap.py` 15 Hz fanout; Compositor lock_state dict + locks-LAST merge with SYSTEM_PRIMITIVE_OVERRIDES defense-in-depth; `hud_excluded_param_ids` resolver-mapped helper in lock_filter.py; `/hud/ws` FastAPI endpoint with set-lock/clear-lock handlers; `GET /admin/rig-capabilities` HTTP endpoint with sidecar-derived hud_excluded_param_ids — covers HUD-01, HUD-02, HUD-05, HUD-06, HUD-07, HUD-08
-- [ ] 09-02-PLAN.md — Renderer HUD UI: Electron multi-BrowserWindow factory (`hud-window.ts`, ipc:hud:open, before-quit cleanup); App.tsx route hash branch (`#/hud`); `<HudRoot>` component tree with `useHudStream` hook (drag→set-lock optimistic, manual-disengage, 1.5s reconnect); native `<input type=range>` sliders bounded by RigCapabilities.param_ranges; Lock/Unlock SVG icons; HUD CSS section in index.css; Settings "Open HUD" button entry point; auto-clear-locks toast on locked_ids drop; live operator UAT — covers HUD-03, HUD-04
+- [x] 09-02-PLAN.md — Renderer HUD UI: Electron multi-BrowserWindow factory (`hud-window.ts`, ipc:hud:open, before-quit cleanup); App.tsx route hash branch (`#/hud`); `<HudRoot>` component tree with `useHudStream` hook (drag→set-lock optimistic, manual-disengage, 1.5s reconnect); native `<input type=range>` sliders bounded by RigCapabilities.param_ranges; Lock/Unlock SVG icons; HUD CSS section in index.css; Settings "Open HUD" button entry point; auto-clear-locks toast on locked_ids drop; live operator UAT — covers HUD-03, HUD-04
 
 **UI hint**: yes  <!-- Dedicated React route mounted in a separate Electron BrowserWindow; multi-row scrollable param list with slider + lock toggle. NO override-badge (designed out by HUD-exclusion rule). -->
 
@@ -291,7 +291,7 @@ Milestone v2.0 phases execute in REVISED order: 8 → 6 → 7 → 9 → 10 (revi
 | 8. Avatar Import + Catalogs | 5/5 | Complete — VERIFICATION passed 5/5 must-haves | 2026-05-08 |
 | 6. Plugin Runtime + Default Plugin | 8/8 | Complete — re_verification_4 passed; F-1/F-2 closed by 06-07 writer consolidation; F-3 closed by tracking-range fix; joy vocabulary gap closed by 06-08 | 2026-05-08 |
 | 7. Three-Category Code Parsing + Dispatch | 8/8 | Complete — 07-08 gap closure exposed active dispatch codes in prompt; live `{heart-eye}` variant confirmed; event UAT prerequisite-gated by current Teto `events: []` | 2026-05-09 |
-| 9. Slider HUD + Per-Param Lock | 0/2 (TBD) | Not started — fourth in v2.0 order | - |
+| 9. Slider HUD + Per-Param Lock | 2/2 | Complete — live HUD UAT approved after visible-param and stream-liveness fixes | 2026-05-09 |
 | 10. Cursor Polish + §14 SC Re-Verification | 0/2 | Not started — last in v2.0 order | - |
 
 ## Coverage

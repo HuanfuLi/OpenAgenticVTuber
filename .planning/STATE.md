@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
-status: executing
-stopped_at: Checkpoint 09-02 Task 5 human re-verification after HUD slider param normalization
-last_updated: "2026-05-09T05:29:53.822Z"
+status: verifying
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-05-09T05:53:49.045Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 42
-  completed_plans: 39
+  completed_plans: 40
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 Phase: 09 (slider-hud-per-param-lock) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -110,6 +110,7 @@ Last activity: 2026-05-09
 | Phase 07-three-category-code-parsing-dispatch P07 | 9min | 2 tasks | 7 files |
 | Phase 07-three-category-code-parsing-dispatch P08 | 39min | 3 tasks | 10 files |
 | Phase 09-slider-hud-per-param-lock P01 | 24min | 5 tasks | 24 files |
+| Phase 09-slider-hud-per-param-lock P02 | 62min | 5 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -204,6 +205,9 @@ Recent decisions affecting current work:
 - [Phase 09-slider-hud-per-param-lock]: The HUD WebSocket pre-filters system-primitive params from param-frame payloads so the renderer does not duplicate exclusion logic.
 - [Phase 09-slider-hud-per-param-lock]: The contract codegen needed HUD-specific union title and alias handling for Annotated discriminated unions.
 - [Phase 09-slider-hud-per-param-lock]: HUD slider rows prefer bounded VTS input params from VTube Studio ParameterSettings; full CDI3/Cubism writable params remain in RigCapabilities but are not all shown in the HUD.
+- [Phase 09-slider-hud-per-param-lock]: The HUD route is hash-routed at #/hud and intentionally bypasses AppShell so the secondary window has no main chrome.
+- [Phase 09-slider-hud-per-param-lock]: The HUD displays the sidecar-provided hud_visible_param_ids subset instead of every writable RigCapabilities row, keeping the operator surface to real VTS input params.
+- [Phase 09-slider-hud-per-param-lock]: The HUD stream is independent of VTS writer availability so operator discovery and lock telemetry do not go dead when VTS is not actively writable.
 
 ### Pending Todos
 
@@ -226,6 +230,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-09T05:29:53.788Z
-Stopped at: Checkpoint 09-02 Task 5 human re-verification after HUD slider param normalization
+Last session: 2026-05-09T05:53:49.031Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
