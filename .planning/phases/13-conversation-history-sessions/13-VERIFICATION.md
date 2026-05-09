@@ -1,7 +1,7 @@
 ---
-status: human_needed
+status: gaps_found
 phase: 13-conversation-history-sessions
-verified_at: 2026-05-09T10:16:00-04:00
+verified_at: 2026-05-09T10:31:00-04:00
 requirements: [HIST-01, HIST-02, HIST-03, HIST-04, HIST-05]
 human_verification:
   - Complete a real LLM turn, restart the app, and confirm the active session transcript restores.
@@ -13,16 +13,16 @@ human_verification:
 
 ## Result
 
-Automated verification passed. Human UAT is still needed for live restart persistence and end-to-end session operations in the running Electron app.
+Gaps found. Automated verification passed, and human UAT passed 6/7 checks. The remaining gap is a minor History-row presentation issue: the session list visibly shows assistant-response preview text, which feels less standard than a title-first conversation-session list.
 
 ## Requirement Coverage
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| HIST-01 | Automated passed; UAT pending | HistorySheet now uses `useConversationHistory()` for real create, switch, rename, delete, and search/filter. Covered by `HistorySheet.test.tsx`. |
-| HIST-02 | Automated passed; restart UAT pending | Active session messages hydrate into Chat through `ConversationHistoryProvider`; durable storage is in `conversation-store.ts`. Covered by `ConversationHistory.test.tsx` and `Chat.test.tsx`; restart restore requires live app UAT. |
-| HIST-03 | Automated passed; live pipeline UAT pending | `conversation-chain-end` commits one completed user/assistant turn via the existing WS dispatcher while preserving streaming state. Covered by `useStreamingMessages.test.ts`, `Chat.test.tsx`, and focused type/build checks. |
-| HIST-04 | Automated passed; UAT pending | Settings > Conversation shows active session, counts, local retention, and clear-all with destructive confirmation. Covered by `Settings.test.tsx`. |
+| HIST-01 | Gap planned | HistorySheet supports real create, switch, rename, delete, and search/filter. UAT found one presentation gap in visible row preview behavior; plan 13-04 will close it. |
+| HIST-02 | Passed | Active session messages hydrate into Chat through `ConversationHistoryProvider`; durable storage is in `conversation-store.ts`. Restart restore UAT passed. |
+| HIST-03 | Passed | `conversation-chain-end` commits one completed user/assistant turn via the existing WS dispatcher while preserving streaming state. Failed-turn skip UAT passed. |
+| HIST-04 | Passed | Settings > Conversation shows active session, counts, local retention, and clear-all with destructive confirmation. UAT passed. |
 | HIST-05 | Passed | Store and UI persist transcript/session data only. No memory, retrieval, per-avatar facts, cloud sync, or export/import state was added. |
 
 ## Automated Checks
@@ -31,14 +31,17 @@ Automated verification passed. Human UAT is still needed for live restart persis
 - `npm --workspace apps/renderer run typecheck` - passed.
 - `npm --workspace apps/electron-main run build` - passed.
 
-## Human Verification Needed
+## UAT Result
 
 See `13-UAT.md`.
 
-1. Create a session, complete a real LLM turn, restart the app, and confirm transcript restore.
-2. Search, switch, rename, and delete sessions in History.
-3. Clear all history from Settings and confirm provider/model configuration remains.
-4. Confirm Memory remains disabled/deferred to v4.0.
+- Passed: 6
+- Issues: 1
+- Pending: 0
+
+## Gap
+
+- History rows should present a standard session title derived from the conversation without making the first/latest assistant response appear as primary history content. Gap plan: `13-04-PLAN.md`.
 
 ## Notes
 
