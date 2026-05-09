@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: executing
-stopped_at: Checkpoint 09-02 Task 5 human verification
-last_updated: "2026-05-09T05:00:48.489Z"
+stopped_at: Checkpoint 09-02 Task 5 human re-verification after HUD slider param normalization
+last_updated: "2026-05-09T05:29:53.822Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
@@ -203,6 +203,7 @@ Recent decisions affecting current work:
 - [Phase 09-slider-hud-per-param-lock]: Mouth-related HUD exclusion stays derived from SYSTEM_PRIMITIVE_OVERRIDES; ParamMouthOpenY is excluded by resolver mapping instead of adding a second override key.
 - [Phase 09-slider-hud-per-param-lock]: The HUD WebSocket pre-filters system-primitive params from param-frame payloads so the renderer does not duplicate exclusion logic.
 - [Phase 09-slider-hud-per-param-lock]: The contract codegen needed HUD-specific union title and alias handling for Annotated discriminated unions.
+- [Phase 09-slider-hud-per-param-lock]: HUD slider rows prefer bounded VTS input params from VTube Studio ParameterSettings; full CDI3/Cubism writable params remain in RigCapabilities but are not all shown in the HUD.
 
 ### Pending Todos
 
@@ -225,6 +226,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-09T05:00:48.480Z
-Stopped at: Checkpoint 09-02 Task 5 human verification
+Last session: 2026-05-09T05:29:53.788Z
+Stopped at: Checkpoint 09-02 Task 5 human re-verification after HUD slider param normalization
 Resume file: None
