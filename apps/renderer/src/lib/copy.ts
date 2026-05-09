@@ -234,9 +234,9 @@ export const COPY = {
     COLLAPSED: 'Logs',
     CLEAR: 'Clear logs',
     OPEN_FOLDER: 'Open log folder',
-    // Phase 2 (plan 02-03) -- structured intent log prefix; styled green in
+    // Phase 7 -- structured dispatch log prefix; styled green in
     // the LogsDrawer per UI-SPEC IP-4. 8-char prefix matches [READY]/[ERROR]
     // width-class for visual scan symmetry.
-    INTENT_PREFIX: '[INTENT]'
+    DISPATCH_PREFIX: '[DISPATCH]'
   }
 } as const
