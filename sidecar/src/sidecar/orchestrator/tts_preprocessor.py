@@ -25,6 +25,7 @@ class TTSPreprocessorConfig:
     ignore_parentheses: bool = False
     ignore_asterisks: bool = True
     ignore_angle_brackets: bool = True
+    ignore_curly_brackets: bool = True
 
 
 def tts_filter(
@@ -34,6 +35,7 @@ def tts_filter(
     ignore_parentheses: bool,
     ignore_asterisks: bool,
     ignore_angle_brackets: bool,
+    ignore_curly_brackets: bool = True,
 ) -> str:
     """
     Filter or do anything to the text before TTS generates the audio.
@@ -47,6 +49,7 @@ def tts_filter(
         ignore_parentheses (bool): Whether to ignore text within parentheses.
         ignore_asterisks (bool): Whether to ignore text within asterisks.
         ignore_angle_brackets (bool): Whether to ignore text within angle brackets.
+        ignore_curly_brackets (bool): Whether to ignore text within curly brackets.
 
     Returns:
         str: The filtered text.
@@ -64,6 +67,13 @@ def tts_filter(
             text = filter_brackets(text)
         except Exception as e:
             logger.warning(f"Error ignoring brackets: {e}")
+            logger.warning(f"Text: {text}")
+            logger.warning("Skipping...")
+    if ignore_curly_brackets:
+        try:
+            text = filter_curly_brackets(text)
+        except Exception as e:
+            logger.warning(f"Error ignoring curly brackets: {e}")
             logger.warning(f"Text: {text}")
             logger.warning("Skipping...")
     if ignore_parentheses:
@@ -163,6 +173,11 @@ def filter_parentheses(text: str) -> str:
 def filter_angle_brackets(text: str) -> str:
     """Filter text to remove all text within angle brackets, handling nested cases."""
     return _filter_nested(text, "<", ">")
+
+
+def filter_curly_brackets(text: str) -> str:
+    """Filter text to remove all text within curly brackets, handling nested cases."""
+    return _filter_nested(text, "{", "}")
 
 
 def filter_asterisks(text: str) -> str:

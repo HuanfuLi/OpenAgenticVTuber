@@ -1,44 +1,51 @@
 """Ported from Open-LLM-VTuber agent/transformers.py (MIT) -- see PROVENANCE.md.
 
 Adaptations vs OLVT:
-  - sentence_divider, display_processor, tts_filter ported VERBATIM (only
-    imports adjusted).
-  - actions_extractor adapted (CONTEXT.md D-13 + RESEARCH Example 4):
-      * Signature: actions_extractor(valid_expression_names: set[str] | None)
-        instead of actions_extractor(live2d_model: Live2dModel).
-      * Yields tuple[SentenceWithTags, list[ActionIntent]] instead of
-        tuple[SentenceWithTags, Actions].
-      * Uses _extract_intents() bracket-walker (RESEARCH Example 4) keyed on
-        capabilities.expressions[].name (kind=expression) and
-        capabilities.hotkeys[].name (kind=action). Expression-first per D-13;
-        unknown tags silently dropped.
-  - SentenceOutput.actions is now list[ActionIntent] (Discrepancy 5).
+  - sentence_divider, display_processor, tts_filter ported with local imports.
+  - code_extractor replaces the milestone-1 single-category action extractor.
+    It emits ordered Dispatch records for [action], {variant}, and <event>
+    codes while leaving sentence.text unchanged for plugin-visible context.
 """
-from typing import AsyncIterator, Tuple, Callable, List, Union, Dict, Any
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from functools import wraps
+from typing import Any, Dict, List, Tuple, Union
 
 from loguru import logger
 
-from contracts import ActionIntent
+from contracts import (
+    ActionCode,
+    Dispatch,
+    EventEntry,
+    EventFire,
+    VariantEntry,
+    VariantToggle,
+)
 
 from .output_types import DisplayText, SentenceOutput
-from .sentence_divider import SentenceDivider, SentenceWithTags, TagState
-from .tts_preprocessor import tts_filter as filter_text
-from .tts_preprocessor import TTSPreprocessorConfig, filter_brackets
+from .sentence_divider import SentenceDivider, SentenceWithTags
+from .tts_preprocessor import TTSPreprocessorConfig, tts_filter as filter_text
+from .tts_preprocessor import (
+    filter_angle_brackets,
+    filter_brackets,
+    filter_curly_brackets,
+)
+
+
+_NO_PARSE_TAGS = ["__agenticllmvtuber_no_parse_tags__"]
 
 
 def sentence_divider(
     faster_first_response: bool = True,
     segment_method: str = "pysbd",
-    valid_tags: List[str] = None,
+    valid_tags: List[str] | None = None,
 ):
     """
     Decorator that transforms token stream into sentences with tags.
 
     Args:
-        faster_first_response: bool - Whether to enable faster first response
-        segment_method: str - Method for sentence segmentation
-        valid_tags: List[str] - List of valid tags to process
+        faster_first_response: Whether to enable faster first response.
+        segment_method: Method for sentence segmentation.
+        valid_tags: Tags to process. Empty/None means no parse-time tag handling.
     """
 
     def decorator(
@@ -55,7 +62,7 @@ def sentence_divider(
             divider = SentenceDivider(
                 faster_first_response=faster_first_response,
                 segment_method=segment_method,
-                valid_tags=valid_tags or [],
+                valid_tags=valid_tags or _NO_PARSE_TAGS,
             )
             stream_from_func = func(*args, **kwargs)
 
@@ -71,109 +78,158 @@ def sentence_divider(
     return decorator
 
 
-def actions_extractor(valid_expression_names: set[str] | None = None):
-    """
-    Decorator that extracts ActionIntents from sentences (skeleton adaptation
-    of OLVT's actions_extractor; see file docstring).
+def _variant_lookup(
+    variants: Sequence[VariantEntry] | Mapping[str, VariantEntry],
+) -> dict[str, VariantEntry]:
+    entries = variants.values() if isinstance(variants, Mapping) else variants
+    return {entry.code.strip().lower(): entry for entry in entries if entry.code.strip()}
 
-    Extracts only system-owned expression intents. Plugin action codes remain
-    raw bracketed sentence text for the plugin adapter and are not emitted as
-    ActionIntent values.
-    """
-    expression_names = {name.lower() for name in (valid_expression_names or set())}
+
+def _event_lookup(
+    events: Sequence[EventEntry] | Mapping[str, EventEntry],
+) -> dict[str, EventEntry]:
+    entries = events.values() if isinstance(events, Mapping) else events
+    return {entry.code.strip().lower(): entry for entry in entries if entry.code.strip()}
+
+
+def _event_duration_ms(entry: EventEntry) -> int:
+    if entry.duration_is_fallback:
+        return 10000
+    return max(0, int(entry.duration_seconds * 1000)) + 1000
+
+
+def code_extractor(
+    plugin_action_codes: set[str] | Sequence[str] | None = None,
+    variants: Sequence[VariantEntry] | Mapping[str, VariantEntry] | None = None,
+    events: Sequence[EventEntry] | Mapping[str, EventEntry] | None = None,
+):
+    """Decorator factory that extracts ordered Dispatch records from sentences."""
+
+    action_codes = {
+        code.strip().lower()
+        for code in (plugin_action_codes or set())
+        if code and code.strip()
+    }
+    variants_by_code = _variant_lookup(variants or [])
+    events_by_code = _event_lookup(events or [])
 
     def decorator(
         func: Callable[
             ..., AsyncIterator[Union[SentenceWithTags, Dict[str, Any]]]
         ],
     ) -> Callable[
-        ..., AsyncIterator[Union[Tuple[SentenceWithTags, List[ActionIntent]], Dict[str, Any]]]
+        ..., AsyncIterator[Union[Tuple[SentenceWithTags, List[Dispatch]], Dict[str, Any]]]
     ]:
         @wraps(func)
         async def wrapper(
             *args, **kwargs
-        ) -> AsyncIterator[
-            Union[Tuple[SentenceWithTags, List[ActionIntent]], Dict[str, Any]]
-        ]:
+        ) -> AsyncIterator[Union[Tuple[SentenceWithTags, List[Dispatch]], Dict[str, Any]]]:
             stream = func(*args, **kwargs)
             async for item in stream:
                 if isinstance(item, SentenceWithTags):
-                    sentence = item
-                    intents: List[ActionIntent] = []
-                    # Only extract intents for non-tag text (mirror OLVT)
-                    if not any(
-                        t.state in [TagState.START, TagState.END]
-                        for t in sentence.tags
-                    ):
-                        intents = _extract_intents(
-                            sentence.text, expression_names
+                    dispatches = _extract_dispatches(
+                        item.text,
+                        action_codes,
+                        variants_by_code,
+                        events_by_code,
+                    )
+                    for dispatch in dispatches:
+                        logger.debug(
+                            f"[DISPATCH] kind={dispatch.kind} name={dispatch.name}"
                         )
-                    yield sentence, intents
+                    yield item, dispatches
                 elif isinstance(item, dict):
                     yield item
                 else:
-                    logger.warning(
-                        f"actions_extractor received unexpected type: {type(item)}"
-                    )
+                    logger.warning(f"code_extractor received unexpected type: {type(item)}")
 
         return wrapper
 
     return decorator
 
 
-def _extract_intents(
-    text: str, expression_names: set
-) -> List[ActionIntent]:
-    """Single-pass left-to-right bracket scan. Case-insensitive name match.
-
-    Mirrors OLVT live2d_model.extract_emotion + extract_action shape but emits
-    structured ActionIntents instead of string lists. Per D-13:
-      - expression match only (kind="expression")
-      - unknown tags silently dropped
-    """
-    intents: List[ActionIntent] = []
+def _extract_dispatches(
+    text: str,
+    plugin_action_codes: set[str],
+    variants_by_code: Mapping[str, VariantEntry],
+    events_by_code: Mapping[str, EventEntry],
+) -> List[Dispatch]:
+    dispatches: List[Dispatch] = []
     lower = text.lower()
+    opener_map = {
+        "[": ("]", "action"),
+        "{": ("}", "variant"),
+        "<": (">", "event"),
+    }
+
     i = 0
     while i < len(lower):
-        if lower[i] != "[":
+        opener = lower[i]
+        closer_and_kind = opener_map.get(opener)
+        if closer_and_kind is None:
             i += 1
             continue
-        end = lower.find("]", i)
+
+        closer, kind = closer_and_kind
+        end = lower.find(closer, i + 1)
         if end == -1:
-            break  # unmatched [ -- silently drop
-        name = lower[i + 1 : end]
-        if name in expression_names:
-            intents.append(
-                ActionIntent(kind="expression", name=name, avatar_id="teto")
-            )
-        # else: silently drop (D-13); plugin actions are handled by plugins.
+            break
+
+        name = lower[i + 1 : end].strip()
+        if name:
+            if kind == "action" and name in plugin_action_codes:
+                dispatches.append(ActionCode(name=name))
+            elif kind == "variant":
+                entry = variants_by_code.get(name)
+                if entry is not None:
+                    dispatches.append(
+                        VariantToggle(name=name, hotkey_id=entry.hotkey_id)
+                    )
+            elif kind == "event":
+                entry = events_by_code.get(name)
+                if entry is not None:
+                    dispatches.append(
+                        EventFire(
+                            name=name,
+                            hotkey_id=entry.hotkey_id,
+                            duration_ms=_event_duration_ms(entry),
+                        )
+                    )
+
         i = end + 1
-    return intents
+
+    return dispatches
+
+
+def _strip_code_syntax(text: str) -> str:
+    text = filter_brackets(text)
+    text = filter_curly_brackets(text)
+    return filter_angle_brackets(text)
 
 
 def display_processor():
     """
     Decorator that processes text for display, passing through dicts.
 
-    Adapted from OLVT for the new tuple shape
-    (SentenceWithTags, List[ActionIntent]) -> (SentenceWithTags, DisplayText, List[ActionIntent]).
+    Shape: (SentenceWithTags, list[Dispatch]) ->
+    (SentenceWithTags, DisplayText, list[Dispatch]).
     """
 
     def decorator(
         func: Callable[
-            ..., AsyncIterator[Union[Tuple[SentenceWithTags, List[ActionIntent]], Dict[str, Any]]]
+            ..., AsyncIterator[Union[Tuple[SentenceWithTags, List[Dispatch]], Dict[str, Any]]]
         ],
     ) -> Callable[
         ...,
         AsyncIterator[
-            Union[Tuple[SentenceWithTags, DisplayText, List[ActionIntent]], Dict[str, Any]]
+            Union[Tuple[SentenceWithTags, DisplayText, List[Dispatch]], Dict[str, Any]]
         ],
     ]:
         @wraps(func)
         async def wrapper(
             *args, **kwargs
         ) -> AsyncIterator[
-            Union[Tuple[SentenceWithTags, DisplayText, List[ActionIntent]], Dict[str, Any]]
+            Union[Tuple[SentenceWithTags, DisplayText, List[Dispatch]], Dict[str, Any]]
         ]:
             stream = func(*args, **kwargs)
 
@@ -183,32 +239,9 @@ def display_processor():
                     and len(item) == 2
                     and isinstance(item[0], SentenceWithTags)
                 ):
-                    sentence, intents = item
-                    text = sentence.text
-                    # Handle think tag states (D-10 disables <think> at API
-                    # level so this is dead code; OLVT-port-faithfulness keeps it).
-                    handled_think = False
-                    for tag in sentence.tags:
-                        if tag.name == "think":
-                            handled_think = True
-                            if tag.state == TagState.START:
-                                text = "("
-                            elif tag.state == TagState.END:
-                                text = ")"
-                    if not handled_think:
-                        # Skeleton-side adaptation (SC #3 spec):
-                        # strip [tag] brackets from chat display so the
-                        # bracket characters never reach the chat panel.
-                        # actions_extractor has already extracted the
-                        # ActionIntents from these brackets; the brackets
-                        # are now redundant for display. This is a divergence
-                        # from OLVT (which leaves bracket-stripping to the
-                        # frontend renderer); recorded as Rule-2 deviation
-                        # so the plan's SC#3 headline assertion holds.
-                        text = filter_brackets(text)
-
-                    display = DisplayText(text=text)
-                    yield sentence, display, intents
+                    sentence, dispatches = item
+                    display = DisplayText(text=_strip_code_syntax(sentence.text))
+                    yield sentence, display, dispatches
                 elif isinstance(item, dict):
                     yield item
                 else:
@@ -222,20 +255,15 @@ def display_processor():
 
 
 def tts_filter(
-    tts_preprocessor_config: TTSPreprocessorConfig = None,
+    tts_preprocessor_config: TTSPreprocessorConfig | None = None,
 ):
-    """
-    Decorator that filters text for TTS, passing through dicts.
-    Skips TTS for think tag content.
-
-    Adapted to construct SentenceOutput with list[ActionIntent].
-    """
+    """Decorator that filters text for TTS, passing through dicts."""
 
     def decorator(
         func: Callable[
             ...,
             AsyncIterator[
-                Union[Tuple[SentenceWithTags, DisplayText, List[ActionIntent]], Dict[str, Any]]
+                Union[Tuple[SentenceWithTags, DisplayText, List[Dispatch]], Dict[str, Any]]
             ],
         ],
     ) -> Callable[
@@ -254,18 +282,16 @@ def tts_filter(
                     and len(item) == 3
                     and isinstance(item[1], DisplayText)
                 ):
-                    sentence, display, intents = item
-                    if any(tag.name == "think" for tag in sentence.tags):
-                        tts = ""
-                    else:
-                        tts = filter_text(
-                            text=display.text,
-                            remove_special_char=config.remove_special_char,
-                            ignore_brackets=config.ignore_brackets,
-                            ignore_parentheses=config.ignore_parentheses,
-                            ignore_asterisks=config.ignore_asterisks,
-                            ignore_angle_brackets=config.ignore_angle_brackets,
-                        )
+                    sentence, display, dispatches = item
+                    tts = filter_text(
+                        text=display.text,
+                        remove_special_char=config.remove_special_char,
+                        ignore_brackets=config.ignore_brackets,
+                        ignore_parentheses=config.ignore_parentheses,
+                        ignore_asterisks=config.ignore_asterisks,
+                        ignore_angle_brackets=config.ignore_angle_brackets,
+                        ignore_curly_brackets=config.ignore_curly_brackets,
+                    )
 
                     logger.debug(f"[{display.name}] display: {display.text}")
                     logger.debug(f"[{display.name}] tts: {tts}")
@@ -274,7 +300,7 @@ def tts_filter(
                         display_text=display,
                         tts_text=tts,
                         plugin_text=sentence.text,
-                        actions=intents,
+                        dispatches=dispatches,
                     )
                 elif isinstance(item, dict):
                     yield item
