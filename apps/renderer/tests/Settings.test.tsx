@@ -209,6 +209,8 @@ describe('Settings TTS section', () => {
       .then((heading) => heading.closest('section')!)
     expect(await within(section).findByText('custom-avatar')).toBeInTheDocument()
     expect(within(section).getByText(COPY.SETTINGS.AVATARS_DEGRADED)).toBeInTheDocument()
+    expect(within(section).getByText(/saved editable catalog has not loaded yet/i)).toBeInTheDocument()
+    expect(within(section).queryByText(/Catalog metadata is unavailable/i)).toBeNull()
     expect(within(section).queryByText(/teto/i)).toBeNull()
     expect(within(section).getByRole('button', { name: COPY.SETTINGS.AVATARS_IMPORT_REPLACE })).not.toBeDisabled()
   })
