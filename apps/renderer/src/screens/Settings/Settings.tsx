@@ -566,39 +566,61 @@ function voiceLabel(plan: AvatarImportPlan): string {
 
 function AvatarsSection() {
   const C = COPY.SETTINGS
-  const { setAvatarImportPlan, setView } = useStore()
+  const { setAvatarImportPlan, setView, status } = useStore()
   const [currentId, setCurrentId] = useState<string>('')
   const [plan, setPlan] = useState<AvatarImportPlan | null>(null)
   const [loading, setLoading] = useState(true)
   const [notice, setNotice] = useState('')
+  const hasSeenGreenSidecar = useRef(false)
 
-  const loadCurrent = async (): Promise<AvatarImportPlan | null> => {
+  const loadCurrent = async (options: { showSpinner?: boolean } = {}): Promise<AvatarImportPlan | null> => {
+    const showSpinner = options.showSpinner ?? true
     if (!window.api?.getCurrentAvatarId || !window.api?.getCurrentAvatarPlan) {
       setLoading(false)
-      setCurrentId('unknown')
+      setCurrentId('')
       setPlan(null)
       return null
     }
-    setLoading(true)
+
+    if (showSpinner) setLoading(true)
+
     try {
-      const [id, currentPlan] = await Promise.all([
-        window.api.getCurrentAvatarId(),
-        window.api.getCurrentAvatarPlan()
-      ])
+      const id = await window.api.getCurrentAvatarId()
       setCurrentId(id)
+    } catch {
+      setCurrentId('')
+      setPlan(null)
+      if (showSpinner) setLoading(false)
+      return null
+    }
+
+    try {
+      const currentPlan = await window.api.getCurrentAvatarPlan()
       setPlan(currentPlan)
       return currentPlan
     } catch {
       setPlan(null)
       return null
     } finally {
-      setLoading(false)
+      if (showSpinner) setLoading(false)
     }
   }
 
   useEffect(() => {
     void loadCurrent()
   }, [])
+
+  useEffect(() => {
+    if (status.sidecar !== 'green') {
+      hasSeenGreenSidecar.current = false
+      return
+    }
+    if (!hasSeenGreenSidecar.current) {
+      hasSeenGreenSidecar.current = true
+      return
+    }
+    if (!plan) void loadCurrent({ showSpinner: false })
+  }, [status.sidecar, status.sidecarDetail, plan])
 
   const openImport = (): void => {
     setAvatarImportPlan(null)
@@ -607,7 +629,7 @@ function AvatarsSection() {
 
   const editCurrent = async (): Promise<void> => {
     setNotice('')
-    const currentPlan = plan ?? await loadCurrent()
+    const currentPlan = plan ?? await loadCurrent({ showSpinner: false })
     if (!currentPlan) {
       setNotice(C.AVATARS_EDIT_UNAVAILABLE)
       return
@@ -615,6 +637,8 @@ function AvatarsSection() {
     setAvatarImportPlan(currentPlan)
     setView('avatar-import')
   }
+
+  const hasCurrentId = currentId.trim().length > 0
 
   return (
     <section className="section" id="sec-avatars">
@@ -653,13 +677,15 @@ function AvatarsSection() {
         <>
           <div className="kv-row">
             <span className="k">{C.AVATARS_ID}</span>
-            <span className="v">{currentId || 'unknown'}</span>
+            <span className="v">{hasCurrentId ? currentId : C.AVATARS_UNKNOWN_ID}</span>
           </div>
-          <div className="placeholder-line muted">{C.AVATARS_DEGRADED}</div>
+          <div className="placeholder-line muted">
+            {hasCurrentId ? C.AVATARS_DEGRADED : C.AVATARS_DEGRADED_UNKNOWN}
+          </div>
         </>
       )}
       <div className="row mt-2" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button className="btn btn-secondary" onClick={editCurrent} disabled={!plan && !loading}>
+        <button className="btn btn-secondary" onClick={editCurrent} disabled={loading && !hasCurrentId}>
           {C.AVATARS_EDIT_CURRENT}
         </button>
         <button className="btn btn-secondary" onClick={openImport}>
@@ -837,6 +863,15 @@ function DiagnosticsSection({ onResetClick }: { onResetClick: () => void }) {
           <div className="v">{C.DIAG_LOG_LEVEL}</div>
           <div className="tx-sm muted" style={{ marginTop: 2 }}>
             {C.DIAG_LOG_LEVEL_HELP}
+          </div>
+          <div
+            className="tx-sm muted"
+            style={{ marginTop: 8, display: 'grid', gap: 4 }}
+            aria-label={C.DIAG_LOG_LEVEL_DESCRIPTIONS_LABEL}
+          >
+            {C.DIAG_LOG_LEVEL_DESCRIPTIONS.map((item) => (
+              <div key={item.id}>{item.label}: {item.description}</div>
+            ))}
           </div>
         </div>
         <select
