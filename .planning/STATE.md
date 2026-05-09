@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Mock/Reality Cleanup
-status: verifying
-stopped_at: Phase 13 gap closure implemented; visual recheck pending
-last_updated: "2026-05-09T11:10:00-04:00"
+status: planning
+stopped_at: Phase 13 complete; Phase 14 ready to execute
+last_updated: "2026-05-09T11:15:00-04:00"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 13
   completed_plans: 10
 ---
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: 13 (Conversation History Sessions) — VISUAL RECHECK PENDING
+Phase: 13 (Conversation History Sessions) — COMPLETE
 Plan: 4 of 4 complete
-Status: Gap closure implemented; verify History row presentation and close animation
-Next: Run `$gsd-verify-work 13` or manually confirm the two remaining visual checks.
+Status: Passed gap recheck; History row presentation and close animation confirmed.
+Next: Execute Phase 14 plugin developer docs and plugin swap hardening.
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -39,7 +39,7 @@ Next: Run `$gsd-verify-work 13` or manually confirm the two remaining visual che
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
   - Phase 10 gap closure complete: Plan 10-03 resolved SC2-SMIRK-RENDERING, and Plan 10-04 resolved SC5-EYE-TRACKING plus BLINK-EYE-VISIBILITY. Operator confirmed cursor eye tracking works and blink behavior passes after app-owned idle blinking was removed so VTS owns normal blinking.
 
-Last activity: 2026-05-09 — Phase 13 gap closure 13-04 implemented. History rows are title-first without visible assistant-response preview, preview text remains searchable but hidden, and the History sheet now has a slide-out close animation. Focused tests and typecheck passed; quick visual recheck remains.
+Last activity: 2026-05-09 — Phase 13 passed UAT recheck. History rows are title-first without visible assistant-response preview, preview text remains searchable but hidden, and the History sheet has a confirmed slide-out close animation. Focused tests and typecheck passed.
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
 
@@ -218,7 +218,6 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- v2.1 Phase 13: add ChatGPT-style conversation history sessions and wire real session/history state into Settings.
 - v2.1 Phase 14: context gathered for human/AI plugin developer docs and plugin swap/status hardening.
 - v2.1 Phase 15: isolate dev mocks and add mock-boundary regression coverage.
 
@@ -256,6 +255,6 @@ Items acknowledged and deferred at v2.0 milestone close on 2026-05-09:
 
 ## Session Continuity
 
-Last session: 2026-05-09T09:07:40-04:00
-Stopped at: Phase 14 context gathered while Phase 13 visual recheck remained pending
+Last session: 2026-05-09T11:15:00-04:00
+Stopped at: Phase 13 UAT recheck passed; Phase 14 is next
 Resume file: .planning/phases/14-plugin-developer-docs-plugin-swap-hardening/14-CONTEXT.md

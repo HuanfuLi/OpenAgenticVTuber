@@ -1,12 +1,12 @@
 ---
-status: resolved
+status: complete
 phase: 13-conversation-history-sessions
 source:
   - 13-01-PLAN.md
   - 13-02-PLAN.md
   - 13-03-PLAN.md
 started: 2026-05-09
-updated: 2026-05-09T11:10:00-04:00
+updated: 2026-05-09T11:15:00-04:00
 ---
 
 # Phase 13 UAT: Conversation History Sessions
@@ -76,3 +76,20 @@ blocked: 0
     - "Keep search useful by filtering title plus non-visible transcript/search text if needed."
     - "Add regression coverage that assistant response preview text is not visibly rendered in normal History rows."
   resolved_by: "13-04-SUMMARY.md / commit 20d8333"
+
+## Gap Recheck
+
+### 1. History Row Presentation
+expected: History rows show the derived session title plus compact metadata only; assistant-response preview text is not visible row content.
+result: pass
+
+### 2. History Sheet Collapse Animation
+expected: Closing History collapses/slides out smoothly before unmount instead of disappearing instantly.
+result: pass
+
+## Recheck Summary
+
+total: 2
+passed: 2
+issues: 0
+pending: 0

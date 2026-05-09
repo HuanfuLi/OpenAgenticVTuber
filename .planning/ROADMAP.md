@@ -42,7 +42,7 @@ Audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
 |-----------|-------|----------------|--------|---------|
 | v1.0 Walking Skeleton | Phases 1-5 | 17/17 | Complete | 2026-05-08 |
 | v2.0 Plugin + Animation Control | Phases 8, 6, 7, 9, 10 | 27/27 | Complete with accepted tech debt | 2026-05-09 |
-| v2.1 Mock/Reality Cleanup | Phases 11-15 | 10/13 | In Progress; Phase 13 visual recheck pending | - |
+| v2.1 Mock/Reality Cleanup | Phases 11-15 | 10/13 | In Progress; Phase 13 complete | - |
 
 ## Current Milestone: v2.1 Mock/Reality Cleanup
 
@@ -157,4 +157,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 13 gap closure implementation; visual recheck pending*
+*Last updated: 2026-05-09 after Phase 13 UAT recheck passed*

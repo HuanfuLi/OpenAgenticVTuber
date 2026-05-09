@@ -1,25 +1,26 @@
 ---
-status: human_needed
+status: passed
 phase: 13-conversation-history-sessions
-verified_at: 2026-05-09T11:10:00-04:00
+verified_at: 2026-05-09T11:15:00-04:00
 requirements: [HIST-01, HIST-02, HIST-03, HIST-04, HIST-05]
 human_verification:
   - Complete a real LLM turn, restart the app, and confirm the active session transcript restores.
   - Use History to search, switch, rename, and delete sessions against the live app.
   - Use Settings > Conversation clear-all and confirm provider settings remain intact.
+  - Recheck title-first History rows and close animation.
 ---
 
 # Phase 13 Verification
 
 ## Result
 
-Gap closure implemented. Automated verification passed, UAT passed 6/7 checks before gap closure, and Plan 13-04 resolved the remaining minor History-row presentation issue in code. A quick human recheck is still useful for the visual close animation and final History row feel.
+Passed after gap closure and human recheck. Automated verification passed, initial UAT passed 6/7 checks, Plan 13-04 resolved the remaining minor History-row presentation issue in code, and the operator confirmed both final visual rechecks.
 
 ## Requirement Coverage
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| HIST-01 | Implemented; visual recheck pending | HistorySheet supports real create, switch, rename, delete, and search/filter. Plan 13-04 removed visible assistant preview text and added close animation coverage. |
+| HIST-01 | Passed | HistorySheet supports real create, switch, rename, delete, and search/filter. Plan 13-04 removed visible assistant preview text and added close animation coverage; operator recheck passed. |
 | HIST-02 | Passed | Active session messages hydrate into Chat through `ConversationHistoryProvider`; durable storage is in `conversation-store.ts`. Restart restore UAT passed. |
 | HIST-03 | Passed | `conversation-chain-end` commits one completed user/assistant turn via the existing WS dispatcher while preserving streaming state. Failed-turn skip UAT passed. |
 | HIST-04 | Passed | Settings > Conversation shows active session, counts, local retention, and clear-all with destructive confirmation. UAT passed. |
@@ -35,18 +36,19 @@ Gap closure implemented. Automated verification passed, UAT passed 6/7 checks be
 
 See `13-UAT.md`.
 
-- Passed: 6
-- Issues: 1
+- Initial passed: 6/7
+- Gap recheck passed: 2/2
+- Issues remaining: 0
 - Pending: 0
 
 ## Gap Closure
 
 - Resolved by `13-04-SUMMARY.md` / commit `20d8333`: History rows now show title plus compact metadata only, preview text remains hidden from visible rows, and close animation is implemented.
 
-## Human Verification Needed
+## Human Recheck Passed
 
-1. Open History and confirm rows no longer show assistant-response preview text.
-2. Close History and confirm the sheet collapses/slides out smoothly instead of disappearing instantly.
+1. History rows no longer show assistant-response preview text.
+2. Closing History collapses/slides out smoothly instead of disappearing instantly.
 
 ## Notes
 
