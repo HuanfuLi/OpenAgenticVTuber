@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 
+const wsMock = vi.hoisted(() => ({ connected: true }))
+
 vi.mock('@/ws/client', () => ({
   send: () => true
 }))
 
 vi.mock('@/ws/store', () => ({
   appendUserMessage: () => undefined,
-  useWSConnected: () => true
+  useWSConnected: () => wsMock.connected
 }))
 
 import { AppStoreProvider } from '@/state/app-store'
@@ -23,6 +25,7 @@ import {
 
 describe('Chat speaking affordance', () => {
   beforeEach(() => {
+    wsMock.connected = true
     resetStreaming()
     const session: ConversationSession = {
       id: 's1',
@@ -77,6 +80,14 @@ describe('Chat speaking affordance', () => {
 
   function renderChat() {
     return render(
+      <AppStoreProvider>
+        <Chat />
+      </AppStoreProvider>
+    )
+  }
+
+  function chatTree() {
+    return (
       <AppStoreProvider>
         <Chat />
       </AppStoreProvider>
@@ -168,5 +179,27 @@ describe('Chat speaking affordance', () => {
 
     expect(await screen.findByText('Do you remember this transcript?')).toBeInTheDocument()
     expect(screen.getByText('Yes, it restored from local history.')).toBeInTheDocument()
+  })
+
+  it('reenables the input after sidecar reconnect clears transient streaming state', () => {
+    const view = render(chatTree())
+
+    act(() => {
+      wsMock.connected = false
+      setInputDisabled(true)
+      setSpeaking(true)
+    })
+    view.rerender(chatTree())
+
+    expect(screen.getByLabelText('Chat input')).toBeDisabled()
+
+    act(() => {
+      resetStreaming()
+      wsMock.connected = true
+    })
+    view.rerender(chatTree())
+
+    expect(screen.getByLabelText('Chat input')).not.toBeDisabled()
+    expect(screen.queryByTestId('speaking-label')).toBeNull()
   })
 })

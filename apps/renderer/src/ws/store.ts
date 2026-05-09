@@ -9,7 +9,7 @@
 // Chat.tsx now reads from useStreamingMessages exclusively.
 
 import { useEffect, useState } from 'react'
-import { subscribe, subscribeState } from './client'
+import { subscribe, subscribeSidecarReconnect, subscribeState } from './client'
 import {
   isAudioPayload,
   isControl,
@@ -29,7 +29,8 @@ import {
   setForceNewMessage,
   setInputDisabled,
   setBanner,
-  setSpeaking
+  setSpeaking,
+  resetStreaming
 } from '@/screens/Chat/useStreamingMessages'
 import { commitConversationTurnFromDispatcher } from '@/state/conversation-history'
 
@@ -101,6 +102,10 @@ subscribe((msg: WSMessage) => {
     return
   }
   // Unknown envelope types silently dropped (matches OLVT _route_message).
+})
+
+subscribeSidecarReconnect(() => {
+  resetStreaming()
 })
 
 // -- re-exports preserved from Phase 1 ---------------------------------------
