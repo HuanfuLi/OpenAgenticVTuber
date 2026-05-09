@@ -42,6 +42,11 @@ sidecar/.pytest_cache/
 
 # uv lockfile is committed intentionally — these patterns intentionally
 # do NOT match sidecar/uv.lock. (See sidecar/uv.lock kept under VCS.)
+packages/contracts/py/uv.lock
+
+# Local VTube Studio auth/runtime artifacts
+sidecar/.vts_token.txt
+Live2D/**/_avatar_overrides.yaml
 
 # Build artifacts
 build/
