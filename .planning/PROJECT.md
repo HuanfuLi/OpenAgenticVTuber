@@ -18,9 +18,19 @@ The app now boots as an Electron desktop shell with a Python sidecar, speaks via
 
 The §14 ceremony has been re-run under the refactored architecture. All six success criteria are PASS in `.planning/skeleton-verification.md` after gap closure for smirk rendering, cursor eye tracking, and blink ownership.
 
-## Current Milestone State
+## Current Milestone: v2.1 Mock/Reality Cleanup
 
-No active milestone is defined. v2.0 is archived; the next milestone should start with `$gsd-new-milestone` and create fresh requirements before adding new phases.
+**Goal:** Replace remaining mocked or hardcoded user-facing surfaces with real app, sidecar, and configuration state before larger v3.0 feature work.
+
+**Target features:**
+- Status bar and popover reflect real configured provider/model, real sidecar lifecycle, and real VTube Studio reachability/auth state instead of hardcoded `qwen2.5` or `mockStatus` values.
+- Settings panel sections for Avatars, per-avatar settings, VTube Studio, Conversation, Memory, and Log level become truthful: wired to real state where v2.0 already has backend support, or explicitly disabled/deferred where the real system is not built yet.
+- Dev/demo mocks remain available only behind development affordances; production user flows stop depending on `mockSafeStorage`, `mockStatus`, `mockBanners`, scripted conversation history, or mock alert actions.
+- Memory is not implemented in v2.1. Its Settings surface should show a truthful disabled/deferred state because memory will ship with the agentic system.
+
+**Next milestone intent:**
+- v3.0 shifts to STT and TTS work.
+- v4.0 carries the agentic system plus memory.
 
 **Accepted deferred items:**
 - Phase 7 live `<event>` UAT remains catalog-gated because active Teto currently has `events: []`; automated parser/routing/tracker coverage is present.
@@ -46,21 +56,24 @@ No active milestone is defined. v2.0 is archived; the next milestone should star
 
 ### Active
 
-No active milestone requirements. Fresh requirements should be created by `$gsd-new-milestone`.
+- [ ] Status and app chrome use real provider/model, sidecar, and VTS state instead of mocks or hardcoded copy.
+- [ ] Settings sections for existing v2.0 systems are wired to real data and actions.
+- [ ] Settings sections for deferred systems are visibly disabled and accurately labeled by future milestone intent.
+- [ ] Development mocks are isolated from production user flows and documented as dev-only.
 
 ### Out of Scope (this milestone — deferred to later v1 milestones)
 
-- **Agent mode and goal-loop** — entire §9; deferred to dedicated agent-runtime milestone
+- **Agent mode and goal-loop** — entire §9; deferred to v4.0 agentic-system milestone
 - **Saved goals + scheduler (APScheduler)** — depends on agent runtime
 - **Skills system + auto-parser (in-app screen-control)** — depends on agent runtime
-- **Memory subsystem** — profile loading, Chroma per-avatar episodic, FTS5 chat search, shared user-facts bucket, RRF retrieval, deletion ops; deferred to memory milestone
+- **Memory subsystem** — profile loading, Chroma per-avatar episodic, FTS5 chat search, shared user-facts bucket, RRF retrieval, deletion ops; deferred to v4.0 with the agentic system
 - **Multi-thread chat per avatar** — single in-memory thread for skeleton
 - **Multi-avatar switching** — import/catalog infrastructure exists, but relationship identity, per-avatar memory, and first-class switching remain deferred
 - **Pet mode (form-factor toggle and click-through)** — windowed mode only for skeleton
 - **Audio-to-params learned drivers (v1.5)** — rule-based DSP only
-- **Voice input (PTT, VAD, faster-whisper)** — text input only for skeleton
+- **Voice input / STT** — deferred to v3.0 STT/TTS milestone
 - **Image input (paste/drag/picker)** — text only
-- **Multiple TTS backends (edge-tts, GPT-SoVITS, ComfyUI)** — piper only
+- **TTS expansion and voice settings** — deferred to v3.0 STT/TTS milestone; v2.1 may only make existing TTS settings truthful
 - **Telemetry, auto-update, audit log, i18n strings, settings UI surfaces beyond LLM setup** — out of skeleton
 
 ### Out of Scope (v1 entirely — never in this project)
@@ -126,6 +139,9 @@ No active milestone requirements. Fresh requirements should be created by `$gsd-
 | v2.0 execution order 8 → 6 → 7 → 9 → 10 | Phase 8 had to define `RigCapabilities` and `AvatarOverrides` before Phase 6 plugin runtime could consume them cleanly | ✓ Good |
 | VTS owns normal idle blinking | App-owned idle blinking fought VTS/model blinking and caused half-blinks/long closed holds | ✓ Good |
 | Live event UAT requires an event-bearing avatar catalog | Current active Teto catalog has `events: []`; treating this as a prerequisite avoids inventing fake live evidence | ✓ Good |
+| v2.1 before v3.0 | User-facing UI still contains mocks/hardcoded state; cleanup should happen before adding larger voice or agentic features | ✓ Good |
+| Memory ships with agentic system | Memory UX depends on agentic/personality context; v2.1 should mark Memory as deferred rather than implementing it prematurely | ✓ Good |
+| v3.0 is STT/TTS; v4.0 is agentic + memory | Voice I/O is the next standalone capability, while agentic workflows and memory are a larger later milestone | ✓ Good |
 
 ## Evolution
 
@@ -145,4 +161,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-09 after v2.0 milestone archive*
+*Last updated: 2026-05-09 after v2.1 milestone initialization*
