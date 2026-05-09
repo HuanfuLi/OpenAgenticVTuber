@@ -96,3 +96,33 @@ def get_cursor_and_rect() -> tuple[tuple[int, int], tuple[int, int, int, int] | 
     if rect is None:
         _cached_hwnd = None
     return get_cursor_pos(), rect
+
+
+def get_primary_monitor_rect() -> tuple[int, int, int, int] | None:
+    """Return the primary monitor rect as (left=0, top=0, right=width, bottom=height).
+
+    Used by CursorDriver as a synthetic-canvas fallback when VTS HWND is not found.
+    Returns None on non-Windows platforms or if pywin32 is unavailable.
+
+    DPI awareness explicitly deferred per VFY-02 -- raw pixel coordinates are returned;
+    on high-DPI displays the projection skews toward one corner, acceptable for v2.0.
+    Re-queried every tick (cheap syscall) so monitor reconfiguration is picked up
+    without staleness -- see 10-RESEARCH.md Pitfall 3.
+    """
+    if not _WINDOWS:
+        return None
+    try:
+        import win32api
+    except ImportError:
+        logger.warning("[WINDOW-DETECT] pywin32 not installed; cannot compute primary monitor rect")
+        return None
+    try:
+        # SM_CXSCREEN=0, SM_CYSCREEN=1 -- primary monitor pixel dimensions
+        width = win32api.GetSystemMetrics(0)
+        height = win32api.GetSystemMetrics(1)
+    except Exception as exc:
+        logger.debug(f"[WINDOW-DETECT] GetSystemMetrics failed: {exc!r}")
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    return (0, 0, width, height)

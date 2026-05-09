@@ -1,3 +1,4 @@
+import sys
 from unittest import mock
 
 from sidecar.vts import window_detect
@@ -64,3 +65,36 @@ def test_force_reprobe_ignores_cached_hwnd_and_finds_new_vts_window(monkeypatch)
 
     with mock.patch.dict("sys.modules", {"win32gui": fake_win32gui}):
         assert window_detect.find_vts_hwnd(force_reprobe=True) == 1234
+
+
+def test_primary_monitor_rect_returns_screen_size_on_windows(monkeypatch):
+    monkeypatch.setattr(window_detect, "_WINDOWS", True)
+    fake_win32api = mock.MagicMock()
+    # SM_CXSCREEN=0 -> 1920, SM_CYSCREEN=1 -> 1080
+    fake_win32api.GetSystemMetrics.side_effect = lambda idx: {0: 1920, 1: 1080}[idx]
+    with mock.patch.dict("sys.modules", {"win32api": fake_win32api}):
+        rect = window_detect.get_primary_monitor_rect()
+    assert rect == (0, 0, 1920, 1080)
+
+
+def test_primary_monitor_rect_returns_none_on_non_windows(monkeypatch):
+    monkeypatch.setattr(window_detect, "_WINDOWS", False)
+    assert window_detect.get_primary_monitor_rect() is None
+
+
+def test_primary_monitor_rect_returns_none_when_pywin32_unavailable(monkeypatch):
+    # Per W7 review: setting sys.modules['win32api'] = None guarantees
+    # `import win32api` raises ImportError regardless of whether pywin32
+    # is installed on the dev machine. This is more robust than patching
+    # builtins.__import__, which can be bypassed by sys.modules cache hits.
+    monkeypatch.setattr(window_detect, "_WINDOWS", True)
+    monkeypatch.setitem(sys.modules, "win32api", None)
+    assert window_detect.get_primary_monitor_rect() is None
+
+
+def test_primary_monitor_rect_returns_none_when_get_system_metrics_returns_zero(monkeypatch):
+    monkeypatch.setattr(window_detect, "_WINDOWS", True)
+    fake_win32api = mock.MagicMock()
+    fake_win32api.GetSystemMetrics.return_value = 0
+    with mock.patch.dict("sys.modules", {"win32api": fake_win32api}):
+        assert window_detect.get_primary_monitor_rect() is None
