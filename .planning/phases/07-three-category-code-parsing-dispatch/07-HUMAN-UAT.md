@@ -1,16 +1,16 @@
 ---
-status: diagnosed
+status: completed
 phase: 07-three-category-code-parsing-dispatch
 source: [07-VERIFICATION.md]
 started: 2026-05-08T21:01:52.7978114-04:00
-updated: 2026-05-08T22:50:51.8225985-04:00
+updated: 2026-05-09T03:49:34Z
 ---
 
 # Phase 7 Human UAT
 
 ## Current Test
 
-[testing complete]
+[testing complete: live variant approved; live event verification prerequisite-gated]
 
 ## Live Dispatch Prerequisites
 
@@ -22,29 +22,36 @@ updated: 2026-05-08T22:50:51.8225985-04:00
 
 ## Tests
 
-### 1. Live VTS dispatch confirmation
-expected: A declared action reaches the active plugin queue, a declared variant toggles through PyvtsSafeWriter, and a declared event fires a VTS motion hotkey with an EVENT-COMPLETE log after duration_ms.
-result: issue
-reported: "VTS model did not show variants (heart eye/smirk). LLM responded that it does not know the action codes. Runtime log showed `[DISPATCH] kind=action name=smirk`, but no variant dispatch was logged for `{heart-eye}` and no visible variant change occurred."
-severity: major
+### 1. Live VTS action and variant confirmation
+expected: A declared action reaches the active plugin queue and a declared variant toggles through PyvtsSafeWriter.
+result: pass
+reported: "User confirmed the rig switched to heart eye after the `heart-eye` hotkey fired."
+notes: "The variant did not switch back automatically. This is intentional for Phase 7: `{variant}` codes are radio-button single-active and persistent until another variant is emitted. Timed completion applies to `<event>` codes only."
+
+### 2. Live VTS event confirmation
+expected: A declared event fires a VTS motion hotkey with an EVENT-COMPLETE log after duration_ms.
+result: blocked
+reason: "Current imported Teto has `events: []`, so event dispatch and `[EVENT-COMPLETE]` verification require selecting or importing an event-bearing active avatar catalog."
+notes: "Absence of `<event>` output while `[DISPATCH-CATALOG-BLOCKED]` is present is a catalog-prerequisite block, not a parser/routing failure."
 
 ## Summary
 
-total: 1
-passed: 0
-issues: 1
+total: 2
+passed: 1
+issues: 0
 pending: 0
 skipped: 0
-blocked: 0
+blocked: 1
 
 ## Gaps
 
 - truth: "A declared action reaches the active plugin queue, a declared variant toggles through PyvtsSafeWriter, and a declared event fires a VTS motion hotkey with an EVENT-COMPLETE log after duration_ms."
-  status: failed
-  reason: "User reported: VTS model did not show variants (heart eye/smirk). LLM responded that it does not know the action codes. Runtime log showed `[DISPATCH] kind=action name=smirk`, but no variant dispatch was logged for `{heart-eye}` and no visible variant change occurred."
-  severity: major
-  test: 1
+  status: partial_pass
+  reason: "Live variant dispatch is approved: user confirmed the rig switched to heart eye. Live event verification is blocked because the active imported Teto catalog has `events: []`."
+  severity: prerequisite
+  tests: [1, 2]
   root_cause: "The live UAT expected variant/event dispatch from model output, but the runtime prompt only exposes plugin `[action]` codes and explicitly tells the model not to emit variant/event tags unless separately provided. The logged assistant sentence was `[smirk] Hello!`, so the parser had no `{heart-eye}` token to dispatch. Separately, the active imported Teto override currently has `events: []`, so event dispatch and EVENT-COMPLETE cannot pass with that catalog; if the app uses default avatar id `teto`, its override file is missing and variant/event catalogs are empty."
+  closure: "Plan 07-08 exposed active dispatch vocabulary in the boot prompt. Human checkpoint confirmed `{heart-eye}` reaches the rig. Persistent heart-eye state is expected variant policy; event UAT remains blocked until an event-bearing avatar catalog is active."
   artifacts:
     - path: "sidecar/src/sidecar/orchestrator/orchestrator.py"
       issue: "System prompt construction accepts only `action_codes_section`; it has no active-avatar variant/event vocabulary section."
