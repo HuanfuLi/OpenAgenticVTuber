@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { store } from './window-store'
 import { spawnSidecar, shutdownSidecar } from './sidecar'
 import { registerIpc } from './ipc'
+import { closeHudWindow } from './hud-window'
 
 // Augment Electron's App with a quitting flag so multiple before-quit handlers cooperate.
 declare global {
@@ -116,6 +117,7 @@ app.on('before-quit', async (e) => {
     e.preventDefault()
     cleanupIpc?.()
     cleanupIpc = null
+    closeHudWindow()
     try {
       await shutdownSidecar()
     } catch (err) {

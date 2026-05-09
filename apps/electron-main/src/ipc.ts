@@ -14,6 +14,7 @@ import {
 } from './sidecar'
 import { store } from './window-store'
 import { loadConfig, saveConfig, clearConfig, type StoredConfig } from './safe-storage'
+import { createHudWindow } from './hud-window'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
 
 export function registerIpc(window: BrowserWindow): () => void {
@@ -75,6 +76,9 @@ export function registerIpc(window: BrowserWindow): () => void {
       return body
     }
   )
+  ipcMain.handle('hud:open', () => {
+    createHudWindow()
+  })
 
   const offReady = onReady((url) => {
     if (!window.isDestroyed()) window.webContents.send('sidecar:ready', url)
@@ -99,5 +103,6 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('avatar:pickFolder')
     ipcMain.removeHandler('avatar:requestImportPlan')
     ipcMain.removeHandler('avatar:commitOverrides')
+    ipcMain.removeHandler('hud:open')
   }
 }

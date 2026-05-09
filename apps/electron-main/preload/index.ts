@@ -53,7 +53,10 @@ const api = {
   requestImportPlan: (folder: string): Promise<AvatarImportPlan> =>
     ipcRenderer.invoke('avatar:requestImportPlan', folder),
   commitAvatarOverrides: (plan: AvatarImportPlan): Promise<{ status: string; path: string }> =>
-    ipcRenderer.invoke('avatar:commitOverrides', plan)
+    ipcRenderer.invoke('avatar:commitOverrides', plan),
+
+  // HUD entry (Phase 9)
+  openHud: (): Promise<void> => ipcRenderer.invoke('hud:open')
 }
 
 contextBridge.exposeInMainWorld('api', api)
