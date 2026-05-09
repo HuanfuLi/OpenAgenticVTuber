@@ -13,6 +13,10 @@ import type {
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
 import type {
+  GptSoVitsProcessRequest,
+  GptSoVitsProcessStatus
+} from '../src/gpt-sovits-process'
+import type {
   ReferenceAudioValidationInput,
   ReferenceAudioValidationResponse
 } from '../src/reference-audio'
@@ -119,6 +123,15 @@ const api = {
     input: GptSoVitsTestSynthesisRequest
   ): Promise<GptSoVitsTestSynthesisResult> =>
     ipcRenderer.invoke('gptSovits:testSynthesis', input),
+  startGptSoVits: (input: GptSoVitsProcessRequest): Promise<GptSoVitsProcessStatus> =>
+    ipcRenderer.invoke('gptSovits:start', input),
+  getGptSoVitsProcessStatus: (): Promise<GptSoVitsProcessStatus> =>
+    ipcRenderer.invoke('gptSovits:status'),
+  stopGptSoVits: (): Promise<GptSoVitsProcessStatus> =>
+    ipcRenderer.invoke('gptSovits:stop'),
+  restartGptSoVits: (
+    input?: GptSoVitsProcessRequest | null
+  ): Promise<GptSoVitsProcessStatus> => ipcRenderer.invoke('gptSovits:restart', input ?? null),
   listVoicePresets: (): Promise<VoicePreset[]> => ipcRenderer.invoke('voicePresets:list'),
   saveVoicePreset: (preset: VoicePreset): Promise<VoicePreset[]> =>
     ipcRenderer.invoke('voicePresets:save', preset),
@@ -191,6 +204,7 @@ contextBridge.exposeInMainWorld('api', api)
 export type RendererApi = typeof api
 export type { StoredConfig, ProviderConfig, Provider } from '../src/safe-storage'
 export type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
+export type { GptSoVitsProcessRequest, GptSoVitsProcessStatus } from '../src/gpt-sovits-process'
 export type {
   GptSoVitsHealthRequest,
   GptSoVitsTestSynthesisRequest,

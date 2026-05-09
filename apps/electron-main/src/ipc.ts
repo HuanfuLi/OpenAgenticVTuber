@@ -28,6 +28,14 @@ import {
 import { loadConfig, saveConfig, clearConfig, type StoredConfig } from './safe-storage'
 import { canDeletePreset, getAvatarSessionPresetKey } from './safe-storage'
 import {
+  getGptSoVitsProcessStatus,
+  restartGptSoVitsProcess,
+  startGptSoVitsProcess,
+  stopGptSoVitsProcess,
+  type GptSoVitsProcessRequest,
+  type GptSoVitsProcessStatus
+} from './gpt-sovits-process'
+import {
   deleteReferenceAudioAsset,
   getManagedReferenceAudioPath,
   pickAndImportReferenceAudio,
@@ -280,6 +288,18 @@ export function registerIpc(window: BrowserWindow): () => void {
         () => failedGptSoVitsTestSynthesis('GPT-SoVITS test synthesis failed: sidecar request failed.')
       )
   )
+  ipcMain.handle(
+    'gptSovits:start',
+    async (_e, request: GptSoVitsProcessRequest): Promise<GptSoVitsProcessStatus> =>
+      startGptSoVitsProcess(request)
+  )
+  ipcMain.handle('gptSovits:status', (): GptSoVitsProcessStatus => getGptSoVitsProcessStatus())
+  ipcMain.handle('gptSovits:stop', async (): Promise<GptSoVitsProcessStatus> => stopGptSoVitsProcess())
+  ipcMain.handle(
+    'gptSovits:restart',
+    async (_e, request?: GptSoVitsProcessRequest | null): Promise<GptSoVitsProcessStatus> =>
+      restartGptSoVitsProcess(request ?? null)
+  )
 
   // New for 01-02 (safeStorage credential gate, PLUMB-04 / D-07 / D-09):
   ipcMain.handle('config:load', () => loadConfig())
@@ -486,6 +506,10 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('sidecar:getAudioStatus')
     ipcMain.removeHandler('gptSovits:checkHealth')
     ipcMain.removeHandler('gptSovits:testSynthesis')
+    ipcMain.removeHandler('gptSovits:start')
+    ipcMain.removeHandler('gptSovits:status')
+    ipcMain.removeHandler('gptSovits:stop')
+    ipcMain.removeHandler('gptSovits:restart')
     ipcMain.removeHandler('config:load')
     ipcMain.removeHandler('config:save')
     ipcMain.removeHandler('config:clear')

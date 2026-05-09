@@ -14,6 +14,10 @@ import type {
 } from '../src/conversation-store'
 import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
 import type {
+  GptSoVitsProcessRequest,
+  GptSoVitsProcessStatus
+} from '../src/gpt-sovits-process'
+import type {
   ReferenceAudioValidationInput,
   ReferenceAudioValidationResponse
 } from '../src/reference-audio'
@@ -38,6 +42,10 @@ export type VoicePresetBridge = {
 export type GptSoVitsAudioBridge = {
   checkGptSoVitsHealth(input: GptSoVitsHealthRequest): Promise<AudioProviderHealth>
   testGptSoVitsSynthesis(input: GptSoVitsTestSynthesisRequest): Promise<GptSoVitsTestSynthesisResult>
+  startGptSoVits(input: GptSoVitsProcessRequest): Promise<GptSoVitsProcessStatus>
+  getGptSoVitsProcessStatus(): Promise<GptSoVitsProcessStatus>
+  stopGptSoVits(): Promise<GptSoVitsProcessStatus>
+  restartGptSoVits(input?: GptSoVitsProcessRequest | null): Promise<GptSoVitsProcessStatus>
 }
 
 export type AvatarImportBridge = {
