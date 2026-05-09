@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 from contracts import ParamFrame
+from contracts import ActionCode
 from contracts.avatar_overrides import AvatarOverrides
 from contracts.rig_capabilities import RigCapabilities
 from plugins.default import DefaultPlugin
@@ -146,3 +147,40 @@ def test_supervised_default_plugin_render_frame_drives_smirk_ramp() -> None:
         )
 
     asyncio.run(run())
+
+
+def test_action_code_delivered_to_active_plugin() -> None:
+    class Plugin(_Plugin):
+        def __init__(self) -> None:
+            self.received: list[ActionCode] = []
+
+        def on_action_code(self, action: ActionCode) -> None:
+            self.received.append(action)
+
+    async def run() -> None:
+        plugin = Plugin()
+        adapter = PluginAdapter(plugin)
+        action = ActionCode(name="joy")
+
+        assert adapter.enqueue_action_code(action) is True
+        assert await adapter.next_action_code() == action
+        assert plugin.received == [action]
+
+    asyncio.run(run())
+
+
+def test_action_code_queue_full_returns_false() -> None:
+    class Plugin(_Plugin):
+        def __init__(self) -> None:
+            self.received: list[ActionCode] = []
+
+        def on_action_code(self, action: ActionCode) -> None:
+            self.received.append(action)
+
+    plugin = Plugin()
+    adapter = PluginAdapter(plugin)
+    for index in range(128):
+        adapter.action_code_queue.put_nowait(ActionCode(name=f"filled-{index}"))
+
+    assert adapter.enqueue_action_code(ActionCode(name="joy")) is False
+    assert plugin.received == []
