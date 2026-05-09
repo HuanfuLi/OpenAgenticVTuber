@@ -9,6 +9,7 @@ import { app, safeStorage } from 'electron'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { AudioConfig } from '../../../packages/contracts/ts/audio-provider'
+import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
 
 const STORE_FILE = 'llm-config.enc'
 
@@ -42,7 +43,24 @@ export interface StoredConfig {
   hasCompletedSetup: boolean
   schemaVersion: 2
   audio: AudioConfig
+  voicePresets: VoicePreset[]
+  referenceAudioAssets: ReferenceAudioAsset[]
+  activePresetByAvatarSession: Record<string, string>
 }
+
+export interface VoicePresetLibraryDefaults {
+  voicePresets: VoicePreset[]
+  referenceAudioAssets: ReferenceAudioAsset[]
+  activePresetByAvatarSession: Record<string, string>
+}
+
+export type DeletePresetResult =
+  | { ok: true }
+  | { ok: false; reason: 'active_preset'; activeKeys: string[] }
+
+export type DeleteReferenceAudioResult =
+  | { ok: true }
+  | { ok: false; reason: 'reference_audio_in_use'; presetIds: string[] }
 
 function storePath(): string {
   return path.join(app.getPath('userData'), STORE_FILE)
@@ -73,6 +91,46 @@ export function defaultAudioConfig(): AudioConfig {
   }
 }
 
+export function defaultVoicePresetLibrary(): VoicePresetLibraryDefaults {
+  return {
+    voicePresets: [],
+    referenceAudioAssets: [],
+    activePresetByAvatarSession: {}
+  }
+}
+
+export function getAvatarSessionPresetKey(avatarId: string | null, sessionId: string | null): string {
+  const normalizedAvatar = avatarId && avatarId.trim().length > 0 ? avatarId.trim() : 'global'
+  const normalizedSession = sessionId && sessionId.trim().length > 0 ? sessionId.trim() : 'global'
+  return `avatar:${normalizedAvatar}|session:${normalizedSession}`
+}
+
+export function canDeletePreset(
+  presetId: string,
+  activePresetByAvatarSession: Record<string, string>
+): DeletePresetResult {
+  const activeKeys = Object.entries(activePresetByAvatarSession)
+    .filter(([, activePresetId]) => activePresetId === presetId)
+    .map(([key]) => key)
+  if (activeKeys.length > 0) {
+    return { ok: false, reason: 'active_preset', activeKeys }
+  }
+  return { ok: true }
+}
+
+export function canDeleteReferenceAudio(
+  assetId: string,
+  voicePresets: VoicePreset[]
+): DeleteReferenceAudioResult {
+  const presetIds = voicePresets
+    .filter((preset) => preset.gpt_sovits.reference_audio_id === assetId)
+    .map((preset) => preset.preset_id)
+  if (presetIds.length > 0) {
+    return { ok: false, reason: 'reference_audio_in_use', presetIds }
+  }
+  return { ok: true }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -81,9 +139,17 @@ export function migrateStoredConfig(raw: unknown): StoredConfig | null {
   if (!isRecord(raw)) return null
   if (raw.schemaVersion === 2) {
     if (!isRecord(raw.provider)) return null
+    const defaults = defaultVoicePresetLibrary()
     return {
       ...(raw as unknown as StoredConfig),
-      audio: isRecord(raw.audio) ? (raw.audio as unknown as AudioConfig) : defaultAudioConfig()
+      audio: isRecord(raw.audio) ? (raw.audio as unknown as AudioConfig) : defaultAudioConfig(),
+      voicePresets: Array.isArray(raw.voicePresets) ? (raw.voicePresets as VoicePreset[]) : defaults.voicePresets,
+      referenceAudioAssets: Array.isArray(raw.referenceAudioAssets)
+        ? (raw.referenceAudioAssets as ReferenceAudioAsset[])
+        : defaults.referenceAudioAssets,
+      activePresetByAvatarSession: isRecord(raw.activePresetByAvatarSession)
+        ? (raw.activePresetByAvatarSession as Record<string, string>)
+        : defaults.activePresetByAvatarSession
     }
   }
   if (raw.schemaVersion === 1) {
@@ -93,7 +159,8 @@ export function migrateStoredConfig(raw: unknown): StoredConfig | null {
       plugin: v1.plugin,
       hasCompletedSetup: v1.hasCompletedSetup,
       schemaVersion: 2,
-      audio: defaultAudioConfig()
+      audio: defaultAudioConfig(),
+      ...defaultVoicePresetLibrary()
     }
   }
   return null
