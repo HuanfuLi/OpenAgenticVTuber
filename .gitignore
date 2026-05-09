@@ -62,5 +62,8 @@ cache/
 chat_history/
 audit_logs/
 
+# Local-only broken plugin fixture for manual Settings fallback testing.
+plugins/broken_motion_test/
+
 # Phase 5 codegen - committed intermediates live under packages/contracts/generated/json-schema/
 # Nothing new to ignore (we COMMIT the intermediates per Claude's Discretion default).
