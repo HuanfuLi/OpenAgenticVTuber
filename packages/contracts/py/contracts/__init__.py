@@ -2,17 +2,31 @@
 from .action_binding import DefaultPluginActionBinding
 from .dispatch import ActionCode, Dispatch, EventFire, VariantToggle
 from .speech_envelope import SpeechEnvelopePayload
-from .audio_payload import AudioPayloadMessage, DisplayTextField
+from .audio_payload import AudioPayloadMessage, DisplayTextField, FailedAudioMetadata
 from .audio_provider import (
     AudioConfig,
     AudioHealthState,
+    AudioProviderContracts,
     AudioProviderHealth,
     AudioProviderId,
     AudioProviderKind,
-    FutureTTSProviderConfig,
+    GptSoVitsActivationGate,
+    GptSoVitsHealthRequest,
+    GptSoVitsLanguage,
+    GptSoVitsLaunchConfig,
+    GptSoVitsProviderConfig,
+    GptSoVitsTestSynthesisRequest,
+    GptSoVitsTestSynthesisResult,
     PiperTTSConfig,
     STTProviderConfig,
     TTSProviderConfig,
+)
+from .voice_preset import (
+    ActivePresetAssociation,
+    GptSoVitsPresetConfig,
+    ReferenceAudioAsset,
+    VoicePreset,
+    VoicePresetLibrary,
 )
 from .discrete_event import DiscreteEvent
 from .param_frame import ParamFrame, ParamMode
@@ -57,12 +71,25 @@ __all__ = [
     "SpeechEnvelopePayload",
     "AudioPayloadMessage",
     "DisplayTextField",
+    "FailedAudioMetadata",
     "AudioConfig",
     "AudioHealthState",
+    "AudioProviderContracts",
     "AudioProviderHealth",
     "AudioProviderId",
     "AudioProviderKind",
-    "FutureTTSProviderConfig",
+    "GptSoVitsActivationGate",
+    "GptSoVitsHealthRequest",
+    "GptSoVitsLanguage",
+    "GptSoVitsLaunchConfig",
+    "GptSoVitsProviderConfig",
+    "GptSoVitsTestSynthesisRequest",
+    "GptSoVitsTestSynthesisResult",
+    "ActivePresetAssociation",
+    "GptSoVitsPresetConfig",
+    "ReferenceAudioAsset",
+    "VoicePreset",
+    "VoicePresetLibrary",
     "PiperTTSConfig",
     "STTProviderConfig",
     "TTSProviderConfig",

@@ -11,9 +11,10 @@ Phase-2 extension over OLVT (documented divergence per Discrepancy 4):
 Per Phase 7 D-A4, the `dispatches` field carries ordered Dispatch records
 instead of OLVT's Actions{expressions,pictures,sounds} dataclass.
 """
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel
 from .dispatch import Dispatch
+from .audio_provider import AudioHealthState, AudioProviderId
 
 
 class DisplayTextField(BaseModel):
@@ -21,6 +22,14 @@ class DisplayTextField(BaseModel):
     text: str
     name: str = "Teto"
     avatar: str = "teto"
+
+
+class FailedAudioMetadata(BaseModel):
+    provider_id: AudioProviderId
+    state: AudioHealthState
+    summary: str
+    retryable: bool = False
+    redacted_diagnostics: Optional[Dict[str, str]] = None
 
 
 class AudioPayloadMessage(BaseModel):
@@ -32,3 +41,4 @@ class AudioPayloadMessage(BaseModel):
     dispatches: List[Dispatch] = []
     sentence_id: int                 # Phase-2 extension (Discrepancy 4)
     forwarded: bool = False          # OLVT broadcast flag; always False in skeleton
+    failed_audio: Optional[FailedAudioMetadata] = None
