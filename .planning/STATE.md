@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Plugin + Animation Control
 status: verifying
-stopped_at: Phase 9 plans approved (2 plans / 10 tasks / 2 waves)
-last_updated: "2026-05-09T02:44:42.732Z"
+stopped_at: Completed 07-08-PLAN.md
+last_updated: "2026-05-09T03:53:53.438Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 10
   completed_phases: 8
-  total_plans: 39
-  completed_plans: 37
+  total_plans: 40
+  completed_plans: 38
 ---
 
 # Project State
@@ -24,8 +24,8 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 ## Current Position
 
-Phase: 07 (three-category-code-parsing-dispatch) — EXECUTING
-Plan: 7 of 7
+Phase: 07 (three-category-code-parsing-dispatch) — COMPLETE
+Plan: 8 of 8
 Status: Phase complete — ready for verification
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
@@ -33,7 +33,8 @@ Status: Phase complete — ready for verification
   - F-2 closed by `tests/test_arch06_single_writer.py` (asserts requestSetParameterValue / requestInjectParameterData / plugin_name ownership single-file)
   - F-3 closed by follow-on commits: 946abd7 (head_only lateral sway) + 4e2ff12 (preserve VTS tracking input ranges)
   - F-4/joy-vocabulary gap closed by 06-08: active Teto catalog is strict, `joy` is absent/invalid, forced `[joy]` is ignored safely, and `heart-eye` variant dispatch remains Phase 7 work
-  - Phase validation gate: 119 passed (pytest tests/plugins tests/compositor tests/architecture/... etc.)
+  - 07-08 focused verification passed: 52 passed (`tests/plugins/test_prompt_section.py`, `tests/test_orchestrator_turn.py`, `tests/test_sidecar_boot.py`, `tests/plugins/test_manifest_watcher.py`, `tests/orchestrator/test_dispatch_routing.py`)
+  - Live UAT confirmed `{heart-eye}` visibly switches the rig and persists by design; event UAT remains blocked until an active avatar catalog declares events
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
 
 Last activity: 2026-05-09
@@ -107,6 +108,7 @@ Last activity: 2026-05-09
 | Phase 07-three-category-code-parsing-dispatch P02 | 8min | 1 tasks | 14 files |
 | Phase 07-three-category-code-parsing-dispatch P06 | 250min | 2 tasks | 11 files |
 | Phase 07-three-category-code-parsing-dispatch P07 | 9min | 2 tasks | 7 files |
+| Phase 07-three-category-code-parsing-dispatch P08 | 39min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -193,6 +195,9 @@ Recent decisions affecting current work:
 - [Phase 07-three-category-code-parsing-dispatch]: Boot validation raises ReservedNameError or CategoryCollisionError instead of being swallowed by the generic startup fallback.
 - [Phase 07-three-category-code-parsing-dispatch]: Orchestrator accepts AvatarOverrides directly and derives variant/event parser catalogs from that boot-frozen object.
 - [Phase 07-three-category-code-parsing-dispatch]: Renderer keeps the logs-drawer intent test filename while assertions now document [DISPATCH] behavior.
+- [Phase 07-three-category-code-parsing-dispatch]: Plan 07-08 boot-freezes the LLM dispatch prompt catalog from the same active plugin and avatar catalogs used by runtime parsing.
+- [Phase 07-three-category-code-parsing-dispatch]: Plan 07-08 records variant codes as persistent radio-button state; timed completion applies only to event codes.
+- [Phase 07-three-category-code-parsing-dispatch]: Plan 07-08 treats current Teto events: [] as a live event UAT prerequisite block, not a parser or routing failure.
 
 ### Pending Todos
 
@@ -215,6 +220,6 @@ Carried forward from research synthesis as plan-time decision items:
 
 ## Session Continuity
 
-Last session: 2026-05-09T02:44:42.684Z
-Stopped at: Phase 9 plans approved (2 plans / 10 tasks / 2 waves)
-Resume file: .planning/phases/09-slider-hud-per-param-lock/09-01-PLAN.md
+Last session: 2026-05-09T03:53:53.412Z
+Stopped at: Completed 07-08-PLAN.md
+Resume file: None
