@@ -18,6 +18,7 @@ from sidecar.avatar.overrides import load_avatar_overrides
 from sidecar.avatar.rig_capabilities import build_rig_capabilities, resolve_source_rig_path
 from sidecar.compositor import Compositor
 from sidecar.compositor.cursor_driver import CursorDriver
+from sidecar.compositor.hud_tap import HudTap
 from sidecar.compositor.idle_driver import IdleDriver
 from sidecar.compositor.plugin_adapter import PluginAdapter
 from sidecar.compositor.speech_driver import SpeechDriver
@@ -169,6 +170,8 @@ async def lifespan(app: FastAPI):
     plugin_manifest_watcher = None
     event_completion_tracker: EventCompletionTracker | None = None
     app.state.startup_error_message = None
+    app.state.lock_state = {}
+    app.state.hud_tap = HudTap()
 
     provider_cfg = _load_provider_config_from_env()
     avatars = _avatars_root()
@@ -339,6 +342,8 @@ async def lifespan(app: FastAPI):
                 plugin_driver=plugin_adapter,
                 capabilities=capabilities,
                 cursor_driver=cursor_drv,
+                lock_state=app.state.lock_state,
+                hud_tap=app.state.hud_tap,
             )
             compositor_task = asyncio.create_task(compositor.run())
             app.state.compositor = compositor
@@ -450,6 +455,35 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             await ws.close(code=1011)
         except Exception:
             pass
+
+
+@app.websocket("/hud/ws")
+async def hud_websocket_endpoint(ws: WebSocket) -> None:
+    from .hud_handlers import hud_push_loop, route_hud_c2s
+
+    await ws.accept()
+    hud_tap: HudTap = app.state.hud_tap
+    queue = hud_tap.subscribe()
+    push_task = asyncio.create_task(hud_push_loop(ws, queue))
+    try:
+        while True:
+            raw = await ws.receive_json()
+            await route_hud_c2s(ws, raw, app.state)
+    except WebSocketDisconnect:
+        log.info("HUD WS client disconnected.")
+    except Exception:  # noqa: BLE001 -- log everything, never let WS handler crash the app
+        log.exception("HUD WS handler error; closing connection.")
+        try:
+            await ws.close(code=1011)
+        except Exception:
+            pass
+    finally:
+        push_task.cancel()
+        try:
+            await push_task
+        except (asyncio.CancelledError, Exception):
+            pass
+        hud_tap.unsubscribe(queue)
 
 
 # /admin router for LLM setup test (Task 3 / PLUMB-04).
