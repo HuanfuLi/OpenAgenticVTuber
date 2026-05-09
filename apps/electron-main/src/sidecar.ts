@@ -19,6 +19,8 @@ const READY_TIMEOUT_MS = 10_000
 const CRASH_WINDOW_MS = 30_000
 const CRASH_RESPAWN_LIMIT = 3 // 3rd crash within 30s -> permanent banner
 
+type SpawnImpl = typeof spawn
+
 export interface SidecarHandle {
   child: ChildProcess
   wsUrl: string
@@ -220,7 +222,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
 
   return new Promise<SidecarHandle>((resolve, reject) => {
     const timer = setTimeout(() => {
-      child.kill()
+      void terminateProcessTree(child)
       reject(new Error(`Sidecar did not emit [READY] within ${READY_TIMEOUT_MS}ms`))
     }, READY_TIMEOUT_MS)
 
@@ -332,23 +334,61 @@ export function onLog(cb: (line: string) => void): () => void {
   }
 }
 
+function waitForChildExit(child: ChildProcess, timeoutMs: number): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return Promise.resolve()
+  }
+  return new Promise<void>((resolve) => {
+    const timer = setTimeout(() => resolve(), timeoutMs)
+    child.once('exit', () => {
+      clearTimeout(timer)
+      resolve()
+    })
+  })
+}
+
+function runTaskkill(pid: number, spawnImpl: SpawnImpl): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const killer = spawnImpl('taskkill', ['/pid', String(pid), '/t', '/f'], {
+      windowsHide: true,
+      stdio: 'ignore'
+    })
+    killer.once('error', () => resolve())
+    killer.once('exit', () => resolve())
+  })
+}
+
+export async function terminateProcessTree(
+  child: ChildProcess,
+  options: {
+    platform?: NodeJS.Platform
+    spawnImpl?: SpawnImpl
+  } = {}
+): Promise<void> {
+  const platform = options.platform ?? process.platform
+  const spawnImpl = options.spawnImpl ?? spawn
+  if (child.exitCode !== null || child.signalCode !== null) return
+
+  if (platform === 'win32' && child.pid) {
+    await runTaskkill(child.pid, spawnImpl)
+    return
+  }
+
+  child.kill()
+}
+
 export async function shutdownSidecar(softTimeoutMs = 5_000): Promise<void> {
   const handle = state.handle
   if (!handle) return
   state.intentionalShutdown = true
-  handle.child.kill()
-  await new Promise<void>((res) => {
-    const t = setTimeout(() => res(), softTimeoutMs)
-    handle.child.on('exit', () => {
-      clearTimeout(t)
-      res()
-    })
-  })
+  const exited = waitForChildExit(handle.child, softTimeoutMs)
+  await terminateProcessTree(handle.child)
+  await exited
   if (state.handle === handle) {
     state.handle = null
     state.readyUrl = null
-    state.intentionalShutdown = false
   }
+  state.intentionalShutdown = false
 }
 
 export async function restartSidecar(): Promise<SidecarHandle> {

@@ -21,10 +21,14 @@ It is the canonical AI guide for adapting motion algorithms to AgenticLLMVTuber.
 1. Identify the algorithm's inputs, outputs, timing model, and state.
 2. Convert external motion output into finite `ParamFrame.add_params` values.
 3. Gate every parameter id through `RigCapabilities.writable_param_ids`.
-4. Use `sidecar.plugins.sdk` helpers for bracket action parsing, ramping, finite
+4. Inspect `AvatarOverrides` only for avatar-specific hints: body-sway metadata,
+   default-plugin action bindings, variants/events catalog context, source rig
+   metadata, and notes. Do not treat variants/events as plugin action codes, and
+   do not let overrides bypass `RigCapabilities`.
+5. Use `sidecar.plugins.sdk` helpers for bracket action parsing, ramping, finite
    filtering, and safe frame construction.
-5. Keep the manifest small and explicit.
-6. Add tests before declaring the plugin complete.
+6. Keep the manifest small and explicit.
+7. Add tests before declaring the plugin complete.
 
 ## Required Tests
 
@@ -46,6 +50,8 @@ uv run pytest tests/plugins/test_plugin_sdk.py tests/plugins/test_sample_plugin.
 ## Do Not
 
 - Do not bypass `RigCapabilities`.
+- Do not assume `AvatarOverrides.variants` or `AvatarOverrides.events` are plugin
+  action codes.
 - Do not emit `NaN`, infinity, strings, or booleans as parameter values.
 - Do not import renderer, Electron, pyvts writer, or compositor internals from a plugin.
 - Do not silently change `plugin.yaml` semantics without updating docs and tests.

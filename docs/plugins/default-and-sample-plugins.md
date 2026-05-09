@@ -13,5 +13,12 @@ The default plugin demonstrates:
 - smoothing and timed render frames;
 - default-plugin action bindings from imported avatar catalogs.
 
+Default-plugin action bindings live in `RigCapabilities` and
+`AvatarOverrides.default_plugin_action_bindings`. They are avatar-specific hints
+for the default plugin's emotion/action vocabulary, not a required abstraction
+for every custom plugin. A custom plugin should read them only when it wants to
+reuse that default-plugin mapping behavior; otherwise it can rely on its own
+manifest action codes and `RigCapabilities.writable_param_ids`.
+
 The default plugin is intentionally richer than the minimal authoring path. Do
 not copy its full structure unless your plugin needs the same complexity.

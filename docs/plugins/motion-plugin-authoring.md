@@ -72,6 +72,41 @@ Lifecycle methods:
 - Values must be finite numbers. Do not emit `NaN` or infinity.
 - Prefer writing only ids present in `RigCapabilities.writable_param_ids`.
 
+## RigCapabilities And AvatarOverrides
+
+`RigCapabilities` is the first contract to check when deciding what a plugin can
+write. It describes the current rig surface after import and introspection:
+writable parameter ids, parameter ranges, expressions, hotkeys, display names,
+sign inversions, and default-plugin action bindings discovered from the rig.
+
+`AvatarOverrides` is the saved avatar-specific catalog and configuration loaded
+at sidecar boot. It is not a second output channel. Use it for avatar-specific
+hints and context that should shape how your plugin interprets the rig:
+
+- `body_sway_strategy`, `proxy_body_param`, and `exp3_body_pose`: the imported
+  body-sway preference and any rig-specific body-pose metadata. Most custom
+  plugins can ignore these unless they intentionally implement body sway.
+- `default_plugin_action_bindings`: avatar-specific bindings used by the
+  production default plugin to map action codes such as `[smirk]` to imported
+  expression/catalog data. Custom plugins may ignore these, or use them as
+  optional hints if they deliberately want to honor the same avatar-specific
+  behavior.
+- `variants` and `events`: the avatar dispatch catalog for `{variant}` and
+  `<event>` codes. These are not plugin action codes and should not be emitted as
+  `ParamFrame` values. They help explain what the avatar can do outside your
+  plugin.
+- `source_rig_path`, `notes`, `param_probes`, `orphan_params`,
+  `physics_chain_proxies`, and `sign_inversions`: import-time metadata that can
+  help advanced plugins adapt to a specific rig, but should not override
+  `RigCapabilities.writable_param_ids`.
+- `voice`: TTS/lipsync configuration. Motion plugins normally should not use it
+  except to avoid conflicting with mouth/lipsync behavior.
+
+Rule of thumb: use `RigCapabilities` to decide what you may write, and
+`AvatarOverrides` to decide whether the avatar has saved preferences or catalog
+metadata that should change your plugin's interpretation. Even when an override
+mentions a parameter, still gate emitted values through `RigCapabilities`.
+
 ## Helper Kit
 
 `sidecar.plugins.sdk` is the supported v1 helper kit:
