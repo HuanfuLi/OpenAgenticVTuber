@@ -1,11 +1,12 @@
 ---
 phase: 9
 slug: slider-hud-per-param-lock
-status: draft
+status: approved
 shadcn_initialized: false
 preset: inherits-from-phase-1
 parent_spec: ../01-plumbing-process-lifecycle/01-UI-SPEC.md
 created: 2026-05-08
+reviewed_at: 2026-05-08
 ---
 
 # Phase 9 — UI Design Contract
