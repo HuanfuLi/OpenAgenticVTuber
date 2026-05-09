@@ -93,7 +93,7 @@ describe('HudRoot', () => {
 
   it('mounts loading state then renders rig-derived rows', async () => {
     renderHud()
-    expect(screen.getByText('Loading rig parameters...')).toBeInTheDocument()
+    expect(screen.getByText('Loading rig parameters…')).toBeInTheDocument()
 
     await waitFor(() => {
       expect(screen.getByText('Angle X')).toBeInTheDocument()
@@ -189,7 +189,7 @@ describe('HudRoot', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText('Avatar changed - locks cleared.')).toBeInTheDocument()
+      expect(screen.getByText('Avatar changed — locks cleared.')).toBeInTheDocument()
     })
   })
 

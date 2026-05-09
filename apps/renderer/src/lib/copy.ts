@@ -185,16 +185,16 @@ export const COPY = {
     FILTER_WRITABLE: 'Writable',
     FILTER_ANIMATING: 'Animating',
     FILTER_LOCKED: 'Locked',
-    FOOTER_TEMPLATE: '{N} params - {M} locked - 15 Hz',
+    FOOTER_TEMPLATE: '{N} params · {M} locked · 15 Hz',
     EMPTY_FILTER_HEADING: 'No params match the active filters.',
     EMPTY_FILTER_BODY: 'Toggle a chip back on to see more params.',
     EMPTY_RIG_HEADING: 'This rig exposes no parameters the HUD can lock.',
     EMPTY_RIG_BODY: 'Add or import a rig with at least one writable parameter.',
-    LOADING_BODY: 'Loading rig parameters...',
+    LOADING_BODY: 'Loading rig parameters…',
     LOADING_ERROR: "Couldn't load rig parameters. Is the sidecar running?",
     RETRY_BUTTON: 'Retry',
-    BANNER_DISCONNECTED: 'HUD lost connection to the sidecar. Reconnecting...',
-    TOAST_LOCKS_CLEARED: 'Avatar changed - locks cleared.'
+    BANNER_DISCONNECTED: 'HUD lost connection to the sidecar. Reconnecting…',
+    TOAST_LOCKS_CLEARED: 'Avatar changed — locks cleared.'
   },
   ERRORS: {
     LLM_UNREACHABLE_BANNER: 'LLM is unreachable. Start LM Studio and click Retry.',

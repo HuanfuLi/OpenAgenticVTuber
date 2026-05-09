@@ -15,7 +15,7 @@ export function createHudWindow(): BrowserWindow {
     height: 640,
     minWidth: 360,
     minHeight: 480,
-    title: 'AgenticLLMVTuber - HUD',
+    title: 'AgenticLLMVTuber — HUD',
     show: false,
     autoHideMenuBar: true,
     webPreferences: {

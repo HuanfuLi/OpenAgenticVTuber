@@ -18,7 +18,7 @@ import { LLMSetup } from './screens/LLMSetup/LLMSetup'
 import { bootSetupStore, useSetupState } from './state/setup-store'
 import { HudRoot } from './screens/HUD/HUD'
 
-const IS_HUD_ROUTE = typeof window !== 'undefined' && window.location.hash === '#/hud'
+const isHudRoute = typeof window !== 'undefined' && window.location.hash === '#/hud'
 
 function GatedShell() {
   const setup = useSetupState()
@@ -37,9 +37,9 @@ export default function App() {
     <ThemeProvider>
       <AppStoreProvider>
         <div className="app-window">
-          {IS_HUD_ROUTE ? <HudRoot /> : <GatedShell />}
+          {isHudRoute ? <HudRoot /> : <GatedShell />}
         </div>
-        {import.meta.env.DEV && !IS_HUD_ROUTE && <DevPanel />}
+        {import.meta.env.DEV && !isHudRoute && <DevPanel />}
       </AppStoreProvider>
     </ThemeProvider>
   )
