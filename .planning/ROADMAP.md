@@ -137,4 +137,4 @@ Plans:
 - Phase 10 no-VTS-rect cursor synthetic fallback still projects against the primary monitor only. The live DPI-aware VTS-window path is validated on a two-monitor Windows setup with VTS on the secondary display.
 
 ---
-*Last updated: 2026-05-09 after Phase 12 12-04 gap closure execution*
+*Last updated: 2026-05-09 after Phase 12 UAT passed*

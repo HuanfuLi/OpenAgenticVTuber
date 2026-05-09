@@ -1,10 +1,10 @@
 ---
-status: gap_closure_executed
+status: complete
 phase: 12-settings-reality-pass
 source:
   - .planning/phases/12-settings-reality-pass/12-01-SUMMARY.md
 started: 2026-05-09T07:32:27-04:00
-updated: 2026-05-09T08:22:55-04:00
+updated: 2026-05-09T08:29:34-04:00
 ---
 
 ## Current Test
@@ -19,9 +19,7 @@ result: pass
 
 ### 2. Avatar Import/Edit Routing
 expected: In Settings > Avatars, "Edit current" opens the Avatar Import review flow for the active avatar catalog. "Import/replace" starts the folder-pick/import flow instead of reusing the current plan.
-result: resolved_pending_retest
-reported: "pass. With a minor warning I don't understand: Catalog metadata is unavailable for this avatar. Start or restart the sidecar, then try Edit current again."
-severity: minor
+result: pass
 
 ### 3. VTube Studio Settings Reality
 expected: Settings has a compact "VTube Studio" section that mirrors live VTS status. Restart sidecar and Reset/re-auth VTS token are available only inside the Troubleshooting disclosure, while the upper-right Status popover remains the primary status surface.
@@ -42,9 +40,9 @@ result: pass
 ## Summary
 
 total: 6
-passed: 5
-issues: 1
-resolved_pending_retest: 1
+passed: 6
+issues: 0
+resolved_pending_retest: 0
 pending: 0
 skipped: 0
 blocked: 0
@@ -52,7 +50,7 @@ blocked: 0
 ## Gaps
 
 - truth: "In Settings > Avatars, Edit current opens the Avatar Import review flow for the active avatar catalog."
-  status: resolved_pending_retest
+  status: resolved
   reason: "User reported: pass. With a minor warning I don't understand: Catalog metadata is unavailable for this avatar. Start or restart the sidecar, then try Edit current again."
   severity: minor
   test: 2
@@ -83,5 +81,6 @@ blocked: 0
     - "Known-ID degraded copy now says the avatar ID is known but the saved editable catalog has not loaded yet."
     - "Copy now tells the user to wait for sidecar status to finish, retry Edit current, or use Import/replace if the avatar was never imported."
     - "Regression coverage asserts the old 'Catalog metadata is unavailable' wording is not rendered."
+  verified: "User passed final re-UAT on 2026-05-09."
   debug_session: "inline verify-work diagnosis 2026-05-09"
   fix_plan: ".planning/phases/12-settings-reality-pass/12-04-PLAN.md"

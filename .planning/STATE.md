@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Mock/Reality Cleanup
-status: verifying
-stopped_at: Phase 12 12-04 warning-copy gap executed
-last_updated: "2026-05-09T08:23:45-04:00"
+status: planning
+stopped_at: Phase 12 UAT passed
+last_updated: "2026-05-09T08:29:34-04:00"
 last_activity: 2026-05-09
 progress:
   total_phases: 4
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: 12 (Settings Reality Pass) — GAP CLOSURE EXECUTED
-Plan: 4 of 4 complete
-Status: Ready for Phase 12 re-UAT
-Next: Run `$gsd-verify-work 12` to re-check the clarified known-ID avatar degraded warning copy.
+Phase: 13 (Conversation History Sessions) — PLANNED
+Plan: 0 of 3 complete
+Status: Ready for Phase 13 execution
+Next: Run `$gsd-execute-phase 13` when ready.
 
   - re_verification_3 passed 2026-05-08T18:35 (06-VERIFICATION.md status: passed)
   - F-1 closed by 06-07 (split VTS writer deleted; MouthOpen flows compositor SpeechDriver → single PyvtsSafeWriter)
@@ -39,7 +39,7 @@ Next: Run `$gsd-verify-work 12` to re-check the clarified known-ID avatar degrad
   - boot_smoke remains formally human_needed in 06-VERIFICATION but operator UAT confirmed lipsync + body sway live (re_verification_3)
   - Phase 10 gap closure complete: Plan 10-03 resolved SC2-SMIRK-RENDERING, and Plan 10-04 resolved SC5-EYE-TRACKING plus BLINK-EYE-VISIBILITY. Operator confirmed cursor eye tracking works and blink behavior passes after app-owned idle blinking was removed so VTS owns normal blinking.
 
-Last activity: 2026-05-09 — executed Phase 12 12-04 warning-copy gap closure. Known-ID degraded avatar copy now explains that the avatar ID is known but the saved editable catalog has not loaded yet, with retry/import guidance. Phase 12 is ready for re-UAT.
+Last activity: 2026-05-09 — Phase 12 re-UAT passed all 6 checks after 12-04 warning-copy cleanup. Phase 12 Settings Reality Pass is complete; Phase 13 conversation history sessions are planned and ready for execution.
 
 **Phase 8 status:** Complete 2026-05-08 — VERIFICATION passed 5/5 must-haves (re-verified after gap closure 08-05). RigCapabilities + AvatarOverrides contracts available for Phase 6/7/9 consumers. Dogfooded `_avatar_overrides.yaml` produced for Teto rig.
 
