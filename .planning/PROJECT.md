@@ -16,6 +16,8 @@ This is the **v1-horizon** core value. The v1.0 walking skeleton shipped the sin
 
 The app now boots as an Electron desktop shell with a Python sidecar, speaks via local Piper TTS, streams LLM replies sentence-by-sentence, and drives VTube Studio through a sidecar-owned compositor. Teto remains the dev rig. The accepted current body-motion strategy is `head_only`; full rig-adaptive body control is intentionally moved into the v2.0 plugin/HUD architecture.
 
+Phase 9 is complete: Settings opens a separate slider HUD window backed by `/admin/rig-capabilities` and `/hud/ws`; the HUD shows a focused VTS-input slider surface, streams live compositor frames, and supports session-only per-param locks that apply last in the compositor.
+
 ## Current Milestone: v2.0 Plugin + Animation Control
 
 **Goal:** Separate animation control from the system core so body-motion strategies are swappable, expose the rig's full parameter surface via an in-app slider HUD with per-param locks for parameter discovery, and formalize a three-category LLM code system (action / variant / event) so plugin authors can extend the LLM system prompt cleanly.
@@ -47,6 +49,7 @@ The app now boots as an Electron desktop shell with a Python sidecar, speaks via
 - [x] OLVT 4-decorator chain ported (sentence_divider → actions_extractor → display_processor → tts_filter); LLM emits `[tag]` → ActionIntent extracted, bracket stripped from chat, INTENT log line fires; adversarial split-bracket robustness — *Validated in Phase 2 (LLM-02); split-bracket SC #3 BLOCKER closed programmatically; live verified against real Teto rig vocabulary (Blush, Cry, Star Eye, …)*
 - [x] Append-only `_memory` + forward-only `_head_idx` orchestrator; in-memory single thread cleared on relaunch — *Validated in Phase 2 (LLM-04); KV-cache discipline grep returns 0 violations; fresh-thread invariant verified at runtime introspection*
 - [x] Pydantic contracts are the source of truth for the six TypeScript contract mirrors; JSON Schema intermediates are committed and `npm run check:contracts` guards drift — *Validated in Phase 5: Polish, Contracts Codegen (SC-02)*
+- [x] Slider HUD exposes a focused rig parameter surface with session-only per-param locks — *Validated in Phase 9: Slider HUD + Per-Param Lock (HUD-01..HUD-08); live UAT approved after `hud_visible_param_ids` and non-blocking HUD stream fixes*
 
 ### Active
 
@@ -56,7 +59,6 @@ The app now boots as an Electron desktop shell with a Python sidecar, speaks via
 - [ ] Rig capabilities contract: sidecar exposes a single `RigCapabilities` source for plugin `on_load()` and renderer HUD population.
 - [ ] Plugin runtime: body-motion logic moves behind a `BodyMotionPlugin` API; the default plugin absorbs milestone-1 intent/body-sway behavior.
 - [ ] Three-category code system: `[action]` routes to plugin logic, `{variant}` toggles persistent avatar variants, and `<event>` fires one-shot motion/event hotkeys.
-- [ ] Slider HUD: user can inspect writable rig params and apply session-only per-param locks.
 - [ ] v2.0 §14 re-verification: replay the skeleton success criteria against the refactored plugin architecture, including the migrated SC-01 ceremony.
 ### Out of Scope (this milestone — deferred to later v1 milestones)
 
@@ -152,4 +154,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-08 after v1.0 milestone archive — walking skeleton shipped; v2.0 plugin/avatar work active*
+*Last updated: 2026-05-09 after Phase 9 completion — slider HUD + per-param lock validated; Phase 10 verification remains*
