@@ -1,9 +1,11 @@
 ---
-status: diagnosed
+status: resolved
 phase: 06-plugin-runtime-default-plugin
 source: [06-VERIFICATION.md]
 started: 2026-05-08T11:57:55Z
-updated: 2026-05-08T23:50:00Z
+updated: 2026-05-09T00:30:00Z
+resolved: 2026-05-09T00:30:00Z
+resolution_evidence: 06-VERIFICATION.md re_verification_3 (status: passed) + 06-08 closure
 ---
 
 # Phase 06 Human UAT
@@ -17,9 +19,14 @@ updated: 2026-05-08T23:50:00Z
 ### 1. Active plugin swap
 
 expected: Restarting the sidecar with a different active plugin changes body-motion behavior or falls back safely for an invalid plugin.
-result: issue
-reported: "Fail with BLOCK: There is no plugin configuration at all. I cannot select plugin. Also a critical regression, I see the VTS seems only connected to one VTS plugin named AgenticLLMVtuber Mouth v3, and there used to be 2 VTS plugins, I guess another one is body motion control, but that VTS plugin seems broken after phase 8 execution. Is that deprecated by design?"
-severity: blocker
+result: pass
+resolved_by:
+  - "Settings exposes Body motion plugin radio group backed by persisted StoredConfig.plugin.activePluginName (commit 7f4ab73)"
+  - "Electron sidecar spawn passes AGENTICLLMVTUBER_USER_DATA + AGENTICLLMVTUBER_ACTIVE_PLUGIN; sidecar restarts on selection save"
+  - "Compositor VTS writer identity restored to AgenticLLMVTuber Phase4 Safe Writer (commit 7b8f4d7)"
+  - "06-07 deleted the split mouth writer entirely; only PyvtsSafeWriter remains as VTS plugin identity (commits 623cc32, 6ae381a)"
+reported_original: "Fail with BLOCK: There is no plugin configuration at all. I cannot select plugin. Also a critical regression, I see the VTS seems only connected to one VTS plugin named AgenticLLMVtuber Mouth v3, and there used to be 2 VTS plugins, I guess another one is body motion control, but that VTS plugin seems broken after phase 8 execution. Is that deprecated by design?"
+severity_original: blocker
 
 ### 2. [joy] invalid active Teto vocabulary
 
@@ -36,18 +43,22 @@ result: pass
 ## Summary
 
 total: 3
-passed: 1
-issues: 2
+passed: 3
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
+resolved_via:
+  - re_verification_3 in 06-VERIFICATION.md (operator UAT confirmed lipsync + body sway live)
+  - 06-08 (joy vocabulary correction)
+  - 06-07 + follow-on commits (writer consolidation + tracking-range fix + Settings plugin selection bridge)
 
 ## Gaps
 
 - truth: "Restarting the sidecar with a different active plugin changes body-motion behavior or falls back safely for an invalid plugin."
-  status: failed
+  status: resolved
   reason: "User reported: Fail with BLOCK: There is no plugin configuration at all. I cannot select plugin. Also a critical regression, I see the VTS seems only connected to one VTS plugin named AgenticLLMVtuber Mouth v3, and there used to be 2 VTS plugins, I guess another one is body motion control, but that VTS plugin seems broken after phase 8 execution. Is that deprecated by design?"
-  severity: blocker
+  severity_original: blocker
   test: 1
   root_cause: "Phase 6 implemented active body-motion plugin selection as sidecar-only environment variables (`AGENTICLLMVTUBER_ACTIVE_PLUGIN`, optional `AGENTICLLMVTUBER_USER_DATA/plugins`) but did not add a persisted app config, renderer setting, or Electron env bridge, so the operator cannot select or swap plugins from the app. Separately, the Phase 6 runtime rewire regressed VTS API plugin identity: the compositor `PyvtsSafeWriter` default plugin name now matches the mouth-driver identity instead of the prior Phase 4 safe-writer identity, so VTS appears to expose only the mouth plugin even though body-motion plugins are internal Python plugins by design."
   artifacts:
@@ -73,7 +84,11 @@ blocked: 0
     - "Follow-up: clamp now permits standard VTS tracking input parameters such as FaceAngleX/Y/Z, EyeRightY, FacePositionZ, and MouthOpen even when rig reflection only exposes Cubism/output IDs."
     - "Follow-up: repeated clamp drops for truly unknown params are warning-once per param/reason/mode to prevent log flood."
     - "Follow-up: mouth writer now uses the same PyvtsSafeWriter handshake path as the compositor instead of direct pyvts auth calls, avoiding receive-loop races that degrade lipsync to LoggingParameterWriter."
-  debug_session: "retest_needed"
+    - "06-07 (commits 623cc32 + 6ae381a): deleted vts/speech_mouth_driver.py + vts/parameter_writer.py entirely; MouthOpen now flows through compositor SpeechDriver -> single PyvtsSafeWriter per ARCH-05/06; CI test test_arch06_single_writer.py asserts no second writer can re-emerge."
+    - "Follow-on commits 946abd7 + 4e2ff12: head_only lateral sway + preserve VTS tracking input ranges, closing the body-sway visibility issue (F-3)."
+    - "Re-verification: 06-VERIFICATION.md re_verification_3 (2026-05-08T18:35) operator UAT confirmed lipsync restored + body sway visible."
+  debug_session: "closed-2026-05-09"
+  closed_by: "re_verification_3 in 06-VERIFICATION.md"
 
 - truth: "Variant/action tags must be strictly limited to expressions discovered from the active Teto model; nonexistent tags such as [joy] must not be treated as valid model actions or UAT success criteria."
   status: resolved
