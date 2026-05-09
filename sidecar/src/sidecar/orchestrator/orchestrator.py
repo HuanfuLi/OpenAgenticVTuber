@@ -28,6 +28,7 @@ from loguru import logger
 
 from contracts import (
     ActionCode,
+    AvatarOverrides,
     AudioPayloadMessage,
     Dispatch,
     DisplayTextField,
@@ -93,6 +94,7 @@ class Orchestrator:
         discrete_dispatcher=None,
         event_completion_tracker=None,
         plugin_action_codes: set[str] | None = None,
+        avatar_overrides: AvatarOverrides | None = None,
         variants=None,
         events=None,
         valid_expression_names: set[str] | None = None,
@@ -102,8 +104,17 @@ class Orchestrator:
         # Bytes-identical across all turns of this orchestrator's lifetime.
         self._system_prompt: str = _build_system_prompt(persona_text, action_codes_section)
         self._plugin_action_codes = plugin_action_codes or valid_expression_names or set()
-        self._variants = variants or []
-        self._events = events or []
+        self._avatar_overrides = avatar_overrides
+        self._variants = (
+            avatar_overrides.variants
+            if avatar_overrides is not None
+            else variants or []
+        )
+        self._events = (
+            avatar_overrides.events
+            if avatar_overrides is not None
+            else events or []
+        )
         self._plugin_adapter = plugin_adapter
         self._variant_state_manager = variant_state_manager
         self._discrete_dispatcher = discrete_dispatcher

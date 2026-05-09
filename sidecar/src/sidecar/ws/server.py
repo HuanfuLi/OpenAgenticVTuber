@@ -23,6 +23,11 @@ from sidecar.compositor.plugin_adapter import PluginAdapter
 from sidecar.compositor.speech_driver import SpeechDriver
 from sidecar.llm.gateway import LLMGateway, ProviderConfig
 from sidecar.orchestrator.orchestrator import Orchestrator
+from sidecar.parser.reserved import (
+    CategoryCollisionError,
+    ReservedNameError,
+    validate_reserved_names,
+)
 from sidecar.plugins.api import BodyMotionPlugin
 from sidecar.plugins.loader import (
     build_action_codes_section,
@@ -35,7 +40,9 @@ from sidecar.plugins.supervisor import NullPlugin, PluginSupervisor
 from sidecar.tts import TTSGateway, TTSTaskManager
 from sidecar.vts.handshake import connect_and_authenticate
 from sidecar.vts.discrete_dispatcher import DiscreteDispatcher
+from sidecar.vts.event_completion_tracker import EventCompletionTracker
 from sidecar.vts.pyvts_writer import PyvtsSafeWriter
+from sidecar.vts.variant_state_manager import VariantStateManager
 from sidecar.admin import avatar as admin_avatar
 
 from .handlers import handle_control, handle_shutdown, handle_text_input  # noqa: F401 -- side-effect: registers @on(...)
@@ -159,6 +166,7 @@ async def lifespan(app: FastAPI):
     writer: PyvtsSafeWriter | None = None
     tts_gateway: TTSGateway | None = None
     plugin_manifest_watcher = None
+    event_completion_tracker: EventCompletionTracker | None = None
     app.state.startup_error_message = None
 
     provider_cfg = _load_provider_config_from_env()
@@ -196,6 +204,38 @@ async def lifespan(app: FastAPI):
                 len(capabilities.hotkeys),
                 len(capabilities.expressions),
             )
+            plugin_manifest = None
+            plugin = NullPlugin()
+            try:
+                manifests = discover_manifests(_repo_root() / "plugins", _user_plugins_dir())
+                manifest_path = manifests.get(_active_plugin_id())
+                if manifest_path is not None:
+                    plugin_manifest = load_manifest(manifest_path)
+                    plugin_manifest_watcher = start_manifest_change_watcher(
+                        manifest_path,
+                        plugin_manifest,
+                    )
+                else:
+                    loguru_logger.warning("[PLUGIN] active plugin not found: {}", _active_plugin_id())
+            except Exception:
+                loguru_logger.exception("[PLUGIN] discovery/load failed; using NullPlugin")
+
+            plugin_action_codes = {
+                getattr(action, "code", action)
+                for action in (plugin_manifest.action_codes if plugin_manifest is not None else [])
+            }
+            validate_reserved_names(
+                plugin_action_codes=plugin_action_codes,
+                variants=overrides.variants,
+                events=overrides.events,
+            )
+
+            if plugin_manifest is not None:
+                try:
+                    plugin = _load_plugin_instance(manifest_path, plugin_manifest.entrypoint)
+                except Exception:
+                    loguru_logger.exception("[PLUGIN] instance load failed; using NullPlugin")
+
             persona = _persona_path(avatars, avatar_dir).read_text(encoding="utf-8")
             voice_model = overrides.voice.model if overrides.voice else "en_US-amy-medium"
             model_path = (
@@ -214,22 +254,6 @@ async def lifespan(app: FastAPI):
             compositor_speech_queue: asyncio.Queue = asyncio.Queue()
             compositor_sentence_complete_queue: asyncio.Queue = asyncio.Queue()
             pending_inputs: asyncio.Queue[str] = asyncio.Queue()
-            plugin_manifest = None
-            plugin = NullPlugin()
-            try:
-                manifests = discover_manifests(_repo_root() / "plugins", _user_plugins_dir())
-                manifest_path = manifests.get(_active_plugin_id())
-                if manifest_path is not None:
-                    plugin_manifest = load_manifest(manifest_path)
-                    plugin_manifest_watcher = start_manifest_change_watcher(
-                        manifest_path,
-                        plugin_manifest,
-                    )
-                    plugin = _load_plugin_instance(manifest_path, plugin_manifest.entrypoint)
-                else:
-                    loguru_logger.warning("[PLUGIN] active plugin not found: {}", _active_plugin_id())
-            except Exception:
-                loguru_logger.exception("[PLUGIN] discovery/load failed; using NullPlugin")
             plugin_supervisor = await PluginSupervisor.load_or_null(plugin, capabilities, overrides)
             plugin_adapter = PluginAdapter(plugin_supervisor)
             action_codes_section = (
@@ -241,6 +265,22 @@ async def lifespan(app: FastAPI):
                 compositor_speech_queue=compositor_speech_queue,
                 compositor_sentence_complete_queue=compositor_sentence_complete_queue,
             )
+            writer = PyvtsSafeWriter()
+            discrete_dispatcher = DiscreteDispatcher(writer)
+            reset_hotkey = next(
+                (
+                    hotkey
+                    for hotkey in capabilities.hotkeys
+                    if hotkey.type == "RemoveAllExpressions"
+                    or hotkey.name == "RemoveAllExpressions"
+                ),
+                None,
+            )
+            variant_state_manager = VariantStateManager(
+                discrete_dispatcher,
+                reset_hotkey_id=reset_hotkey.hotkey_id if reset_hotkey else None,
+            )
+            event_completion_tracker = EventCompletionTracker()
             app.state.orchestrator = Orchestrator(
                 gateway=gateway,
                 persona_text=persona,
@@ -250,12 +290,28 @@ async def lifespan(app: FastAPI):
                 compositor_sentence_complete_queue=compositor_sentence_complete_queue,
                 pending_inputs=pending_inputs,
                 plugin_adapter=plugin_adapter,
+                variant_state_manager=variant_state_manager,
+                discrete_dispatcher=discrete_dispatcher,
+                event_completion_tracker=event_completion_tracker,
+                plugin_action_codes=plugin_action_codes,
+                avatar_overrides=overrides,
             )
             app.state.tts_gateway = tts_gateway
             turn_loop_task = asyncio.create_task(app.state.orchestrator._turn_loop())
 
-            writer = PyvtsSafeWriter()
             handshake_task = asyncio.create_task(connect_and_authenticate(writer))
+            try:
+                await handshake_task
+                try:
+                    await variant_state_manager.reset_to_baseline()
+                except Exception:
+                    loguru_logger.exception(
+                        "[VTS-BASELINE] reset_to_baseline failed; continuing with no active variant state."
+                    )
+            except Exception:
+                loguru_logger.exception(
+                    "[VTS-HANDSHAKE] unavailable; continuing without baseline reset."
+                )
             breath_writeable = any(
                 p.name == "Auto Breath" and p.visible for p in overrides.param_probes
             )
@@ -266,7 +322,6 @@ async def lifespan(app: FastAPI):
                 avatar_dir,
             )
             cursor_drv = CursorDriver()
-            discrete_dispatcher = DiscreteDispatcher(writer)
             compositor = Compositor(
                 writer=writer,
                 idle_driver=idle_drv,
@@ -282,12 +337,18 @@ async def lifespan(app: FastAPI):
             app.state.compositor_task = compositor_task
             app.state.teto_overrides = overrides
             app.state.discrete_dispatcher = discrete_dispatcher
+            app.state.variant_state_manager = variant_state_manager
+            app.state.event_completion_tracker = event_completion_tracker
             app.state.plugin_manifest = plugin_manifest
             app.state.plugin_manifest_watcher = plugin_manifest_watcher
             app.state.plugin_adapter = plugin_adapter
+            app.state.action_code_queue = getattr(plugin_adapter, "action_code_queue", None)
             app.state.plugin_supervisor = plugin_supervisor
             app.state.turn_loop_task = turn_loop_task
             loguru_logger.info("[READY] orchestrator + TTS initialized.")
+        except (ReservedNameError, CategoryCollisionError):
+            loguru_logger.exception("Boot validation failed.")
+            raise
         except Exception:
             loguru_logger.exception("Orchestrator construction failed.")
             app.state.orchestrator = None
@@ -317,6 +378,10 @@ async def lifespan(app: FastAPI):
             await handshake_task
         except asyncio.CancelledError:
             pass
+        except Exception:
+            pass
+    if event_completion_tracker is not None:
+        await event_completion_tracker.close()
     if writer is not None:
         await writer.close()
     plugin_supervisor = getattr(app.state, "plugin_supervisor", None)
