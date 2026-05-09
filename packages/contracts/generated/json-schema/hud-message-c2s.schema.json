@@ -1,0 +1,65 @@
+{
+  "$defs": {
+    "HudClearLockMessage": {
+      "properties": {
+        "kind": {
+          "const": "clear-lock",
+          "default": "clear-lock",
+          "title": "Kind",
+          "type": "string"
+        },
+        "param_id": {
+          "title": "Param Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "param_id"
+      ],
+      "title": "HudClearLockMessage",
+      "type": "object"
+    },
+    "HudSetLockMessage": {
+      "properties": {
+        "kind": {
+          "const": "set-lock",
+          "default": "set-lock",
+          "title": "Kind",
+          "type": "string"
+        },
+        "param_id": {
+          "title": "Param Id",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "param_id",
+        "value"
+      ],
+      "title": "HudSetLockMessage",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "clear-lock": "#/$defs/HudClearLockMessage",
+      "set-lock": "#/$defs/HudSetLockMessage"
+    },
+    "propertyName": "kind"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/HudSetLockMessage"
+    },
+    {
+      "$ref": "#/$defs/HudClearLockMessage"
+    }
+  ],
+  "title": "HudMessageC2S"
+}

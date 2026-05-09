@@ -15,6 +15,17 @@ export type {
 export type { Expression, Hotkey, RigCapabilities } from './rig-capabilities'
 export type { AvatarImportPlan, ImportWarning } from './avatar-import-plan'
 export type {
+  HudLockConfirmedMessage,
+  HudLockRejectedMessage,
+  HudMessageS2C,
+  HudParamFrameMessage,
+} from './hud-message-s2c'
+export type {
+  HudClearLockMessage,
+  HudMessageC2S,
+  HudSetLockMessage,
+} from './hud-message-c2s'
+export type {
   ControlMessage,
   DisplayTextMessage,
   ErrorMessage,

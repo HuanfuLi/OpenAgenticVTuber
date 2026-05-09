@@ -1,0 +1,112 @@
+{
+  "$defs": {
+    "HudLockConfirmedMessage": {
+      "properties": {
+        "kind": {
+          "const": "lock-confirmed",
+          "default": "lock-confirmed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "param_id": {
+          "title": "Param Id",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "param_id",
+        "value"
+      ],
+      "title": "HudLockConfirmedMessage",
+      "type": "object"
+    },
+    "HudLockRejectedMessage": {
+      "description": "ERROR-log channel only per CONTEXT D-C5; never surfaces in renderer UI.",
+      "properties": {
+        "kind": {
+          "const": "lock-rejected",
+          "default": "lock-rejected",
+          "title": "Kind",
+          "type": "string"
+        },
+        "param_id": {
+          "title": "Param Id",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "param_id",
+        "reason"
+      ],
+      "title": "HudLockRejectedMessage",
+      "type": "object"
+    },
+    "HudParamFrameMessage": {
+      "description": "Full snapshot pushed at 15Hz per CONTEXT D-C4 (no delta encoding).",
+      "properties": {
+        "kind": {
+          "const": "param-frame",
+          "default": "param-frame",
+          "title": "Kind",
+          "type": "string"
+        },
+        "locked_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Locked Ids",
+          "type": "array"
+        },
+        "params": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Params",
+          "type": "object"
+        },
+        "tick_n": {
+          "title": "Tick N",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "locked_ids",
+        "params",
+        "tick_n"
+      ],
+      "title": "HudParamFrameMessage",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "lock-confirmed": "#/$defs/HudLockConfirmedMessage",
+      "lock-rejected": "#/$defs/HudLockRejectedMessage",
+      "param-frame": "#/$defs/HudParamFrameMessage"
+    },
+    "propertyName": "kind"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/HudParamFrameMessage"
+    },
+    {
+      "$ref": "#/$defs/HudLockConfirmedMessage"
+    },
+    {
+      "$ref": "#/$defs/HudLockRejectedMessage"
+    }
+  ],
+  "title": "HudMessageS2C"
+}

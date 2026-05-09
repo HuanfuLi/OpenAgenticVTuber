@@ -32,6 +32,8 @@ from contracts import (  # noqa: E402
     DiscreteEvent,
     EventFire,
     EventEntry,
+    HudMessageC2S,
+    HudMessageS2C,
     ParamFrame,
     RigCapabilities,
     SpeechEnvelopePayload,
@@ -57,6 +59,8 @@ TARGETS = [
     (RigCapabilities, "rig-capabilities", "rig_capabilities", "RigCapabilities"),
     (AvatarImportPlan, "avatar-import-plan", "avatar_import_plan", "AvatarImportPlan"),
     (WSMessage, "ws-message", "ws_message", "WSMessage"),
+    (HudMessageS2C, "hud-message-s2c", "hud_message", "HudMessageS2C"),
+    (HudMessageC2S, "hud-message-c2s", "hud_message", "HudMessageC2S"),
 ]
 
 OWNER_FILE = {
@@ -82,6 +86,13 @@ OWNER_FILE = {
     "RigCapabilities": "rig-capabilities",
     "ImportWarning": "avatar-import-plan",
     "AvatarImportPlan": "avatar-import-plan",
+    "HudMessageS2C": "hud-message-s2c",
+    "HudParamFrameMessage": "hud-message-s2c",
+    "HudLockConfirmedMessage": "hud-message-s2c",
+    "HudLockRejectedMessage": "hud-message-s2c",
+    "HudMessageC2S": "hud-message-c2s",
+    "HudSetLockMessage": "hud-message-c2s",
+    "HudClearLockMessage": "hud-message-c2s",
 }
 
 GUARD_NAMES = {
@@ -282,6 +293,8 @@ def main() -> int:
 
     for model, ts_name, py_name, primary in TARGETS:
         schema = emit_schema(model)
+        if primary in {"HudMessageS2C", "HudMessageC2S"}:
+            schema.setdefault("title", primary)
         schemas[ts_name] = schema
         py_names[ts_name] = py_name
         schema_path = SCHEMA_DIR / f"{ts_name}.schema.json"
@@ -301,6 +314,16 @@ def main() -> int:
             )
         if ts_name == "param-frame" and "export type ParamMode" not in ts_by_file[ts_name]:
             ts_by_file[ts_name] = "export type ParamMode = 'add' | 'set';\n\n" + ts_by_file[ts_name]
+        if ts_name == "hud-message-s2c" and "export type HudMessageS2C" not in ts_by_file[ts_name]:
+            ts_by_file[ts_name] = (
+                ts_by_file[ts_name].rstrip()
+                + "\n\nexport type HudMessageS2C = HudParamFrameMessage | HudLockConfirmedMessage | HudLockRejectedMessage;\n"
+            )
+        if ts_name == "hud-message-c2s" and "export type HudMessageC2S" not in ts_by_file[ts_name]:
+            ts_by_file[ts_name] = (
+                ts_by_file[ts_name].rstrip()
+                + "\n\nexport type HudMessageC2S = HudSetLockMessage | HudClearLockMessage;\n"
+            )
         if ts_name == "audio-payload":
             ts_by_file[ts_name] = ensure_import(ts_by_file[ts_name], "Dispatch", "./dispatch")
         if ts_name == "ws-message":

@@ -14,6 +14,15 @@ from .avatar_overrides import (
     ParamProbeResult,
     Voice,
 )
+from .hud_message import (
+    HudClearLockMessage,
+    HudLockConfirmedMessage,
+    HudLockRejectedMessage,
+    HudMessageC2S,
+    HudMessageS2C,
+    HudParamFrameMessage,
+    HudSetLockMessage,
+)
 from .rig_capabilities import Expression, Hotkey, RigCapabilities
 from .avatar_import_plan import AvatarImportPlan, ImportWarning
 from .ws_message import (
@@ -52,6 +61,13 @@ __all__ = [
     "RigCapabilities",
     "AvatarImportPlan",
     "ImportWarning",
+    "HudParamFrameMessage",
+    "HudLockConfirmedMessage",
+    "HudLockRejectedMessage",
+    "HudSetLockMessage",
+    "HudClearLockMessage",
+    "HudMessageS2C",
+    "HudMessageC2S",
     "TextInputMessage",
     "DisplayTextMessage",
     "ShutdownMessage",
