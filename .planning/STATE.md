@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
-status: ready_to_execute
-stopped_at: Phase 16 planned; ready to execute
+status: human_verification_required
+stopped_at: Phase 16 executed; awaiting manual UAT
 last_updated: "2026-05-09T18:20:00-04:00"
 last_activity: 2026-05-09
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 3
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 16 of 22 (Audio Contracts + TTS Provider Shell)
-Plan: 0/3 complete
-Status: Ready to execute Phase 16
-Last activity: 2026-05-09 - Phase 16 planned with 3 execution plans
+Plan: 3/3 complete
+Status: Automated execution complete; manual UAT pending
+Last activity: 2026-05-09 - Phase 16 executed with provider shell, health diagnostics, and UAT evidence
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -64,10 +64,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Execute Phase 16 plans:
-  - `16-01`: Audio Contracts and Config Migration
-  - `16-02`: TTS Provider Shell and Piper Adapter
-  - `16-03`: Provider Health, Failure Semantics, and Non-Blocking Regression
+- Complete Phase 16 manual UAT from `16-UAT.md`.
 
 ### Blockers/Concerns
 
