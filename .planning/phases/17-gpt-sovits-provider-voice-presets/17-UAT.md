@@ -10,34 +10,38 @@ source:
   - 17-06-SUMMARY.md
   - 17-07-SUMMARY.md
 started: 2026-05-10T00:00:00Z
-updated: 2026-05-10T01:32:00Z
+updated: 2026-05-10T03:35:00Z
 ---
 
 # Phase 17 UAT - GPT-SoVITS Provider + Voice Presets
 
 ## Current Test
 
-number: 1
-name: Provider Selection And Health Gate
+number: 3
+name: Reference Audio Import And Validation
 expected: |
-  In Settings -> TTS, Piper is available as a selectable local provider. Selecting GPT-SoVITS shows a single Base URL field, lets you run a health check, and does not activate GPT-SoVITS until a voice preset and audible test synthesis also pass.
-awaiting: diagnosis/fix planning
+  Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
+awaiting: user retest after audited import/new-preset UX fix
 
 ## Tests
 
 ### 1. Provider Selection And Health Gate
 expected: In Settings -> TTS, Piper is available as a selectable local provider. Selecting GPT-SoVITS shows a single Base URL field, lets you run a health check, and does not activate GPT-SoVITS until a voice preset and audible test synthesis also pass.
-result: issue
-reported: "Initial startup blocker and health/test gate sub-issue were fixed. Retest still critically fails: Voice preset Save has no indication, user cannot tell whether it saved; saved preset disappears after leaving and returning to Settings; chat regressed and cannot get LLM response because sidecar startup raises `ValueError: GPT-SoVITS activation requires an active voice preset and reference audio.`"
-severity: blocker
+result: pass
+reported: "After fixes, health check and test synthesis passed; activation produced GPT-SoVITS runtime and chat used GPT-SoVITS voice instead of Piper. User confirmed: 'pass. Running GPT-Sovits voice'."
+severity: none
 
 ### 2. App-Managed Launch Controls
 expected: In app-launched GPT-SoVITS mode, Settings shows command, working directory, optional health URL, Start, Stop, and Restart controls. Stop/Restart only apply to the process AgenticLLMVTuber started; external server mode says to stop it outside the app.
-result: [pending]
+result: pass
+reported: "User confirmed pass."
+severity: none
 
 ### 3. Reference Audio Import And Validation
 expected: Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
-result: [pending]
+result: issue
+reported: "User reported: Import is not blocked when transcript/language are missing, saving a different preset name/config overwrites the first saved preset instead of creating a new preset, and the first fix still had poor UX plus failed new-preset persistence. Audited fix now applied; awaiting user retest."
+severity: blocker
 
 ### 4. Voice Preset Management
 expected: You can create, rename, select, and delete named voice presets with GPT-SoVITS tuning/reference fields. Deleting the active preset or in-use reference audio is blocked until reassignment rather than silently switching to Piper or cascade-deleting data.
@@ -58,9 +62,9 @@ result: [pending]
 ## Summary
 
 total: 7
-passed: 0
+passed: 2
 issues: 1
-pending: 6
+pending: 4
 skipped: 0
 blocked: 0
 
@@ -83,11 +87,11 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
 ## Gaps
 
 - truth: "In Settings -> TTS, Piper is available as a selectable local provider. Selecting GPT-SoVITS shows a single Base URL field, lets you run a health check, and does not activate GPT-SoVITS until a voice preset and audible test synthesis also pass."
-  status: failed
-  reason: "User reported: Initial startup blocker and health/test gate sub-issue were fixed. Retest still critically fails: Voice preset Save has no indication, user cannot tell whether it saved; saved preset disappears after leaving and returning to Settings; chat regressed and cannot get LLM response because sidecar startup raises `ValueError: GPT-SoVITS activation requires an active voice preset and reference audio.`"
-  severity: blocker
+  status: resolved
+  reason: "User confirmed retest passed: test synthesis and activation succeeded, runtime/chat used GPT-SoVITS voice instead of Piper."
+  severity: none
   test: 1
-  root_cause: "Startup sub-issue resolved: local npm workspace install was stale/incomplete. Health/test gate sub-issue fixed in commit 8504e17. Preset save feedback/persistence issue fixed by showing explicit save success/failure status, refreshing persisted preset state after save, and adding a return-to-Settings regression. Chat regression root cause: sidecar startup still built the active GPT-SoVITS gateway when persisted activation lacked a usable active preset/reference handoff, causing `ValueError` and leaving the orchestrator unavailable. Sidecar startup now detects incomplete GPT-SoVITS activation, reports a misconfigured GPT-SoVITS health state, and starts the Piper gateway so chat remains available."
+  root_cause: "Startup sub-issue resolved: local npm workspace install was stale/incomplete. Health/test gate sub-issue fixed in commit 8504e17. Preset save feedback/persistence and stale activation chat startup sub-issues fixed in commit 417fbea. Latest activation issue root cause: activation could save the final config from stale renderer state, overwriting the preset/reference data that made test synthesis pass; Electron also was not passing active conversation session id to the sidecar for exact avatar/session preset resolution."
   artifacts:
     - path: "node_modules/.bin/electron-vite"
       issue: "Missing executable shim required by `npm run dev`."
@@ -113,8 +117,35 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
       issue: "Added voice preset save success/failure copy."
     - path: "sidecar/tests/test_sidecar_boot.py"
       issue: "Added regression coverage for incomplete active GPT-SoVITS config using Piper gateway config."
+    - path: "apps/renderer/src/screens/Settings/Settings.tsx"
+      issue: "Fixed activation to fetch latest stored config, persist the activated preset with selected reference audio, refresh runtime audio status, and show a clear activation/runtime provider status card."
+    - path: "apps/electron-main/src/sidecar.ts"
+      issue: "Fixed sidecar env handoff to include the active conversation session id for exact active preset resolution."
+    - path: "sidecar/src/sidecar/tts/tts_gateway.py"
+      issue: "Investigating whether sidecar selects GPT-SoVITS provider or falls back to Piper after activation."
+    - path: "apps/renderer/tests/Settings.test.tsx"
+      issue: "Added regression coverage that activation persists selected reference audio into the active preset before sidecar restart."
+    - path: "sidecar/tests/test_sidecar_boot.py"
+      issue: "Added regression coverage that complete GPT-SoVITS preset/reference handoff keeps the GPT-SoVITS gateway config."
   missing:
-    - "User retest confirmation that preset save has visible feedback, persists after leaving/returning to Settings, and chat responds when persisted GPT-SoVITS activation is incomplete/stale."
+    - "None for Test 1."
+  debug_session: ""
+
+- truth: "Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path."
+  status: failed
+  reason: "User reported reference import was not clearly blocked without transcript/language and preset save overwrote the selected preset when trying to create a different named/configured preset."
+  severity: blocker
+  test: 3
+  root_cause: "Reference import relied on disabled-button state and silently returned in the handler without visible validation feedback. Voice preset editing had no explicit new-preset mode, so Save always derived from the selected preset id and overwrote it. The first fix still allowed async Settings hydration to overwrite user-edited preset/reference fields after typing, which made valid new-preset saves and import-failure messaging appear to disappear."
+  artifacts:
+    - path: "apps/renderer/src/screens/Settings/Settings.tsx"
+      issue: "Added explicit New preset action that clears selected preset state so Save creates a distinct preset id; added visible reference transcript/language validation/import failure status; guarded late async hydration from clobbering user-edited preset/reference fields."
+    - path: "apps/renderer/src/lib/copy.ts"
+      issue: "Added New preset and reference-required copy."
+    - path: "apps/renderer/tests/Settings.test.tsx"
+      issue: "Added regression coverage that New preset creates a separate preset instead of overwriting the selected one, persists as active across Settings reload, and import failures remain visible."
+  missing:
+    - "User retest confirmation that invalid reference import is blocked with visible feedback and New preset creates a second preset."
   debug_session: ""
 
 ## Gap Fix Evidence
@@ -131,3 +162,19 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
 - `uv run --project sidecar python -m pytest sidecar/tests/tts/test_gpt_sovits_provider.py sidecar/tests/admin/test_audio_test_tts_endpoint.py sidecar/tests/admin/test_audio_status_endpoint.py sidecar/tests/admin/test_reference_audio_validation_endpoint.py sidecar/tests/test_tts_gateway.py sidecar/tests/test_tts_manager.py sidecar/tests/test_sidecar_boot.py -q` - passed after preset persistence/boot robustness fix, 43 tests.
 - `npm --workspace apps/electron-main run test -- --run reference-audio.test.ts ipc-gpt-sovits-audio.test.ts safe-storage.test.ts` - passed, 15 tests.
 - `npm --workspace apps/electron-main run build` - passed.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after activation persistence/runtime feedback fix, 49 tests.
+- `npm --workspace apps/electron-main run test -- --run ipc-gpt-sovits-audio.test.ts safe-storage.test.ts` - passed after activation persistence/runtime feedback fix, 11 tests.
+- `uv run --project sidecar python -m pytest sidecar/tests/test_sidecar_boot.py sidecar/tests/test_tts_gateway.py -q` - passed after active-session handoff coverage, 16 tests.
+- `npm --workspace apps/renderer run typecheck` - passed after activation persistence/runtime feedback fix.
+- `npm --workspace apps/electron-main run build` - passed after active-session handoff fix.
+- `uv run --project sidecar python -m pytest sidecar/tests/tts/test_gpt_sovits_provider.py sidecar/tests/admin/test_audio_test_tts_endpoint.py sidecar/tests/admin/test_audio_status_endpoint.py sidecar/tests/admin/test_reference_audio_validation_endpoint.py sidecar/tests/test_tts_gateway.py sidecar/tests/test_tts_manager.py sidecar/tests/test_sidecar_boot.py -q` - passed after activation persistence/runtime feedback fix, 44 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after Test 3 import/new-preset fix, 45 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after Test 3 import/new-preset fix, 50 tests.
+- `npm --workspace apps/renderer run typecheck` - passed after Test 3 import/new-preset fix.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after audited Test 3 hydration/UX fix, 46 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after audited Test 3 hydration/UX fix, 51 tests.
+- `npm --workspace apps/renderer run typecheck` - passed after audited Test 3 hydration/UX fix.
+- `npm --workspace apps/electron-main run test -- --run reference-audio.test.ts ipc-gpt-sovits-audio.test.ts safe-storage.test.ts` - passed after audited Test 3 hydration/UX fix, 15 tests.
+- `npm --workspace apps/electron-main run build` - passed after audited Test 3 hydration/UX fix.
+- `uv run --project sidecar python -m pytest sidecar/tests/test_sidecar_boot.py -q` - passed after audited Test 3 hydration/UX fix, 10 tests.
+- `uv run --project sidecar python -m pytest sidecar/tests/tts/test_gpt_sovits_provider.py sidecar/tests/admin/test_audio_test_tts_endpoint.py sidecar/tests/admin/test_audio_status_endpoint.py sidecar/tests/admin/test_reference_audio_validation_endpoint.py sidecar/tests/test_tts_gateway.py sidecar/tests/test_tts_manager.py sidecar/tests/test_sidecar_boot.py -q` - passed after audited Test 3 hydration/UX fix, 44 tests.

@@ -1129,6 +1129,27 @@ function withSelectedReferenceAsset(preset: VoicePreset | null, asset: Reference
   }
 }
 
+function upsertVoicePreset(presets: VoicePreset[], preset: VoicePreset): VoicePreset[] {
+  const existingIndex = presets.findIndex((item) => item.preset_id === preset.preset_id)
+  if (existingIndex < 0) return [...presets, preset]
+  return presets.map((item, index) => index === existingIndex ? preset : item)
+}
+
+function chooseActiveVoicePreset(
+  presets: VoicePreset[],
+  activeMap: Record<string, string>,
+  avatarId: string | null,
+  sessionId: string | null
+): VoicePreset | null {
+  const candidateIds = [
+    activeMap[avatarSessionPresetKey(avatarId, sessionId)],
+    activeMap[avatarSessionPresetKey(avatarId, 'global')],
+    activeMap[avatarSessionPresetKey('global', 'global')]
+  ]
+  const activeId = candidateIds.find(Boolean)
+  return presets.find((preset) => preset.preset_id === activeId) ?? presets[0] ?? null
+}
+
 function playSynthesisPreview(result: GptSoVitsTestSynthesisResult): string | null {
   if (!result.ok || !result.audio_base64) return null
   const binary = atob(result.audio_base64)
@@ -1162,11 +1183,15 @@ function TTSSection() {
   const [referenceTranscript, setReferenceTranscript] = useState('')
   const [referenceLanguage, setReferenceLanguage] = useState<ReferenceAudioAsset['language'] | ''>('')
   const [selectedReferenceAssetId, setSelectedReferenceAssetId] = useState('')
+  const [referenceStatusText, setReferenceStatusText] = useState<string>(C.REFERENCE_AUDIO_REQUIRED)
   const [blockedReferenceDeleteCount, setBlockedReferenceDeleteCount] = useState<number | null>(null)
   const [confirmStopGptSoVits, setConfirmStopGptSoVits] = useState(false)
   const [statusText, setStatusText] = useState<string>(C.GPT_SOVITS_PROVIDER_NOT_READY)
   const [healthUrl, setHealthUrl] = useState('')
   const previewUrlRef = useRef<string | null>(null)
+  const providerTouchedRef = useRef(false)
+  const presetTouchedRef = useRef(false)
+  const referenceTouchedRef = useRef(false)
 
   const refreshAudioStatus = async (): Promise<void> => {
     setLoading(true)
@@ -1197,20 +1222,29 @@ function TTSSection() {
         const loadedPresets = presets.length > 0 ? presets : cfg?.voicePresets ?? []
         setVoicePresets(loadedPresets)
         setReferenceAudioAssets(cfg?.referenceAudioAssets ?? [])
-        setActivePresetByAvatarSession(cfg?.activePresetByAvatarSession ?? {})
+        const activeMap = cfg?.activePresetByAvatarSession ?? {}
+        setActivePresetByAvatarSession(activeMap)
         setCurrentAvatarId(avatarId)
         const configuredGpt = cfg?.audio?.tts?.gpt_sovits ?? defaultGptSoVitsConfig()
         setCandidate(configuredGpt)
-        setProviderChoice(cfg?.audio?.tts?.active_provider ?? 'piper')
+        if (!providerTouchedRef.current) setProviderChoice(cfg?.audio?.tts?.active_provider ?? 'piper')
         setHealthPassed(configuredGpt.activation.health_check_passed)
         setTestPassed(configuredGpt.activation.test_synthesis_passed)
-        setSelectedPresetId(loadedPresets[0]?.preset_id ?? '')
-        setPresetName(loadedPresets[0]?.name ?? '')
-        const firstReferenceId = loadedPresets[0]?.gpt_sovits.reference_audio_id ?? cfg?.referenceAudioAssets?.[0]?.asset_id ?? ''
-        setSelectedReferenceAssetId(firstReferenceId)
-        const selectedReference = cfg?.referenceAudioAssets?.find((asset) => asset.asset_id === firstReferenceId)
-        setReferenceTranscript(selectedReference?.transcript_text ?? loadedPresets[0]?.gpt_sovits.prompt_text ?? '')
-        setReferenceLanguage(selectedReference?.language ?? loadedPresets[0]?.gpt_sovits.prompt_lang ?? '')
+        const initialPreset = chooseActiveVoicePreset(loadedPresets, activeMap, avatarId, activeSession.id)
+        if (!presetTouchedRef.current) {
+          setSelectedPresetId(initialPreset?.preset_id ?? '')
+          setPresetName(initialPreset?.name ?? '')
+        }
+        if (!referenceTouchedRef.current) {
+          const firstReferenceId = initialPreset?.gpt_sovits.reference_audio_id ?? cfg?.referenceAudioAssets?.[0]?.asset_id ?? ''
+          setSelectedReferenceAssetId(firstReferenceId)
+          const selectedReference = cfg?.referenceAudioAssets?.find((asset) => asset.asset_id === firstReferenceId)
+          const nextTranscript = selectedReference?.transcript_text ?? initialPreset?.gpt_sovits.prompt_text ?? ''
+          const nextLanguage = selectedReference?.language ?? initialPreset?.gpt_sovits.prompt_lang ?? ''
+          setReferenceTranscript(nextTranscript)
+          setReferenceLanguage(nextLanguage)
+          setReferenceStatusText(nextTranscript.trim() && nextLanguage ? C.REFERENCE_AUDIO_READY : C.REFERENCE_AUDIO_REQUIRED)
+        }
         setHealthUrl(processStatus?.healthUrl ?? '')
       })
       .catch(() => undefined)
@@ -1221,12 +1255,18 @@ function TTSSection() {
         previewUrlRef.current = null
       }
     }
-  }, [])
+  }, [activeSession.id, C.REFERENCE_AUDIO_READY, C.REFERENCE_AUDIO_REQUIRED])
 
   const healthState = audioStatus?.state ?? 'unavailable'
   const healthClass = healthState === 'ok' ? 'green' : healthState === 'unavailable' ? 'amber' : 'red'
-  const selectedPreset = voicePresets.find((preset) => preset.preset_id === selectedPresetId) ?? voicePresets[0] ?? null
+  const selectedPreset = voicePresets.find((preset) => preset.preset_id === selectedPresetId) ?? null
   const selectedReferenceAsset = referenceAudioAssets.find((asset) => asset.asset_id === selectedReferenceAssetId) ?? null
+  const referenceRequired = !referenceTranscript.trim() || !referenceLanguage
+  const referenceValidationText = referenceRequired
+    ? C.REFERENCE_AUDIO_REQUIRED
+    : referenceStatusText === C.REFERENCE_AUDIO_REQUIRED
+      ? C.REFERENCE_AUDIO_READY
+      : referenceStatusText
   const testCandidatePreset = withSelectedReferenceAsset(selectedPreset, selectedReferenceAsset)
   const hasReferenceForTest = testCandidatePreset?.gpt_sovits.reference_audio_id !== null && testCandidatePreset?.gpt_sovits.reference_audio_id !== undefined
   const testSynthesisReady = healthPassed && testCandidatePreset !== null && hasReferenceForTest
@@ -1238,6 +1278,7 @@ function TTSSection() {
   }
 
   const selectProvider = async (id: string): Promise<void> => {
+    providerTouchedRef.current = true
     const provider = id as TtsProviderChoice
     setProviderChoice(provider)
     if (provider === 'piper') {
@@ -1308,12 +1349,14 @@ function TTSSection() {
 
   const activateGptSoVits = async (): Promise<void> => {
     if (!activationReady || !testCandidatePreset) return
-    const cfg = storedCfg ?? await window.api.getStoredConfig()
+    const cfg = await window.api.getStoredConfig()
     if (!cfg) return
     const presetToActivate = testCandidatePreset
+    let nextVoicePresets = upsertVoicePreset(cfg.voicePresets ?? [], presetToActivate)
     if (selectedPreset && presetToActivate !== selectedPreset) {
-      const nextPresets = await window.api.saveVoicePreset(presetToActivate)
-      setVoicePresets(nextPresets)
+      const savedPresets = await window.api.saveVoicePreset(presetToActivate)
+      nextVoicePresets = savedPresets.length > 0 ? upsertVoicePreset(savedPresets, presetToActivate) : nextVoicePresets
+      setVoicePresets(nextVoicePresets)
     }
     const activatedCandidate: GptSoVitsProviderConfig = {
       ...candidate,
@@ -1333,6 +1376,7 @@ function TTSSection() {
     const nextCfg: StoredConfig = {
       ...cfg,
       activePresetByAvatarSession: nextActivePresetByAvatarSession,
+      voicePresets: nextVoicePresets,
       audio: {
         ...cfg.audio,
         tts: {
@@ -1346,7 +1390,10 @@ function TTSSection() {
     setActivePresetByAvatarSession(nextActivePresetByAvatarSession)
     await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, presetToActivate.preset_id)
     setCandidate(activatedCandidate)
-    setStatusText(C.GPT_SOVITS_ACTIVATION_SUCCESS)
+    setProviderChoice('gpt_sovits')
+    const runtimeStatus = await window.api.getAudioStatus().catch(() => null)
+    if (runtimeStatus) setAudioStatus(runtimeStatus)
+    setStatusText(runtimeStatus?.provider_id === 'gpt_sovits' ? C.GPT_SOVITS_ACTIVATION_SUCCESS : C.GPT_SOVITS_ACTIVATION_RUNTIME_MISMATCH)
   }
 
   const runStart = async (): Promise<void> => {
@@ -1359,25 +1406,28 @@ function TTSSection() {
 
   const savePreset = async (): Promise<void> => {
     const draftPreset = createDraftVoicePreset(presetName, selectedPreset)
-    const nextPreset = selectedReferenceAsset
-      ? {
-          ...draftPreset,
-          gpt_sovits: {
-            ...draftPreset.gpt_sovits,
-            reference_audio_id: selectedReferenceAsset.asset_id,
-            prompt_text: selectedReferenceAsset.transcript_text,
-            prompt_lang: selectedReferenceAsset.language
-          }
-        }
-      : draftPreset
+    const referenceText = selectedReferenceAsset?.transcript_text ?? referenceTranscript.trim()
+    const referenceLang = selectedReferenceAsset?.language ?? referenceLanguage
+    const nextPreset = {
+      ...draftPreset,
+      gpt_sovits: {
+        ...draftPreset.gpt_sovits,
+        reference_audio_id: selectedReferenceAsset?.asset_id ?? draftPreset.gpt_sovits.reference_audio_id,
+        prompt_text: referenceText || draftPreset.gpt_sovits.prompt_text,
+        prompt_lang: referenceLang || draftPreset.gpt_sovits.prompt_lang
+      }
+    }
     try {
       const savedPresets = await window.api.saveVoicePreset(nextPreset)
       const persistedPresets = await (window.api.listVoicePresets?.().catch(() => savedPresets) ?? Promise.resolve(savedPresets))
-      const nextPresets = persistedPresets.length > 0 ? persistedPresets : savedPresets
+      const nextPresets = upsertVoicePreset(persistedPresets.length > 0 ? persistedPresets : savedPresets, nextPreset)
       setVoicePresets(nextPresets)
       setStoredCfg((cur) => cur ? { ...cur, voicePresets: nextPresets } : cur)
+      presetTouchedRef.current = false
       setSelectedPresetId(nextPreset.preset_id)
       setPresetName(nextPreset.name)
+      const map = await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, nextPreset.preset_id)
+      if (map) setActivePresetByAvatarSession(map)
       setStatusText(
         nextPresets.some((preset) => preset.preset_id === nextPreset.preset_id)
           ? C.VOICE_PRESET_SAVE_SUCCESS
@@ -1388,7 +1438,23 @@ function TTSSection() {
     }
   }
 
+  const startNewVoicePreset = (): void => {
+    presetTouchedRef.current = true
+    referenceTouchedRef.current = true
+    setSelectedPresetId('')
+    setPresetName('')
+    setSelectedReferenceAssetId('')
+    setReferenceTranscript('')
+    setReferenceLanguage('')
+    setHealthPassed(false)
+    setTestPassed(false)
+    setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
+    setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
+  }
+
   const selectVoicePreset = async (presetId: string): Promise<void> => {
+    presetTouchedRef.current = true
+    referenceTouchedRef.current = true
     const preset = voicePresets.find((item) => item.preset_id === presetId)
     setSelectedPresetId(presetId)
     setPresetName(preset?.name ?? '')
@@ -1396,6 +1462,11 @@ function TTSSection() {
     const referenceAsset = referenceAudioAssets.find((asset) => asset.asset_id === preset?.gpt_sovits.reference_audio_id)
     setReferenceTranscript(referenceAsset?.transcript_text ?? preset?.gpt_sovits.prompt_text ?? '')
     setReferenceLanguage(referenceAsset?.language ?? preset?.gpt_sovits.prompt_lang ?? '')
+    setReferenceStatusText(
+      (referenceAsset?.transcript_text ?? preset?.gpt_sovits.prompt_text ?? '').trim() && (referenceAsset?.language ?? preset?.gpt_sovits.prompt_lang ?? '')
+        ? C.REFERENCE_AUDIO_READY
+        : C.REFERENCE_AUDIO_REQUIRED
+    )
     const map = await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, presetId)
     if (map) setActivePresetByAvatarSession(map)
   }
@@ -1420,26 +1491,38 @@ function TTSSection() {
   }
 
   const importReferenceAudio = async (): Promise<void> => {
-    if (!referenceTranscript.trim() || !referenceLanguage) return
-    const asset = await window.api.pickAndImportReferenceAudio?.({
-      transcriptText: referenceTranscript.trim(),
-      language: referenceLanguage as ReferenceAudioAsset['language']
-    })
-    if (!asset) return
-    setReferenceAudioAssets((assets) => [...assets.filter((item) => item.asset_id !== asset.asset_id), asset])
-    setSelectedReferenceAssetId(asset.asset_id)
-    if (selectedPreset) {
-      const nextPreset = {
-        ...selectedPreset,
-        gpt_sovits: {
-          ...selectedPreset.gpt_sovits,
-          reference_audio_id: asset.asset_id,
-          prompt_text: asset.transcript_text,
-          prompt_lang: asset.language
+    if (referenceRequired) {
+      setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
+      setStatusText(C.REFERENCE_AUDIO_REQUIRED)
+      return
+    }
+    try {
+      const asset = await window.api.pickAndImportReferenceAudio?.({
+        transcriptText: referenceTranscript.trim(),
+        language: referenceLanguage as ReferenceAudioAsset['language']
+      })
+      if (!asset) return
+      setReferenceAudioAssets((assets) => [...assets.filter((item) => item.asset_id !== asset.asset_id), asset])
+      setSelectedReferenceAssetId(asset.asset_id)
+      setReferenceStatusText(C.REFERENCE_AUDIO_IMPORT_SUCCESS)
+      setStatusText(C.REFERENCE_AUDIO_IMPORT_SUCCESS)
+      if (selectedPreset) {
+        const nextPreset = {
+          ...selectedPreset,
+          gpt_sovits: {
+            ...selectedPreset.gpt_sovits,
+            reference_audio_id: asset.asset_id,
+            prompt_text: asset.transcript_text,
+            prompt_lang: asset.language
+          }
         }
+        const nextPresets = await window.api.saveVoicePreset(nextPreset)
+        setVoicePresets(nextPresets)
       }
-      const nextPresets = await window.api.saveVoicePreset(nextPreset)
-      setVoicePresets(nextPresets)
+    } catch (err) {
+      const message = err instanceof Error && err.message.trim() ? err.message : C.REFERENCE_AUDIO_IMPORT_FAILURE
+      setReferenceStatusText(message)
+      setStatusText(message)
     }
   }
 
@@ -1535,7 +1618,10 @@ function TTSSection() {
             <button className="btn btn-primary" type="button" onClick={() => void runTestSynthesis()} disabled={!testSynthesisReady}>{C.GPT_SOVITS_TEST_SYNTHESIS}</button>
             <button className="btn btn-primary" type="button" onClick={() => void activateGptSoVits()} disabled={!activationReady}>{C.GPT_SOVITS_ACTIVATE_PRESET}</button>
           </div>
-          <div className="tx-sm muted mt-2">{statusText}</div>
+          <div className="preset-card mt-2" role="status" aria-live="polite">
+            <div className="semibold">{statusText}</div>
+            <div className="tx-sm muted">Runtime provider: {audioStatus?.provider_id ?? 'unknown'} · {audioStatus?.summary ?? 'No runtime status yet.'}</div>
+          </div>
           <div className="group-label mt-4">{C.VOICE_PRESETS_HEADER}</div>
           {voicePresets.length === 0 ? (
             <div className="preset-card">
@@ -1557,9 +1643,18 @@ function TTSSection() {
           )}
           <div className="field">
             <label className="label" htmlFor="voice-preset-name">{C.VOICE_PRESET_NAME}</label>
-            <input id="voice-preset-name" className="input" value={presetName} onChange={(e) => setPresetName(e.target.value)} />
+            <input
+              id="voice-preset-name"
+              className="input"
+              value={presetName}
+              onChange={(e) => {
+                presetTouchedRef.current = true
+                setPresetName(e.target.value)
+              }}
+            />
           </div>
           <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn btn-secondary" type="button" onClick={startNewVoicePreset}>{C.VOICE_PRESET_NEW}</button>
             <button className="btn btn-secondary" type="button" onClick={() => void savePreset()}>{C.VOICE_PRESET_SAVE}</button>
             <button className="btn btn-destructive" type="button" onClick={requestDeletePreset} disabled={!selectedPreset}>{C.VOICE_PRESET_DELETE}</button>
           </div>
@@ -1567,11 +1662,31 @@ function TTSSection() {
           <div className="group-label mt-4">{C.REFERENCE_AUDIO_HEADER}</div>
           <div className="field">
             <label className="label" htmlFor="reference-audio-transcript">{C.REFERENCE_AUDIO_TRANSCRIPT}</label>
-            <textarea id="reference-audio-transcript" className="input" value={referenceTranscript} onChange={(e) => setReferenceTranscript(e.target.value)} />
+            <textarea
+              id="reference-audio-transcript"
+              className="input"
+              value={referenceTranscript}
+              aria-describedby="reference-audio-status"
+              onChange={(e) => {
+                referenceTouchedRef.current = true
+                setReferenceTranscript(e.target.value)
+                setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
+              }}
+            />
           </div>
           <div className="field">
             <label className="label" htmlFor="reference-audio-language">{C.REFERENCE_AUDIO_LANGUAGE}</label>
-            <select id="reference-audio-language" className="select" value={referenceLanguage} onChange={(e) => setReferenceLanguage(e.target.value as ReferenceAudioAsset['language'])}>
+            <select
+              id="reference-audio-language"
+              className="select"
+              value={referenceLanguage}
+              aria-describedby="reference-audio-status"
+              onChange={(e) => {
+                referenceTouchedRef.current = true
+                setReferenceLanguage(e.target.value as ReferenceAudioAsset['language'])
+                setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
+              }}
+            >
               <option value="">Select language</option>
               <option value="auto">auto</option>
               <option value="en">en</option>
@@ -1585,10 +1700,14 @@ function TTSSection() {
             className="btn btn-secondary"
             type="button"
             onClick={() => void importReferenceAudio()}
-            disabled={!referenceTranscript.trim() || !referenceLanguage}
+            aria-describedby="reference-audio-status"
+            disabled={referenceRequired}
           >
             {C.REFERENCE_AUDIO_IMPORT}
           </button>
+          <div id="reference-audio-status" className="preset-card mt-2" role="status" aria-live="polite">
+            <div className="tx-sm">{referenceValidationText}</div>
+          </div>
           <div className="reference-audio-list mt-2">
             {referenceAudioAssets.map((asset) => (
               <div className="preset-card" key={asset.asset_id}>
@@ -1601,9 +1720,11 @@ function TTSSection() {
                         name="reference-audio-selection"
                         checked={selectedReferenceAssetId === asset.asset_id}
                         onChange={() => {
+                          referenceTouchedRef.current = true
                           setSelectedReferenceAssetId(asset.asset_id)
                           setReferenceTranscript(asset.transcript_text)
                           setReferenceLanguage(asset.language)
+                          setReferenceStatusText(C.REFERENCE_AUDIO_READY)
                         }}
                       />
                       <span>{asset.display_basename}</span>

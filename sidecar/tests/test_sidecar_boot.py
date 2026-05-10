@@ -149,6 +149,62 @@ def test_incomplete_active_gpt_sovits_config_uses_piper_gateway_config(monkeypat
     assert "Piper remains available" in health.summary
 
 
+def test_complete_active_gpt_sovits_config_keeps_gpt_gateway_config(monkeypatch, tmp_path):
+    from contracts import AudioConfig
+    from sidecar.ws import server
+
+    user_data = tmp_path / "user-data"
+    reference = user_data / "reference-audio" / "ref-1-voice.wav"
+    reference.parent.mkdir(parents=True)
+    reference.write_bytes(b"audio")
+    monkeypatch.setenv("AGENTICLLMVTUBER_USER_DATA", str(user_data))
+    monkeypatch.setenv("AGENTICLLMVTUBER_ACTIVE_SESSION", "session-1")
+    monkeypatch.setenv(
+        "AGENTICLLMVTUBER_VOICE_PRESET_CONFIG_JSON",
+        json.dumps({
+            "voicePresets": [{
+                "preset_id": "preset-1",
+                "name": "Akari",
+                "provider_id": "gpt_sovits",
+                "gpt_sovits": {"reference_audio_id": "ref-1", "prompt_text": "hello", "prompt_lang": "en", "text_lang": "en"},
+            }],
+            "referenceAudioAssets": [{
+                "asset_id": "ref-1",
+                "managed_path_token": "reference-audio/ref-1-voice.wav",
+                "display_basename": "voice.wav",
+                "duration_ms": 3000,
+                "format": "wav",
+                "transcript_text": "hello",
+                "language": "en",
+            }],
+            "activePresetByAvatarSession": {"avatar:teto|session:session-1": "preset-1"},
+        }),
+    )
+    audio_config = AudioConfig.model_validate({
+        "tts": {
+            "active_provider": "gpt_sovits",
+            "gpt_sovits": {
+                "provider_id": "gpt_sovits",
+                "enabled": True,
+                "base_url": "http://127.0.0.1:9880",
+                "activation": {
+                    "health_check_passed": True,
+                    "test_synthesis_passed": True,
+                    "active_allowed": True,
+                },
+            },
+        },
+    })
+
+    gateway_config, preset, reference_audio, health = server._prepare_tts_gateway_inputs(audio_config, "teto")
+
+    assert gateway_config.tts.active_provider == "gpt_sovits"
+    assert preset is not None
+    assert preset.preset_id == "preset-1"
+    assert reference_audio == reference.resolve()
+    assert health is None
+
+
 async def _never():
     await asyncio.Event().wait()
 

@@ -47,6 +47,18 @@ function renderSettingsWithProbe() {
   )
 }
 
+async function openGptSoVitsSettings(): Promise<void> {
+  fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+}
+
+async function waitForPresetLibrary(): Promise<void> {
+  await screen.findByRole('radio', { name: /Akari bright/i })
+}
+
+async function waitForReferenceReady(): Promise<void> {
+  await screen.findByText(COPY.SETTINGS.REFERENCE_AUDIO_REQUIRED)
+}
+
 describe('Settings TTS section', () => {
   const gptConfig = (): GptSoVitsProviderConfig => ({
     provider_id: 'gpt_sovits',
@@ -366,7 +378,7 @@ describe('Settings TTS section', () => {
   it('shows external versus app-launched GPT-SoVITS setup fields', async () => {
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
     expect(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_BASE_URL)).toBeInTheDocument()
     expect(screen.queryByLabelText(COPY.SETTINGS.GPT_SOVITS_COMMAND)).toBeNull()
 
@@ -383,7 +395,7 @@ describe('Settings TTS section', () => {
   it('confirms before stopping app-launched GPT-SoVITS', async () => {
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_CONNECTION_MODE), {
       target: { value: 'app_managed' }
     })
@@ -414,11 +426,13 @@ describe('Settings TTS section', () => {
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
     const activate = await screen.findByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })
     expect(activate).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
     await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    await waitFor(() => expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS })).not.toBeDisabled())
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS }))
     expect(await screen.findByText(COPY.SETTINGS.GPT_SOVITS_CANDIDATE_FAILURE)).toBeInTheDocument()
     expect(window.api.saveStoredConfig).not.toHaveBeenCalledWith(expect.objectContaining({
@@ -429,12 +443,24 @@ describe('Settings TTS section', () => {
   it('persists the default first preset association in the activation config save', async () => {
     const preset = gptPreset()
     vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [preset] })
+    vi.mocked(window.api.getAudioStatus).mockResolvedValue({
+      provider_id: 'gpt_sovits',
+      kind: 'tts',
+      state: 'ok',
+      summary: 'GPT-SoVITS service is reachable.',
+      detail: null,
+      retryable: false,
+      latency_ms: 12,
+      redacted_diagnostics: null
+    })
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
     await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    await waitFor(() => expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS })).not.toBeDisabled())
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS }))
     await screen.findByText(COPY.SETTINGS.GPT_SOVITS_PREVIEW_READY)
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET }))
@@ -452,14 +478,77 @@ describe('Settings TTS section', () => {
     expect(window.api.setActiveVoicePresetForAvatarSession).toHaveBeenCalledWith('akari', 's1', preset.preset_id)
   })
 
+  it('persists selected reference audio into the activated preset before restarting chat TTS', async () => {
+    const preset = gptPreset({
+      gpt_sovits: { ...gptPreset().gpt_sovits, reference_audio_id: null, prompt_text: '' }
+    })
+    const referenceAsset = {
+      asset_id: 'ref-akari',
+      display_basename: 'akari.wav',
+      managed_path_token: 'reference-audio/ref-akari-akari.wav',
+      transcript_text: 'こんにちは',
+      language: 'ja' as const,
+      format: 'wav' as const,
+      duration_ms: 3000
+    }
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      voicePresets: [preset],
+      referenceAudioAssets: [referenceAsset]
+    })
+    vi.mocked(window.api.listVoicePresets).mockResolvedValue([preset])
+    vi.mocked(window.api.saveVoicePreset).mockImplementation(async (savedPreset) => [savedPreset])
+    vi.mocked(window.api.getAudioStatus).mockResolvedValue({
+      provider_id: 'gpt_sovits',
+      kind: 'tts',
+      state: 'ok',
+      summary: 'GPT-SoVITS service is reachable.',
+      detail: null,
+      retryable: false,
+      latency_ms: 12,
+      redacted_diagnostics: null
+    })
+
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    await waitFor(() => expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS })).not.toBeDisabled())
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_PREVIEW_READY)
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET }))
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
+        voicePresets: [expect.objectContaining({
+          preset_id: preset.preset_id,
+          gpt_sovits: expect.objectContaining({
+            reference_audio_id: referenceAsset.asset_id,
+            prompt_text: referenceAsset.transcript_text,
+            prompt_lang: referenceAsset.language
+          })
+        })],
+        audio: expect.objectContaining({
+          tts: expect.objectContaining({ active_provider: 'gpt_sovits' })
+        })
+      }))
+    })
+    expect(await screen.findByText(COPY.SETTINGS.GPT_SOVITS_ACTIVATION_SUCCESS)).toBeInTheDocument()
+    expect(screen.getByText(/Runtime provider: gpt_sovits/i)).toBeInTheDocument()
+  })
+
   it('plays successful test synthesis audio without chat or history side effects', async () => {
     vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [gptPreset()] })
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
     await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    await waitFor(() => expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS })).not.toBeDisabled())
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS }))
 
     await waitFor(() => {
@@ -509,13 +598,13 @@ describe('Settings TTS section', () => {
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
     await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
 
-    const testButton = screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS })
-    expect(testButton).not.toBeDisabled()
-    fireEvent.click(testButton)
+    await waitFor(() => expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS })).not.toBeDisabled())
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS }))
 
     await waitFor(() => {
       expect(window.api.testGptSoVitsSynthesis).toHaveBeenCalledWith(expect.objectContaining({
@@ -553,9 +642,7 @@ describe('Settings TTS section', () => {
   it('creates, renames, selects, and deletes global presets without avatar catalog mutation', async () => {
     const initialPreset = gptPreset()
     vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [initialPreset] })
-    vi.mocked(window.api.saveVoicePreset)
-      .mockResolvedValueOnce([gptPreset({ preset_id: 'preset-new', name: 'Soft Akari' })])
-      .mockResolvedValueOnce([gptPreset({ preset_id: 'preset-new', name: 'Bright Akari' })])
+    vi.mocked(window.api.saveVoicePreset).mockImplementation(async (preset: VoicePreset) => [preset])
     vi.mocked(window.api.deleteVoicePreset).mockResolvedValue([])
 
     renderSettings()
@@ -574,17 +661,66 @@ describe('Settings TTS section', () => {
       expect(window.api.saveVoicePreset).toHaveBeenCalledWith(expect.objectContaining({ name: 'Bright Akari' }))
     })
 
-    fireEvent.click(screen.getByRole('radio', { name: /Bright Akari/i }))
+    fireEvent.click(screen.getAllByRole('radio', { name: /Bright Akari/i }).at(-1)!)
     await waitFor(() => {
-      expect(window.api.setActiveVoicePresetForAvatarSession).toHaveBeenCalledWith('akari', 's1', 'preset-new')
+      expect(window.api.setActiveVoicePresetForAvatarSession).toHaveBeenCalledWith('akari', 's1', initialPreset.preset_id)
     })
 
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_DELETE }))
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_DELETE_CONFIRM }))
     await waitFor(() => {
-      expect(window.api.deleteVoicePreset).toHaveBeenCalledWith('preset-new')
+      expect(window.api.deleteVoicePreset).toHaveBeenCalledWith(initialPreset.preset_id)
     })
     expect(window.api.commitAvatarOverrides).toBeUndefined()
+  })
+
+  it('creates a separate preset after choosing New preset instead of overwriting the selected preset', async () => {
+    const initialPreset = gptPreset()
+    let persistedPresets = [initialPreset]
+    let activePresetByAvatarSession: Record<string, string> = {}
+    vi.mocked(window.api.getStoredConfig).mockImplementation(async () => ({
+      ...storedConfig,
+      voicePresets: persistedPresets,
+      activePresetByAvatarSession
+    }))
+    vi.mocked(window.api.listVoicePresets).mockImplementation(async () => persistedPresets)
+    vi.mocked(window.api.saveVoicePreset).mockImplementation(async (preset: VoicePreset) => {
+      persistedPresets = [...persistedPresets.filter((item) => item.preset_id !== preset.preset_id), preset]
+      return persistedPresets
+    })
+    vi.mocked(window.api.setActiveVoicePresetForAvatarSession).mockImplementation(async (avatarId, sessionId, presetId) => {
+      activePresetByAvatarSession = { [`avatar:${avatarId ?? 'global'}|session:${sessionId ?? 'global'}`]: presetId }
+      return activePresetByAvatarSession
+    })
+
+    const firstRender = renderSettings()
+
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_NEW }))
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Second Akari' } })
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT), { target: { value: 'second reference' } })
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'en' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
+
+    await waitFor(() => {
+      expect(window.api.saveVoicePreset).toHaveBeenCalledWith(expect.objectContaining({
+        name: 'Second Akari',
+        preset_id: expect.not.stringMatching(initialPreset.preset_id),
+        gpt_sovits: expect.objectContaining({ prompt_text: 'second reference', prompt_lang: 'en' })
+      }))
+    })
+    await waitFor(() => {
+      expect(window.api.setActiveVoicePresetForAvatarSession).toHaveBeenCalledWith('akari', 's1', expect.not.stringMatching(initialPreset.preset_id))
+    })
+
+    firstRender.unmount()
+    renderSettings()
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
+
+    expect(await screen.findByRole('radio', { name: /Second Akari/i })).toBeChecked()
+    expect(screen.getByRole('radio', { name: /Akari bright/i })).not.toBeChecked()
   })
 
   it('shows save feedback and reloads persisted voice presets after returning to Settings', async () => {
@@ -600,7 +736,8 @@ describe('Settings TTS section', () => {
     })
 
     const firstRender = renderSettings()
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
+    await waitForReferenceReady()
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Persistent Akari' } })
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
 
@@ -608,7 +745,8 @@ describe('Settings TTS section', () => {
     firstRender.unmount()
 
     renderSettings()
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
+    await screen.findByRole('radio', { name: /Persistent Akari/i })
 
     expect(await screen.findByRole('radio', { name: /Persistent Akari/i })).toBeInTheDocument()
   })
@@ -647,9 +785,11 @@ describe('Settings TTS section', () => {
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT), { target: { value: 'こんにちは' } })
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'ja' } })
+    await waitFor(() => expect(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT })).not.toBeDisabled())
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT }))
 
     await waitFor(() => {
@@ -673,13 +813,31 @@ describe('Settings TTS section', () => {
   it('requires transcript and language before reference asset activation', async () => {
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
+    await waitForReferenceReady()
 
     expect(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT })).toBeDisabled()
+    expect(screen.getByText(COPY.SETTINGS.REFERENCE_AUDIO_REQUIRED)).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT), { target: { value: 'hello' } })
     expect(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT })).toBeDisabled()
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'en' } })
     expect(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT })).not.toBeDisabled()
+    expect(screen.getByText(COPY.SETTINGS.REFERENCE_AUDIO_READY)).toBeInTheDocument()
+  })
+
+  it('shows reference import failures instead of silently dropping them', async () => {
+    vi.mocked(window.api.pickAndImportReferenceAudio).mockRejectedValue(new Error('Reference audio format must be one of: wav, flac, mp3, ogg.'))
+
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    await waitForReferenceReady()
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT), { target: { value: 'hello' } })
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'en' } })
+    await waitFor(() => expect(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT })).not.toBeDisabled())
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT }))
+
+    expect(await screen.findAllByText('Reference audio format must be one of: wav, flac, mp3, ogg.')).toHaveLength(2)
   })
 
   it('renders reference audio validation summary including server access', async () => {

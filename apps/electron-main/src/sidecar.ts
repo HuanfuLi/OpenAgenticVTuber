@@ -11,6 +11,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { app } from 'electron'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { getActiveConversationSession } from './conversation-store'
 import { loadConfig, type StoredConfig } from './safe-storage'
 import { NO_ACTIVE_AVATAR_ID, resolveCurrentAvatarId, store } from './window-store'
 
@@ -101,6 +102,14 @@ export function activeBodyMotionPluginName(stored: StoredConfig | null): string 
 
 export function cursorTrackingEnabled(stored: StoredConfig | null): boolean {
   return stored?.plugin?.cursorTrackingEnabled !== false
+}
+
+function activeConversationSessionId(): string {
+  try {
+    return getActiveConversationSession().id || 'global'
+  } catch {
+    return 'global'
+  }
 }
 
 function parseYamlScalar(text: string, key: string): string | null {
@@ -212,6 +221,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
   const activePluginName = activeBodyMotionPluginName(storedConfig)
   const cursorTracking = cursorTrackingEnabled(storedConfig)
   const activeAvatarId = resolveCurrentAvatarId(repoRoot) || NO_ACTIVE_AVATAR_ID
+  const activeSessionId = activeConversationSessionId()
   const child = spawn('uv', ['run', 'python', '-m', 'sidecar'], {
     cwd: sidecarRoot,
     env: {
@@ -235,6 +245,7 @@ export async function spawnSidecar(): Promise<SidecarHandle> {
       AGENTICLLMVTUBER_ACTIVE_PLUGIN: activePluginName,
       AGENTICLLMVTUBER_CURSOR_TRACKING_ENABLED: cursorTracking ? '1' : '0',
       AGENTICLLMVTUBER_ACTIVE_AVATAR: activeAvatarId,
+      AGENTICLLMVTUBER_ACTIVE_SESSION: activeSessionId,
       ...(llmConfigJson ? { AGENTICLLMVTUBER_LLM_CONFIG_JSON: llmConfigJson } : {}),
       ...(audioConfigJson ? { AGENTICLLMVTUBER_AUDIO_CONFIG_JSON: audioConfigJson } : {}),
       ...(voicePresetJson ? { AGENTICLLMVTUBER_VOICE_PRESET_CONFIG_JSON: voicePresetJson } : {})
