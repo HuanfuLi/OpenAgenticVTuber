@@ -1165,6 +1165,23 @@ function playSynthesisPreview(result: GptSoVitsTestSynthesisResult): string | nu
   return url
 }
 
+const ACTIVATION_STATUS_ATTEMPTS = 6
+const ACTIVATION_STATUS_RETRY_MS = 400
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+async function waitForActivatedRuntimeStatus(): Promise<AudioProviderHealth | null> {
+  let latest: AudioProviderHealth | null = null
+  for (let attempt = 0; attempt < ACTIVATION_STATUS_ATTEMPTS; attempt += 1) {
+    if (attempt > 0) await wait(ACTIVATION_STATUS_RETRY_MS)
+    latest = await window.api.getAudioStatus().catch(() => null)
+    if (latest?.provider_id === 'gpt_sovits') return latest
+  }
+  return latest
+}
+
 function TTSSection() {
   const C = COPY.SETTINGS
   const { activeSession } = useConversationHistory()
@@ -1398,7 +1415,7 @@ function TTSSection() {
     await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, presetToActivate.preset_id)
     setCandidate(activatedCandidate)
     setProviderChoice('gpt_sovits')
-    const runtimeStatus = await window.api.getAudioStatus().catch(() => null)
+    const runtimeStatus = await waitForActivatedRuntimeStatus()
     if (runtimeStatus) setAudioStatus(runtimeStatus)
     setStatusText(runtimeStatus?.provider_id === 'gpt_sovits' ? C.GPT_SOVITS_ACTIVATION_SUCCESS : C.GPT_SOVITS_ACTIVATION_RUNTIME_MISMATCH)
   }
