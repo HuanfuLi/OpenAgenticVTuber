@@ -7,6 +7,8 @@ import { Settings } from '@/screens/Settings/Settings'
 import { defaultAudioConfig } from '@/state/setup-store'
 import type { StoredConfig } from '@preload-types'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
+import type { GptSoVitsProviderConfig } from '@contracts/audio-provider'
+import type { VoicePreset } from '@contracts/voice-preset'
 
 function renderSettings() {
   return render(
@@ -46,6 +48,51 @@ function renderSettingsWithProbe() {
 }
 
 describe('Settings TTS section', () => {
+  const gptConfig = (): GptSoVitsProviderConfig => ({
+    provider_id: 'gpt_sovits',
+    enabled: true,
+    base_url: 'http://127.0.0.1:9880',
+    request_timeout_ms: 30_000,
+    launch: {
+      mode: 'external',
+      command: null,
+      working_directory: null,
+      auto_start: false
+    },
+    activation: {
+      active_allowed: false,
+      health_check_passed: false,
+      test_synthesis_passed: false,
+      last_health_checked_at: null,
+      last_test_synthesis_at: null
+    }
+  })
+
+  const gptPreset = (overrides: Partial<VoicePreset> = {}): VoicePreset => ({
+    preset_id: 'preset-akari',
+    name: 'Akari bright',
+    provider_id: 'gpt_sovits',
+    piper_voice_model: null,
+    created_at: null,
+    updated_at: null,
+    gpt_sovits: {
+      prompt_text: 'こんにちは',
+      prompt_lang: 'ja',
+      text_lang: 'ja',
+      reference_audio_id: 'ref-akari',
+      top_k: 15,
+      top_p: 1,
+      temperature: 1,
+      speed_factor: 1,
+      repetition_penalty: 1.35,
+      text_split_method: 'cut5',
+      batch_size: 1,
+      media_type: 'wav',
+      streaming_mode: false
+    },
+    ...overrides
+  })
+
   const storedConfig: StoredConfig = {
     provider: {
       provider: 'lm_studio',
@@ -120,6 +167,45 @@ describe('Settings TTS section', () => {
           latency_ms: null,
           redacted_diagnostics: null
         }),
+        checkGptSoVitsHealth: vi.fn().mockResolvedValue({
+          provider_id: 'gpt_sovits',
+          kind: 'tts',
+          state: 'ok',
+          summary: 'GPT-SoVITS reachable.',
+          detail: null,
+          retryable: false,
+          latency_ms: 12,
+          redacted_diagnostics: null
+        }),
+        testGptSoVitsSynthesis: vi.fn().mockResolvedValue({
+          ok: true,
+          provider_id: 'gpt_sovits',
+          media_type: 'wav',
+          audio_base64: 'UklGRg==',
+          sample_rate_hz: 24_000,
+          duration_ms: 120,
+          summary: 'Test synthesis ready.',
+          failure: null
+        }),
+        startGptSoVits: vi.fn().mockResolvedValue({ mode: 'app_managed', appManaged: true, pid: 123, state: 'running', summary: 'running' }),
+        stopGptSoVits: vi.fn().mockResolvedValue({ mode: 'app_managed', appManaged: false, pid: null, state: 'stopped', summary: 'stopped' }),
+        restartGptSoVits: vi.fn().mockResolvedValue({ mode: 'app_managed', appManaged: true, pid: 124, state: 'running', summary: 'running' }),
+        getGptSoVitsProcessStatus: vi.fn().mockResolvedValue({ mode: 'external', appManaged: false, pid: null, state: 'not_app_managed', summary: 'No app-launched GPT-SoVITS process is running.' }),
+        listVoicePresets: vi.fn().mockResolvedValue([]),
+        saveVoicePreset: vi.fn().mockResolvedValue([]),
+        deleteVoicePreset: vi.fn().mockResolvedValue([]),
+        setActiveVoicePresetForAvatarSession: vi.fn().mockResolvedValue({}),
+        pickAndImportReferenceAudio: vi.fn().mockResolvedValue(null),
+        validateReferenceAudio: vi.fn().mockResolvedValue({
+          ok: true,
+          format: 'wav',
+          duration_seconds: 4.2,
+          sample_rate: 24_000,
+          channels: 1,
+          errors: [],
+          redacted_diagnostics: 'ok'
+        }),
+        deleteReferenceAudio: vi.fn().mockResolvedValue([]),
         restartSidecar: vi.fn().mockResolvedValue(undefined),
         resetVtsAuth: vi.fn().mockResolvedValue(undefined),
         getCurrentAvatarId: vi.fn().mockResolvedValue('akari'),
@@ -213,6 +299,15 @@ describe('Settings TTS section', () => {
         onSidecarCrash: vi.fn().mockReturnValue(() => undefined)
       }
     })
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn().mockReturnValue('blob:settings-test')
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn()
+    })
+    vi.stubGlobal('Audio', vi.fn().mockImplementation(() => ({ play: vi.fn().mockResolvedValue(undefined), pause: vi.fn() })))
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       value: vi.fn().mockReturnValue({
@@ -231,6 +326,103 @@ describe('Settings TTS section', () => {
     expect(screen.getByText(COPY.SETTINGS.TTS_OUTPUT_VAL)).toBeInTheDocument()
     expect(screen.getByText(COPY.SETTINGS.TTS_HELP)).toBeInTheDocument()
     expect(screen.queryByText(/Coming in milestone-3.*TTS/i)).toBeNull()
+  })
+
+  it('selecting Piper local TTS explicitly saves piper without GPT-SoVITS gates', async () => {
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      audio: {
+        ...defaultAudioConfig(),
+        tts: { ...defaultAudioConfig().tts, active_provider: 'gpt_sovits', gpt_sovits: gptConfig() }
+      }
+    })
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /Piper local TTS/i }))
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
+        audio: expect.objectContaining({
+          tts: expect.objectContaining({ active_provider: 'piper' })
+        })
+      }))
+    })
+    expect(window.api.checkGptSoVitsHealth).not.toHaveBeenCalled()
+    expect(window.api.testGptSoVitsSynthesis).not.toHaveBeenCalled()
+  })
+
+  it('shows external versus app-launched GPT-SoVITS setup fields', async () => {
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    expect(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_BASE_URL)).toBeInTheDocument()
+    expect(screen.queryByLabelText(COPY.SETTINGS.GPT_SOVITS_COMMAND)).toBeNull()
+
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_CONNECTION_MODE), {
+      target: { value: 'app_managed' }
+    })
+
+    expect(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_COMMAND)).toBeInTheDocument()
+    expect(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_WORKING_DIRECTORY)).toBeInTheDocument()
+    expect(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_HEALTH_URL)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_START })).toBeInTheDocument()
+  })
+
+  it('gates GPT-SoVITS activation on health plus successful test synthesis', async () => {
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [gptPreset()] })
+    vi.mocked(window.api.testGptSoVitsSynthesis).mockResolvedValue({
+      ok: false,
+      provider_id: 'gpt_sovits',
+      media_type: 'wav',
+      audio_base64: null,
+      sample_rate_hz: null,
+      duration_ms: null,
+      summary: 'failed',
+      failure: null
+    })
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    const activate = await screen.findByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })
+    expect(activate).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS }))
+    expect(await screen.findByText(COPY.SETTINGS.GPT_SOVITS_CANDIDATE_FAILURE)).toBeInTheDocument()
+    expect(window.api.saveStoredConfig).not.toHaveBeenCalledWith(expect.objectContaining({
+      audio: expect.objectContaining({ tts: expect.objectContaining({ active_provider: 'gpt_sovits' }) })
+    }))
+  })
+
+  it('plays successful test synthesis audio without chat or history side effects', async () => {
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [gptPreset()] })
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS }))
+
+    await waitFor(() => {
+      expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+      expect(window.Audio).toHaveBeenCalledWith('blob:settings-test')
+    })
+    expect(window.api.commitConversationTurn).not.toHaveBeenCalled()
+    expect(screen.queryByRole('textbox', { name: /message/i })).toBeNull()
+  })
+
+  it('renders non-localhost GPT-SoVITS warning copy from settings copy', async () => {
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_BASE_URL), {
+      target: { value: 'http://192.168.1.50:9880' }
+    })
+
+    expect(screen.getByText(COPY.SETTINGS.GPT_SOVITS_NON_LOCAL_WARNING)).toBeInTheDocument()
   })
 
   it('renders one combined Avatars section with current catalog counts and actions', async () => {
