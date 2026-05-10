@@ -18,6 +18,9 @@ export type { StoredConfig, ProviderConfig, Provider }
 export function defaultAudioConfig(): AudioConfig {
   return {
     schema_version: 1,
+    diagnostics: {
+      redact_diagnostics: true
+    },
     tts: {
       active_provider: 'piper',
       piper: {
@@ -34,8 +37,26 @@ export function defaultAudioConfig(): AudioConfig {
     stt: {
       enabled: false,
       active_provider: null,
+      input_mode: 'push_to_talk',
+      language_mode: 'auto',
       capture_timeout_ms: 30_000,
-      execution: 'off_event_loop'
+      execution: 'off_event_loop',
+      cloud: {
+        openai: {
+          provider_id: 'openai',
+          consent_granted: false,
+          api_key: null,
+          endpoint_url: null,
+          model_name: null
+        },
+        groq: {
+          provider_id: 'groq',
+          consent_granted: false,
+          api_key: null,
+          endpoint_url: null,
+          model_name: null
+        }
+      }
     }
   }
 }

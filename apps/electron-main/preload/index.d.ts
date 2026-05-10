@@ -1,9 +1,12 @@
 import type { RendererApi } from './index'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
 import type {
+  AudioProviderCatalog,
   GptSoVitsHealthRequest,
   GptSoVitsTestSynthesisRequest,
-  GptSoVitsTestSynthesisResult
+  GptSoVitsTestSynthesisResult,
+  STTTestRequest,
+  STTTestResult
 } from '../../../packages/contracts/ts/audio-provider'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import type {
@@ -40,6 +43,8 @@ export type VoicePresetBridge = {
 }
 
 export type GptSoVitsAudioBridge = {
+  getAudioProviders(): Promise<AudioProviderCatalog>
+  testSttProvider(input: STTTestRequest): Promise<STTTestResult>
   checkGptSoVitsHealth(input: GptSoVitsHealthRequest): Promise<AudioProviderHealth>
   testGptSoVitsSynthesis(input: GptSoVitsTestSynthesisRequest): Promise<GptSoVitsTestSynthesisResult>
   startGptSoVits(input: GptSoVitsProcessRequest): Promise<GptSoVitsProcessStatus>

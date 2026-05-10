@@ -48,9 +48,12 @@ import {
 import { createHudWindow } from './hud-window'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
 import type {
+  AudioProviderCatalog,
   GptSoVitsHealthRequest,
   GptSoVitsTestSynthesisRequest,
-  GptSoVitsTestSynthesisResult
+  GptSoVitsTestSynthesisResult,
+  STTTestRequest,
+  STTTestResult
 } from '../../../packages/contracts/ts/audio-provider'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
@@ -97,6 +100,99 @@ function failedGptSoVitsTestSynthesis(summary: string, state: AudioProviderHealt
   }
 }
 
+function fallbackAudioProviderCatalog(summary: string): AudioProviderCatalog {
+  return {
+    providers: [
+      {
+        provider_id: 'piper',
+        kind: 'tts',
+        display_name: 'Piper local TTS',
+        capabilities: ['local', 'requires_local_model', 'test_synthesis'],
+        local: true,
+        requires_api_key: false,
+        requires_consent: false,
+        enabled: true,
+        summary
+      },
+      {
+        provider_id: 'gpt_sovits',
+        kind: 'tts',
+        display_name: 'GPT-SoVITS',
+        capabilities: ['local', 'requires_external_service', 'test_synthesis', 'chinese_english'],
+        local: true,
+        requires_api_key: false,
+        requires_consent: false,
+        enabled: true,
+        summary
+      },
+      {
+        provider_id: 'funasr',
+        kind: 'stt',
+        display_name: 'FunASR',
+        capabilities: ['local', 'requires_local_model', 'test_transcription', 'chinese_english'],
+        local: true,
+        requires_api_key: false,
+        requires_consent: false,
+        enabled: true,
+        summary
+      },
+      {
+        provider_id: 'faster_whisper',
+        kind: 'stt',
+        display_name: 'faster-whisper',
+        capabilities: ['local', 'requires_local_model', 'test_transcription'],
+        local: true,
+        requires_api_key: false,
+        requires_consent: false,
+        enabled: true,
+        summary
+      },
+      {
+        provider_id: 'openai',
+        kind: 'stt',
+        display_name: 'OpenAI STT',
+        capabilities: ['cloud', 'requires_api_key', 'test_transcription'],
+        local: false,
+        requires_api_key: true,
+        requires_consent: true,
+        enabled: true,
+        summary
+      },
+      {
+        provider_id: 'groq',
+        kind: 'stt',
+        display_name: 'Groq STT',
+        capabilities: ['cloud', 'requires_api_key', 'test_transcription'],
+        local: false,
+        requires_api_key: true,
+        requires_consent: true,
+        enabled: true,
+        summary
+      }
+    ]
+  }
+}
+
+function failedSttTest(summary: string, providerId: STTTestResult['provider_id'] = 'funasr', state: AudioProviderHealth['state'] = 'unavailable'): STTTestResult {
+  const failure: AudioProviderHealth = {
+    provider_id: providerId,
+    kind: 'stt',
+    state,
+    summary,
+    detail: null,
+    retryable: state === 'unavailable',
+    latency_ms: null,
+    redacted_diagnostics: null
+  }
+  return {
+    ok: false,
+    provider_id: providerId,
+    summary,
+    failure,
+    redacted_diagnostics: null
+  }
+}
+
 function resolveTestSynthesisSidecarBody(request: GptSoVitsTestSynthesisRequest): GptSoVitsTestSynthesisRequest & { reference_audio_path: string } {
   const referenceAudioId = request.preset.gpt_sovits.reference_audio_id
   if (!referenceAudioId) {
@@ -135,6 +231,27 @@ async function postSidecarAdminJson<TResponse>(
       }
       return onHttpFailure(resp.status)
     }
+    return (await resp.json()) as TResponse
+  } catch {
+    return onFetchFailure()
+  }
+}
+
+async function getSidecarAdminJson<TResponse>(
+  pathSuffix: string,
+  onUnavailable: () => TResponse,
+  onHttpFailure: (status: number) => TResponse,
+  onFetchFailure: () => TResponse
+): Promise<TResponse> {
+  let baseUrl: string
+  try {
+    baseUrl = getSidecarHttpUrl()
+  } catch {
+    return onUnavailable()
+  }
+  try {
+    const resp = await fetch(`${baseUrl}${pathSuffix}`)
+    if (!resp.ok) return onHttpFailure(resp.status)
     return (await resp.json()) as TResponse
   } catch {
     return onFetchFailure()
@@ -278,6 +395,29 @@ export function registerIpc(window: BrowserWindow): () => void {
       }
     }
   })
+  ipcMain.handle(
+    'sidecar:getAudioProviders',
+    async (): Promise<AudioProviderCatalog> =>
+      getSidecarAdminJson<AudioProviderCatalog>(
+        '/admin/audio/providers',
+        () => fallbackAudioProviderCatalog('Sidecar is not ready.'),
+        (status) => fallbackAudioProviderCatalog(`Audio provider catalog unavailable: HTTP ${status}`),
+        () => fallbackAudioProviderCatalog('Audio provider catalog unavailable: sidecar request failed.')
+      )
+  )
+  ipcMain.handle(
+    'audio:testStt',
+    async (_e, request: STTTestRequest): Promise<STTTestResult> => {
+      const providerId = request.config.active_provider ?? 'funasr'
+      return postSidecarAdminJson<STTTestResult>(
+        '/admin/audio/stt/test',
+        request,
+        () => failedSttTest('Sidecar is not ready.', providerId, 'unavailable'),
+        (status) => failedSttTest(`STT test failed: HTTP ${status}`, providerId, 'external_service_failure'),
+        () => failedSttTest('STT test failed: sidecar request failed.', providerId, 'external_service_failure')
+      )
+    }
+  )
   ipcMain.handle(
     'gptSovits:checkHealth',
     async (_e, request: GptSoVitsHealthRequest): Promise<AudioProviderHealth> =>
@@ -535,6 +675,8 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('sidecar:getVtsStatus')
     ipcMain.removeHandler('sidecar:getPluginStatus')
     ipcMain.removeHandler('sidecar:getAudioStatus')
+    ipcMain.removeHandler('sidecar:getAudioProviders')
+    ipcMain.removeHandler('audio:testStt')
     ipcMain.removeHandler('gptSovits:checkHealth')
     ipcMain.removeHandler('gptSovits:testSynthesis')
     ipcMain.removeHandler('gptSovits:start')

@@ -3,7 +3,11 @@ export type { DefaultPluginActionBinding } from './action-binding'
 export type { AudioPayloadMessage, DisplayTextField, FailedAudioMetadata } from './audio-payload'
 export type {
   AudioConfig,
+  AudioDiagnosticsConfig,
+  AudioProviderCatalog,
+  AudioProviderCatalogEntry,
   AudioProviderContracts,
+  CloudSTTProviderSettings,
   GptSoVitsActivationGate,
   GptSoVitsHealthRequest,
   GptSoVitsLaunchConfig,
@@ -12,6 +16,8 @@ export type {
   GptSoVitsTestSynthesisResult,
   PiperTTSConfig,
   STTProviderConfig,
+  STTTestRequest,
+  STTTestResult,
   TTSProviderConfig,
 } from './audio-provider'
 export type { AudioProviderHealth } from './audio-provider-health'

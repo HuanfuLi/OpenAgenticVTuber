@@ -13,7 +13,17 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 import soundfile
 
-from contracts import AudioProviderHealth, GptSoVitsProviderConfig, VoicePreset
+from contracts import (
+    AudioProviderCatalog,
+    AudioProviderCatalogEntry,
+    AudioProviderHealth,
+    GptSoVitsProviderConfig,
+    STTProviderConfig,
+    STTTestRequest,
+    STTTestResult,
+    VoicePreset,
+)
+from sidecar.audio.redaction import redact_audio_diagnostics
 from sidecar.tts.gpt_sovits_provider import GptSoVitsProvider
 from sidecar.tts.provider import TTSProviderError, TTSSynthesisRequest
 
@@ -109,6 +119,105 @@ def _fallback_health(request: Request) -> AudioProviderHealth:
     )
 
 
+def _provider_catalog() -> AudioProviderCatalog:
+    return AudioProviderCatalog(
+        providers=[
+            AudioProviderCatalogEntry(
+                provider_id="piper",
+                kind="tts",
+                display_name="Piper local TTS",
+                capabilities=["local", "requires_local_model", "test_synthesis"],
+                local=True,
+                summary="Local baseline TTS provider.",
+            ),
+            AudioProviderCatalogEntry(
+                provider_id="gpt_sovits",
+                kind="tts",
+                display_name="GPT-SoVITS",
+                capabilities=["local", "requires_external_service", "test_synthesis", "chinese_english"],
+                local=True,
+                summary="External or app-launched voice synthesis server.",
+            ),
+            AudioProviderCatalogEntry(
+                provider_id="funasr",
+                kind="stt",
+                display_name="FunASR",
+                capabilities=["local", "requires_local_model", "test_transcription", "chinese_english"],
+                local=True,
+                summary="Local STT adapter planned for Phase 19.",
+            ),
+            AudioProviderCatalogEntry(
+                provider_id="faster_whisper",
+                kind="stt",
+                display_name="faster-whisper",
+                capabilities=["local", "requires_local_model", "test_transcription"],
+                local=True,
+                summary="Local fallback STT adapter planned for Phase 19.",
+            ),
+            AudioProviderCatalogEntry(
+                provider_id="openai",
+                kind="stt",
+                display_name="OpenAI STT",
+                capabilities=["cloud", "requires_api_key", "test_transcription"],
+                local=False,
+                requires_api_key=True,
+                requires_consent=True,
+                summary="Cloud STT option; disabled until explicit consent and an API key are saved.",
+            ),
+            AudioProviderCatalogEntry(
+                provider_id="groq",
+                kind="stt",
+                display_name="Groq STT",
+                capabilities=["cloud", "requires_api_key", "test_transcription"],
+                local=False,
+                requires_api_key=True,
+                requires_consent=True,
+                summary="Cloud STT option; disabled until explicit consent and an API key are saved.",
+            ),
+        ]
+    )
+
+
+def _stt_provider_health(config: STTProviderConfig) -> AudioProviderHealth:
+    provider_id = config.active_provider or "funasr"
+    if provider_id in {"openai", "groq"}:
+        cloud = config.cloud.get(provider_id)
+        if cloud is None or not cloud.consent_granted:
+            return AudioProviderHealth(
+                provider_id=provider_id,
+                kind="stt",
+                state="misconfigured",
+                summary="Cloud STT is blocked until explicit consent is saved.",
+                retryable=False,
+                redacted_diagnostics={"provider": provider_id, "consent": "missing"},
+            )
+        if not cloud.api_key:
+            return AudioProviderHealth(
+                provider_id=provider_id,
+                kind="stt",
+                state="missing_credential",
+                summary="Cloud STT API key is required before any test request can run.",
+                retryable=False,
+                redacted_diagnostics={"provider": provider_id, "credential": "missing"},
+            )
+        return AudioProviderHealth(
+            provider_id=provider_id,
+            kind="stt",
+            state="unavailable",
+            summary="Cloud STT adapter is planned for Phase 19; no network request was sent.",
+            retryable=True,
+            redacted_diagnostics={"provider": provider_id, "network": "not_attempted"},
+        )
+    return AudioProviderHealth(
+        provider_id=provider_id,
+        kind="stt",
+        state="unavailable",
+        summary="Local STT adapter is planned for Phase 19.",
+        retryable=True,
+        redacted_diagnostics={"provider": provider_id, "adapter": "not_implemented"},
+    )
+
+
 def _pcm_to_wav_base64(pcm_int16: bytes, sample_rate: int) -> tuple[str, int]:
     buf = BytesIO()
     with wave.open(buf, "wb") as wf:
@@ -160,6 +269,34 @@ async def get_audio_status(request: Request) -> dict[str, object]:
     if provider is not None and hasattr(provider, "health"):
         return provider.health().model_dump()
     return _fallback_health(request).model_dump()
+
+
+@router.get("/providers")
+async def get_audio_providers() -> dict[str, object]:
+    return _provider_catalog().model_dump()
+
+
+@router.post("/stt/test")
+async def post_stt_test(payload: STTTestRequest) -> dict[str, object]:
+    health = _stt_provider_health(payload.config)
+    diagnostics = redact_audio_diagnostics(
+        {
+            "provider": health.provider_id,
+            "sample_label": payload.sample_label or "none",
+            "summary": health.summary,
+            "api_key": payload.config.cloud.get(health.provider_id).api_key
+            if health.provider_id in {"openai", "groq"} and payload.config.cloud.get(health.provider_id)
+            else "",
+        }
+    )
+    redacted_diagnostics = {str(key): str(value) for key, value in diagnostics.items()}
+    return STTTestResult(
+        ok=False,
+        provider_id=health.provider_id,
+        summary=health.summary,
+        failure=health,
+        redacted_diagnostics=redacted_diagnostics,
+    ).model_dump()
 
 
 @router.post("/gpt-sovits/health")

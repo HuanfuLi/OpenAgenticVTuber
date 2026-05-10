@@ -73,6 +73,9 @@ function storePath(): string {
 export function defaultAudioConfig(): AudioConfig {
   return {
     schema_version: 1,
+    diagnostics: {
+      redact_diagnostics: true
+    },
     tts: {
       active_provider: 'piper',
       piper: {
@@ -89,8 +92,62 @@ export function defaultAudioConfig(): AudioConfig {
     stt: {
       enabled: false,
       active_provider: null,
+      input_mode: 'push_to_talk',
+      language_mode: 'auto',
       capture_timeout_ms: 30_000,
-      execution: 'off_event_loop'
+      execution: 'off_event_loop',
+      cloud: {
+        openai: {
+          provider_id: 'openai',
+          consent_granted: false,
+          api_key: null,
+          endpoint_url: null,
+          model_name: null
+        },
+        groq: {
+          provider_id: 'groq',
+          consent_granted: false,
+          api_key: null,
+          endpoint_url: null,
+          model_name: null
+        }
+      }
+    }
+  }
+}
+
+function normalizeAudioConfig(audio: unknown): AudioConfig {
+  if (!isRecord(audio)) return defaultAudioConfig()
+  const defaults = defaultAudioConfig()
+  const raw = audio as Partial<AudioConfig>
+  return {
+    ...defaults,
+    ...raw,
+    diagnostics: {
+      ...defaults.diagnostics,
+      ...(isRecord(raw.diagnostics) ? raw.diagnostics : {})
+    },
+    tts: {
+      ...defaults.tts,
+      ...(isRecord(raw.tts) ? raw.tts : {}),
+      piper: {
+        ...defaults.tts.piper,
+        ...(isRecord(raw.tts) && isRecord(raw.tts.piper) ? raw.tts.piper : {})
+      }
+    },
+    stt: {
+      ...defaults.stt,
+      ...(isRecord(raw.stt) ? raw.stt : {}),
+      cloud: {
+        openai: {
+          ...defaults.stt.cloud.openai,
+          ...(isRecord(raw.stt) && isRecord(raw.stt.cloud) && isRecord(raw.stt.cloud.openai) ? raw.stt.cloud.openai : {})
+        },
+        groq: {
+          ...defaults.stt.cloud.groq,
+          ...(isRecord(raw.stt) && isRecord(raw.stt.cloud) && isRecord(raw.stt.cloud.groq) ? raw.stt.cloud.groq : {})
+        }
+      }
     }
   }
 }
@@ -153,7 +210,7 @@ export function migrateStoredConfig(raw: unknown): StoredConfig | null {
     const defaults = defaultVoicePresetLibrary()
     return {
       ...(raw as unknown as StoredConfig),
-      audio: isRecord(raw.audio) ? (raw.audio as unknown as AudioConfig) : defaultAudioConfig(),
+      audio: normalizeAudioConfig(raw.audio),
       voicePresets: Array.isArray(raw.voicePresets)
         ? (raw.voicePresets as VoicePreset[]).map(normalizeVoicePresetValidation)
         : defaults.voicePresets,

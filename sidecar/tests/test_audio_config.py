@@ -63,6 +63,6 @@ def test_build_tts_gateway_rejects_unsupported_phase_16_provider(tmp_path):
             avatar_voice_model="avatar-voice",
         )
     except ValueError as exc:
-        assert "Unsupported TTS provider for Phase 16" in str(exc)
+        assert "GPT-SoVITS provider is not enabled" in str(exc)
     else:
         raise AssertionError("unsupported provider should fail loudly")

@@ -2,6 +2,12 @@
   "$defs": {
     "AudioConfig": {
       "properties": {
+        "diagnostics": {
+          "$ref": "#/$defs/AudioDiagnosticsConfig",
+          "default": {
+            "redact_diagnostics": true
+          }
+        },
         "schema_version": {
           "const": 1,
           "default": 1,
@@ -13,8 +19,26 @@
           "default": {
             "active_provider": null,
             "capture_timeout_ms": 30000,
+            "cloud": {
+              "groq": {
+                "api_key": null,
+                "consent_granted": false,
+                "endpoint_url": null,
+                "model_name": null,
+                "provider_id": "groq"
+              },
+              "openai": {
+                "api_key": null,
+                "consent_granted": false,
+                "endpoint_url": null,
+                "model_name": null,
+                "provider_id": "openai"
+              }
+            },
             "enabled": false,
-            "execution": "off_event_loop"
+            "execution": "off_event_loop",
+            "input_mode": "push_to_talk",
+            "language_mode": "auto"
           }
         },
         "tts": {
@@ -35,11 +59,119 @@
         }
       },
       "required": [
+        "diagnostics",
         "schema_version",
         "stt",
         "tts"
       ],
       "title": "AudioConfig",
+      "type": "object"
+    },
+    "AudioDiagnosticsConfig": {
+      "properties": {
+        "redact_diagnostics": {
+          "default": true,
+          "title": "Redact Diagnostics",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "redact_diagnostics"
+      ],
+      "title": "AudioDiagnosticsConfig",
+      "type": "object"
+    },
+    "AudioProviderCatalog": {
+      "properties": {
+        "providers": {
+          "items": {
+            "$ref": "#/$defs/AudioProviderCatalogEntry"
+          },
+          "title": "Providers",
+          "type": "array"
+        }
+      },
+      "title": "AudioProviderCatalog",
+      "type": "object"
+    },
+    "AudioProviderCatalogEntry": {
+      "properties": {
+        "capabilities": {
+          "items": {
+            "enum": [
+              "local",
+              "cloud",
+              "requires_api_key",
+              "requires_external_service",
+              "requires_local_model",
+              "test_synthesis",
+              "test_transcription",
+              "chinese_english"
+            ],
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "display_name": {
+          "title": "Display Name",
+          "type": "string"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "kind": {
+          "enum": [
+            "tts",
+            "stt"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "local": {
+          "title": "Local",
+          "type": "boolean"
+        },
+        "provider_id": {
+          "enum": [
+            "piper",
+            "gpt_sovits",
+            "funasr",
+            "faster_whisper",
+            "openai",
+            "groq"
+          ],
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "requires_api_key": {
+          "default": false,
+          "title": "Requires Api Key",
+          "type": "boolean"
+        },
+        "requires_consent": {
+          "default": false,
+          "title": "Requires Consent",
+          "type": "boolean"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "display_name",
+        "enabled",
+        "kind",
+        "local",
+        "provider_id",
+        "requires_api_key",
+        "requires_consent",
+        "summary"
+      ],
+      "title": "AudioProviderCatalogEntry",
       "type": "object"
     },
     "AudioProviderHealth": {
@@ -136,6 +268,68 @@
         "summary"
       ],
       "title": "AudioProviderHealth",
+      "type": "object"
+    },
+    "CloudSTTProviderSettings": {
+      "properties": {
+        "api_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Api Key"
+        },
+        "consent_granted": {
+          "default": false,
+          "title": "Consent Granted",
+          "type": "boolean"
+        },
+        "endpoint_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint Url"
+        },
+        "model_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Name"
+        },
+        "provider_id": {
+          "enum": [
+            "openai",
+            "groq"
+          ],
+          "title": "Provider Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_key",
+        "consent_granted",
+        "endpoint_url",
+        "model_name",
+        "provider_id"
+      ],
+      "title": "CloudSTTProviderSettings",
       "type": "object"
     },
     "GptSoVitsActivationGate": {
@@ -718,6 +912,19 @@
           "title": "Capture Timeout Ms",
           "type": "integer"
         },
+        "cloud": {
+          "additionalProperties": {
+            "$ref": "#/$defs/CloudSTTProviderSettings"
+          },
+          "propertyNames": {
+            "enum": [
+              "openai",
+              "groq"
+            ]
+          },
+          "title": "Cloud",
+          "type": "object"
+        },
         "enabled": {
           "default": false,
           "title": "Enabled",
@@ -728,15 +935,118 @@
           "default": "off_event_loop",
           "title": "Execution",
           "type": "string"
+        },
+        "input_mode": {
+          "default": "push_to_talk",
+          "enum": [
+            "push_to_talk",
+            "vad"
+          ],
+          "title": "Input Mode",
+          "type": "string"
+        },
+        "language_mode": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "zh",
+            "en"
+          ],
+          "title": "Language Mode",
+          "type": "string"
         }
       },
       "required": [
         "active_provider",
         "capture_timeout_ms",
         "enabled",
-        "execution"
+        "execution",
+        "input_mode",
+        "language_mode"
       ],
       "title": "STTProviderConfig",
+      "type": "object"
+    },
+    "STTTestRequest": {
+      "properties": {
+        "config": {
+          "$ref": "#/$defs/STTProviderConfig"
+        },
+        "sample_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sample Label"
+        }
+      },
+      "required": [
+        "config",
+        "sample_label"
+      ],
+      "title": "STTTestRequest",
+      "type": "object"
+    },
+    "STTTestResult": {
+      "properties": {
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AudioProviderHealth"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ok": {
+          "title": "Ok",
+          "type": "boolean"
+        },
+        "provider_id": {
+          "enum": [
+            "funasr",
+            "faster_whisper",
+            "openai",
+            "groq"
+          ],
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "redacted_diagnostics": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redacted Diagnostics"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "failure",
+        "ok",
+        "provider_id",
+        "redacted_diagnostics",
+        "summary"
+      ],
+      "title": "STTTestResult",
       "type": "object"
     },
     "TTSProviderConfig": {
@@ -889,12 +1199,33 @@
     "audio_config": {
       "$ref": "#/$defs/AudioConfig",
       "default": {
+        "diagnostics": {
+          "redact_diagnostics": true
+        },
         "schema_version": 1,
         "stt": {
           "active_provider": null,
           "capture_timeout_ms": 30000,
+          "cloud": {
+            "groq": {
+              "api_key": null,
+              "consent_granted": false,
+              "endpoint_url": null,
+              "model_name": null,
+              "provider_id": "groq"
+            },
+            "openai": {
+              "api_key": null,
+              "consent_granted": false,
+              "endpoint_url": null,
+              "model_name": null,
+              "provider_id": "openai"
+            }
+          },
           "enabled": false,
-          "execution": "off_event_loop"
+          "execution": "off_event_loop",
+          "input_mode": "push_to_talk",
+          "language_mode": "auto"
         },
         "tts": {
           "active_provider": "piper",
@@ -909,6 +1240,12 @@
             "voice_model": "en_US-amy-medium"
           }
         }
+      }
+    },
+    "audio_provider_catalog": {
+      "$ref": "#/$defs/AudioProviderCatalog",
+      "default": {
+        "providers": []
       }
     },
     "gpt_sovits_health_request": {
@@ -943,13 +1280,38 @@
         }
       ],
       "default": null
+    },
+    "stt_test_request": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/STTTestRequest"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "stt_test_result": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/STTTestResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [
     "audio_config",
+    "audio_provider_catalog",
     "gpt_sovits_health_request",
     "gpt_sovits_test_synthesis_request",
-    "gpt_sovits_test_synthesis_result"
+    "gpt_sovits_test_synthesis_result",
+    "stt_test_request",
+    "stt_test_result"
   ],
   "title": "AudioProviderContracts",
   "type": "object"

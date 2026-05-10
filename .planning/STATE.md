@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
 status: ready_for_next_phase
-stopped_at: Phase 17 plan 17-12 gap closure baseline complete; ready for Phase 18
-last_updated: "2026-05-10T06:17:00Z"
-last_activity: 2026-05-10 - Phase 17 plan 17-12 lipsync velocity and sentence-latency gap closure completed
+stopped_at: Phase 18 rich voice settings complete; ready for Phase 19
+last_updated: "2026-05-10T06:31:00Z"
+last_activity: 2026-05-10 - Phase 18 rich voice settings, STT consent, provider catalog, and diagnostics completed
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 27
-  completed_plans: 16
-  percent: 28
+  completed_plans: 19
+  percent: 70
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon - v3.0 improves voice usability before memory/avatar identity work)
-**Current focus:** Phase 18: Rich Voice Settings + Persistence
+**Current focus:** Phase 19: STT Provider Abstraction + Local/Cloud Providers
 
 ## Current Position
 
-Phase: 18 of 22 (Rich Voice Settings + Persistence)
-Plan: Ready to plan/execute Phase 18
-Status: Phase 17 gap closures complete; ready for next phase
-Last activity: 2026-05-10 - Phase 17 plan 17-12 lipsync velocity and sentence-latency gap closure completed
+Phase: 19 of 22 (STT Provider Abstraction + Local/Cloud Providers)
+Plan: Ready to execute Phase 19
+Status: Phase 18 complete; ready for next phase
+Last activity: 2026-05-10 - Phase 18 rich voice settings, STT consent, provider catalog, and diagnostics completed
 
-Progress: [███░░░░░░░] 16/27 planned v3.0 plans complete
+Progress: [███████░░░] 19/27 planned v3.0 plans complete
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed in v3.0: 12
+- Total plans completed in v3.0: 15
 - Average duration: 10 min
 - Total execution time: 117 min
 
@@ -46,7 +46,7 @@ Progress: [███░░░░░░░] 16/27 planned v3.0 plans complete
 |-------|-------|-------|----------|
 | 16. Audio Contracts + TTS Provider Shell | 4/4 | same-session | same-session |
 | 17. GPT-SoVITS Provider + Voice Presets | 12/12 | 117 min | 10 min |
-| 18. Rich Voice Settings + Persistence | 0/TBD | - | - |
+| 18. Rich Voice Settings + Persistence | 3/3 | same-session | same-session |
 | 19. STT Provider Abstraction + Local/Cloud Providers | 0/TBD | - | - |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | 0/4 | - | - |
 | 21. Code-Switch Evaluation + Hardening | 0/4 | - | - |
@@ -77,7 +77,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Execute Phase 18 Rich Voice Settings + Persistence.
+- Execute Phase 19 STT Provider Abstraction + Local/Cloud Providers.
 
 ### Blockers/Concerns
 
@@ -93,6 +93,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 17 plan 17-07 keeps GPT-SoVITS chat failures visible without raw diagnostics inline and does not save config or switch to Piper from chat failure handling.
 - Phase 17 live retests after 17-10 through 17-12 remain useful for user confidence, but automated coverage and verification allow Phase 18 to proceed.
 - Phase 17 code review blockers were fixed and final `17-REVIEW.md` is clean; `17-VERIFICATION.md` passed all 5 roadmap success criteria.
+- Phase 18 added provider catalog labels, explicit cloud STT consent/API key persistence, redacted diagnostics, Voice in settings, and diagnostics-only STT tests without microphone capture or chat submission.
 
 ## Deferred Items
 
@@ -104,6 +105,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-10T06:17:00Z
-Stopped at: Completed 17-12-PLAN.md gap closure baseline; ready for Phase 18
+Last session: 2026-05-10T06:31:00Z
+Stopped at: Completed Phase 18 rich voice settings; ready for Phase 19
 Resume file: None

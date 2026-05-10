@@ -28,6 +28,18 @@ AudioHealthState = Literal[
     "misconfigured",
 ]
 GptSoVitsLanguage = Literal["zh", "en", "ja", "ko", "yue", "auto"]
+AudioProviderCapability = Literal[
+    "local",
+    "cloud",
+    "requires_api_key",
+    "requires_external_service",
+    "requires_local_model",
+    "test_synthesis",
+    "test_transcription",
+    "chinese_english",
+]
+STTInputMode = Literal["push_to_talk", "vad"]
+STTLanguageMode = Literal["auto", "zh", "en"]
 
 
 class AudioProviderHealth(BaseModel):
@@ -39,6 +51,22 @@ class AudioProviderHealth(BaseModel):
     retryable: bool = False
     latency_ms: Optional[float] = None
     redacted_diagnostics: Optional[dict[str, str]] = None
+
+
+class AudioProviderCatalogEntry(BaseModel):
+    provider_id: AudioProviderId
+    kind: AudioProviderKind
+    display_name: str
+    capabilities: list[AudioProviderCapability] = Field(default_factory=list)
+    local: bool
+    requires_api_key: bool = False
+    requires_consent: bool = False
+    enabled: bool = True
+    summary: str
+
+
+class AudioProviderCatalog(BaseModel):
+    providers: list[AudioProviderCatalogEntry] = Field(default_factory=list)
 
 
 class PiperTTSConfig(BaseModel):
@@ -106,25 +134,63 @@ class TTSProviderConfig(BaseModel):
 class STTProviderConfig(BaseModel):
     enabled: bool = False
     active_provider: Optional[Literal["funasr", "faster_whisper", "openai", "groq"]] = None
+    input_mode: STTInputMode = "push_to_talk"
+    language_mode: STTLanguageMode = "auto"
     capture_timeout_ms: int = Field(default=30_000, ge=1_000)
     execution: Literal["off_event_loop"] = "off_event_loop"
+    cloud: dict[Literal["openai", "groq"], "CloudSTTProviderSettings"] = Field(
+        default_factory=lambda: {
+            "openai": CloudSTTProviderSettings(provider_id="openai"),
+            "groq": CloudSTTProviderSettings(provider_id="groq"),
+        }
+    )
+
+
+class CloudSTTProviderSettings(BaseModel):
+    provider_id: Literal["openai", "groq"]
+    consent_granted: bool = False
+    api_key: Optional[str] = None
+    endpoint_url: Optional[str] = None
+    model_name: Optional[str] = None
+
+
+class AudioDiagnosticsConfig(BaseModel):
+    redact_diagnostics: bool = True
+
+
+class STTTestRequest(BaseModel):
+    config: STTProviderConfig
+    sample_label: Optional[str] = None
+
+
+class STTTestResult(BaseModel):
+    ok: bool
+    provider_id: Literal["funasr", "faster_whisper", "openai", "groq"]
+    summary: str
+    failure: Optional[AudioProviderHealth] = None
+    redacted_diagnostics: Optional[dict[str, str]] = None
 
 
 class AudioConfig(BaseModel):
     schema_version: Literal[1] = 1
     tts: TTSProviderConfig = TTSProviderConfig()
     stt: STTProviderConfig = STTProviderConfig()
+    diagnostics: AudioDiagnosticsConfig = AudioDiagnosticsConfig()
 
 
 class AudioProviderContracts(BaseModel):
     audio_config: AudioConfig = AudioConfig()
+    audio_provider_catalog: AudioProviderCatalog = AudioProviderCatalog()
     gpt_sovits_health_request: Optional[GptSoVitsHealthRequest] = None
     gpt_sovits_test_synthesis_request: Optional[GptSoVitsTestSynthesisRequest] = None
     gpt_sovits_test_synthesis_result: Optional[GptSoVitsTestSynthesisResult] = None
+    stt_test_request: Optional[STTTestRequest] = None
+    stt_test_result: Optional[STTTestResult] = None
 
 
 from .voice_preset import VoicePreset  # noqa: E402
 
 GptSoVitsTestSynthesisRequest.model_rebuild()
 GptSoVitsHealthRequest.model_rebuild()
+STTProviderConfig.model_rebuild()
 AudioProviderContracts.model_rebuild()

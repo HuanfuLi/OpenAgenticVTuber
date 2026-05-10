@@ -2,10 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import type {
+  AudioProviderCatalog,
   GptSoVitsHealthRequest,
   GptSoVitsProviderConfig,
   GptSoVitsTestSynthesisRequest,
-  GptSoVitsTestSynthesisResult
+  GptSoVitsTestSynthesisResult,
+  STTTestRequest,
+  STTTestResult
 } from '../../../packages/contracts/ts/audio-provider'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
@@ -306,6 +309,84 @@ describe('GPT-SoVITS audio IPC handlers', () => {
 
     expect(mocks.removedHandlers).toContain('gptSovits:checkHealth')
     expect(mocks.removedHandlers).toContain('gptSovits:testSynthesis')
+    expect(mocks.removedHandlers).toContain('sidecar:getAudioProviders')
+    expect(mocks.removedHandlers).toContain('audio:testStt')
+  })
+
+  it('proxies provider catalog and STT tests without leaking diagnostics', async () => {
+    installHandlers()
+    const catalog: AudioProviderCatalog = {
+      providers: [
+        {
+          provider_id: 'openai',
+          kind: 'stt',
+          display_name: 'OpenAI STT',
+          capabilities: ['cloud', 'requires_api_key', 'test_transcription'],
+          local: false,
+          requires_api_key: true,
+          requires_consent: true,
+          enabled: true,
+          summary: 'Cloud STT option.'
+        }
+      ]
+    }
+    const sttResult: STTTestResult = {
+      ok: false,
+      provider_id: 'openai',
+      summary: 'Cloud STT is blocked until explicit consent is saved.',
+      failure: {
+        provider_id: 'openai',
+        kind: 'stt',
+        state: 'misconfigured',
+        summary: 'Cloud STT is blocked until explicit consent is saved.',
+        detail: null,
+        retryable: false,
+        latency_ms: null,
+        redacted_diagnostics: { provider: 'openai', credential: '[redacted]' }
+      },
+      redacted_diagnostics: { provider: 'openai', credential: '[redacted]' }
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(catalog) })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(sttResult) })
+    vi.stubGlobal('fetch', fetchMock)
+    const request: STTTestRequest = {
+      config: {
+        enabled: true,
+        active_provider: 'openai',
+        input_mode: 'push_to_talk',
+        language_mode: 'auto',
+        capture_timeout_ms: 30_000,
+        execution: 'off_event_loop',
+        cloud: {
+          openai: {
+            provider_id: 'openai',
+            consent_granted: false,
+            api_key: 'sk-secret-value',
+            endpoint_url: null,
+            model_name: null
+          },
+          groq: {
+            provider_id: 'groq',
+            consent_granted: false,
+            api_key: null,
+            endpoint_url: null,
+            model_name: null
+          }
+        }
+      },
+      sample_label: 'settings'
+    }
+
+    await expect(invokeMany<AudioProviderCatalog>('sidecar:getAudioProviders')).resolves.toEqual(catalog)
+    await expect(invoke<STTTestResult>('audio:testStt', request)).resolves.toEqual(sttResult)
+    expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://127.0.0.1:8765/admin/audio/providers')
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'http://127.0.0.1:8765/admin/audio/stt/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    })
+    expect(JSON.stringify(sttResult)).not.toContain('sk-secret-value')
   })
 
   it('restarts the sidecar after changing the active voice preset association', async () => {

@@ -15,7 +15,13 @@ import type { AudioProviderHealth, BodyMotionPluginSummary, PluginRuntimeStatus,
 import { ProviderSelect } from '@/screens/LLMSetup/ProviderSelect'
 import { TestLog } from '@/screens/LLMSetup/TestLog'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
-import type { GptSoVitsProviderConfig, GptSoVitsTestSynthesisResult } from '@contracts/audio-provider'
+import type {
+  AudioProviderCatalogEntry,
+  GptSoVitsProviderConfig,
+  GptSoVitsTestSynthesisResult,
+  STTProviderConfig,
+  STTTestResult
+} from '@contracts/audio-provider'
 import type { GptSoVitsPresetConfig, ReferenceAudioAsset, VoicePreset } from '@contracts/voice-preset'
 import {
   buildGptSoVitsPresetValidationFingerprint,
@@ -2027,6 +2033,270 @@ function TTSSection() {
   )
 }
 
+// -------- §6 Voice in ----------------------------------------------------
+const STT_PROVIDER_ORDER: NonNullable<STTProviderConfig['active_provider']>[] = ['funasr', 'faster_whisper', 'openai', 'groq']
+
+function normalizeSttConfig(config: StoredConfig | null): STTProviderConfig {
+  return {
+    ...defaultAudioConfig().stt,
+    ...(config?.audio?.stt ?? {}),
+    cloud: {
+      openai: {
+        ...defaultAudioConfig().stt.cloud.openai,
+        ...(config?.audio?.stt?.cloud?.openai ?? {})
+      },
+      groq: {
+        ...defaultAudioConfig().stt.cloud.groq,
+        ...(config?.audio?.stt?.cloud?.groq ?? {})
+      }
+    }
+  }
+}
+
+function providerCapabilityText(entry: AudioProviderCatalogEntry): string {
+  const labels = entry.capabilities.map((capability) => {
+    if (capability === 'local') return 'Local'
+    if (capability === 'cloud') return 'Cloud'
+    if (capability === 'requires_api_key') return 'API key'
+    if (capability === 'requires_external_service') return 'External service'
+    if (capability === 'requires_local_model') return 'Local model'
+    if (capability === 'test_synthesis') return 'Test synthesis'
+    if (capability === 'test_transcription') return 'Test transcription'
+    return 'Chinese/English'
+  })
+  return labels.join(' · ')
+}
+
+function VoiceInputSection() {
+  const C = COPY.SETTINGS
+  const [storedCfg, setStoredCfg] = useState<StoredConfig | null>(null)
+  const [providers, setProviders] = useState<AudioProviderCatalogEntry[]>([])
+  const [sttConfig, setSttConfig] = useState<STTProviderConfig>(() => normalizeSttConfig(null))
+  const [statusText, setStatusText] = useState<string>(C.VOICE_IN_TEST_NOT_READY)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<STTTestResult | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.api) return
+    let cancelled = false
+    Promise.all([
+      window.api.getStoredConfig(),
+      window.api.getAudioProviders?.().catch(() => ({ providers: [] })) ?? Promise.resolve({ providers: [] })
+    ])
+      .then(([cfg, catalog]) => {
+        if (cancelled) return
+        setStoredCfg(cfg)
+        setSttConfig(normalizeSttConfig(cfg))
+        setProviders(catalog.providers.filter((provider) => provider.kind === 'stt'))
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const activeProvider = sttConfig.active_provider ?? 'funasr'
+  const selectedCloud = activeProvider === 'openai' || activeProvider === 'groq' ? sttConfig.cloud[activeProvider] : null
+  const cloudBlocked = selectedCloud !== null && (!selectedCloud.consent_granted || !selectedCloud.api_key?.trim())
+
+  const updateSttConfig = (patch: Partial<STTProviderConfig>): void => {
+    setSttConfig((cur) => ({ ...cur, ...patch }))
+    setTestResult(null)
+    setStatusText(C.VOICE_IN_TEST_NOT_READY)
+  }
+
+  const updateCloud = (provider: 'openai' | 'groq', patch: Partial<STTProviderConfig['cloud']['openai']>): void => {
+    setSttConfig((cur) => ({
+      ...cur,
+      cloud: {
+        ...cur.cloud,
+        [provider]: {
+          ...cur.cloud[provider],
+          ...patch
+        }
+      }
+    }))
+    setTestResult(null)
+    setStatusText(C.VOICE_IN_TEST_NOT_READY)
+  }
+
+  const saveVoiceInput = async (): Promise<StoredConfig | null> => {
+    setSaving(true)
+    try {
+      const cfg = storedCfg ?? await window.api.getStoredConfig()
+      if (!cfg) return null
+      const nextCfg: StoredConfig = {
+        ...cfg,
+        audio: {
+          ...cfg.audio,
+          stt: sttConfig,
+          diagnostics: {
+            ...(cfg.audio.diagnostics ?? defaultAudioConfig().diagnostics),
+            redact_diagnostics: true
+          }
+        }
+      }
+      await window.api.saveStoredConfig(nextCfg)
+      setStoredCfg(nextCfg)
+      setStatusText(C.VOICE_IN_SAVED)
+      return nextCfg
+    } catch {
+      setStatusText(C.VOICE_IN_SAVE_ERROR)
+      return null
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const runSttTest = async (): Promise<void> => {
+    if (cloudBlocked) {
+      setStatusText(C.VOICE_IN_TEST_BLOCKED)
+      return
+    }
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const result = await window.api.testSttProvider?.({
+        config: sttConfig,
+        sample_label: 'settings-diagnostics'
+      })
+      if (result) {
+        setTestResult(result)
+        setStatusText(result.summary)
+      }
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  return (
+    <section className="section" id="sec-voice-in">
+      <h2>{C.VOICE_IN_HEADER}</h2>
+      <div className="tx-sm muted">{C.VOICE_IN_HELP}</div>
+
+      <div className="group-label mt-4">{C.VOICE_IN_PROVIDER_GROUP}</div>
+      <div className="radio-group" role="radiogroup" aria-label={C.VOICE_IN_PROVIDER_GROUP}>
+        {STT_PROVIDER_ORDER.map((providerId) => {
+          const entry = providers.find((provider) => provider.provider_id === providerId)
+          const label = entry
+            ? `${entry.display_name} — ${providerCapabilityText(entry)}`
+            : providerId
+          return (
+            <RadioRow
+              key={providerId}
+              id={providerId}
+              label={label}
+              checked={activeProvider === providerId}
+              onChange={(id) => updateSttConfig({ active_provider: id as STTProviderConfig['active_provider'], enabled: true })}
+            />
+          )
+        })}
+      </div>
+
+      <div className="settings-form">
+        <div className="field">
+          <label className="label" htmlFor="voice-in-input-mode">{C.VOICE_IN_INPUT_MODE}</label>
+          <select
+            id="voice-in-input-mode"
+            className="select"
+            value={sttConfig.input_mode}
+            onChange={(e) => updateSttConfig({ input_mode: e.target.value as STTProviderConfig['input_mode'] })}
+          >
+            <option value="push_to_talk">{C.VOICE_IN_INPUT_PUSH_TO_TALK}</option>
+            <option value="vad">{C.VOICE_IN_INPUT_VAD}</option>
+          </select>
+        </div>
+        <div className="field">
+          <label className="label" htmlFor="voice-in-language">{C.VOICE_IN_LANGUAGE}</label>
+          <select
+            id="voice-in-language"
+            className="select"
+            value={sttConfig.language_mode}
+            onChange={(e) => updateSttConfig({ language_mode: e.target.value as STTProviderConfig['language_mode'] })}
+          >
+            <option value="auto">{C.VOICE_IN_LANGUAGE_AUTO}</option>
+            <option value="zh">{C.VOICE_IN_LANGUAGE_ZH}</option>
+            <option value="en">{C.VOICE_IN_LANGUAGE_EN}</option>
+          </select>
+        </div>
+        <div className="field">
+          <label className="label" htmlFor="voice-in-timeout">{C.VOICE_IN_CAPTURE_TIMEOUT}</label>
+          <input
+            id="voice-in-timeout"
+            className="input"
+            type="number"
+            min={1000}
+            step={500}
+            value={sttConfig.capture_timeout_ms}
+            onChange={(e) => updateSttConfig({ capture_timeout_ms: Number(e.target.value) || 30_000 })}
+          />
+        </div>
+        {selectedCloud && (
+          <>
+            <div className="kv-row" style={{ alignItems: 'flex-start' }}>
+              <div>
+                <div className="v">{C.VOICE_IN_CLOUD_CONSENT}</div>
+                <div className="tx-sm muted" style={{ marginTop: 2 }}>{C.VOICE_IN_CLOUD_CONSENT_HELP}</div>
+              </div>
+              <button
+                className={`switch${selectedCloud.consent_granted ? ' on' : ''}`}
+                aria-label={C.VOICE_IN_CLOUD_CONSENT}
+                aria-checked={selectedCloud.consent_granted}
+                role="switch"
+                onClick={() => updateCloud(activeProvider as 'openai' | 'groq', { consent_granted: !selectedCloud.consent_granted })}
+              />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="voice-in-api-key">{C.VOICE_IN_API_KEY}</label>
+              <input
+                id="voice-in-api-key"
+                type="password"
+                className="input"
+                value={selectedCloud.api_key ?? ''}
+                onChange={(e) => updateCloud(activeProvider as 'openai' | 'groq', { api_key: e.target.value || null })}
+              />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="voice-in-endpoint">{C.VOICE_IN_ENDPOINT}</label>
+              <input
+                id="voice-in-endpoint"
+                className="input"
+                value={selectedCloud.endpoint_url ?? ''}
+                onChange={(e) => updateCloud(activeProvider as 'openai' | 'groq', { endpoint_url: e.target.value || null })}
+              />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="voice-in-model">{C.VOICE_IN_MODEL}</label>
+              <input
+                id="voice-in-model"
+                className="input"
+                value={selectedCloud.model_name ?? ''}
+                onChange={(e) => updateCloud(activeProvider as 'openai' | 'groq', { model_name: e.target.value || null })}
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button className="btn btn-primary" type="button" onClick={() => void saveVoiceInput()} disabled={saving}>
+          {saving ? C.CONN_SAVING : C.VOICE_IN_SAVE}
+        </button>
+        <button className="btn btn-secondary" type="button" onClick={() => void runSttTest()} disabled={testing || cloudBlocked}>
+          {testing ? COPY.STATUS.TESTING : C.VOICE_IN_TEST}
+        </button>
+      </div>
+      <div className="preset-card mt-2" role="status" aria-live="polite">
+        <div className="semibold">{cloudBlocked ? C.VOICE_IN_TEST_BLOCKED : statusText}</div>
+        {testResult?.failure?.redacted_diagnostics && (
+          <div className="tx-sm muted">{Object.entries(testResult.failure.redacted_diagnostics).map(([k, v]) => `${k}: ${v}`).join(' · ')}</div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 // -------- §16 About ------------------------------------------------------
 function AboutSection() {
   const C = COPY.SETTINGS
@@ -2157,6 +2427,7 @@ export function Settings() {
     { id: 'sec-plugins', label: 'Plugins' },
     { id: 'sec-vts', label: 'VTube Studio' },
     { id: 'sec-tts', label: 'TTS' },
+    { id: 'sec-voice-in', label: 'Voice in' },
     { id: 'sec-conversation', label: 'Conversation' },
     { id: 'sec-memory', label: 'Memory' },
     { id: 'sec-appearance', label: 'Appearance' },
@@ -2210,15 +2481,7 @@ export function Settings() {
         <PluginSection />
         <VTubeStudioSection />
         <TTSSection />
-        {C.PLACEHOLDERS.filter((p) => p.num === 6).map((p) => (
-          <PlaceholderSection
-            key={p.num}
-            num={p.num}
-            title={p.title}
-            milestone={p.milestone}
-            body={p.body}
-          />
-        ))}
+        <VoiceInputSection />
         <ConversationSection />
         <MemorySection />
         {C.PLACEHOLDERS.filter((p) => p.num > 8).map((p) => (

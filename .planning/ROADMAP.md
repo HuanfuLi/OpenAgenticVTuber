@@ -63,7 +63,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 
 - [x] **Phase 16: Audio Contracts + TTS Provider Shell** - Sidecar-owned audio contracts, versioned config migration, Piper adapter, and provider failure semantics. Complete after focused live audio retest passed on 2026-05-09.
 - [x] **Phase 17: GPT-SoVITS Provider + Voice Presets** - GPT-SoVITS external/app-launched provider, test synthesis, reference audio, named presets, visible failed-audio chat/UAT evidence, and GPT-SoVITS gap closures through plan 17-12.
-- [ ] **Phase 18: Rich Voice Settings + Persistence** - User-facing audio settings, provider catalog labels, privacy copy, credential redaction, and diagnostics.
+- [x] **Phase 18: Rich Voice Settings + Persistence** - User-facing audio settings, provider catalog labels, privacy copy, credential redaction, and diagnostics.
 - [ ] **Phase 19: STT Provider Abstraction + Local/Cloud Providers** - FunASR, faster-whisper, OpenAI, and Groq through one lazy-loaded STT provider layer.
 - [ ] **Phase 20: Renderer Voice Capture + PTT/VAD Preview UX** - Microphone capture, push-to-talk, VAD controls, transcript preview, and final-text submission through the existing chat path.
 - [ ] **Phase 21: Code-Switch Evaluation + Hardening** - Locked bilingual eval corpus, provider scorecard, no-translation checks, and evidence-backed provider copy.
@@ -131,9 +131,9 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
   3. Settings, logs, and diagnostics redact STT credentials, reference-audio paths, transcripts, and provider errors where appropriate.
   4. User can inspect TTS/STT latency, timeout, and provider-failure diagnostics without exposing secrets.
 **Plans**: 3
-  - [ ] 18-01 Audio Settings Persistence, Consent, And Redaction
-  - [ ] 18-02 Voice Output And Voice Input Settings UI
-  - [ ] 18-03 Audio Diagnostics, Provider Tests, And Redaction Regression
+  - [x] 18-01 Audio Settings Persistence, Consent, And Redaction
+  - [x] 18-02 Voice Output And Voice Input Settings UI
+  - [x] 18-03 Audio Diagnostics, Provider Tests, And Redaction Regression
 **Wave dependencies**:
   - Wave 1: 18-01 can execute after Phase 17 is complete.
   - Wave 2: 18-02 depends on 18-01 typed settings/status APIs.
@@ -226,7 +226,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 | 15. Mock Boundary Audit | v2.1 | 1/1 | Complete | 2026-05-09 |
 | 16. Audio Contracts + TTS Provider Shell | v3.0 | 4/4 | Complete | 2026-05-09 |
 | 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 12/12 | Complete | 2026-05-10 |
-| 18. Rich Voice Settings + Persistence | v3.0 | 0/3 | Planned | - |
+| 18. Rich Voice Settings + Persistence | v3.0 | 3/3 | Complete | 2026-05-10 |
 | 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 0/4 | Planned | - |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 0/TBD | Not started | - |
 | 21. Code-Switch Evaluation + Hardening | v3.0 | 0/TBD | Not started | - |
@@ -248,4 +248,4 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - v3.0 excludes GPT-SoVITS installer/training/voice cloning, wake-word activation, translation before LLM submission, barge-in interruption, silent cloud STT fallback, and any promise that no-headphones/AEC is solved before Phase 22 evidence.
 
 ---
-*Last updated: 2026-05-10 after Phase 17 plan 17-12 gap closure*
+*Last updated: 2026-05-10 after Phase 18 rich voice settings execution*

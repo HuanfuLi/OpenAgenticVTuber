@@ -46,7 +46,10 @@ describe('StoredConfig audio migration', () => {
         cursorTrackingEnabled: false
       },
       hasCompletedSetup: true,
-      audio: defaultAudioConfig()
+      audio: defaultAudioConfig(),
+      voicePresets: [],
+      referenceAudioAssets: [],
+      activePresetByAvatarSession: {}
     })
   })
 

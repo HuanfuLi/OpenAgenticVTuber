@@ -6,9 +6,12 @@ import type { StoredConfig } from '../src/safe-storage'
 import type { ChromeState, LogLevel, ThemePreference } from '../src/window-store'
 import type { AvatarImportPlan } from '../../../packages/contracts/ts/avatar-import-plan'
 import type {
+  AudioProviderCatalog,
   GptSoVitsHealthRequest,
   GptSoVitsTestSynthesisRequest,
-  GptSoVitsTestSynthesisResult
+  GptSoVitsTestSynthesisResult,
+  STTTestRequest,
+  STTTestResult
 } from '../../../packages/contracts/ts/audio-provider'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
@@ -117,6 +120,10 @@ const api = {
     ipcRenderer.invoke('sidecar:getPluginStatus'),
   getAudioStatus: (): Promise<AudioProviderHealth> =>
     ipcRenderer.invoke('sidecar:getAudioStatus'),
+  getAudioProviders: (): Promise<AudioProviderCatalog> =>
+    ipcRenderer.invoke('sidecar:getAudioProviders'),
+  testSttProvider: (input: STTTestRequest): Promise<STTTestResult> =>
+    ipcRenderer.invoke('audio:testStt', input),
   checkGptSoVitsHealth: (input: GptSoVitsHealthRequest): Promise<AudioProviderHealth> =>
     ipcRenderer.invoke('gptSovits:checkHealth', input),
   testGptSoVitsSynthesis: (
@@ -206,9 +213,12 @@ export type { StoredConfig, ProviderConfig, Provider } from '../src/safe-storage
 export type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
 export type { GptSoVitsProcessRequest, GptSoVitsProcessStatus } from '../src/gpt-sovits-process'
 export type {
+  AudioProviderCatalog,
   GptSoVitsHealthRequest,
   GptSoVitsTestSynthesisRequest,
-  GptSoVitsTestSynthesisResult
+  GptSoVitsTestSynthesisResult,
+  STTTestRequest,
+  STTTestResult
 } from '../../../packages/contracts/ts/audio-provider'
 export type {
   ReferenceAudioValidationInput,

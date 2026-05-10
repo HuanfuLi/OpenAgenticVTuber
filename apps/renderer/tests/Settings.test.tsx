@@ -201,6 +201,70 @@ describe('Settings TTS section', () => {
           latency_ms: null,
           redacted_diagnostics: null
         }),
+        getAudioProviders: vi.fn().mockResolvedValue({
+          providers: [
+            {
+              provider_id: 'funasr',
+              kind: 'stt',
+              display_name: 'FunASR',
+              capabilities: ['local', 'requires_local_model', 'test_transcription', 'chinese_english'],
+              local: true,
+              requires_api_key: false,
+              requires_consent: false,
+              enabled: true,
+              summary: 'Local STT adapter planned.'
+            },
+            {
+              provider_id: 'faster_whisper',
+              kind: 'stt',
+              display_name: 'faster-whisper',
+              capabilities: ['local', 'requires_local_model', 'test_transcription'],
+              local: true,
+              requires_api_key: false,
+              requires_consent: false,
+              enabled: true,
+              summary: 'Local STT adapter planned.'
+            },
+            {
+              provider_id: 'openai',
+              kind: 'stt',
+              display_name: 'OpenAI STT',
+              capabilities: ['cloud', 'requires_api_key', 'test_transcription'],
+              local: false,
+              requires_api_key: true,
+              requires_consent: true,
+              enabled: true,
+              summary: 'Cloud STT option.'
+            },
+            {
+              provider_id: 'groq',
+              kind: 'stt',
+              display_name: 'Groq STT',
+              capabilities: ['cloud', 'requires_api_key', 'test_transcription'],
+              local: false,
+              requires_api_key: true,
+              requires_consent: true,
+              enabled: true,
+              summary: 'Cloud STT option.'
+            }
+          ]
+        }),
+        testSttProvider: vi.fn().mockResolvedValue({
+          ok: false,
+          provider_id: 'funasr',
+          summary: COPY.SETTINGS.VOICE_IN_TEST_NOT_READY,
+          failure: {
+            provider_id: 'funasr',
+            kind: 'stt',
+            state: 'unavailable',
+            summary: COPY.SETTINGS.VOICE_IN_TEST_NOT_READY,
+            detail: null,
+            retryable: true,
+            latency_ms: null,
+            redacted_diagnostics: { adapter: 'not_implemented' }
+          },
+          redacted_diagnostics: { adapter: 'not_implemented' }
+        }),
         checkGptSoVitsHealth: vi.fn().mockResolvedValue({
           provider_id: 'gpt_sovits',
           kind: 'tts',
@@ -367,10 +431,42 @@ describe('Settings TTS section', () => {
     renderSettings()
 
     expect(screen.getByRole('heading', { name: COPY.SETTINGS.TTS_HEADER })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: COPY.SETTINGS.VOICE_IN_HEADER })).toBeInTheDocument()
     expect(screen.getByText(COPY.SETTINGS.TTS_ENGINE_VAL)).toBeInTheDocument()
     expect(screen.getByText(COPY.SETTINGS.TTS_OUTPUT_VAL)).toBeInTheDocument()
     expect(screen.getByText(COPY.SETTINGS.TTS_HELP)).toBeInTheDocument()
     expect(screen.queryByText(/Coming in milestone-3.*TTS/i)).toBeNull()
+  })
+
+  it('shows voice input provider choices with cloud consent blocked by default', async () => {
+    renderSettings()
+
+    expect(await screen.findByRole('radio', { name: /FunASR/i })).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('radio', { name: /OpenAI STT/i }))
+
+    expect(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_CLOUD_CONSENT)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_TEST })).toBeDisabled()
+    expect(screen.getByText(COPY.SETTINGS.VOICE_IN_TEST_BLOCKED)).toBeInTheDocument()
+  })
+
+  it('saves voice input settings without committing a conversation turn', async () => {
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /faster-whisper/i }))
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_LANGUAGE), { target: { value: 'en' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_SAVE }))
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
+        audio: expect.objectContaining({
+          stt: expect.objectContaining({
+            active_provider: 'faster_whisper',
+            language_mode: 'en'
+          })
+        })
+      }))
+    })
+    expect(window.api.commitConversationTurn).not.toHaveBeenCalled()
   })
 
   it('selecting Piper local TTS explicitly saves piper without GPT-SoVITS gates', async () => {
