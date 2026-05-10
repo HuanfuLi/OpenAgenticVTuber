@@ -99,6 +99,7 @@ vi.mock('../src/conversation-store', () => ({
 }))
 
 import { registerIpc } from '../src/ipc'
+import { restartSidecar } from '../src/sidecar'
 
 function candidateConfig(): GptSoVitsProviderConfig {
   return {
@@ -162,6 +163,12 @@ function candidateReferenceAudioAsset(): ReferenceAudioAsset {
 
 function installHandlers(): () => void {
   return registerIpc({ isDestroyed: vi.fn(() => false), webContents: { send: vi.fn() } } as never)
+}
+
+async function invokeMany<T>(channel: string, ...payload: unknown[]): Promise<T> {
+  const handler = mocks.handlers.get(channel)
+  expect(handler).toBeDefined()
+  return (await handler?.({}, ...payload)) as T
 }
 
 async function invoke<T>(channel: string, payload: unknown): Promise<T> {
@@ -297,6 +304,15 @@ describe('GPT-SoVITS audio IPC handlers', () => {
 
     expect(mocks.removedHandlers).toContain('gptSovits:checkHealth')
     expect(mocks.removedHandlers).toContain('gptSovits:testSynthesis')
+  })
+
+  it('restarts the sidecar after changing the active voice preset association', async () => {
+    installHandlers()
+
+    await expect(
+      invokeMany<Record<string, string>>('voicePresets:setActiveForAvatarSession', 'teto', 'session-1', 'preset-1')
+    ).resolves.toEqual({ 'avatar:teto|session:session-1': 'preset-1' })
+    expect(restartSidecar).toHaveBeenCalledTimes(1)
   })
 })
 

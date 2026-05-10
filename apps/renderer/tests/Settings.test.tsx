@@ -9,6 +9,7 @@ import type { StoredConfig } from '@preload-types'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
 import type { GptSoVitsProviderConfig } from '@contracts/audio-provider'
 import type { VoicePreset } from '@contracts/voice-preset'
+import { buildGptSoVitsPresetValidationFingerprint } from '@contracts/gpt-sovits-validation'
 
 function renderSettings() {
   return render(
@@ -87,6 +88,7 @@ describe('Settings TTS section', () => {
     piper_voice_model: null,
     created_at: null,
     updated_at: null,
+    validation: null,
     gpt_sovits: {
       prompt_text: 'こんにちは',
       prompt_lang: 'ja',
@@ -104,6 +106,24 @@ describe('Settings TTS section', () => {
     },
     ...overrides
   })
+
+  const validatedGptPreset = (
+    config: GptSoVitsProviderConfig,
+    overrides: Partial<VoicePreset> = {}
+  ): VoicePreset => {
+    const preset = gptPreset(overrides)
+    return {
+      ...preset,
+      validation: {
+        state: 'validated',
+        fingerprint: buildGptSoVitsPresetValidationFingerprint(config, preset),
+        validated_at: '2026-05-10T00:00:00Z',
+        health_checked_at: '2026-05-10T00:00:00Z',
+        test_synthesis_at: '2026-05-10T00:00:00Z',
+        summary: 'validated'
+      }
+    }
+  }
 
   const storedConfig: StoredConfig = {
     provider: {
@@ -476,6 +496,87 @@ describe('Settings TTS section', () => {
       }))
     })
     expect(window.api.setActiveVoicePresetForAvatarSession).toHaveBeenCalledWith('akari', 's1', preset.preset_id)
+  })
+
+  it('activates a matching validated preset after health without redundant test synthesis', async () => {
+    const config = gptConfig()
+    const preset = validatedGptPreset(config)
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      audio: { ...defaultAudioConfig(), tts: { ...defaultAudioConfig().tts, gpt_sovits: config } },
+      voicePresets: [preset]
+    })
+
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
+    expect(await screen.findByText(COPY.SETTINGS.VOICE_PRESET_VALIDATED)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    await waitFor(() => expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })).not.toBeDisabled())
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET }))
+
+    await waitFor(() => {
+      expect(window.api.setActiveVoicePresetForAvatarSession).toHaveBeenCalledWith('akari', 's1', preset.preset_id)
+    })
+    expect(window.api.testGptSoVitsSynthesis).not.toHaveBeenCalled()
+  })
+
+  it('keeps validation valid when only preset display name changes', async () => {
+    const config = gptConfig()
+    const preset = validatedGptPreset(config, { name: 'Renamed Akari' })
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      audio: { ...defaultAudioConfig(), tts: { ...defaultAudioConfig().tts, gpt_sovits: config } },
+      voicePresets: [preset]
+    })
+
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    expect(await screen.findByText(COPY.SETTINGS.VOICE_PRESET_VALIDATED)).toBeInTheDocument()
+  })
+
+  it('marks synthesis-affecting edits as changed since last test and blocks activation', async () => {
+    const config = gptConfig()
+    const validated = validatedGptPreset(config)
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      audio: { ...defaultAudioConfig(), tts: { ...defaultAudioConfig().tts, gpt_sovits: config } },
+      voicePresets: [{ ...validated, gpt_sovits: { ...validated.gpt_sovits, prompt_text: 'changed prompt' } }]
+    })
+
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    expect(await screen.findByText(COPY.SETTINGS.VOICE_PRESET_CHANGED_SINCE_TEST)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })).toBeDisabled()
+  })
+
+  it('persists validation metadata onto the selected preset only after successful test synthesis', async () => {
+    const preset = gptPreset()
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [preset] })
+    vi.mocked(window.api.saveVoicePreset).mockImplementation(async (savedPreset) => [savedPreset])
+
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS }))
+
+    await waitFor(() => {
+      expect(window.api.saveVoicePreset).toHaveBeenCalledWith(expect.objectContaining({
+        validation: expect.objectContaining({
+          state: 'validated',
+          fingerprint: buildGptSoVitsPresetValidationFingerprint(gptConfig(), preset)
+        })
+      }))
+    })
   })
 
   it('persists selected reference audio into the activated preset before restarting chat TTS', async () => {
