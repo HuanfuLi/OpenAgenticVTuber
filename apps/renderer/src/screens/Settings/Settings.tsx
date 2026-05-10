@@ -1139,6 +1139,9 @@ function TTSSection() {
   const [presetName, setPresetName] = useState('')
   const [blockedDeletePreset, setBlockedDeletePreset] = useState<VoicePreset | null>(null)
   const [confirmDeletePreset, setConfirmDeletePreset] = useState<VoicePreset | null>(null)
+  const [referenceTranscript, setReferenceTranscript] = useState('')
+  const [referenceLanguage, setReferenceLanguage] = useState<ReferenceAudioAsset['language'] | ''>('')
+  const [blockedReferenceDeleteCount, setBlockedReferenceDeleteCount] = useState<number | null>(null)
   const [statusText, setStatusText] = useState<string>(C.GPT_SOVITS_PROVIDER_NOT_READY)
   const [healthUrl, setHealthUrl] = useState('')
   const previewUrlRef = useRef<string | null>(null)
@@ -1342,6 +1345,26 @@ function TTSSection() {
     setConfirmDeletePreset(null)
   }
 
+  const importReferenceAudio = async (): Promise<void> => {
+    if (!referenceTranscript.trim() || !referenceLanguage) return
+    const asset = await window.api.pickAndImportReferenceAudio?.({
+      transcriptText: referenceTranscript.trim(),
+      language: referenceLanguage as ReferenceAudioAsset['language']
+    })
+    if (!asset) return
+    setReferenceAudioAssets((assets) => [...assets.filter((item) => item.asset_id !== asset.asset_id), asset])
+  }
+
+  const requestDeleteReferenceAudio = async (asset: ReferenceAudioAsset): Promise<void> => {
+    const inUseCount = voicePresets.filter((preset) => preset.gpt_sovits.reference_audio_id === asset.asset_id).length
+    if (inUseCount > 0) {
+      setBlockedReferenceDeleteCount(inUseCount)
+      return
+    }
+    const nextAssets = await window.api.deleteReferenceAudio?.(asset.asset_id)
+    if (nextAssets) setReferenceAudioAssets(nextAssets)
+  }
+
   return (
     <section className="section" id="sec-tts">
       <h2>{C.TTS_HEADER}</h2>
@@ -1448,6 +1471,50 @@ function TTSSection() {
             <button className="btn btn-destructive" type="button" onClick={requestDeletePreset} disabled={!selectedPreset}>{C.VOICE_PRESET_DELETE}</button>
           </div>
           <div className="tx-sm muted mt-2">{C.VOICE_PRESET_ACTIVE_NOTE}</div>
+          <div className="group-label mt-4">{C.REFERENCE_AUDIO_HEADER}</div>
+          <div className="field">
+            <label className="label" htmlFor="reference-audio-transcript">{C.REFERENCE_AUDIO_TRANSCRIPT}</label>
+            <textarea id="reference-audio-transcript" className="input" value={referenceTranscript} onChange={(e) => setReferenceTranscript(e.target.value)} />
+          </div>
+          <div className="field">
+            <label className="label" htmlFor="reference-audio-language">{C.REFERENCE_AUDIO_LANGUAGE}</label>
+            <select id="reference-audio-language" className="select" value={referenceLanguage} onChange={(e) => setReferenceLanguage(e.target.value as ReferenceAudioAsset['language'])}>
+              <option value="">Select language</option>
+              <option value="auto">auto</option>
+              <option value="en">en</option>
+              <option value="ja">ja</option>
+              <option value="zh">zh</option>
+              <option value="ko">ko</option>
+              <option value="yue">yue</option>
+            </select>
+          </div>
+          <button
+            className="btn btn-secondary"
+            type="button"
+            onClick={() => void importReferenceAudio()}
+            disabled={!referenceTranscript.trim() || !referenceLanguage}
+          >
+            {C.REFERENCE_AUDIO_IMPORT}
+          </button>
+          <div className="reference-audio-list mt-2">
+            {referenceAudioAssets.map((asset) => (
+              <div className="preset-card" key={asset.asset_id}>
+                <div className="between">
+                  <div>
+                    <div className="semibold">{asset.display_basename}</div>
+                    <div className="tx-sm muted">{asset.managed_path_token}</div>
+                  </div>
+                  <button className="btn btn-destructive" type="button" onClick={() => void requestDeleteReferenceAudio(asset)}>{C.REFERENCE_AUDIO_DELETE}</button>
+                </div>
+                <div className="validation-grid mt-2" aria-label="Reference audio validation">
+                  <span>{C.REFERENCE_AUDIO_VALIDATION_FORMAT}</span><span>{asset.format}</span>
+                  <span>{C.REFERENCE_AUDIO_VALIDATION_DURATION}</span><span>{Math.round(asset.duration_ms / 1000)}s</span>
+                  <span>{C.REFERENCE_AUDIO_VALIDATION_METADATA}</span><span>{asset.language}</span>
+                  <span>{C.REFERENCE_AUDIO_VALIDATION_SERVER_ACCESS}</span><span>{testPassed ? 'ok' : C.GPT_SOVITS_PROVIDER_NOT_READY}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       <div className="kv-row">
@@ -1495,6 +1562,16 @@ function TTSSection() {
             <div className="actions">
               <button className="btn btn-secondary" onClick={() => setConfirmDeletePreset(null)}>{C.VOICE_PRESET_DELETE_CANCEL}</button>
               <button className="btn btn-destructive" onClick={() => void confirmDeleteSelectedPreset()}>{C.VOICE_PRESET_DELETE_CONFIRM}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {blockedReferenceDeleteCount !== null && (
+        <div className="dialog-overlay">
+          <div className="dialog" data-theme-surface role="alertdialog" aria-labelledby="reference-audio-delete-blocked-title">
+            <h3 id="reference-audio-delete-blocked-title">{C.REFERENCE_AUDIO_DELETE_BLOCKED(blockedReferenceDeleteCount)}</h3>
+            <div className="actions">
+              <button className="btn btn-secondary" onClick={() => setBlockedReferenceDeleteCount(null)}>{C.REFERENCE_AUDIO_DELETE_CANCEL}</button>
             </div>
           </div>
         </div>

@@ -675,6 +675,23 @@ textarea.input { height: auto; min-height: 36px; padding: 8px 12px; resize: none
 .radio-row .default-tag { color: var(--muted-foreground); font-size: 12px; }
 .group-label { font-size: 14px; font-weight: 600; margin-top: 8px; }
 .group-help { font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px; }
+.tts-inline-banner {
+  margin: 0 0 8px;
+}
+.preset-card {
+  border: 1px solid color-mix(in oklab, var(--border), transparent 45%);
+  border-radius: 16px;
+  background: var(--card);
+  padding: 12px;
+  margin: 8px 0;
+}
+.validation-grid {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.8fr) minmax(0, 1.2fr);
+  gap: 4px 12px;
+  font-size: 12px;
+}
+.validation-grid span:nth-child(odd) { color: var(--muted-foreground); }
 
 .preview-card {
   border: 1px solid color-mix(in oklab, var(--border), transparent 40%);
