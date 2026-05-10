@@ -27,6 +27,8 @@ from contracts import (
 )
 from sidecar.audio.redaction import redact_audio_diagnostics
 from sidecar.stt import STTModelCache, STTProviderRegistry
+from sidecar.stt.provider import STTProviderError, STTRequest
+from sidecar.stt.readiness import readiness_from_test_result
 from sidecar.stt.readiness import compute_stt_readiness_fingerprint, validate_stt_readiness
 from sidecar.tts.gpt_sovits_provider import GptSoVitsProvider
 from sidecar.tts.provider import TTSProviderError, TTSSynthesisRequest
@@ -197,6 +199,40 @@ def _stt_model_cache(request: Request, config: STTProviderConfig | None = None) 
     return STTModelCache(cache_root=config.cache_root if config else None, user_data=user_data)
 
 
+def _local_model_status(request: Request, config: STTProviderConfig) -> str:
+    provider_id = config.active_provider
+    if provider_id not in {"funasr", "faster_whisper"}:
+        return "downloaded"
+    model_id = config.local_model_id or ("iic/SenseVoiceSmall" if provider_id == "funasr" else "small")
+    catalog = _stt_model_cache(request, config).catalog()
+    model = next((item for item in catalog.models if item.provider_id == provider_id and item.model_id == model_id), None)
+    return model.status if model else "missing"
+
+
+def _stt_failure_result(payload: STTTestRequest, health: AudioProviderHealth, diagnostics: dict[str, str] | None = None) -> STTTestResult:
+    return STTTestResult(
+        ok=False,
+        provider_id=health.provider_id,
+        transcript=None,
+        language=None,
+        latency_ms=None,
+        duration_ms=payload.duration_ms,
+        model_cache_state="not_downloaded" if health.provider_id in {"funasr", "faster_whisper"} else None,
+        readiness=payload.config.readiness.model_copy(
+            update={
+                "active_allowed": False,
+                "health_check_passed": health.state == "ok",
+                "test_transcription_passed": False,
+                "fingerprint": compute_stt_readiness_fingerprint(payload.config),
+                "invalidation_reason": "test_failed",
+            }
+        ),
+        summary=health.summary,
+        failure=health,
+        redacted_diagnostics=diagnostics,
+    )
+
+
 def _pcm_to_wav_base64(pcm_int16: bytes, sample_rate: int) -> tuple[str, int]:
     buf = BytesIO()
     with wave.open(buf, "wb") as wf:
@@ -256,7 +292,7 @@ async def get_audio_providers() -> dict[str, object]:
 
 
 @router.post("/stt/test")
-async def post_stt_test(payload: STTTestRequest) -> dict[str, object]:
+async def post_stt_test(request: Request, payload: STTTestRequest) -> dict[str, object]:
     health = _stt_provider_health(payload.config)
     diagnostics = redact_audio_diagnostics(
         {
@@ -269,27 +305,60 @@ async def post_stt_test(payload: STTTestRequest) -> dict[str, object]:
         }
     )
     redacted_diagnostics = {str(key): str(value) for key, value in diagnostics.items()}
-    return STTTestResult(
-        ok=False,
-        provider_id=health.provider_id,
-        transcript=None,
-        language=None,
-        latency_ms=None,
-        duration_ms=payload.duration_ms,
-        model_cache_state="not_downloaded" if health.provider_id in {"funasr", "faster_whisper"} else None,
-        readiness=payload.config.readiness.model_copy(
-            update={
-                "active_allowed": False,
-                "health_check_passed": health.state == "ok",
-                "test_transcription_passed": False,
-                "fingerprint": compute_stt_readiness_fingerprint(payload.config),
-                "invalidation_reason": "test_failed",
-            }
-        ),
-        summary=health.summary,
-        failure=health,
-        redacted_diagnostics=redacted_diagnostics,
-    ).model_dump()
+    if health.state not in {"ok", "unavailable"} and health.provider_id in {"openai", "groq"}:
+        return _stt_failure_result(payload, health, redacted_diagnostics).model_dump()
+    if not payload.audio_base64_wav:
+        return _stt_failure_result(payload, health, redacted_diagnostics).model_dump()
+    provider_id = payload.config.active_provider or "funasr"
+    if provider_id in {"funasr", "faster_whisper"} and _local_model_status(request, payload.config) != "downloaded":
+        missing_model = AudioProviderHealth(
+            provider_id=provider_id,
+            kind="stt",
+            state="misconfigured",
+            summary="Local STT model is not downloaded in the app-managed cache.",
+            retryable=False,
+            redacted_diagnostics={"model_cache": "not_downloaded"},
+        )
+        return _stt_failure_result(payload, missing_model, redacted_diagnostics).model_dump()
+    try:
+        audio_bytes = base64.b64decode(payload.audio_base64_wav)
+        provider = STTProviderRegistry().build_provider(payload.config)
+        stt_result = provider.transcribe(
+            STTRequest(
+                audio_bytes=audio_bytes,
+                sample_rate_hz=16_000,
+                duration_ms=payload.duration_ms or 0,
+                language_mode=payload.config.language_mode,
+                provider_id=provider_id,
+                model_id=payload.config.local_model_id,
+            )
+        )
+        result = STTTestResult(
+            ok=True,
+            provider_id=provider_id,
+            transcript=stt_result.text,
+            language=stt_result.language,
+            latency_ms=stt_result.latency_ms,
+            duration_ms=payload.duration_ms,
+            model_cache_state=_local_model_status(request, payload.config) if provider_id in {"funasr", "faster_whisper"} else None,
+            summary="STT test transcription succeeded.",
+            failure=None,
+            redacted_diagnostics=stt_result.redacted_diagnostics,
+        )
+        result.readiness = readiness_from_test_result(payload.config, result)
+        return result.model_dump()
+    except STTProviderError as exc:
+        return _stt_failure_result(payload, exc.health(), exc.redacted_diagnostics).model_dump()
+    except Exception as exc:
+        failure = AudioProviderHealth(
+            provider_id=provider_id,
+            kind="stt",
+            state="external_service_failure",
+            summary="STT test transcription failed.",
+            retryable=True,
+            redacted_diagnostics={"error_type": type(exc).__name__},
+        )
+        return _stt_failure_result(payload, failure, failure.redacted_diagnostics).model_dump()
 
 
 @router.post("/stt/health")
