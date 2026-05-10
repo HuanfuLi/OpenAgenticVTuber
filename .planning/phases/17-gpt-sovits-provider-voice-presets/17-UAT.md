@@ -10,7 +10,7 @@ source:
   - 17-06-SUMMARY.md
   - 17-07-SUMMARY.md
 started: 2026-05-10T00:00:00Z
-updated: 2026-05-10T03:50:00Z
+updated: 2026-05-10T04:00:00Z
 ---
 
 # Phase 17 UAT - GPT-SoVITS Provider + Voice Presets
@@ -21,7 +21,7 @@ number: 3
 name: Reference Audio Import And Validation
 expected: |
   Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
-awaiting: user retest after blocking incomplete-preset save dialog fix
+awaiting: user retest after New-preset create-flow redesign
 
 ## Tests
 
@@ -40,7 +40,7 @@ severity: none
 ### 3. Reference Audio Import And Validation
 expected: Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
 result: issue
-reported: "User reported: Import is not blocked when transcript/language are missing, saving a different preset name/config overwrites the first saved preset instead of creating a new preset, and the first fixes still had poor UX because saving an empty new preset showed no obvious message. Blocking save-dialog fix now applied; awaiting user retest."
+reported: "User reported: Import is not blocked when transcript/language are missing, saving a different preset name/config overwrites the first saved preset instead of creating a new preset, and the first fixes still had the wrong user flow. User expects entering config first and clicking New preset to save a new preset; Save preset should update an existing selected preset. Create/update flow redesign now applied; awaiting user retest."
 severity: blocker
 
 ### 4. Voice Preset Management
@@ -136,14 +136,14 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
   reason: "User reported reference import was not clearly blocked without transcript/language and preset save overwrote the selected preset when trying to create a different named/configured preset."
   severity: blocker
   test: 3
-  root_cause: "Reference import relied on disabled-button state and silently returned in the handler without visible validation feedback. Voice preset editing had no explicit new-preset mode, so Save always derived from the selected preset id and overwrote it. The first fix still allowed async Settings hydration to overwrite user-edited preset/reference fields after typing, which made valid new-preset saves and import-failure messaging appear to disappear. The second fix still used an inline banner for missing reference data; in the actual user flow this was not prominent enough, so Save needed to open a focused blocking dialog that explains why no preset was created."
+  root_cause: "Reference import relied on disabled-button state and silently returned in the handler without visible validation feedback. Voice preset editing had no explicit create/update split, so Save always derived from the selected preset id and overwrote it. The first redesign treated New preset as a draft-clearing action, but the desired UX is direct-entry: enter config, import/select reference audio, then click New preset to persist a new record. Reference import also auto-saved into the selected preset, which could mutate the existing preset before a new record was created."
   artifacts:
     - path: "apps/renderer/src/screens/Settings/Settings.tsx"
-      issue: "Added explicit New preset action that clears selected preset state so Save creates a distinct preset id; added visible reference transcript/language validation/import failure status; guarded late async hydration from clobbering user-edited preset/reference fields; made incomplete Save preset open a focused alertdialog listing missing fields and skip persistence when reference transcript/language/audio are incomplete."
+      issue: "Redesigned preset persistence so New preset saves the current form as a new preset id, Save preset updates only the selected preset, and reference import selects an app-managed asset without implicitly saving into the selected preset. Missing required fields still open a focused alertdialog and skip persistence."
     - path: "apps/renderer/src/lib/copy.ts"
-      issue: "Added New preset, reference-required, preset-save-missing-reference, and blocking dialog copy."
+      issue: "Updated copy to describe direct-entry New preset behavior and distinguish new-preset creation success from existing-preset save success."
     - path: "apps/renderer/tests/Settings.test.tsx"
-      issue: "Added regression coverage that New preset creates a separate preset instead of overwriting the selected one, persists as active across Settings reload, import failures remain visible, and incomplete new preset saves open an alertdialog showing why nothing was saved."
+      issue: "Updated regression coverage so users type config first, import/select reference audio, then click New preset to create a separate record; reference import no longer calls saveVoicePreset by itself; Save preset remains the existing-preset update action."
   missing:
     - "User retest confirmation that invalid reference import is blocked with visible feedback and New preset creates a second preset."
   debug_session: ""
@@ -184,3 +184,6 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
 - `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after blocking incomplete-preset save dialog fix, 47 tests.
 - `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after blocking incomplete-preset save dialog fix, 52 tests.
 - `npm --workspace apps/renderer run typecheck` - passed after blocking incomplete-preset save dialog fix.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after New-preset create-flow redesign, 47 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after New-preset create-flow redesign, 52 tests.
+- `npm --workspace apps/renderer run typecheck` - passed after New-preset create-flow redesign.

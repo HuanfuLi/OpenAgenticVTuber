@@ -686,7 +686,7 @@ describe('Settings TTS section', () => {
     expect(window.api.commitAvatarOverrides).toBeUndefined()
   })
 
-  it('creates a separate preset after choosing New preset instead of overwriting the selected preset', async () => {
+  it('creates a separate preset from the current fields when clicking New preset', async () => {
     const initialPreset = gptPreset()
     let persistedPresets = [initialPreset]
     let activePresetByAvatarSession: Record<string, string> = {}
@@ -718,13 +718,12 @@ describe('Settings TTS section', () => {
 
     await openGptSoVitsSettings()
     await waitForPresetLibrary()
-    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_NEW }))
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Second Akari' } })
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT), { target: { value: 'second reference' } })
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'en' } })
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT }))
     await screen.findByText('second.wav')
-    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_NEW }))
 
     await waitFor(() => {
       expect(window.api.saveVoicePreset).toHaveBeenCalledWith(expect.objectContaining({
@@ -775,9 +774,9 @@ describe('Settings TTS section', () => {
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'en' } })
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT }))
     await screen.findByText('persistent.wav')
-    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_NEW }))
 
-    expect(await screen.findByText(COPY.SETTINGS.VOICE_PRESET_SAVE_SUCCESS)).toBeInTheDocument()
+    expect(await screen.findByText(COPY.SETTINGS.VOICE_PRESET_CREATE_SUCCESS)).toBeInTheDocument()
     firstRender.unmount()
 
     renderSettings()
@@ -832,15 +831,7 @@ describe('Settings TTS section', () => {
       expect(window.api.pickAndImportReferenceAudio).toHaveBeenCalledWith({ transcriptText: 'こんにちは', language: 'ja' })
     })
     expect(await screen.findByText('sample.wav')).toBeInTheDocument()
-    await waitFor(() => {
-      expect(window.api.saveVoicePreset).toHaveBeenCalledWith(expect.objectContaining({
-        gpt_sovits: expect.objectContaining({
-          reference_audio_id: 'ref-imported',
-          prompt_text: 'こんにちは',
-          prompt_lang: 'ja'
-        })
-      }))
-    })
+    expect(window.api.saveVoicePreset).not.toHaveBeenCalled()
     expect(screen.getByText('reference-audio/ref-imported-sample.wav')).toBeInTheDocument()
     expect(screen.queryByText(/C:\\Users/)).toBeNull()
     expect(screen.queryByText(/\/Users\//)).toBeNull()
@@ -866,9 +857,8 @@ describe('Settings TTS section', () => {
 
     await openGptSoVitsSettings()
     await waitForReferenceReady()
-    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_NEW }))
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Broken Akari' } })
-    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_NEW }))
 
     const dialog = await screen.findByRole('alertdialog', { name: COPY.SETTINGS.VOICE_PRESET_SAVE_BLOCKED_TITLE })
     expect(dialog).toHaveTextContent(COPY.SETTINGS.VOICE_PRESET_SAVE_MISSING_REFERENCE)

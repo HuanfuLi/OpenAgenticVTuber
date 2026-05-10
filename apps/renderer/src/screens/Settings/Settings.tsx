@@ -16,7 +16,7 @@ import { ProviderSelect } from '@/screens/LLMSetup/ProviderSelect'
 import { TestLog } from '@/screens/LLMSetup/TestLog'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
 import type { GptSoVitsProviderConfig, GptSoVitsTestSynthesisResult } from '@contracts/audio-provider'
-import type { ReferenceAudioAsset, VoicePreset } from '@contracts/voice-preset'
+import type { GptSoVitsPresetConfig, ReferenceAudioAsset, VoicePreset } from '@contracts/voice-preset'
 import type { LogLevel } from '@preload-types'
 
 const LOG_LEVELS: LogLevel[] = ['error', 'warn', 'info', 'debug']
@@ -1082,30 +1082,33 @@ function avatarSessionPresetKey(avatarId: string | null, sessionId: string | nul
   return `avatar:${avatar}|session:${session}`
 }
 
-function createDraftVoicePreset(name: string, existing?: VoicePreset | null): VoicePreset {
+function createDraftVoicePreset(name: string, existing?: VoicePreset | null, forceNew = false): VoicePreset {
   const now = new Date().toISOString()
+  const gptSoVits: GptSoVitsPresetConfig = existing?.gpt_sovits
+    ? { ...existing.gpt_sovits }
+    : {
+        prompt_text: '',
+        prompt_lang: 'auto',
+        text_lang: 'auto',
+        reference_audio_id: null,
+        top_k: 15,
+        top_p: 1,
+        temperature: 1,
+        speed_factor: 1,
+        repetition_penalty: 1.35,
+        text_split_method: 'cut5',
+        batch_size: 1,
+        media_type: 'wav',
+        streaming_mode: false
+      }
   return {
-    preset_id: existing?.preset_id ?? `preset-${Date.now()}`,
+    preset_id: !forceNew && existing?.preset_id ? existing.preset_id : `preset-${Date.now()}`,
     name: name.trim() || 'Untitled voice preset',
     provider_id: 'gpt_sovits',
     piper_voice_model: null,
-    created_at: existing?.created_at ?? now,
+    created_at: !forceNew && existing?.created_at ? existing.created_at : now,
     updated_at: now,
-    gpt_sovits: existing?.gpt_sovits ?? {
-      prompt_text: '',
-      prompt_lang: 'auto',
-      text_lang: 'auto',
-      reference_audio_id: null,
-      top_k: 15,
-      top_p: 1,
-      temperature: 1,
-      speed_factor: 1,
-      repetition_penalty: 1.35,
-      text_split_method: 'cut5',
-      batch_size: 1,
-      media_type: 'wav',
-      streaming_mode: false
-    }
+    gpt_sovits: gptSoVits
   }
 }
 
@@ -1406,8 +1409,14 @@ function TTSSection() {
     })
   }
 
-  const savePreset = async (): Promise<void> => {
-    const draftPreset = createDraftVoicePreset(presetName, selectedPreset)
+  const persistVoicePreset = async (mode: 'create' | 'update'): Promise<void> => {
+    if (mode === 'update' && !selectedPreset) {
+      setPresetValidationText(C.VOICE_PRESET_SAVE_NO_SELECTION)
+      setPresetSaveBlockReasons([C.VOICE_PRESET_SAVE_NO_SELECTION])
+      setStatusText(C.VOICE_PRESET_SAVE_NO_SELECTION)
+      return
+    }
+    const draftPreset = createDraftVoicePreset(presetName, selectedPreset, mode === 'create')
     const referenceText = selectedReferenceAsset?.transcript_text ?? referenceTranscript.trim()
     const referenceLang = selectedReferenceAsset?.language ?? referenceLanguage
     const missingPresetFields: string[] = [
@@ -1447,7 +1456,7 @@ function TTSSection() {
       if (map) setActivePresetByAvatarSession(map)
       setStatusText(
         nextPresets.some((preset) => preset.preset_id === nextPreset.preset_id)
-          ? C.VOICE_PRESET_SAVE_SUCCESS
+          ? (mode === 'create' ? C.VOICE_PRESET_CREATE_SUCCESS : C.VOICE_PRESET_SAVE_SUCCESS)
           : C.VOICE_PRESET_SAVE_FAILURE
       )
     } catch {
@@ -1455,22 +1464,6 @@ function TTSSection() {
       setPresetSaveBlockReasons([C.VOICE_PRESET_SAVE_FAILURE])
       setStatusText(C.VOICE_PRESET_SAVE_FAILURE)
     }
-  }
-
-  const startNewVoicePreset = (): void => {
-    presetTouchedRef.current = true
-    referenceTouchedRef.current = true
-    setSelectedPresetId('')
-    setPresetName('')
-    setSelectedReferenceAssetId('')
-    setReferenceTranscript('')
-    setReferenceLanguage('')
-    setHealthPassed(false)
-    setTestPassed(false)
-    setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
-    setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
-    setPresetValidationText('')
-    setPresetSaveBlockReasons(null)
   }
 
   const selectVoicePreset = async (presetId: string): Promise<void> => {
@@ -1529,19 +1522,6 @@ function TTSSection() {
       setSelectedReferenceAssetId(asset.asset_id)
       setReferenceStatusText(C.REFERENCE_AUDIO_IMPORT_SUCCESS)
       setStatusText(C.REFERENCE_AUDIO_IMPORT_SUCCESS)
-      if (selectedPreset) {
-        const nextPreset = {
-          ...selectedPreset,
-          gpt_sovits: {
-            ...selectedPreset.gpt_sovits,
-            reference_audio_id: asset.asset_id,
-            prompt_text: asset.transcript_text,
-            prompt_lang: asset.language
-          }
-        }
-        const nextPresets = await window.api.saveVoicePreset(nextPreset)
-        setVoicePresets(nextPresets)
-      }
     } catch (err) {
       const message = err instanceof Error && err.message.trim() ? err.message : C.REFERENCE_AUDIO_IMPORT_FAILURE
       setReferenceStatusText(message)
@@ -1677,8 +1657,8 @@ function TTSSection() {
             />
           </div>
           <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn btn-secondary" type="button" onClick={startNewVoicePreset}>{C.VOICE_PRESET_NEW}</button>
-            <button className="btn btn-secondary" type="button" onClick={() => void savePreset()}>{C.VOICE_PRESET_SAVE}</button>
+            <button className="btn btn-primary" type="button" onClick={() => void persistVoicePreset('create')}>{C.VOICE_PRESET_NEW}</button>
+            <button className="btn btn-secondary" type="button" onClick={() => void persistVoicePreset('update')}>{C.VOICE_PRESET_SAVE}</button>
             <button className="btn btn-destructive" type="button" onClick={requestDeletePreset} disabled={!selectedPreset}>{C.VOICE_PRESET_DELETE}</button>
           </div>
           {presetValidationText && <div className="banner warn tts-inline-banner" role="alert">{presetValidationText}</div>}
