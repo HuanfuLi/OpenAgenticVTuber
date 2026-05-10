@@ -1,9 +1,16 @@
 ---
 phase: 17-gpt-sovits-provider-voice-presets
-verified: 2026-05-09T20:40:13Z
+verified: 2026-05-10T03:55:00Z
 status: passed
 score: 5/5 must-haves verified
 overrides_applied: 0
+re_verification:
+  previous_status: passed
+  previous_score: 5/5
+  gaps_closed:
+    - "17-08 UAT blocker: already validated matching GPT-SoVITS presets no longer require redundant test synthesis before activation; new/changed candidates still require current health plus successful test synthesis."
+  gaps_remaining: []
+  regressions: []
 residual_risk:
   - "Live GPT-SoVITS server UAT remains environment-blocked; 17-UAT.md records the blocked probe and checklist. Code-level mocked/provider coverage and static wiring checks pass the goal-backward criteria."
 ---
@@ -11,11 +18,31 @@ residual_risk:
 # Phase 17: GPT-SoVITS Provider + Voice Presets Verification Report
 
 **Phase Goal:** Users can choose GPT-SoVITS for character voice output, validate it before use, and organize voice presets without losing Piper fallback safety.
-**Verified:** 2026-05-09T20:40:13Z
+**Verified:** 2026-05-10T03:55:00Z
 **Status:** passed
-**Re-verification:** No — initial verification after review fixes
+**Re-verification:** Yes — after 17-08 UAT gap closure
 
 ## Goal Achievement
+
+### 17-08 UAT Gap Closure Re-Verification
+
+| Question | Status | Evidence |
+|---|---|---|
+| Durable per-preset validation metadata exists on `VoicePreset`. | ✓ VERIFIED | Python source contract defines `GptSoVitsPresetValidation` and `VoicePreset.validation` (`packages/contracts/py/contracts/voice_preset.py:26-42`); generated TS exposes `validation: GptSoVitsPresetValidation \| null` (`packages/contracts/ts/voice-preset.ts:16-48`); JSON schema includes the validation definition and field (`packages/contracts/generated/json-schema/voice-preset.schema.json:172`, `380`). |
+| Fingerprint computation is shared between renderer and Electron main from the same module. | ✓ VERIFIED | Shared helper lives in `packages/contracts/ts/gpt-sovits-validation.ts`; Settings imports it via `@contracts/gpt-sovits-validation` (`Settings.tsx:20-24`); Electron main safe-storage re-exports the same helper module (`safe-storage.ts:13-16`). |
+| Fingerprint excludes display-only `name` and includes the 17-08 synthesis-affecting fields. | ✓ VERIFIED | Helper payload includes provider `base_url`, `request_timeout_ms`, launch mode/command/cwd, `preset_id`, reference/prompt/language/tuning/media/streaming fields (`gpt-sovits-validation.ts:108-137`) and does not reference `preset.name`; safe-storage tests prove rename stability and invalidation on base URL, launch, reference, prompt, and tuning changes (`safe-storage.test.ts:190-210`). |
+| Successful test synthesis persists proof to the selected preset. | ✓ VERIFIED | `runTestSynthesis` writes `validation: { state: 'validated', fingerprint, validated_at, health_checked_at, test_synthesis_at, summary }` through `window.api.saveVoicePreset` only after `result.ok` (`Settings.tsx:1363-1395`); renderer test asserts the saved preset carries matching validation metadata (`Settings.test.tsx:559-580`). |
+| Failed test synthesis avoids writing proof/activation. | ✓ VERIFIED | Failed result path clears `testPassed`/`lastTestFingerprint`, sets failure copy, and returns before save/activation (`Settings.tsx:1368-1377`); renderer test verifies failed synthesis does not save active GPT-SoVITS config (`Settings.test.tsx:434-461`). |
+| Matching already validated presets activate without another test synthesis after current health is OK. | ✓ VERIFIED | Activation readiness accepts `selectedValidationState === 'validated'` with current `healthPassed` (`Settings.tsx:1295-1301`); test validates activation after health and asserts `testGptSoVitsSynthesis` was not called (`Settings.test.tsx:501-524`). |
+| New/changed candidates require health plus successful test synthesis. | ✓ VERIFIED | Missing validation returns `needs_test`, mismatched validated fingerprints return `changed` (`gpt-sovits-validation.ts:140-148`); activation requires current health and either matching durable validation or current-session successful test fingerprint (`Settings.tsx:1299-1301`); tests cover failed gating and changed-prompt blocking (`Settings.test.tsx:434-461`, `541-557`). |
+| Rename preserves validation. | ✓ VERIFIED | `createDraftVoicePreset` preserves existing validation on update (`Settings.tsx:1090-1115`), and helper excludes `name`; renderer and safe-storage tests cover renamed validated presets remaining validated (`Settings.test.tsx:526-539`; `safe-storage.test.ts:190-198`). |
+| Active validated preset selection restarts/applies sidecar runtime association. | ✓ VERIFIED | Selection and activation call `setActiveVoicePresetForAvatarSession` (`Settings.tsx:1444`, `1546`); IPC saves `activePresetByAvatarSession` and awaits `restartSidecar()` before returning (`ipc.ts:361-374`); Electron main test asserts the restart (`ipc-gpt-sovits-audio.test.ts:309-316`). |
+| UAT evidence avoids false live-server manual pass. | ✓ VERIFIED | `17-UAT.md` remains `status: testing`, keeps live-server tests 4-7 pending, and explicitly states no live-server pass is claimed for 17-08 (`17-UAT.md:47-62`, `155-166`). |
+
+Focused automated re-verification commands passed in this verifier run:
+
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx` — PASS (54 tests)
+- `npm --workspace apps/electron-main run test -- --run ipc-gpt-sovits-audio.test.ts safe-storage.test.ts` — PASS (16 tests)
 
 ### Observable Truths
 
@@ -102,5 +129,5 @@ No blocking implementation gaps found. The five roadmap success criteria are sup
 
 ---
 
-_Verified: 2026-05-09T20:40:13Z_
+_Verified: 2026-05-10T03:55:00Z_
 _Verifier: the agent (gsd-verifier)_
