@@ -380,6 +380,25 @@ describe('Settings TTS section', () => {
     expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_START })).toBeInTheDocument()
   })
 
+  it('confirms before stopping app-launched GPT-SoVITS', async () => {
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_CONNECTION_MODE), {
+      target: { value: 'app_managed' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_STOP_APP_LAUNCHED }))
+
+    expect(window.api.stopGptSoVits).not.toHaveBeenCalled()
+    const dialog = screen.getByRole('alertdialog', { name: COPY.SETTINGS.GPT_SOVITS_STOP_APP_LAUNCHED })
+    expect(within(dialog).getByText(COPY.SETTINGS.GPT_SOVITS_STOP_CONFIRM)).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_STOP_APP_LAUNCHED }))
+
+    await waitFor(() => {
+      expect(window.api.stopGptSoVits).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('gates GPT-SoVITS activation on health plus successful test synthesis', async () => {
     vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [gptPreset()] })
     vi.mocked(window.api.testGptSoVitsSynthesis).mockResolvedValue({
@@ -423,6 +442,23 @@ describe('Settings TTS section', () => {
     })
     expect(window.api.commitConversationTurn).not.toHaveBeenCalled()
     expect(screen.queryByRole('textbox', { name: /message/i })).toBeNull()
+  })
+
+  it('blocks test synthesis and activation until the selected preset has reference audio', async () => {
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      voicePresets: [gptPreset({ gpt_sovits: { ...gptPreset().gpt_sovits, reference_audio_id: null, prompt_text: '' } })]
+    })
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS })).toBeDisabled()
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })).toBeDisabled()
+    expect(window.api.testGptSoVitsSynthesis).not.toHaveBeenCalled()
   })
 
   it('renders non-localhost GPT-SoVITS warning copy from settings copy', async () => {
@@ -525,6 +561,15 @@ describe('Settings TTS section', () => {
       expect(window.api.pickAndImportReferenceAudio).toHaveBeenCalledWith({ transcriptText: 'こんにちは', language: 'ja' })
     })
     expect(await screen.findByText('sample.wav')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(window.api.saveVoicePreset).toHaveBeenCalledWith(expect.objectContaining({
+        gpt_sovits: expect.objectContaining({
+          reference_audio_id: 'ref-imported',
+          prompt_text: 'こんにちは',
+          prompt_lang: 'ja'
+        })
+      }))
+    })
     expect(screen.getByText('reference-audio/ref-imported-sample.wav')).toBeInTheDocument()
     expect(screen.queryByText(/C:\\Users/)).toBeNull()
     expect(screen.queryByText(/\/Users\//)).toBeNull()

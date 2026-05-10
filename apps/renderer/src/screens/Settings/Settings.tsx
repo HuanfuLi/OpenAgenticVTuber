@@ -1141,7 +1141,9 @@ function TTSSection() {
   const [confirmDeletePreset, setConfirmDeletePreset] = useState<VoicePreset | null>(null)
   const [referenceTranscript, setReferenceTranscript] = useState('')
   const [referenceLanguage, setReferenceLanguage] = useState<ReferenceAudioAsset['language'] | ''>('')
+  const [selectedReferenceAssetId, setSelectedReferenceAssetId] = useState('')
   const [blockedReferenceDeleteCount, setBlockedReferenceDeleteCount] = useState<number | null>(null)
+  const [confirmStopGptSoVits, setConfirmStopGptSoVits] = useState(false)
   const [statusText, setStatusText] = useState<string>(C.GPT_SOVITS_PROVIDER_NOT_READY)
   const [healthUrl, setHealthUrl] = useState('')
   const previewUrlRef = useRef<string | null>(null)
@@ -1184,6 +1186,11 @@ function TTSSection() {
         setTestPassed(configuredGpt.activation.test_synthesis_passed)
         setSelectedPresetId(loadedPresets[0]?.preset_id ?? '')
         setPresetName(loadedPresets[0]?.name ?? '')
+        const firstReferenceId = loadedPresets[0]?.gpt_sovits.reference_audio_id ?? cfg?.referenceAudioAssets?.[0]?.asset_id ?? ''
+        setSelectedReferenceAssetId(firstReferenceId)
+        const selectedReference = cfg?.referenceAudioAssets?.find((asset) => asset.asset_id === firstReferenceId)
+        setReferenceTranscript(selectedReference?.transcript_text ?? loadedPresets[0]?.gpt_sovits.prompt_text ?? '')
+        setReferenceLanguage(selectedReference?.language ?? loadedPresets[0]?.gpt_sovits.prompt_lang ?? '')
         setHealthUrl(processStatus?.healthUrl ?? '')
       })
       .catch(() => undefined)
@@ -1199,7 +1206,8 @@ function TTSSection() {
   const healthState = audioStatus?.state ?? 'unavailable'
   const healthClass = healthState === 'ok' ? 'green' : healthState === 'unavailable' ? 'amber' : 'red'
   const selectedPreset = voicePresets.find((preset) => preset.preset_id === selectedPresetId) ?? voicePresets[0] ?? null
-  const activationReady = healthPassed && testPassed && selectedPreset !== null
+  const selectedReferenceAsset = referenceAudioAssets.find((asset) => asset.asset_id === selectedReferenceAssetId) ?? null
+  const activationReady = healthPassed && testPassed && selectedPreset !== null && selectedPreset.gpt_sovits.reference_audio_id !== null
 
   const saveConfig = async (nextCfg: StoredConfig): Promise<void> => {
     await window.api.saveStoredConfig(nextCfg)
@@ -1250,7 +1258,11 @@ function TTSSection() {
   }
 
   const runTestSynthesis = async (): Promise<void> => {
-    if (!selectedPreset) return
+    if (!selectedPreset || !selectedPreset.gpt_sovits.reference_audio_id) {
+      setTestPassed(false)
+      setStatusText(C.GPT_SOVITS_REFERENCE_PATH_FAILURE)
+      return
+    }
     const result = await window.api.testGptSoVitsSynthesis({
       config: candidate,
       preset: selectedPreset,
@@ -1311,7 +1323,18 @@ function TTSSection() {
   }
 
   const savePreset = async (): Promise<void> => {
-    const nextPreset = createDraftVoicePreset(presetName, selectedPreset)
+    const draftPreset = createDraftVoicePreset(presetName, selectedPreset)
+    const nextPreset = selectedReferenceAsset
+      ? {
+          ...draftPreset,
+          gpt_sovits: {
+            ...draftPreset.gpt_sovits,
+            reference_audio_id: selectedReferenceAsset.asset_id,
+            prompt_text: selectedReferenceAsset.transcript_text,
+            prompt_lang: selectedReferenceAsset.language
+          }
+        }
+      : draftPreset
     const nextPresets = await window.api.saveVoicePreset(nextPreset)
     setVoicePresets(nextPresets)
     setSelectedPresetId(nextPreset.preset_id)
@@ -1322,6 +1345,10 @@ function TTSSection() {
     const preset = voicePresets.find((item) => item.preset_id === presetId)
     setSelectedPresetId(presetId)
     setPresetName(preset?.name ?? '')
+    setSelectedReferenceAssetId(preset?.gpt_sovits.reference_audio_id ?? '')
+    const referenceAsset = referenceAudioAssets.find((asset) => asset.asset_id === preset?.gpt_sovits.reference_audio_id)
+    setReferenceTranscript(referenceAsset?.transcript_text ?? preset?.gpt_sovits.prompt_text ?? '')
+    setReferenceLanguage(referenceAsset?.language ?? preset?.gpt_sovits.prompt_lang ?? '')
     const map = await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, presetId)
     if (map) setActivePresetByAvatarSession(map)
   }
@@ -1353,6 +1380,25 @@ function TTSSection() {
     })
     if (!asset) return
     setReferenceAudioAssets((assets) => [...assets.filter((item) => item.asset_id !== asset.asset_id), asset])
+    setSelectedReferenceAssetId(asset.asset_id)
+    if (selectedPreset) {
+      const nextPreset = {
+        ...selectedPreset,
+        gpt_sovits: {
+          ...selectedPreset.gpt_sovits,
+          reference_audio_id: asset.asset_id,
+          prompt_text: asset.transcript_text,
+          prompt_lang: asset.language
+        }
+      }
+      const nextPresets = await window.api.saveVoicePreset(nextPreset)
+      setVoicePresets(nextPresets)
+    }
+  }
+
+  const confirmStopAppLaunchedGptSoVits = async (): Promise<void> => {
+    await window.api.stopGptSoVits?.()
+    setConfirmStopGptSoVits(false)
   }
 
   const requestDeleteReferenceAudio = async (asset: ReferenceAudioAsset): Promise<void> => {
@@ -1430,7 +1476,7 @@ function TTSSection() {
               </div>
               <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button className="btn btn-secondary" type="button" onClick={() => void runStart()}>{C.GPT_SOVITS_START}</button>
-                <button className="btn btn-secondary" type="button" onClick={() => void window.api.stopGptSoVits?.()}>{C.GPT_SOVITS_STOP_APP_LAUNCHED}</button>
+                <button className="btn btn-secondary" type="button" onClick={() => setConfirmStopGptSoVits(true)}>{C.GPT_SOVITS_STOP_APP_LAUNCHED}</button>
                 <button className="btn btn-secondary" type="button" onClick={() => void window.api.restartGptSoVits?.({ command: candidate.launch.command, workingDirectory: candidate.launch.working_directory, healthUrl: healthUrl || null })}>{C.GPT_SOVITS_RESTART_APP_LAUNCHED}</button>
               </div>
             </>
@@ -1439,7 +1485,7 @@ function TTSSection() {
           )}
           <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn btn-secondary" type="button" onClick={() => void runHealthCheck()}>{C.GPT_SOVITS_HEALTH_CHECK}</button>
-            <button className="btn btn-primary" type="button" onClick={() => void runTestSynthesis()} disabled={!healthPassed || !selectedPreset}>{C.GPT_SOVITS_TEST_SYNTHESIS}</button>
+            <button className="btn btn-primary" type="button" onClick={() => void runTestSynthesis()} disabled={!healthPassed || !selectedPreset || !selectedPreset.gpt_sovits.reference_audio_id}>{C.GPT_SOVITS_TEST_SYNTHESIS}</button>
             <button className="btn btn-primary" type="button" onClick={() => void activateGptSoVits()} disabled={!activationReady}>{C.GPT_SOVITS_ACTIVATE_PRESET}</button>
           </div>
           <div className="tx-sm muted mt-2">{statusText}</div>
@@ -1501,7 +1547,20 @@ function TTSSection() {
               <div className="preset-card" key={asset.asset_id}>
                 <div className="between">
                   <div>
-                    <div className="semibold">{asset.display_basename}</div>
+                    <label className="radio-row" htmlFor={`reference-audio-${asset.asset_id}`}>
+                      <input
+                        id={`reference-audio-${asset.asset_id}`}
+                        type="radio"
+                        name="reference-audio-selection"
+                        checked={selectedReferenceAssetId === asset.asset_id}
+                        onChange={() => {
+                          setSelectedReferenceAssetId(asset.asset_id)
+                          setReferenceTranscript(asset.transcript_text)
+                          setReferenceLanguage(asset.language)
+                        }}
+                      />
+                      <span>{asset.display_basename}</span>
+                    </label>
                     <div className="tx-sm muted">{asset.managed_path_token}</div>
                   </div>
                   <button className="btn btn-destructive" type="button" onClick={() => void requestDeleteReferenceAudio(asset)}>{C.REFERENCE_AUDIO_DELETE}</button>
@@ -1572,6 +1631,18 @@ function TTSSection() {
             <h3 id="reference-audio-delete-blocked-title">{C.REFERENCE_AUDIO_DELETE_BLOCKED(blockedReferenceDeleteCount)}</h3>
             <div className="actions">
               <button className="btn btn-secondary" onClick={() => setBlockedReferenceDeleteCount(null)}>{C.REFERENCE_AUDIO_DELETE_CANCEL}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmStopGptSoVits && (
+        <div className="dialog-overlay">
+          <div className="dialog" data-theme-surface role="alertdialog" aria-labelledby="gpt-sovits-stop-title">
+            <h3 id="gpt-sovits-stop-title">{C.GPT_SOVITS_STOP_APP_LAUNCHED}</h3>
+            <p>{C.GPT_SOVITS_STOP_CONFIRM}</p>
+            <div className="actions">
+              <button className="btn btn-secondary" onClick={() => setConfirmStopGptSoVits(false)}>{C.REFERENCE_AUDIO_DELETE_CANCEL}</button>
+              <button className="btn btn-destructive" onClick={() => void confirmStopAppLaunchedGptSoVits()}>{C.GPT_SOVITS_STOP_APP_LAUNCHED}</button>
             </div>
           </div>
         </div>
