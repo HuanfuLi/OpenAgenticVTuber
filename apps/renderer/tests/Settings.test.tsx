@@ -641,7 +641,19 @@ describe('Settings TTS section', () => {
 
   it('creates, renames, selects, and deletes global presets without avatar catalog mutation', async () => {
     const initialPreset = gptPreset()
-    vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [initialPreset] })
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      voicePresets: [initialPreset],
+      referenceAudioAssets: [{
+        asset_id: 'ref-akari',
+        display_basename: 'akari.wav',
+        managed_path_token: 'reference-audio/ref-akari.wav',
+        transcript_text: 'こんにちは',
+        language: 'ja',
+        format: 'wav',
+        duration_ms: 3000
+      }]
+    })
     vi.mocked(window.api.saveVoicePreset).mockImplementation(async (preset: VoicePreset) => [preset])
     vi.mocked(window.api.deleteVoicePreset).mockResolvedValue([])
 
@@ -692,6 +704,15 @@ describe('Settings TTS section', () => {
       activePresetByAvatarSession = { [`avatar:${avatarId ?? 'global'}|session:${sessionId ?? 'global'}`]: presetId }
       return activePresetByAvatarSession
     })
+    vi.mocked(window.api.pickAndImportReferenceAudio).mockResolvedValue({
+      asset_id: 'ref-second',
+      display_basename: 'second.wav',
+      managed_path_token: 'reference-audio/ref-second-second.wav',
+      transcript_text: 'second reference',
+      language: 'en',
+      format: 'wav',
+      duration_ms: 3000
+    })
 
     const firstRender = renderSettings()
 
@@ -701,13 +722,15 @@ describe('Settings TTS section', () => {
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Second Akari' } })
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT), { target: { value: 'second reference' } })
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'en' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT }))
+    await screen.findByText('second.wav')
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
 
     await waitFor(() => {
       expect(window.api.saveVoicePreset).toHaveBeenCalledWith(expect.objectContaining({
         name: 'Second Akari',
         preset_id: expect.not.stringMatching(initialPreset.preset_id),
-        gpt_sovits: expect.objectContaining({ prompt_text: 'second reference', prompt_lang: 'en' })
+        gpt_sovits: expect.objectContaining({ reference_audio_id: 'ref-second', prompt_text: 'second reference', prompt_lang: 'en' })
       }))
     })
     await waitFor(() => {
@@ -734,11 +757,24 @@ describe('Settings TTS section', () => {
       persistedPresets = [preset]
       return persistedPresets
     })
+    vi.mocked(window.api.pickAndImportReferenceAudio).mockResolvedValue({
+      asset_id: 'ref-persistent',
+      display_basename: 'persistent.wav',
+      managed_path_token: 'reference-audio/ref-persistent-persistent.wav',
+      transcript_text: 'persistent reference',
+      language: 'en',
+      format: 'wav',
+      duration_ms: 3000
+    })
 
     const firstRender = renderSettings()
     await openGptSoVitsSettings()
     await waitForReferenceReady()
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Persistent Akari' } })
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT), { target: { value: 'persistent reference' } })
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'en' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT }))
+    await screen.findByText('persistent.wav')
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
 
     expect(await screen.findByText(COPY.SETTINGS.VOICE_PRESET_SAVE_SUCCESS)).toBeInTheDocument()
@@ -816,13 +852,26 @@ describe('Settings TTS section', () => {
     await openGptSoVitsSettings()
     await waitForReferenceReady()
 
-    expect(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT })).toBeDisabled()
-    expect(screen.getByText(COPY.SETTINGS.REFERENCE_AUDIO_REQUIRED)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT }))
+    expect(screen.getAllByText(COPY.SETTINGS.REFERENCE_AUDIO_REQUIRED).length).toBeGreaterThan(0)
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT), { target: { value: 'hello' } })
-    expect(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT }))
+    expect(screen.getAllByText(COPY.SETTINGS.REFERENCE_AUDIO_REQUIRED).length).toBeGreaterThan(0)
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'en' } })
-    expect(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT })).not.toBeDisabled()
     expect(screen.getByText(COPY.SETTINGS.REFERENCE_AUDIO_READY)).toBeInTheDocument()
+  })
+
+  it('shows why a new preset was not saved when required voice reference information is missing', async () => {
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    await waitForReferenceReady()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_NEW }))
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Broken Akari' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(COPY.SETTINGS.VOICE_PRESET_SAVE_MISSING_REFERENCE)
+    expect(window.api.saveVoicePreset).not.toHaveBeenCalled()
   })
 
   it('shows reference import failures instead of silently dropping them', async () => {

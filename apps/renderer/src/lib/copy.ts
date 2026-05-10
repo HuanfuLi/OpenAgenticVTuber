@@ -254,6 +254,7 @@ export const COPY = {
     VOICE_PRESET_SAVE: 'Save preset',
     VOICE_PRESET_SAVE_SUCCESS: 'Voice preset saved.',
     VOICE_PRESET_SAVE_FAILURE: 'Voice preset could not be saved. Open logs for details.',
+    VOICE_PRESET_SAVE_MISSING_REFERENCE: 'Preset was not saved. Add reference transcript, choose a language, and import or select reference audio first.',
     VOICE_PRESET_DELETE: 'Delete voice preset',
     VOICE_PRESET_DELETE_CONFIRM: 'Delete preset',
     VOICE_PRESET_DELETE_BLOCKED: 'Delete voice preset? Choose another active preset before deleting this one.',

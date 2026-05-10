@@ -1184,6 +1184,7 @@ function TTSSection() {
   const [referenceLanguage, setReferenceLanguage] = useState<ReferenceAudioAsset['language'] | ''>('')
   const [selectedReferenceAssetId, setSelectedReferenceAssetId] = useState('')
   const [referenceStatusText, setReferenceStatusText] = useState<string>(C.REFERENCE_AUDIO_REQUIRED)
+  const [presetValidationText, setPresetValidationText] = useState<string>('')
   const [blockedReferenceDeleteCount, setBlockedReferenceDeleteCount] = useState<number | null>(null)
   const [confirmStopGptSoVits, setConfirmStopGptSoVits] = useState(false)
   const [statusText, setStatusText] = useState<string>(C.GPT_SOVITS_PROVIDER_NOT_READY)
@@ -1408,6 +1409,12 @@ function TTSSection() {
     const draftPreset = createDraftVoicePreset(presetName, selectedPreset)
     const referenceText = selectedReferenceAsset?.transcript_text ?? referenceTranscript.trim()
     const referenceLang = selectedReferenceAsset?.language ?? referenceLanguage
+    if (!referenceText.trim() || !referenceLang || !selectedReferenceAsset) {
+      setPresetValidationText(C.VOICE_PRESET_SAVE_MISSING_REFERENCE)
+      setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
+      setStatusText(C.VOICE_PRESET_SAVE_MISSING_REFERENCE)
+      return
+    }
     const nextPreset = {
       ...draftPreset,
       gpt_sovits: {
@@ -1424,6 +1431,7 @@ function TTSSection() {
       setVoicePresets(nextPresets)
       setStoredCfg((cur) => cur ? { ...cur, voicePresets: nextPresets } : cur)
       presetTouchedRef.current = false
+      setPresetValidationText('')
       setSelectedPresetId(nextPreset.preset_id)
       setPresetName(nextPreset.name)
       const map = await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, nextPreset.preset_id)
@@ -1434,6 +1442,7 @@ function TTSSection() {
           : C.VOICE_PRESET_SAVE_FAILURE
       )
     } catch {
+      setPresetValidationText(C.VOICE_PRESET_SAVE_FAILURE)
       setStatusText(C.VOICE_PRESET_SAVE_FAILURE)
     }
   }
@@ -1450,6 +1459,7 @@ function TTSSection() {
     setTestPassed(false)
     setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
     setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
+    setPresetValidationText('')
   }
 
   const selectVoicePreset = async (presetId: string): Promise<void> => {
@@ -1467,6 +1477,7 @@ function TTSSection() {
         ? C.REFERENCE_AUDIO_READY
         : C.REFERENCE_AUDIO_REQUIRED
     )
+    setPresetValidationText('')
     const map = await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, presetId)
     if (map) setActivePresetByAvatarSession(map)
   }
@@ -1658,6 +1669,7 @@ function TTSSection() {
             <button className="btn btn-secondary" type="button" onClick={() => void savePreset()}>{C.VOICE_PRESET_SAVE}</button>
             <button className="btn btn-destructive" type="button" onClick={requestDeletePreset} disabled={!selectedPreset}>{C.VOICE_PRESET_DELETE}</button>
           </div>
+          {presetValidationText && <div className="banner warn tts-inline-banner" role="alert">{presetValidationText}</div>}
           <div className="tx-sm muted mt-2">{C.VOICE_PRESET_ACTIVE_NOTE}</div>
           <div className="group-label mt-4">{C.REFERENCE_AUDIO_HEADER}</div>
           <div className="field">
@@ -1701,7 +1713,6 @@ function TTSSection() {
             type="button"
             onClick={() => void importReferenceAudio()}
             aria-describedby="reference-audio-status"
-            disabled={referenceRequired}
           >
             {C.REFERENCE_AUDIO_IMPORT}
           </button>

@@ -10,7 +10,7 @@ source:
   - 17-06-SUMMARY.md
   - 17-07-SUMMARY.md
 started: 2026-05-10T00:00:00Z
-updated: 2026-05-10T03:35:00Z
+updated: 2026-05-10T03:45:00Z
 ---
 
 # Phase 17 UAT - GPT-SoVITS Provider + Voice Presets
@@ -136,14 +136,14 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
   reason: "User reported reference import was not clearly blocked without transcript/language and preset save overwrote the selected preset when trying to create a different named/configured preset."
   severity: blocker
   test: 3
-  root_cause: "Reference import relied on disabled-button state and silently returned in the handler without visible validation feedback. Voice preset editing had no explicit new-preset mode, so Save always derived from the selected preset id and overwrote it. The first fix still allowed async Settings hydration to overwrite user-edited preset/reference fields after typing, which made valid new-preset saves and import-failure messaging appear to disappear."
+  root_cause: "Reference import relied on disabled-button state and silently returned in the handler without visible validation feedback. Voice preset editing had no explicit new-preset mode, so Save always derived from the selected preset id and overwrote it. The first fix still allowed async Settings hydration to overwrite user-edited preset/reference fields after typing, which made valid new-preset saves and import-failure messaging appear to disappear. The second fix still treated missing reference data mostly as an import-button validation issue; Save itself needed to block incomplete GPT-SoVITS presets with a visible reason."
   artifacts:
     - path: "apps/renderer/src/screens/Settings/Settings.tsx"
-      issue: "Added explicit New preset action that clears selected preset state so Save creates a distinct preset id; added visible reference transcript/language validation/import failure status; guarded late async hydration from clobbering user-edited preset/reference fields."
+      issue: "Added explicit New preset action that clears selected preset state so Save creates a distinct preset id; added visible reference transcript/language validation/import failure status; guarded late async hydration from clobbering user-edited preset/reference fields; made Save preset show a prominent inline error and skip persistence when reference transcript/language/audio are incomplete."
     - path: "apps/renderer/src/lib/copy.ts"
-      issue: "Added New preset and reference-required copy."
+      issue: "Added New preset, reference-required, and preset-save-missing-reference copy."
     - path: "apps/renderer/tests/Settings.test.tsx"
-      issue: "Added regression coverage that New preset creates a separate preset instead of overwriting the selected one, persists as active across Settings reload, and import failures remain visible."
+      issue: "Added regression coverage that New preset creates a separate preset instead of overwriting the selected one, persists as active across Settings reload, import failures remain visible, and incomplete new preset saves show why nothing was saved."
   missing:
     - "User retest confirmation that invalid reference import is blocked with visible feedback and New preset creates a second preset."
   debug_session: ""
@@ -178,3 +178,6 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
 - `npm --workspace apps/electron-main run build` - passed after audited Test 3 hydration/UX fix.
 - `uv run --project sidecar python -m pytest sidecar/tests/test_sidecar_boot.py -q` - passed after audited Test 3 hydration/UX fix, 10 tests.
 - `uv run --project sidecar python -m pytest sidecar/tests/tts/test_gpt_sovits_provider.py sidecar/tests/admin/test_audio_test_tts_endpoint.py sidecar/tests/admin/test_audio_status_endpoint.py sidecar/tests/admin/test_reference_audio_validation_endpoint.py sidecar/tests/test_tts_gateway.py sidecar/tests/test_tts_manager.py sidecar/tests/test_sidecar_boot.py -q` - passed after audited Test 3 hydration/UX fix, 44 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after Save-preset missing-reference UX fix, 47 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after Save-preset missing-reference UX fix, 52 tests.
+- `npm --workspace apps/renderer run typecheck` - passed after Save-preset missing-reference UX fix.
