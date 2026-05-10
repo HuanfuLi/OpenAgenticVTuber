@@ -3,7 +3,17 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import type { WSMessage } from '@contracts/ws-message'
 
 const wsClientMock = vi.hoisted(() => ({
-  listener: null as ((msg: WSMessage) => void) | null
+  listener: null as ((msg: WSMessage) => void) | null,
+  listeners: new Set<(msg: WSMessage) => void>(),
+  reconnectListeners: new Set<(url: string, previousUrl: string | null) => void>(),
+  dispatch(msg: WSMessage): void {
+    for (const listener of Array.from(this.listeners)) listener(msg)
+  },
+  reset(): void {
+    this.listener = null
+    this.listeners.clear()
+    this.reconnectListeners.clear()
+  }
 }))
 
 const playAudioPayloadMock = vi.hoisted(() => vi.fn())
@@ -12,9 +22,20 @@ vi.mock('@/ws/client', () => ({
   send: vi.fn(() => true),
   subscribe: vi.fn((listener: (msg: WSMessage) => void) => {
     wsClientMock.listener = listener
-    return () => undefined
+    wsClientMock.listeners.add(listener)
+    return () => {
+      wsClientMock.listeners.delete(listener)
+      if (wsClientMock.listener === listener) {
+        wsClientMock.listener = wsClientMock.listeners.values().next().value ?? null
+      }
+    }
   }),
-  subscribeSidecarReconnect: vi.fn(() => () => undefined),
+  subscribeSidecarReconnect: vi.fn((listener: (url: string, previousUrl: string | null) => void) => {
+    wsClientMock.reconnectListeners.add(listener)
+    return () => {
+      wsClientMock.reconnectListeners.delete(listener)
+    }
+  }),
   subscribeState: vi.fn((listener: (open: boolean) => void) => {
     listener(true)
     return () => undefined
@@ -39,10 +60,30 @@ import { Chat } from '@/screens/Chat/Chat'
 import { _internalState, resetStreaming } from '@/screens/Chat/useStreamingMessages'
 import type { ConversationSession } from '@preload-types'
 
+type StoreModule = typeof import('@/ws/store')
+
 async function loadDispatcher(): Promise<(msg: WSMessage) => void> {
   await import('@/ws/store')
   if (!wsClientMock.listener) throw new Error('WS dispatcher did not subscribe')
   return wsClientMock.listener
+}
+
+async function loadStore(): Promise<StoreModule> {
+  return import('@/ws/store')
+}
+
+function normalAudio(text = 'Hello!'): WSMessage {
+  return {
+    type: 'audio',
+    audio: 'UklGRg==',
+    dispatches: [],
+    display_text: { avatar: 'Teto', name: '', text },
+    failed_audio: null,
+    forwarded: false,
+    sentence_id: 1,
+    slice_length: 20,
+    volumes: []
+  }
 }
 
 function failedGptAudio(text = 'The visible sentence.'): WSMessage {
@@ -79,6 +120,7 @@ describe('Chat streaming failed-audio surface', () => {
   beforeEach(() => {
     resetStreaming()
     playAudioPayloadMock.mockClear()
+    wsClientMock.reset()
     Object.defineProperty(window, 'api', {
       configurable: true,
       value: {
@@ -110,6 +152,48 @@ describe('Chat streaming failed-audio surface', () => {
         openVtsDocs: vi.fn().mockResolvedValue(undefined),
         restartSidecar: vi.fn().mockResolvedValue(undefined)
       }
+    })
+  })
+
+  describe('UAT Test 6 duplicate dispatcher regression', () => {
+    it('keeps one active audio dispatcher when store registration is requested twice', async () => {
+      const store = await loadStore()
+
+      store.ensureWSStoreSubscriptions()
+      store.ensureWSStoreSubscriptions()
+
+      expect(wsClientMock.listeners.size).toBe(1)
+      expect(wsClientMock.reconnectListeners.size).toBe(1)
+    })
+
+    it('replaces Thinking exactly once for one audio payload after duplicate registration simulation', async () => {
+      const store = await loadStore()
+      store.ensureWSStoreSubscriptions()
+      store.ensureWSStoreSubscriptions()
+
+      wsClientMock.dispatch({ type: 'control', text: 'conversation-chain-start' })
+      wsClientMock.dispatch(normalAudio('Hello!'))
+
+      expect(_internalState().messages).toHaveLength(1)
+      expect(_internalState().messages[0]?.text).toBe('Hello!')
+      expect(_internalState().messages[0]?.text).not.toBe('Hello!Hello!')
+      expect(playAudioPayloadMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('records one failed GPT-SoVITS sentence and no audio playback after duplicate registration simulation', async () => {
+      const store = await loadStore()
+      store.ensureWSStoreSubscriptions()
+      store.ensureWSStoreSubscriptions()
+
+      wsClientMock.dispatch(failedGptAudio('Failed but visible once.'))
+
+      expect(_internalState().messages).toHaveLength(1)
+      expect(_internalState().messages[0]?.text).toBe('Failed but visible once.')
+      expect(_internalState().messages[0]?.audioFailures).toHaveLength(1)
+      expect(_internalState().messages[0]?.audioFailures[0]).toEqual(
+        expect.objectContaining({ sentenceId: 7, failedProviderId: 'gpt_sovits' })
+      )
+      expect(playAudioPayloadMock).not.toHaveBeenCalled()
     })
   })
 
