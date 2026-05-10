@@ -62,7 +62,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 **Phase Numbering:** v3.0 continues after shipped v2.1 Phases 11-15. Planned work starts at Phase 16.
 
 - [x] **Phase 16: Audio Contracts + TTS Provider Shell** - Sidecar-owned audio contracts, versioned config migration, Piper adapter, and provider failure semantics. Complete after focused live audio retest passed on 2026-05-09.
-- [x] **Phase 17: GPT-SoVITS Provider + Voice Presets** - GPT-SoVITS external/app-launched provider, test synthesis, reference audio, named presets, and visible failed-audio chat/UAT evidence. Complete after plan 17-07 automated regression passed; live-server UAT remains environment-dependent.
+- [x] **Phase 17: GPT-SoVITS Provider + Voice Presets** - GPT-SoVITS external/app-launched provider, test synthesis, reference audio, named presets, and visible failed-audio chat/UAT evidence. Complete after plan 17-08 per-preset validation gap closure; live-server UAT remains environment-dependent.
 - [ ] **Phase 18: Rich Voice Settings + Persistence** - User-facing audio settings, provider catalog labels, privacy copy, credential redaction, and diagnostics.
 - [ ] **Phase 19: STT Provider Abstraction + Local/Cloud Providers** - FunASR, faster-whisper, OpenAI, and Groq through one lazy-loaded STT provider layer.
 - [ ] **Phase 20: Renderer Voice Capture + PTT/VAD Preview UX** - Microphone capture, push-to-talk, VAD controls, transcript preview, and final-text submission through the existing chat path.
@@ -105,7 +105,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
   3. User can create, rename, select, and delete named voice presets with backend-specific tuning controls.
   4. User can import GPT-SoVITS reference audio into sanitized app-managed storage and see validation failures before using it.
   5. When GPT-SoVITS fails, the user sees a visible failure/fallback state and the app never silently changes provider mid-turn.
-**Plans**: 7 plans
+**Plans**: 8 plans
 **Plan list**:
 - [x] 17-01-PLAN.md — Contracts and blocking Phase 16 UAT gate
 - [x] 17-02-PLAN.md — Preset persistence and reference-audio validation IPC
@@ -114,6 +114,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - [x] 17-05-PLAN.md — App-managed GPT-SoVITS launch lifecycle
 - [x] 17-06-PLAN.md — Settings provider, preset, reference-audio, and audible test UI
 - [x] 17-07-PLAN.md — Chat failure surface, final regression, and UAT
+- [x] 17-08-PLAN.md — Per-preset GPT-SoVITS validation evidence and activation gap closure
 **UI hint**: yes
 
 ### Phase 18: Rich Voice Settings + Persistence
@@ -220,7 +221,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 | 14. Plugin Developer Docs + Plugin Swap Hardening | v2.1 | 4/4 | Complete | 2026-05-09 |
 | 15. Mock Boundary Audit | v2.1 | 1/1 | Complete | 2026-05-09 |
 | 16. Audio Contracts + TTS Provider Shell | v3.0 | 4/4 | Complete | 2026-05-09 |
-| 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 7/7 | Complete | 2026-05-10 |
+| 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 8/8 | Complete | 2026-05-10 |
 | 18. Rich Voice Settings + Persistence | v3.0 | 0/3 | Planned | - |
 | 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 0/4 | Planned | - |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 0/TBD | Not started | - |
@@ -243,4 +244,4 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - v3.0 excludes GPT-SoVITS installer/training/voice cloning, wake-word activation, translation before LLM submission, barge-in interruption, silent cloud STT fallback, and any promise that no-headphones/AEC is solved before Phase 22 evidence.
 
 ---
-*Last updated: 2026-05-10 after Phase 17 plan 17-07 execution*
+*Last updated: 2026-05-10 after Phase 17 plan 17-08 gap closure*
