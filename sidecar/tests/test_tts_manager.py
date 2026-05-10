@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import re
+import threading
 import wave
 from io import BytesIO
 from typing import Any
@@ -79,6 +80,17 @@ def _pcm_wav_b64(sample_rate: int = 22050, pcm: bytes = b"\x01\x00\x02\x00") -> 
         wf.setframerate(sample_rate)
         wf.writeframes(pcm)
     return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+
+def _decode_wav_b64(audio_b64: str) -> tuple[int, int]:
+    decoded = base64.b64decode(audio_b64)
+    with wave.open(BytesIO(decoded), "rb") as wf:
+        return wf.getframerate(), wf.getnframes()
+
+
+async def _wait_for_ws_writes(ws: _FakeWS, count: int) -> None:
+    while len(ws.writes) < count:
+        await asyncio.sleep(0.001)
 
 
 @pytest.mark.asyncio
@@ -220,7 +232,7 @@ async def test_sender_uses_locked_order_for_non_silent_payload(monkeypatch):
     await manager.speak("hello.", _display("hello."), _dispatches(), 1, ws)
     await manager.wait_for_all_audio_complete()
 
-    assert observed == ["queue-put", "ws-send", "write"]
+    assert observed == ["ws-send", "queue-put", "write"]
     assert envelope is not None
     assert envelope.sentence_id == 1
     assert envelope.started_at == pytest.approx(50.2)
@@ -228,6 +240,55 @@ async def test_sender_uses_locked_order_for_non_silent_payload(monkeypatch):
     assert isinstance(stream.writes[0], np.ndarray)
     assert stream.writes[0].dtype == np.dtype("int16")
     assert stream.writes[0].tolist() == [1, 2]
+
+
+@pytest.mark.asyncio
+async def test_sender_does_not_block_next_payload_on_local_playback(monkeypatch):
+    class BlockingWriteStream(_FakeStream):
+        def __init__(self) -> None:
+            super().__init__()
+            self.write_started = threading.Event()
+            self.release_write = threading.Event()
+
+        def write(self, pcm: Any) -> None:
+            self.write_started.set()
+            self.release_write.wait(timeout=1)
+            super().write(pcm)
+
+    stream = BlockingWriteStream()
+    ws = _FakeWS()
+    speech_queue: asyncio.Queue = asyncio.Queue()
+    manager = TTSTaskManager(stream=stream, compositor_speech_queue=speech_queue)
+
+    async def fake_prepare(*, tts_text, display_text, dispatches, sentence_id):
+        return (
+            {
+                "type": "audio",
+                "audio": _pcm_wav_b64(),
+                "volumes": [0.2],
+                "slice_length": 20,
+                "display_text": display_text.model_dump(),
+                "dispatches": [a.model_dump() for a in dispatches],
+                "sentence_id": sentence_id,
+                "forwarded": False,
+            },
+            bytes([sentence_id, 0]),
+            22050,
+        )
+
+    monkeypatch.setattr(manager, "_synthesize_payload", fake_prepare)
+
+    await manager.speak("first.", _display("first."), _dispatches(), 1, ws)
+    await manager.speak("second.", _display("second."), _dispatches(), 2, ws)
+
+    await asyncio.to_thread(stream.write_started.wait, 1)
+    await asyncio.wait_for(_wait_for_ws_writes(ws, 2), timeout=1)
+    assert [w["sentence_id"] for w in ws.writes] == [1, 2]
+    assert stream.writes == []
+
+    stream.release_write.set()
+    await manager.wait_for_all_audio_complete()
+    assert len(stream.writes) == 2
 
 
 @pytest.mark.asyncio
@@ -398,6 +459,46 @@ async def test_provider_synthesis_runs_off_event_loop():
     await manager.wait_for_all_audio_complete()
     assert [call.sentence_id for call in provider.calls] == [1]
     assert ws.writes[0]["audio"] is not None
+    assert stream.writes[0].tolist() == [1, 2]
+
+
+@pytest.mark.asyncio
+async def test_provider_synthesis_resamples_to_stream_sample_rate_for_playback_payload_and_rms():
+    class MismatchedRateProvider(_BlockingProvider):
+        provider_id = "gpt_sovits"
+        sample_rate = 24000
+
+        def synthesize(self, request: TTSSynthesisRequest) -> TTSSynthesisResult:
+            self.calls.append(request)
+            returned_rate = 32000
+            samples = (
+                np.sin(2 * np.pi * 220 * np.arange(returned_rate // 10) / returned_rate) * 20000
+            ).astype(np.int16)
+            return TTSSynthesisResult(
+                pcm_int16=samples.tobytes(),
+                sample_rate=returned_rate,
+                provider_id="gpt_sovits",
+            )
+
+    stream = _FakeStream()
+    ws = _FakeWS()
+    speech_queue: asyncio.Queue = asyncio.Queue()
+    provider = MismatchedRateProvider()
+    manager = TTSTaskManager(stream=stream, compositor_speech_queue=speech_queue, provider=provider)
+
+    await manager.speak("hello.", _display("hello."), _dispatches(), 1, ws)
+    await manager.wait_for_all_audio_complete()
+
+    assert [call.sentence_id for call in provider.calls] == [1]
+    assert len(stream.writes) == 1
+    assert len(stream.writes[0]) == 2400
+    assert ws.writes[0]["audio"] is not None
+    wav_rate, wav_frames = _decode_wav_b64(ws.writes[0]["audio"])
+    assert wav_rate == 24000
+    assert wav_frames == 2400
+    assert len(ws.writes[0]["volumes"]) == 5
+    envelope = await speech_queue.get()
+    assert len(envelope.volumes) == 5
 
 
 @pytest.mark.asyncio

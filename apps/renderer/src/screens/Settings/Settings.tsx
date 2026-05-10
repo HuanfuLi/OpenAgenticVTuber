@@ -1049,6 +1049,7 @@ function DiagnosticsSection({ onResetClick }: { onResetClick: () => void }) {
 
 // -------- §5 TTS / Voice out ---------------------------------------------
 type TtsProviderChoice = 'piper' | 'gpt_sovits'
+const GPT_SOVITS_LANGUAGE_OPTIONS: GptSoVitsPresetConfig['text_lang'][] = ['auto', 'en', 'ja', 'zh', 'ko', 'yue']
 
 function defaultGptSoVitsConfig(): GptSoVitsProviderConfig {
   return {
@@ -1095,6 +1096,8 @@ function createDraftVoicePreset(name: string, existing?: VoicePreset | null, for
         prompt_text: '',
         prompt_lang: 'auto',
         text_lang: 'auto',
+        gpt_weights_path: null,
+        sovits_weights_path: null,
         reference_audio_id: null,
         top_k: 15,
         top_p: 1,
@@ -1194,6 +1197,9 @@ function TTSSection() {
   const [selectedPresetId, setSelectedPresetId] = useState<string>('')
   const [activePresetByAvatarSession, setActivePresetByAvatarSession] = useState<Record<string, string>>({})
   const [presetName, setPresetName] = useState('')
+  const [textLanguage, setTextLanguage] = useState<GptSoVitsPresetConfig['text_lang']>('auto')
+  const [gptWeightsPath, setGptWeightsPath] = useState('')
+  const [sovitsWeightsPath, setSovitsWeightsPath] = useState('')
   const [blockedDeletePreset, setBlockedDeletePreset] = useState<VoicePreset | null>(null)
   const [deleteReplacementPresetId, setDeleteReplacementPresetId] = useState('')
   const [confirmDeletePreset, setConfirmDeletePreset] = useState<VoicePreset | null>(null)
@@ -1254,6 +1260,9 @@ function TTSSection() {
         if (!presetTouchedRef.current) {
           setSelectedPresetId(initialPreset?.preset_id ?? '')
           setPresetName(initialPreset?.name ?? '')
+          setTextLanguage(initialPreset?.gpt_sovits.text_lang ?? 'auto')
+          setGptWeightsPath(initialPreset?.gpt_sovits.gpt_weights_path ?? '')
+          setSovitsWeightsPath(initialPreset?.gpt_sovits.sovits_weights_path ?? '')
         }
         if (!referenceTouchedRef.current) {
           const firstReferenceId = initialPreset?.gpt_sovits.reference_audio_id ?? cfg?.referenceAudioAssets?.[0]?.asset_id ?? ''
@@ -1280,6 +1289,17 @@ function TTSSection() {
   const healthState = audioStatus?.state ?? 'unavailable'
   const healthClass = healthState === 'ok' ? 'green' : healthState === 'unavailable' ? 'amber' : 'red'
   const selectedPreset = voicePresets.find((preset) => preset.preset_id === selectedPresetId) ?? null
+  const applyDraftGptSoVitsFields = (preset: VoicePreset | null): VoicePreset | null => preset
+    ? {
+        ...preset,
+        gpt_sovits: {
+          ...preset.gpt_sovits,
+          text_lang: textLanguage || preset.gpt_sovits.text_lang,
+          gpt_weights_path: gptWeightsPath.trim() || null,
+          sovits_weights_path: sovitsWeightsPath.trim() || null
+        }
+      }
+    : null
   const selectedReferenceAsset = referenceAudioAssets.find((asset) => asset.asset_id === selectedReferenceAssetId) ?? null
   const deleteReplacementOptions = blockedDeletePreset ? voicePresets.filter((preset) => preset.preset_id !== blockedDeletePreset.preset_id) : []
   const referenceRequired = !referenceTranscript.trim() || !referenceLanguage
@@ -1288,7 +1308,7 @@ function TTSSection() {
     : referenceStatusText === C.REFERENCE_AUDIO_REQUIRED
       ? C.REFERENCE_AUDIO_READY
       : referenceStatusText
-  const testCandidatePreset = withSelectedReferenceAsset(selectedPreset, selectedReferenceAsset)
+  const testCandidatePreset = withSelectedReferenceAsset(applyDraftGptSoVitsFields(selectedPreset), selectedReferenceAsset)
   const currentValidationFingerprint = testCandidatePreset
     ? buildGptSoVitsPresetValidationFingerprint(candidate, testCandidatePreset)
     : null
@@ -1344,7 +1364,14 @@ function TTSSection() {
   }
 
   const runHealthCheck = async (): Promise<void> => {
-    const status = await window.api.checkGptSoVitsHealth({ config: candidate })
+    if (!testCandidatePreset) {
+      setHealthPassed(false)
+      setTestPassed(false)
+      setLastTestFingerprint(null)
+      setStatusText(C.VOICE_PRESET_SAVE_NO_SELECTION)
+      return
+    }
+    const status = await window.api.checkGptSoVitsHealth({ config: candidate, preset: testCandidatePreset })
     const passed = status.state === 'ok'
     setAudioStatus(status)
     setHealthPassed(passed)
@@ -1496,7 +1523,10 @@ function TTSSection() {
         ...draftPreset.gpt_sovits,
         reference_audio_id: selectedReferenceAsset?.asset_id ?? draftPreset.gpt_sovits.reference_audio_id,
         prompt_text: referenceText || draftPreset.gpt_sovits.prompt_text,
-        prompt_lang: referenceLang || draftPreset.gpt_sovits.prompt_lang
+        prompt_lang: referenceLang || draftPreset.gpt_sovits.prompt_lang,
+        text_lang: textLanguage || draftPreset.gpt_sovits.text_lang,
+        gpt_weights_path: gptWeightsPath.trim() || null,
+        sovits_weights_path: sovitsWeightsPath.trim() || null
       }
     }
     try {
@@ -1510,6 +1540,9 @@ function TTSSection() {
       setPresetSaveBlockReasons(null)
       setSelectedPresetId(nextPreset.preset_id)
       setPresetName(nextPreset.name)
+      setTextLanguage(nextPreset.gpt_sovits.text_lang)
+      setGptWeightsPath(nextPreset.gpt_sovits.gpt_weights_path ?? '')
+      setSovitsWeightsPath(nextPreset.gpt_sovits.sovits_weights_path ?? '')
       const map = await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, nextPreset.preset_id)
       if (map) setActivePresetByAvatarSession(map)
       setStatusText(
@@ -1530,6 +1563,9 @@ function TTSSection() {
     const preset = voicePresets.find((item) => item.preset_id === presetId)
     setSelectedPresetId(presetId)
     setPresetName(preset?.name ?? '')
+    setTextLanguage(preset?.gpt_sovits.text_lang ?? 'auto')
+    setGptWeightsPath(preset?.gpt_sovits.gpt_weights_path ?? '')
+    setSovitsWeightsPath(preset?.gpt_sovits.sovits_weights_path ?? '')
     setSelectedReferenceAssetId(preset?.gpt_sovits.reference_audio_id ?? '')
     const referenceAsset = referenceAudioAssets.find((asset) => asset.asset_id === preset?.gpt_sovits.reference_audio_id)
     setReferenceTranscript(referenceAsset?.transcript_text ?? preset?.gpt_sovits.prompt_text ?? '')
@@ -1713,15 +1749,18 @@ function TTSSection() {
             </div>
           ) : (
             <div className="radio-group" role="radiogroup" aria-label={C.VOICE_PRESETS_HEADER}>
-              {voicePresets.map((preset) => (
-                <RadioRow
-                  key={preset.preset_id}
-                  id={preset.preset_id}
-                  label={`${preset.name} — ${preset.provider_id} · ${preset.gpt_sovits.text_lang} · ${presetValidationLabel(getGptSoVitsPresetValidationState(candidate, preset))}`}
-                  checked={selectedPreset?.preset_id === preset.preset_id}
-                  onChange={(id) => void selectVoicePreset(id)}
-                />
-              ))}
+              {voicePresets.map((preset) => {
+                const displayPreset = preset.preset_id === selectedPresetId ? (applyDraftGptSoVitsFields(preset) ?? preset) : preset
+                return (
+                  <RadioRow
+                    key={preset.preset_id}
+                    id={preset.preset_id}
+                    label={`${displayPreset.name} — ${displayPreset.provider_id} · ${displayPreset.gpt_sovits.text_lang} · ${presetValidationLabel(getGptSoVitsPresetValidationState(candidate, displayPreset))}`}
+                    checked={selectedPreset?.preset_id === preset.preset_id}
+                    onChange={(id) => void selectVoicePreset(id)}
+                  />
+                )
+              })}
             </div>
           )}
           <div className="field">
@@ -1735,6 +1774,54 @@ function TTSSection() {
                 setPresetName(e.target.value)
               }}
             />
+          </div>
+          <div className="field">
+            <label className="label" htmlFor="gpt-sovits-text-language">{C.GPT_SOVITS_TEXT_LANGUAGE}</label>
+            <select
+              id="gpt-sovits-text-language"
+              className="select"
+              value={textLanguage}
+              onChange={(e) => {
+                presetTouchedRef.current = true
+                setTextLanguage(e.target.value as GptSoVitsPresetConfig['text_lang'])
+                setTestPassed(false)
+                setLastTestFingerprint(null)
+              }}
+            >
+              {GPT_SOVITS_LANGUAGE_OPTIONS.map((language) => (
+                <option key={language} value={language}>{language}</option>
+              ))}
+            </select>
+            <div className="tx-sm muted mt-1">{C.GPT_SOVITS_TEXT_LANGUAGE_HELP}</div>
+          </div>
+          <div className="field">
+            <label className="label" htmlFor="gpt-sovits-gpt-weights">{C.GPT_SOVITS_GPT_WEIGHTS_PATH}</label>
+            <input
+              id="gpt-sovits-gpt-weights"
+              className="input"
+              value={gptWeightsPath}
+              onChange={(e) => {
+                presetTouchedRef.current = true
+                setGptWeightsPath(e.target.value)
+                setTestPassed(false)
+                setLastTestFingerprint(null)
+              }}
+            />
+          </div>
+          <div className="field">
+            <label className="label" htmlFor="gpt-sovits-sovits-weights">{C.GPT_SOVITS_SOVITS_WEIGHTS_PATH}</label>
+            <input
+              id="gpt-sovits-sovits-weights"
+              className="input"
+              value={sovitsWeightsPath}
+              onChange={(e) => {
+                presetTouchedRef.current = true
+                setSovitsWeightsPath(e.target.value)
+                setTestPassed(false)
+                setLastTestFingerprint(null)
+              }}
+            />
+            <div className="tx-sm muted mt-1">{C.GPT_SOVITS_WEIGHTS_PATH_HELP}</div>
           </div>
           <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn btn-primary" type="button" onClick={() => void persistVoicePreset('create')}>{C.VOICE_PRESET_NEW}</button>

@@ -122,6 +122,8 @@ export function buildGptSoVitsPresetValidationFingerprint(
         prompt_text: preset.gpt_sovits.prompt_text,
         prompt_lang: preset.gpt_sovits.prompt_lang,
         text_lang: preset.gpt_sovits.text_lang,
+        gpt_weights_path: normalizeString(preset.gpt_sovits.gpt_weights_path),
+        sovits_weights_path: normalizeString(preset.gpt_sovits.sovits_weights_path),
         top_k: preset.gpt_sovits.top_k,
         top_p: preset.gpt_sovits.top_p,
         temperature: preset.gpt_sovits.temperature,

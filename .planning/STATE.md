@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
 status: ready_for_next_phase
-stopped_at: Phase 17 plan 17-09 duplicate-dispatch gap closure complete; ready for Phase 18 planning/execution after live Test 6 retest remains pending
-last_updated: "2026-05-10T00:05:16Z"
-last_activity: 2026-05-10 - Phase 17 plan 17-09 duplicate GPT-SoVITS chat text gap closure completed
+stopped_at: Phase 17 plan 17-12 gap closure baseline complete; ready for Phase 18
+last_updated: "2026-05-10T06:17:00Z"
+last_activity: 2026-05-10 - Phase 17 plan 17-12 lipsync velocity and sentence-latency gap closure completed
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 19
-  completed_plans: 13
-  percent: 68
+  total_plans: 27
+  completed_plans: 16
+  percent: 28
 ---
 
 # Project State
@@ -27,29 +27,29 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 Phase: 18 of 22 (Rich Voice Settings + Persistence)
 Plan: Ready to plan/execute Phase 18
-Status: Phase 17 duplicate-dispatch gap closure complete with live Test 6 retest still pending; ready for next phase
-Last activity: 2026-05-10 - Phase 17 plan 17-09 duplicate GPT-SoVITS chat text gap closure completed
+Status: Phase 17 gap closures complete; ready for next phase
+Last activity: 2026-05-10 - Phase 17 plan 17-12 lipsync velocity and sentence-latency gap closure completed
 
-Progress: [███████░░░] 13/19 planned v3.0 plans complete
+Progress: [███░░░░░░░] 16/27 planned v3.0 plans complete
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed in v3.0: 9
-- Average duration: 8 min
-- Total execution time: 55 min
+- Total plans completed in v3.0: 12
+- Average duration: 10 min
+- Total execution time: 117 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 16. Audio Contracts + TTS Provider Shell | 4/4 | same-session | same-session |
-| 17. GPT-SoVITS Provider + Voice Presets | 9/9 | 73 min | 8 min |
+| 17. GPT-SoVITS Provider + Voice Presets | 12/12 | 117 min | 10 min |
 | 18. Rich Voice Settings + Persistence | 0/TBD | - | - |
 | 19. STT Provider Abstraction + Local/Cloud Providers | 0/TBD | - | - |
-| 20. Renderer Voice Capture + PTT/VAD Preview UX | 0/TBD | - | - |
-| 21. Code-Switch Evaluation + Hardening | 0/TBD | - | - |
+| 20. Renderer Voice Capture + PTT/VAD Preview UX | 0/4 | - | - |
+| 21. Code-Switch Evaluation + Hardening | 0/4 | - | - |
 | 22. AEC Spike + No-Headphones Decision | 0/TBD | - | - |
 
 ## Accumulated Context
@@ -71,11 +71,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 17 plan 17-07 added visible GPT-SoVITS failed-audio chat state, final cross-tier regression evidence, and environment-blocked live-server UAT tracking.
 - Phase 17 plan 17-08 added per-preset GPT-SoVITS validation evidence, deterministic fingerprint invalidation, and validated preset switching with sidecar restart.
 - Phase 17 plan 17-09 made renderer WebSocket store registration idempotent/HMR-safe to prevent duplicate visible GPT-SoVITS chat text; live Test 6 remains awaiting user retest.
+- Phase 17 plan 17-10 aligned GPT-SoVITS returned PCM, renderer WAV payloads, and RMS envelopes to the output stream sample rate.
+- Phase 17 plan 17-11 added per-preset GPT/SoVITS weight paths and independent synthesized Text language validation.
+- Phase 17 plan 17-12 decoupled websocket audio delivery from sidecar playback, queued renderer audio playback, and damped GPT-SoVITS mouth motion.
 
 ### Pending Todos
 
-- Retest Phase 17 UAT Test 6 with a live active GPT-SoVITS chat turn; 17-09 automated gap closure did not claim the manual pass.
-- Plan/execute Phase 18 Rich Voice Settings + Persistence.
+- Execute Phase 18 Rich Voice Settings + Persistence.
 
 ### Blockers/Concerns
 
@@ -89,7 +91,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 17 plan 17-05 scopes stop/restart to the tracked app-owned child process only; external servers return not-app-managed status.
 - Phase 17 plan 17-06 keeps GPT-SoVITS activation behind health plus audible test synthesis and keeps preset/reference deletes guarded.
 - Phase 17 plan 17-07 keeps GPT-SoVITS chat failures visible without raw diagnostics inline and does not save config or switch to Piper from chat failure handling.
-- Phase 17 code review blockers were fixed and final `17-REVIEW.md` is clean; `17-VERIFICATION.md` passed all 5 roadmap success criteria with live-server UAT documented as environment-blocked.
+- Phase 17 live retests after 17-10 through 17-12 remain useful for user confidence, but automated coverage and verification allow Phase 18 to proceed.
+- Phase 17 code review blockers were fixed and final `17-REVIEW.md` is clean; `17-VERIFICATION.md` passed all 5 roadmap success criteria.
 
 ## Deferred Items
 
@@ -101,6 +104,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-10T03:42:03Z
-Stopped at: Completed 17-09-PLAN.md duplicate-dispatch gap closure; ready for Phase 18 with Test 6 live retest pending
+Last session: 2026-05-10T06:17:00Z
+Stopped at: Completed 17-12-PLAN.md gap closure baseline; ready for Phase 18
 Resume file: None

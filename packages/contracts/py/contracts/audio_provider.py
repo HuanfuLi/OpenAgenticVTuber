@@ -77,6 +77,7 @@ class GptSoVitsProviderConfig(BaseModel):
 
 class GptSoVitsHealthRequest(BaseModel):
     config: GptSoVitsProviderConfig
+    preset: "VoicePreset"
 
 
 class GptSoVitsTestSynthesisRequest(BaseModel):
@@ -125,4 +126,5 @@ class AudioProviderContracts(BaseModel):
 from .voice_preset import VoicePreset  # noqa: E402
 
 GptSoVitsTestSynthesisRequest.model_rebuild()
+GptSoVitsHealthRequest.model_rebuild()
 AudioProviderContracts.model_rebuild()

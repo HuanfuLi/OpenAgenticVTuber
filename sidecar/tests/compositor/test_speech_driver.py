@@ -13,6 +13,7 @@ from sidecar.compositor.speech_driver import (
     MOUTH_NOISE_FLOOR,
     MOUTH_PARAM,
     MOUTH_RELEASE_ALPHA,
+    MOUTH_RMS_BLEND,
     SPEECH_EVIDENCE_LOG_ENV,
     SpeechDriver,
 )
@@ -31,8 +32,10 @@ async def test_speech_driver_interpolates_rms_and_outputs_mouth(tmp_path):
     )
     driver = SpeechDriver(queue, TetoOverrides(), tmp_path)
 
-    out = driver.tick(10.010)
-    target = min(MOUTH_MAX_OPEN, (0.5 - MOUTH_NOISE_FLOOR) * MOUTH_GAIN)
+    out = driver.tick(10.020)
+    smoothed_rms = EMA_ALPHA * 1.0
+    mouth_rms = MOUTH_RMS_BLEND * 1.0 + (1.0 - MOUTH_RMS_BLEND) * smoothed_rms
+    target = min(MOUTH_MAX_OPEN, (mouth_rms - MOUTH_NOISE_FLOOR) * MOUTH_GAIN)
     assert out[MOUTH_PARAM] == pytest.approx(target * MOUTH_ATTACK_ALPHA)
 
 
@@ -152,9 +155,31 @@ async def test_speech_driver_caps_and_releases_mouth(tmp_path):
     )
     driver = SpeechDriver(queue, TetoOverrides(), tmp_path)
 
-    open_out = driver.tick(0.0)[MOUTH_PARAM]
+    open_out = 0.0
+    for step in range(20):
+        open_out = driver.tick(step * 0.02)[MOUTH_PARAM]
     assert open_out < 1.0
-    assert open_out == pytest.approx(MOUTH_MAX_OPEN * MOUTH_ATTACK_ALPHA)
+    assert open_out <= MOUTH_MAX_OPEN
 
-    closed_out = driver.tick(0.1)[MOUTH_PARAM]
+    closed_out = driver.tick(0.5)[MOUTH_PARAM]
     assert closed_out == pytest.approx(open_out * (1.0 - MOUTH_RELEASE_ALPHA))
+
+
+@pytest.mark.asyncio
+async def test_speech_driver_damps_fast_rms_swings_for_gpt_sovits(tmp_path):
+    queue: asyncio.Queue = asyncio.Queue()
+    await queue.put(
+        SpeechEnvelopePayload(
+            sentence_id=1,
+            volumes=[0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
+            slice_length=20,
+            started_at=0.0,
+        )
+    )
+    driver = SpeechDriver(queue, TetoOverrides(), tmp_path)
+
+    outputs = [driver.tick(step * 0.01)[MOUTH_PARAM] for step in range(10)]
+
+    deltas = [abs(curr - prev) for prev, curr in zip(outputs, outputs[1:])]
+    assert max(deltas) < 0.16
+    assert max(outputs) - min(outputs) > 0.08

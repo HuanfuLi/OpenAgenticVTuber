@@ -48,9 +48,11 @@ def _client() -> TestClient:
 
 
 def test_gpt_sovits_health_returns_candidate_health_without_activation(monkeypatch) -> None:
+    provider_kwargs: list[dict] = []
+
     class _Provider:
-        def __init__(self, **_kwargs) -> None:
-            pass
+        def __init__(self, **kwargs) -> None:
+            provider_kwargs.append(kwargs)
 
         def health(self) -> AudioProviderHealth:
             return AudioProviderHealth(
@@ -64,12 +66,46 @@ def test_gpt_sovits_health_returns_candidate_health_without_activation(monkeypat
     with _client() as client:
         client.app.state.audio_config = AudioConfig()
         before = client.app.state.audio_config.model_dump()
-        body = client.post("/admin/audio/gpt-sovits/health", json={"config": _request()["config"]}).json()
+        body = client.post("/admin/audio/gpt-sovits/health", json={"config": _request()["config"], "preset": _request()["preset"]}).json()
         after = client.app.state.audio_config.model_dump()
 
     assert body["provider_id"] == "gpt_sovits"
     assert body["state"] == "ok"
+    assert provider_kwargs[0]["preset"].preset_id == "preset-1"
     assert before == after
+
+
+def test_gpt_sovits_health_surfaces_set_weight_failures_from_candidate_preset(monkeypatch) -> None:
+    provider_kwargs: list[dict] = []
+
+    class _Provider:
+        def __init__(self, **kwargs) -> None:
+            provider_kwargs.append(kwargs)
+
+        def health(self) -> AudioProviderHealth:
+            return AudioProviderHealth(
+                provider_id="gpt_sovits",
+                kind="tts",
+                state="external_service_failure",
+                summary="GPT-SoVITS GPT weight selection failed.",
+                detail="HTTP 500: missing GPT weights",
+                retryable=True,
+            )
+
+    request = _request()
+    request["preset"]["gpt_sovits"]["gpt_weights_path"] = "missing.ckpt"
+    monkeypatch.setattr(audio_module, "GptSoVitsProvider", _Provider)
+
+    with _client() as client:
+        body = client.post(
+            "/admin/audio/gpt-sovits/health",
+            json={"config": request["config"], "preset": request["preset"]},
+        ).json()
+
+    assert body["provider_id"] == "gpt_sovits"
+    assert body["state"] == "external_service_failure"
+    assert "GPT weight selection failed" in body["summary"]
+    assert provider_kwargs[0]["preset"].gpt_sovits.gpt_weights_path == "missing.ckpt"
 
 
 def test_test_synthesis_rejects_reference_path_outside_managed_storage(tmp_path, monkeypatch) -> None:

@@ -11,6 +11,9 @@ source:
   - 17-07-SUMMARY.md
   - 17-08-SUMMARY.md
   - 17-09-SUMMARY.md
+  - 17-10-SUMMARY.md
+  - 17-11-SUMMARY.md
+  - 17-12-SUMMARY.md
 started: 2026-05-10T00:00:00Z
 updated: 2026-05-10T05:45:00Z
 ---
@@ -19,7 +22,7 @@ updated: 2026-05-10T05:45:00Z
 
 ## Current Test
 
-[partial - reopened for Plan 17-10 sample-rate/lipsync and Plan 17-11 GPT/SoVITS weight-selection regressions]
+[partial - reopened for Plan 17-10 sample-rate/lipsync, Plan 17-11 GPT/SoVITS weight-selection, and Plan 17-12 lipsync velocity / sentence-latency regressions]
 
 ## Tests
 
@@ -86,8 +89,9 @@ blocked: 0
 | Code review | PASS | `17-REVIEW.md` status is clean after fixes. |
 | Goal verification | PASS | `17-VERIFICATION.md` passed 5/5 roadmap success criteria. |
 | Plan 17-08 per-preset validation regression | PASS | `npm run check:contracts`; renderer Settings/Chat tests; renderer typecheck; Electron main focused tests; Electron main build; and sidecar boot/gateway tests all passed on 2026-05-10 after per-preset validation gap closure. |
-| Plan 17-10 sample-rate/lipsync regression | PENDING | Planned in `17-10-PLAN.md`; no pass claimed until focused sidecar tests and live non-stream-rate GPT-SoVITS retest are recorded. |
-| Plan 17-11 GPT/SoVITS weight-selection regression | PENDING | Planned in `17-11-PLAN.md`; no pass claimed until contract/renderer/provider/admin-route tests and live valid/invalid weight-path retest are recorded. |
+| Plan 17-10 sample-rate/lipsync regression | AUTOMATED PASS / LIVE PENDING | `uv run --project sidecar python -m pytest sidecar/tests/test_audio_payload_helpers.py sidecar/tests/test_tts_manager.py sidecar/tests/test_tts_gateway.py -q` passed 31 tests on 2026-05-10 after stream-rate PCM/WAV/RMS alignment. No live pass claimed until non-stream-rate GPT-SoVITS retest is recorded. |
+| Plan 17-11 GPT/SoVITS weight + text-language selection regression | AUTOMATED PARTIAL / LIVE PARTIAL | Sidecar provider/admin tests passed 14 tests; renderer Settings tests passed 57 tests; renderer typecheck passed; Electron GPT-SoVITS IPC tests passed 8 tests. User confirmed GPT-SoVITS now uses the correct sound after weight/text-language fixes. `npm run check:contracts` regenerated expected TS/schema files but its git-diff gate remains pending until generated contract changes are committed. Invalid weight-path live retest remains pending. |
+| Plan 17-12 lipsync velocity and sentence-latency regression | AUTOMATED PASS / LIVE PENDING | Compared OLVT `conversations/tts_manager.py` and `utils/stream_audio.py`; fixed sidecar payload delivery so WS sends are no longer blocked by local `sounddevice` playback, added renderer audio queue to prevent overlap, and damped mouth movement by using smoothed RMS with lower gain/attack. `uv run --project sidecar python -m pytest sidecar/tests/test_tts_manager.py sidecar/tests/compositor/test_speech_driver.py -q` passed 21 tests; related TTS/provider/admin tests passed 33 tests; renderer WS audio tests passed 16 tests; renderer typecheck and `npm run build` passed. Live GPT-SoVITS latency/lipsync-velocity retest remains pending. |
 
 ## Previous Live Server Availability
 
@@ -109,25 +113,25 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
     - path: "sidecar/tests/test_audio_payload_helpers.py"
       issue: "Plan 17-10 will prove mismatched 32k/48k returns align to stream-rate payload/write bytes and matching-rate behavior is a no-op."
   missing:
-    - "Execute Plan 17-10 focused tests."
     - "Live retest with GPT-SoVITS returning a non-stream-rate WAV: activate preset, send a long sentence, confirm audible speech and mouth/RMS motion end together."
+    - "Live retest confirms mouth movement is no longer too fast/overactive during GPT-SoVITS speech."
   debug_session: ""
 
-- truth: "Selecting GPT-SoVITS shows health/test controls that validate the selected voice preset, including its intended GPT and SoVITS model weights, before activation."
+- truth: "Selecting GPT-SoVITS shows health/test controls that validate the selected voice preset, including its intended synthesized text language plus GPT and SoVITS model weights, before activation."
   status: testing
-  reason: "Checker blocker: current health flow sends config only and uses `_dummy_health_preset()`, so per-preset GPT/SoVITS weight paths cannot be checked and set-weight failures can falsely pass health. Plan 17-11 covers per-preset weight fields, validation fingerprinting, Settings health payload, provider/admin set-weight application, and actual app/admin route tests."
+  reason: "Checker blocker: current health flow sends config only and uses `_dummy_health_preset()`, so per-preset GPT/SoVITS weight paths cannot be checked and set-weight failures can falsely pass health. Additional OLVT parity blocker: current Settings exposes reference/prompt language but not a separate synthesized Text language control, so `text_lang: zh` with `prompt_lang: ja` cannot be configured reliably. Plan 17-11 covers per-preset text language and weight fields, validation fingerprinting, Settings health payload, provider/admin set-weight application, and actual app/admin route tests."
   severity: blocker
   test: 1
-  root_cause: "GPT-SoVITS `/tts` payload does not select model weights; the server's current external state determines voice identity unless `/set_gpt_weights` and `/set_sovits_weights` are called. Health currently constructs a dummy preset and cannot apply candidate preset weights."
+  root_cause: "GPT-SoVITS `/tts` payload does not select model weights; the server's current external state determines voice identity unless `/set_gpt_weights` and `/set_sovits_weights` are called. Health currently constructs a dummy preset and cannot apply candidate preset weights. The app contract has `text_lang`, but Settings does not expose it separately from reference language, which blocks OLVT parity for Chinese synthesized text with Japanese reference audio."
   artifacts:
     - path: "packages/contracts/py/contracts/voice_preset.py"
       issue: "Plan 17-11 will add optional per-preset `gpt_weights_path` and `sovits_weights_path`."
     - path: "packages/contracts/py/contracts/audio_provider.py"
       issue: "Plan 17-11 will update `GptSoVitsHealthRequest` to carry the selected/test candidate preset."
     - path: "packages/contracts/ts/gpt-sovits-validation.ts"
-      issue: "Plan 17-11 will include both weight paths in validation fingerprints so changes require health/test again."
+      issue: "Plan 17-11 will include synthesized text language and both weight paths in validation fingerprints so changes require health/test again."
     - path: "apps/renderer/src/screens/Settings/Settings.tsx"
-      issue: "Plan 17-11 will send the current candidate preset for health and expose/carry weight path fields through create/update/test/activation."
+      issue: "Plan 17-11 will send the current candidate preset for health and expose/carry separate synthesized Text language plus weight path fields through create/update/test/activation."
     - path: "sidecar/src/sidecar/admin/audio.py"
       issue: "Plan 17-11 will remove dummy health preset use and pass the route candidate preset into provider health."
     - path: "sidecar/src/sidecar/tts/gpt_sovits_provider.py"
@@ -135,8 +139,8 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
     - path: "sidecar/tests/admin/test_audio_test_tts_endpoint.py"
       issue: "Plan 17-11 will add actual app/admin route tests proving set-weight failures fail candidate health."
   missing:
-    - "Execute Plan 17-11 contract, renderer, provider, and admin-route tests."
-    - "Live retest with valid Teto or user-selected weights, then invalid GPT/SoVITS weight paths, confirming health/test/activation fail visibly instead of falling back to Piper."
+    - "Commit generated contract changes so `npm run check:contracts` can pass its git-diff gate."
+    - "Live retest with invalid GPT/SoVITS weight paths, confirming health/test/activation fail visibly instead of falling back to Piper."
   debug_session: ""
 
 - truth: "In Settings -> TTS, Piper is available as a selectable local provider. Selecting GPT-SoVITS shows a single Base URL field, lets you run a health check, and does not activate GPT-SoVITS until a voice preset and audible test synthesis also pass."

@@ -22,15 +22,23 @@ def _wav_bytes(sample_rate: int = 24_000, pcm: bytes = b"\x01\x00\x02\x00") -> b
     return buf.getvalue()
 
 
-def _preset() -> VoicePreset:
+def _preset(
+    *,
+    text_lang: str = "ja",
+    prompt_lang: str = "ja",
+    gpt_weights_path: str | None = None,
+    sovits_weights_path: str | None = None,
+) -> VoicePreset:
     return VoicePreset(
         preset_id="preset-1",
         name="Teto GPT",
         provider_id="gpt_sovits",
         gpt_sovits=GptSoVitsPresetConfig(
             prompt_text="今日も一緒に頑張ろうね。",
-            prompt_lang="ja",
-            text_lang="ja",
+            prompt_lang=prompt_lang,
+            text_lang=text_lang,
+            gpt_weights_path=gpt_weights_path,
+            sovits_weights_path=sovits_weights_path,
             top_k=15,
             top_p=1.0,
             temperature=1.0,
@@ -162,6 +170,110 @@ def test_payload_includes_required_gpt_sovits_fields(tmp_path: Path) -> None:
             "repetition_penalty": 1.35,
         }
     ]
+
+
+def test_payload_preserves_olvt_language_split(tmp_path: Path) -> None:
+    reference = tmp_path / "ref.wav"
+    reference.write_bytes(_wav_bytes())
+    seen_payloads: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_payloads.append(__import__("json").loads(request.content))
+        return httpx.Response(200, content=_wav_bytes(), headers={"content-type": "audio/wav"})
+
+    provider = GptSoVitsProvider(
+        config=_config(),
+        preset=_preset(text_lang="zh", prompt_lang="ja"),
+        reference_audio=reference,
+        transport=httpx.MockTransport(handler),
+    )
+
+    provider.synthesize(TTSSynthesisRequest(text="你好", sentence_id=7))
+
+    assert seen_payloads[0]["text_lang"] == "zh"
+    assert seen_payloads[0]["prompt_lang"] == "ja"
+
+
+def test_provider_applies_configured_weights_before_synthesis_and_skips_redundant_repeat(tmp_path: Path) -> None:
+    reference = tmp_path / "ref.wav"
+    reference.write_bytes(_wav_bytes())
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if request.url.path.endswith("/tts"):
+            return httpx.Response(200, content=_wav_bytes(), headers={"content-type": "audio/wav"})
+        return httpx.Response(200, json={"ok": True})
+
+    provider = GptSoVitsProvider(
+        config=_config(),
+        preset=_preset(
+            gpt_weights_path="GPT_weights_v2Pro/teto_v1-e15.ckpt",
+            sovits_weights_path="SoVITS_weights_v2Pro/teto_v1_e8_s160.pth",
+        ),
+        reference_audio=reference,
+        transport=httpx.MockTransport(handler),
+    )
+
+    provider.synthesize(TTSSynthesisRequest(text="こんにちは", sentence_id=1))
+    provider.synthesize(TTSSynthesisRequest(text="もう一回", sentence_id=2))
+
+    assert seen == [
+        "http://127.0.0.1:9880/base/set_gpt_weights?weights_path=GPT_weights_v2Pro%2Fteto_v1-e15.ckpt",
+        "http://127.0.0.1:9880/base/set_sovits_weights?weights_path=SoVITS_weights_v2Pro%2Fteto_v1_e8_s160.pth",
+        "http://127.0.0.1:9880/base/tts",
+        "http://127.0.0.1:9880/base/tts",
+    ]
+
+
+def test_weight_selection_failures_fail_health_and_synthesis(tmp_path: Path) -> None:
+    reference = tmp_path / "ref.wav"
+    reference.write_bytes(_wav_bytes())
+
+    def failing_gpt_handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/set_gpt_weights"):
+            return httpx.Response(500, json={"message": "missing GPT weights"})
+        return httpx.Response(200, content=_wav_bytes(), headers={"content-type": "audio/wav"})
+
+    provider = GptSoVitsProvider(
+        config=_config(),
+        preset=_preset(gpt_weights_path="missing.ckpt"),
+        reference_audio=reference,
+        transport=httpx.MockTransport(failing_gpt_handler),
+    )
+
+    health = provider.health()
+    assert health.state == "external_service_failure"
+    assert "GPT weight selection failed" in health.summary
+    assert "missing GPT weights" in (health.detail or "")
+
+    with pytest.raises(TTSProviderError) as exc_info:
+        provider.synthesize(TTSSynthesisRequest(text="こんにちは", sentence_id=1))
+    assert exc_info.value.state == "external_service_failure"
+    assert "GPT weight selection failed" in exc_info.value.summary
+
+
+def test_sovits_weight_selection_failure_reports_sovits_label(tmp_path: Path) -> None:
+    reference = tmp_path / "ref.wav"
+    reference.write_bytes(_wav_bytes())
+
+    def failing_sovits_handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/set_sovits_weights"):
+            return httpx.Response(404, json={"detail": "missing SoVITS weights"})
+        return httpx.Response(200, json={"ok": True})
+
+    provider = GptSoVitsProvider(
+        config=_config(),
+        preset=_preset(sovits_weights_path="missing.pth"),
+        reference_audio=reference,
+        transport=httpx.MockTransport(failing_sovits_handler),
+    )
+
+    health = provider.health()
+
+    assert health.state == "external_service_failure"
+    assert "SoVITS weight selection failed" in health.summary
+    assert "missing SoVITS weights" in (health.detail or "")
 
 
 def test_health_requires_successful_docs_response(tmp_path: Path) -> None:

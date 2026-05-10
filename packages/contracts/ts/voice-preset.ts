@@ -25,11 +25,13 @@ export interface VoicePreset {
 }
 export interface GptSoVitsPresetConfig {
   batch_size: number;
+  gpt_weights_path: string | null;
   media_type: 'wav';
   prompt_lang: 'zh' | 'en' | 'ja' | 'ko' | 'yue' | 'auto';
   prompt_text: string;
   reference_audio_id: string | null;
   repetition_penalty: number;
+  sovits_weights_path: string | null;
   speed_factor: number;
   streaming_mode: boolean;
   temperature: number;

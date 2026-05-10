@@ -64,6 +64,7 @@ class GptSoVitsCandidateRequest(BaseModel):
 
 class GptSoVitsHealthCandidateRequest(BaseModel):
     config: GptSoVitsProviderConfig
+    preset: VoicePreset
 
 
 def _redacted_diagnostics(display_basename: str, summary: str) -> str:
@@ -149,10 +150,6 @@ def _validate_managed_reference_path(candidate: Path) -> dict[str, object] | Non
     return None
 
 
-def _dummy_health_preset() -> VoicePreset:
-    return VoicePreset(preset_id="health-check", name="Health check", provider_id="gpt_sovits")
-
-
 @router.get("/status")
 async def get_audio_status(request: Request) -> dict[str, object]:
     health = getattr(request.app.state, "audio_provider_health", None)
@@ -170,7 +167,7 @@ async def post_gpt_sovits_health(payload: GptSoVitsHealthCandidateRequest) -> di
     try:
         provider = GptSoVitsProvider(
             config=payload.config,
-            preset=_dummy_health_preset(),
+            preset=payload.preset,
             reference_audio="health-check.wav",
         )
     except TTSProviderError as exc:

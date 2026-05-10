@@ -48,6 +48,23 @@ def get_volume_by_chunks(
     return (rms_per_chunk / max_rms).tolist()
 
 
+def _resample_mono_int16(pcm_int16: bytes, source_rate: int, target_rate: int) -> bytes:
+    if not pcm_int16 or source_rate <= 0 or target_rate <= 0 or source_rate == target_rate:
+        return pcm_int16
+
+    samples = np.frombuffer(pcm_int16, dtype=np.int16)
+    if len(samples) == 0:
+        return pcm_int16
+    target_len = max(1, int(round(len(samples) * target_rate / source_rate)))
+    if target_len == len(samples):
+        return pcm_int16
+
+    source_positions = np.arange(len(samples), dtype=np.float64)
+    target_positions = np.linspace(0, len(samples) - 1, target_len, dtype=np.float64)
+    resampled = np.interp(target_positions, source_positions, samples.astype(np.float64))
+    return np.clip(np.rint(resampled), -32768, 32767).astype(np.int16).tobytes()
+
+
 def prepare_payload_from_pcm(
     pcm_int16: bytes,
     sample_rate: int,
@@ -55,26 +72,30 @@ def prepare_payload_from_pcm(
     dispatches: list[Dispatch],
     sentence_id: int,
     chunk_length_ms: int = 20,
+    target_sample_rate: int | None = None,
 ) -> tuple[AudioPayloadMessage, bytes, int]:
     """Build the existing audio envelope from provider-neutral PCM output."""
+    output_sample_rate = target_sample_rate if target_sample_rate and target_sample_rate > 0 else sample_rate
     if not pcm_int16:
         msg = AudioPayloadMessage(
             audio=None, volumes=[], slice_length=chunk_length_ms,
             display_text=display_text, dispatches=dispatches, sentence_id=sentence_id,
             forwarded=False,
         )
-        return msg, b"", sample_rate
+        return msg, b"", output_sample_rate
+
+    output_pcm_int16 = _resample_mono_int16(pcm_int16, sample_rate, output_sample_rate)
 
     # Volumes: numpy chunk-RMS over the same bytes.
-    volumes = get_volume_by_chunks(pcm_int16, sample_rate, chunk_length_ms)
+    volumes = get_volume_by_chunks(output_pcm_int16, output_sample_rate, chunk_length_ms)
 
     # base64 WAV: assemble header in-memory via stdlib wave.
     wav_buf = BytesIO()
     with wave.open(wav_buf, "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(2)        # int16 = 2 bytes
-        wf.setframerate(sample_rate)
-        wf.writeframes(pcm_int16)
+        wf.setframerate(output_sample_rate)
+        wf.writeframes(output_pcm_int16)
     audio_b64 = base64.b64encode(wav_buf.getvalue()).decode("utf-8")
 
     msg = AudioPayloadMessage(
@@ -86,7 +107,7 @@ def prepare_payload_from_pcm(
         sentence_id=sentence_id,
         forwarded=False,
     )
-    return msg, pcm_int16, sample_rate
+    return msg, output_pcm_int16, output_sample_rate
 
 
 def synthesize_and_prepare_payload(

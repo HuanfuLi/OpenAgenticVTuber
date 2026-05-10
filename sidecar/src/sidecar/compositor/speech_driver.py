@@ -17,10 +17,11 @@ from plugins.default.body_sway import build_strategy
 EMA_ALPHA = 0.2
 MOUTH_PARAM = "MouthOpen"
 MOUTH_NOISE_FLOOR = 0.05
-MOUTH_GAIN = 0.9
-MOUTH_MAX_OPEN = 0.7
-MOUTH_ATTACK_ALPHA = 0.55
-MOUTH_RELEASE_ALPHA = 0.45
+MOUTH_GAIN = 0.6
+MOUTH_MAX_OPEN = 0.5
+MOUTH_ATTACK_ALPHA = 0.42
+MOUTH_RELEASE_ALPHA = 0.34
+MOUTH_RMS_BLEND = 0.65
 SPEECH_EVIDENCE_LOG_ENV = "AGENTICLLMVTUBER_SPEECH_EVIDENCE_LOG"
 SPEECH_EVIDENCE_LOG_INTERVAL_S = 0.25
 
@@ -54,7 +55,8 @@ class SpeechDriver:
         self._drain_queue()
         rms = self._current_rms(now)
         self._rms_smooth = EMA_ALPHA * rms + (1.0 - EMA_ALPHA) * self._rms_smooth
-        mouth = self._smooth_mouth(self._mouth_target(rms))
+        mouth_rms = MOUTH_RMS_BLEND * rms + (1.0 - MOUTH_RMS_BLEND) * self._rms_smooth
+        mouth = self._smooth_mouth(self._mouth_target(mouth_rms))
         body_params = self._strategy.tick(self._rms_smooth, now)
         out = {MOUTH_PARAM: mouth}
         out.update(body_params)

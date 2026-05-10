@@ -93,6 +93,8 @@ describe('Settings TTS section', () => {
       prompt_text: 'こんにちは',
       prompt_lang: 'ja',
       text_lang: 'ja',
+      gpt_weights_path: null,
+      sovits_weights_path: null,
       reference_audio_id: 'ref-akari',
       top_k: 15,
       top_p: 1,
@@ -554,6 +556,70 @@ describe('Settings TTS section', () => {
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
     await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
     expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })).toBeDisabled()
+  })
+
+  it('marks text language and weight edits as changed since last test', async () => {
+    const config = gptConfig()
+    const validated = validatedGptPreset(config)
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      audio: { ...defaultAudioConfig(), tts: { ...defaultAudioConfig().tts, gpt_sovits: config } },
+      voicePresets: [validated]
+    })
+
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    expect(await screen.findByRole('radio', { name: /Akari bright.*Validated/i })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_TEXT_LANGUAGE), { target: { value: 'zh' } })
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_GPT_WEIGHTS_PATH), { target: { value: 'GPT_weights_v2Pro/teto_v1-e15.ckpt' } })
+
+    expect(await screen.findByRole('radio', { name: /Akari bright.*zh.*Changed since last test/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })).toBeDisabled()
+  })
+
+  it('sends health with candidate preset text language, reference language, and weight paths', async () => {
+    const preset = gptPreset()
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [preset] })
+
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_TEXT_LANGUAGE), { target: { value: 'zh' } })
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_GPT_WEIGHTS_PATH), { target: { value: 'GPT_weights_v2Pro/teto_v1-e15.ckpt' } })
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_SOVITS_WEIGHTS_PATH), { target: { value: 'SoVITS_weights_v2Pro/teto_v1_e8_s160.pth' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
+
+    await waitFor(() => {
+      expect(window.api.checkGptSoVitsHealth).toHaveBeenCalledWith(expect.objectContaining({
+        config: expect.objectContaining({ provider_id: 'gpt_sovits' }),
+        preset: expect.objectContaining({
+          gpt_sovits: expect.objectContaining({
+            text_lang: 'zh',
+            prompt_lang: 'ja',
+            gpt_weights_path: 'GPT_weights_v2Pro/teto_v1-e15.ckpt',
+            sovits_weights_path: 'SoVITS_weights_v2Pro/teto_v1_e8_s160.pth'
+          })
+        })
+      }))
+    })
+  })
+
+  it('keeps synthesized text language independent from reference language', async () => {
+    const preset = gptPreset({ gpt_sovits: { ...gptPreset().gpt_sovits, text_lang: 'zh', prompt_lang: 'ja' } })
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [preset] })
+
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
+    expect(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_TEXT_LANGUAGE)).toHaveValue('zh')
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'en' } })
+
+    expect(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_TEXT_LANGUAGE)).toHaveValue('zh')
   })
 
   it('persists validation metadata onto the selected preset only after successful test synthesis', async () => {

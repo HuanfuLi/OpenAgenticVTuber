@@ -67,12 +67,8 @@ export interface PiperTTSConfig {
   voice_model: string
 }
 export interface GptSoVitsHealthRequest {
-  config: GptSoVitsProviderConfig
-}
-export interface GptSoVitsTestSynthesisRequest {
   config: GptSoVitsProviderConfig;
-  preset: VoicePreset;
-  text: string
+  preset: VoicePreset
 }
 
 export interface GptSoVitsPresetValidation {
@@ -82,6 +78,11 @@ export interface GptSoVitsPresetValidation {
   summary: string | null;
   test_synthesis_at: string | null;
   validated_at: string
+}
+export interface GptSoVitsTestSynthesisRequest {
+  config: GptSoVitsProviderConfig;
+  preset: VoicePreset;
+  text: string
 }
 export interface GptSoVitsTestSynthesisResult {
   audio_base64: string | null;

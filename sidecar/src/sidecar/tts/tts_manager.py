@@ -27,6 +27,14 @@ class _QueuedPayload:
     pcm_bytes: bytes
 
 
+@dataclass
+class _PlaybackPayload:
+    sentence_id: int
+    volumes: list[float]
+    slice_length: int
+    pcm_bytes: bytes
+
+
 class TTSTaskManager:
     """OLVT-style ordered sender with sidecar-side playback."""
 
@@ -38,20 +46,35 @@ class TTSTaskManager:
         extra_speech_queues: list[asyncio.Queue[SpeechEnvelopePayload]] | None = None,
         voice: Any | None = None,
         provider: TTSProvider | None = None,
+        stream_sample_rate: int | None = None,
     ) -> None:
         self._stream = stream
         self._voice = voice
         self._provider = provider
+        self._stream_sample_rate = self._resolve_stream_sample_rate(stream_sample_rate)
         self.compositor_speech_queue = compositor_speech_queue
         self.compositor_sentence_complete_queue = compositor_sentence_complete_queue
         self.extra_speech_queues = extra_speech_queues or []
         self.task_list: list[asyncio.Task[None]] = []
         self._payload_queue: asyncio.Queue[_QueuedPayload] = asyncio.Queue()
+        self._playback_queue: asyncio.Queue[_PlaybackPayload] = asyncio.Queue()
         self._sender_task: asyncio.Task[None] | None = None
+        self._playback_task: asyncio.Task[None] | None = None
         self._sequence_counter = 0
         self._next_sequence_to_send = 0
         self._last_write_finished_at: float | None = None
         self._last_sentence_id: int | None = None
+
+    def _resolve_stream_sample_rate(self, configured_sample_rate: int | None) -> int | None:
+        for value in (
+            configured_sample_rate,
+            getattr(self._stream, "samplerate", None),
+            getattr(self._provider, "sample_rate", None),
+            getattr(getattr(self._voice, "config", None), "sample_rate", None),
+        ):
+            if isinstance(value, (int, float)) and value > 0:
+                return int(value)
+        return None
 
     async def speak(
         self,
@@ -80,6 +103,7 @@ class TTSTaskManager:
         if self.task_list:
             await asyncio.gather(*self.task_list)
         await self._payload_queue.join()
+        await self._playback_queue.join()
         if self._last_write_finished_at is not None:
             drain_start = time.perf_counter()
             await asyncio.sleep(float(self._stream.latency) + 0.020)
@@ -95,7 +119,10 @@ class TTSTaskManager:
         self.task_list.clear()
         if self._sender_task is not None:
             self._sender_task.cancel()
+        if self._playback_task is not None:
+            self._playback_task.cancel()
         self._payload_queue = asyncio.Queue()
+        self._playback_queue = asyncio.Queue()
         self._sequence_counter = 0
         self._next_sequence_to_send = 0
         self._last_write_finished_at = None
@@ -104,6 +131,10 @@ class TTSTaskManager:
     def _ensure_sender_task(self, ws: WebSocket) -> None:
         if self._sender_task is None or self._sender_task.done():
             self._sender_task = asyncio.create_task(self._process_payload_queue(ws))
+
+    def _ensure_playback_task(self) -> None:
+        if self._playback_task is None or self._playback_task.done():
+            self._playback_task = asyncio.create_task(self._process_playback_queue())
 
     async def _process_tts(
         self,
@@ -231,6 +262,7 @@ class TTSTaskManager:
                 display_text,
                 dispatches,
                 sentence_id,
+                target_sample_rate=self._stream_sample_rate,
             )
         if self._voice is None:
             raise TTSProviderError(
@@ -249,7 +281,6 @@ class TTSTaskManager:
 
     async def _process_payload_queue(self, ws: WebSocket) -> None:
         buffered_payloads: dict[int, _QueuedPayload] = {}
-        loop = asyncio.get_running_loop()
 
         while True:
             queued = await self._payload_queue.get()
@@ -260,45 +291,55 @@ class TTSTaskManager:
                     next_payload = buffered_payloads.pop(self._next_sequence_to_send)
                     payload = next_payload.payload
 
+                    await ws.send_json(payload.model_dump())
                     if payload.audio is not None and next_payload.pcm_bytes:
-                        pcm_int16 = np.frombuffer(next_payload.pcm_bytes, dtype=np.int16)
-                        started_at = float(self._stream.time) + float(self._stream.latency)
-                        logger.info(
-                            f"[TTS-WRITE-START] sentence_id={next_payload.sentence_id} "
-                            f"started_at={started_at:.6f} volumes_n={len(payload.volumes)} "
-                            f"slice_ms={payload.slice_length}"
-                        )
-                        speech_envelope = SpeechEnvelopePayload(
-                            sentence_id=next_payload.sentence_id,
-                            volumes=payload.volumes,
-                            slice_length=payload.slice_length,
-                            started_at=started_at,
-                        )
-                        await self.compositor_speech_queue.put(speech_envelope)
-                        for speech_queue in self.extra_speech_queues:
-                            await speech_queue.put(speech_envelope)
-                        await ws.send_json(payload.model_dump())
-
-                        write_start = time.perf_counter()
-                        xrun = await loop.run_in_executor(
-                            None,
-                            self._stream.write,
-                            pcm_int16,
-                        )
-                        self._last_write_finished_at = time.perf_counter()
-                        self._last_sentence_id = next_payload.sentence_id
-                        if self.compositor_sentence_complete_queue is not None:
-                            await self.compositor_sentence_complete_queue.put(
-                                next_payload.sentence_id
+                        self._ensure_playback_task()
+                        await self._playback_queue.put(
+                            _PlaybackPayload(
+                                sentence_id=next_payload.sentence_id,
+                                volumes=payload.volumes,
+                                slice_length=payload.slice_length,
+                                pcm_bytes=next_payload.pcm_bytes,
                             )
-                        logger.info(
-                            f"[TTS-WRITE-END] sentence_id={next_payload.sentence_id} "
-                            f"write_ms={(self._last_write_finished_at - write_start) * 1000:.2f} "
-                            f"xrun={bool(xrun)}"
                         )
-                    else:
-                        await ws.send_json(payload.model_dump())
 
                     self._next_sequence_to_send += 1
             finally:
                 self._payload_queue.task_done()
+
+    async def _process_playback_queue(self) -> None:
+        loop = asyncio.get_running_loop()
+
+        while True:
+            playback = await self._playback_queue.get()
+            try:
+                pcm_int16 = np.frombuffer(playback.pcm_bytes, dtype=np.int16)
+                started_at = float(self._stream.time) + float(self._stream.latency)
+                logger.info(
+                    f"[TTS-WRITE-START] sentence_id={playback.sentence_id} "
+                    f"started_at={started_at:.6f} volumes_n={len(playback.volumes)} "
+                    f"slice_ms={playback.slice_length}"
+                )
+                speech_envelope = SpeechEnvelopePayload(
+                    sentence_id=playback.sentence_id,
+                    volumes=playback.volumes,
+                    slice_length=playback.slice_length,
+                    started_at=started_at,
+                )
+                await self.compositor_speech_queue.put(speech_envelope)
+                for speech_queue in self.extra_speech_queues:
+                    await speech_queue.put(speech_envelope)
+
+                write_start = time.perf_counter()
+                xrun = await loop.run_in_executor(None, self._stream.write, pcm_int16)
+                self._last_write_finished_at = time.perf_counter()
+                self._last_sentence_id = playback.sentence_id
+                if self.compositor_sentence_complete_queue is not None:
+                    await self.compositor_sentence_complete_queue.put(playback.sentence_id)
+                logger.info(
+                    f"[TTS-WRITE-END] sentence_id={playback.sentence_id} "
+                    f"write_ms={(self._last_write_finished_at - write_start) * 1000:.2f} "
+                    f"xrun={bool(xrun)}"
+                )
+            finally:
+                self._playback_queue.task_done()

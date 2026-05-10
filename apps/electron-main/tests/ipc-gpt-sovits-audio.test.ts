@@ -136,6 +136,8 @@ function candidatePreset(): VoicePreset {
       prompt_text: 'hello reference',
       prompt_lang: 'en',
       text_lang: 'en',
+      gpt_weights_path: null,
+      sovits_weights_path: null,
       top_k: 15,
       top_p: 1,
       temperature: 1,
@@ -199,7 +201,7 @@ describe('GPT-SoVITS audio IPC handlers', () => {
     }
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(health) })
     vi.stubGlobal('fetch', fetchMock)
-    const request: GptSoVitsHealthRequest = { config: candidateConfig() }
+    const request: GptSoVitsHealthRequest = { config: candidateConfig(), preset: candidatePreset() }
 
     await expect(invoke<AudioProviderHealth>('gptSovits:checkHealth', request)).resolves.toEqual(health)
     expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:8765/admin/audio/gpt-sovits/health', {

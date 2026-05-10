@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { playAudioPayload } from '@/ws/audio-player'
+import { playAudioPayload, resetAudioPlaybackQueueForTests } from '@/ws/audio-player'
 
 class MockAudioElement {
   src: string
@@ -36,6 +36,7 @@ describe('playAudioPayload', () => {
     objectUrlCounter = 0
     nextPlayResult = Promise.resolve()
     vi.restoreAllMocks()
+    resetAudioPlaybackQueueForTests()
 
     vi.stubGlobal('Audio', MockAudioElement)
     vi.spyOn(URL, 'createObjectURL').mockImplementation(() => {
@@ -62,6 +63,20 @@ describe('playAudioPayload', () => {
 
     expect(URL.revokeObjectURL).toHaveBeenCalledTimes(1)
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:audio-1')
+  })
+
+  it('queues payloads so sentence audio does not overlap', () => {
+    playAudioPayload(btoa('RIFF-first'))
+    playAudioPayload(btoa('RIFF-second'))
+
+    expect(mockAudioElements).toHaveLength(1)
+    expect(mockAudioElements[0]!.play).toHaveBeenCalledTimes(1)
+
+    mockAudioElements[0]!.emit('ended')
+
+    expect(mockAudioElements).toHaveLength(2)
+    expect(mockAudioElements[1]!.src).toBe('blob:audio-2')
+    expect(mockAudioElements[1]!.play).toHaveBeenCalledTimes(1)
   })
 
   it('skips null and empty payloads without warning', () => {

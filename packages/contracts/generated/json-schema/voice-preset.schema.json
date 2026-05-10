@@ -60,6 +60,18 @@
           "title": "Batch Size",
           "type": "integer"
         },
+        "gpt_weights_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gpt Weights Path"
+        },
         "media_type": {
           "const": "wav",
           "default": "wav",
@@ -101,6 +113,18 @@
           "minimum": 0.0,
           "title": "Repetition Penalty",
           "type": "number"
+        },
+        "sovits_weights_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sovits Weights Path"
         },
         "speed_factor": {
           "default": 1.0,
@@ -153,11 +177,13 @@
       },
       "required": [
         "batch_size",
+        "gpt_weights_path",
         "media_type",
         "prompt_lang",
         "prompt_text",
         "reference_audio_id",
         "repetition_penalty",
+        "sovits_weights_path",
         "speed_factor",
         "streaming_mode",
         "temperature",
@@ -320,11 +346,13 @@
           "$ref": "#/$defs/GptSoVitsPresetConfig",
           "default": {
             "batch_size": 1,
+            "gpt_weights_path": null,
             "media_type": "wav",
             "prompt_lang": "ja",
             "prompt_text": "",
             "reference_audio_id": null,
             "repetition_penalty": 1.35,
+            "sovits_weights_path": null,
             "speed_factor": 1.0,
             "streaming_mode": false,
             "temperature": 1.0,

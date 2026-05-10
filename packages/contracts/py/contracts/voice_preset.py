@@ -12,6 +12,8 @@ class GptSoVitsPresetConfig(BaseModel):
     prompt_text: str = ""
     prompt_lang: GptSoVitsLanguage = "ja"
     text_lang: GptSoVitsLanguage = "ja"
+    gpt_weights_path: Optional[str] = None
+    sovits_weights_path: Optional[str] = None
     top_k: int = Field(default=15, ge=1)
     top_p: float = Field(default=1.0, ge=0.0, le=1.0)
     temperature: float = Field(default=1.0, ge=0.0)
