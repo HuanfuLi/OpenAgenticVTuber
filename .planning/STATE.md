@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v3.0
-milestone_name: milestone
-status: executing
-stopped_at: Completed 17-07-PLAN.md
-last_updated: "2026-05-10T00:16:39Z"
-last_activity: 2026-05-10 - Completed Phase 17 plan 17-07 chat failure surface, final regression, and UAT evidence
+milestone_name: Rich Voice Configuration + Voice Input
+status: ready_for_next_phase
+stopped_at: Phase 17 verified complete; ready for Phase 18 planning/execution
+last_updated: "2026-05-10T00:40:00Z"
+last_activity: 2026-05-10 - Phase 17 verified after code review fixes and goal verification
 progress:
   total_phases: 7
-  completed_phases: 1
-  total_plans: 14
+  completed_phases: 2
+  total_plans: 18
   completed_plans: 11
-  percent: 25
+  percent: 61
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon - v3.0 improves voice usability before memory/avatar identity work)
-**Current focus:** Phase 17: GPT-SoVITS Provider + Voice Presets
+**Current focus:** Phase 18: Rich Voice Settings + Persistence
 
 ## Current Position
 
-Phase: 17 of 22 (GPT-SoVITS Provider + Voice Presets)
-Plan: 7/7 complete
-Status: Phase 17 complete; ready for Phase 18 planning or Phase 17 verification
-Last activity: 2026-05-10 - Completed Phase 17 plan 17-07 chat failure surface, final regression, and UAT evidence
+Phase: 18 of 22 (Rich Voice Settings + Persistence)
+Plan: Ready to plan/execute Phase 18
+Status: Phase 17 verified complete; ready for next phase
+Last activity: 2026-05-10 - Phase 17 verified after code review fixes and goal verification
 
-Progress: [██████████] 7/7 plans complete in Phase 17
+Progress: [██████░░░░] 11/18 planned v3.0 plans complete
 
 ## Performance Metrics
 
@@ -72,7 +72,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Run Phase 17 verification/UAT with a live GPT-SoVITS server when one is available.
+- Run Phase 17 live GPT-SoVITS server UAT when a server is available.
+- Plan/execute Phase 18 Rich Voice Settings + Persistence.
 
 ### Blockers/Concerns
 
@@ -86,6 +87,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 17 plan 17-05 scopes stop/restart to the tracked app-owned child process only; external servers return not-app-managed status.
 - Phase 17 plan 17-06 keeps GPT-SoVITS activation behind health plus audible test synthesis and keeps preset/reference deletes guarded.
 - Phase 17 plan 17-07 keeps GPT-SoVITS chat failures visible without raw diagnostics inline and does not save config or switch to Piper from chat failure handling.
+- Phase 17 code review blockers were fixed and final `17-REVIEW.md` is clean; `17-VERIFICATION.md` passed all 5 roadmap success criteria with live-server UAT documented as environment-blocked.
 
 ## Deferred Items
 
@@ -97,6 +99,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-10T00:16:39Z
-Stopped at: Completed 17-07-PLAN.md
+Last session: 2026-05-10T00:40:00Z
+Stopped at: Phase 17 verified complete; ready for Phase 18
 Resume file: None
