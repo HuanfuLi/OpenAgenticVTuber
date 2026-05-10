@@ -39,7 +39,9 @@ import {
   deleteReferenceAudioAsset,
   getManagedReferenceAudioPath,
   pickAndImportReferenceAudio,
+  resolveReferenceAudioAssetPath,
   validateReferenceAudioWithSidecar,
+  type ManagedReferenceAudioValidationInput,
   type ReferenceAudioValidationInput,
   type ReferenceAudioValidationResponse
 } from './reference-audio'
@@ -93,6 +95,17 @@ function failedGptSoVitsTestSynthesis(summary: string, state: AudioProviderHealt
     summary,
     failure: unavailableGptSoVitsHealth(summary, state)
   }
+}
+
+function resolveTestSynthesisSidecarBody(request: GptSoVitsTestSynthesisRequest): GptSoVitsTestSynthesisRequest & { reference_audio_path: string } {
+  const referenceAudioId = request.preset.gpt_sovits.reference_audio_id
+  if (!referenceAudioId) {
+    throw new Error('Select managed reference audio before testing GPT-SoVITS.')
+  }
+  const cfg = loadConfig()
+  if (!cfg) throw new Error('Stored config is not initialized.')
+  const { managedPath } = resolveReferenceAudioAssetPath(referenceAudioId, cfg.referenceAudioAssets)
+  return { ...request, reference_audio_path: managedPath }
 }
 
 async function postSidecarAdminJson<TResponse>(
@@ -279,14 +292,21 @@ export function registerIpc(window: BrowserWindow): () => void {
   )
   ipcMain.handle(
     'gptSovits:testSynthesis',
-    async (_e, request: GptSoVitsTestSynthesisRequest): Promise<GptSoVitsTestSynthesisResult> =>
-      postSidecarAdminJson<GptSoVitsTestSynthesisResult>(
+    async (_e, request: GptSoVitsTestSynthesisRequest): Promise<GptSoVitsTestSynthesisResult> => {
+      let sidecarBody: GptSoVitsTestSynthesisRequest & { reference_audio_path: string }
+      try {
+        sidecarBody = resolveTestSynthesisSidecarBody(request)
+      } catch (err) {
+        return failedGptSoVitsTestSynthesis(err instanceof Error ? err.message : 'Invalid reference audio.', 'misconfigured')
+      }
+      return postSidecarAdminJson<GptSoVitsTestSynthesisResult>(
         '/admin/audio/test-synthesis',
-        request,
+        sidecarBody,
         () => failedGptSoVitsTestSynthesis('Sidecar is not ready.', 'unavailable'),
         (status) => failedGptSoVitsTestSynthesis(`GPT-SoVITS test synthesis failed: HTTP ${status}`),
         () => failedGptSoVitsTestSynthesis('GPT-SoVITS test synthesis failed: sidecar request failed.')
       )
+    }
   )
   ipcMain.handle(
     'gptSovits:start',
@@ -354,8 +374,18 @@ export function registerIpc(window: BrowserWindow): () => void {
   )
   ipcMain.handle(
     'referenceAudio:validate',
-    async (_e, input: ReferenceAudioValidationInput): Promise<ReferenceAudioValidationResponse> =>
-      validateReferenceAudioWithSidecar(getSidecarHttpUrl(), input)
+    async (_e, input: ReferenceAudioValidationInput): Promise<ReferenceAudioValidationResponse> => {
+      const cfg = loadConfig()
+      if (!cfg) throw new Error('Stored config is not initialized.')
+      const { asset, managedPath } = resolveReferenceAudioAssetPath(input.assetId, cfg.referenceAudioAssets)
+      const sidecarInput: ManagedReferenceAudioValidationInput = {
+        managedPath,
+        displayBasename: asset.display_basename,
+        transcriptText: input.transcriptText,
+        language: input.language
+      }
+      return validateReferenceAudioWithSidecar(getSidecarHttpUrl(), sidecarInput)
+    }
   )
   ipcMain.handle(
     'referenceAudio:pickAndImport',

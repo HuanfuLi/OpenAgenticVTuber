@@ -64,12 +64,25 @@ def test_gpt_sovits_health_returns_candidate_health_without_activation(monkeypat
     with _client() as client:
         client.app.state.audio_config = AudioConfig()
         before = client.app.state.audio_config.model_dump()
-        body = client.post("/admin/audio/gpt-sovits/health", json=_request()).json()
+        body = client.post("/admin/audio/gpt-sovits/health", json={"config": _request()["config"]}).json()
         after = client.app.state.audio_config.model_dump()
 
     assert body["provider_id"] == "gpt_sovits"
     assert body["state"] == "ok"
     assert before == after
+
+
+def test_test_synthesis_rejects_reference_path_outside_managed_storage(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AGENTICLLMVTUBER_USER_DATA", str(tmp_path / "user-data"))
+    outside = tmp_path / "outside.wav"
+    outside.write_bytes(b"audio")
+
+    with _client() as client:
+        body = client.post("/admin/audio/test-synthesis", json=_request(str(outside))).json()
+
+    assert body["ok"] is False
+    assert body["activation_allowed"] is False
+    assert body["failure"]["state"] == "misconfigured"
 
 
 def test_test_synthesis_returns_wav_metadata_without_chat_history_or_activation(monkeypatch) -> None:

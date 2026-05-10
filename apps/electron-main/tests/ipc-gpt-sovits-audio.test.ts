@@ -8,7 +8,7 @@ import type {
   GptSoVitsTestSynthesisResult
 } from '../../../packages/contracts/ts/audio-provider'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
-import type { VoicePreset } from '../../../packages/contracts/ts/voice-preset'
+import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
 
 const mocks = vi.hoisted(() => ({
   handlers: new Map<string, (...args: unknown[]) => unknown>(),
@@ -65,6 +65,23 @@ vi.mock('../src/window-store', () => ({
   saveLogLevel: vi.fn((level) => level),
   saveThemePreference: vi.fn().mockResolvedValue(undefined),
   store: { get: vi.fn(), set: vi.fn() }
+}))
+
+vi.mock('../src/safe-storage', () => ({
+  loadConfig: vi.fn(() => ({
+    provider: { provider: 'lm_studio', endpointUrl: 'http://localhost:1234/v1', apiKey: '', modelName: '' },
+    plugin: { activePluginName: 'default' },
+    hasCompletedSetup: true,
+    schemaVersion: 2,
+    audio: {},
+    voicePresets: [candidatePreset()],
+    referenceAudioAssets: [candidateReferenceAudioAsset()],
+    activePresetByAvatarSession: {}
+  })),
+  saveConfig: vi.fn(),
+  clearConfig: vi.fn(),
+  canDeletePreset: vi.fn(() => ({ ok: true })),
+  getAvatarSessionPresetKey: vi.fn((avatarId: string | null, sessionId: string | null) => `avatar:${avatarId ?? 'global'}|session:${sessionId ?? 'global'}`)
 }))
 
 vi.mock('../src/hud-window', () => ({ createHudWindow: vi.fn() }))
@@ -128,6 +145,18 @@ function candidatePreset(): VoicePreset {
       streaming_mode: false,
       repetition_penalty: 1.35
     }
+  }
+}
+
+function candidateReferenceAudioAsset(): ReferenceAudioAsset {
+  return {
+    asset_id: 'asset-1',
+    display_basename: 'voice.wav',
+    managed_path_token: 'reference-audio/asset-1-voice.wav',
+    transcript_text: 'hello reference',
+    language: 'en',
+    format: 'wav',
+    duration_ms: 3000
   }
 }
 
@@ -197,8 +226,25 @@ describe('GPT-SoVITS audio IPC handlers', () => {
     expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:8765/admin/audio/test-synthesis', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request)
+      body: JSON.stringify({ ...request, reference_audio_path: path.resolve('C:\\AgenticLLMVTuberTest', 'reference-audio/asset-1-voice.wav') })
     })
+  })
+
+  it('rejects test synthesis before forwarding when the preset has no managed reference asset', async () => {
+    installHandlers()
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const request: GptSoVitsTestSynthesisRequest = {
+      config: candidateConfig(),
+      preset: { ...candidatePreset(), gpt_sovits: { ...candidatePreset().gpt_sovits, reference_audio_id: null } },
+      text: 'test voice'
+    }
+
+    const result = await invoke<GptSoVitsTestSynthesisResult>('gptSovits:testSynthesis', request)
+
+    expect(result.ok).toBe(false)
+    expect(result.failure?.state).toBe('misconfigured')
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('returns typed redacted failures for sidecar unavailable and HTTP failure responses', async () => {

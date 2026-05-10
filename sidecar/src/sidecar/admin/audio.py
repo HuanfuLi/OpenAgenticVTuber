@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import os
 import wave
 from io import BytesIO
 from pathlib import Path
@@ -61,6 +62,10 @@ class GptSoVitsCandidateRequest(BaseModel):
     text: str = Field(default="hello", min_length=1)
 
 
+class GptSoVitsHealthCandidateRequest(BaseModel):
+    config: GptSoVitsProviderConfig
+
+
 def _redacted_diagnostics(display_basename: str, summary: str) -> str:
     return f"reference_audio={Path(display_basename).name}; {summary}"
 
@@ -114,6 +119,40 @@ def _pcm_to_wav_base64(pcm_int16: bytes, sample_rate: int) -> tuple[str, int]:
     return base64.b64encode(buf.getvalue()).decode("utf-8"), duration_ms
 
 
+def _managed_reference_root() -> Path | None:
+    user_data = os.environ.get("AGENTICLLMVTUBER_USER_DATA")
+    if not user_data:
+        return None
+    return (Path(user_data) / "reference-audio").resolve()
+
+
+def _is_under_root(candidate: Path, root: Path) -> bool:
+    try:
+        candidate.resolve().relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _validate_managed_reference_path(candidate: Path) -> dict[str, object] | None:
+    root = _managed_reference_root()
+    if root is None:
+        return None
+    if not _is_under_root(candidate, root):
+        return _error_response(
+            display_basename=candidate.name,
+            code="unreadable_file",
+            message="Reference audio path is outside managed storage.",
+            diagnostic="managed path token rejected",
+            audio_format=candidate.suffix.lower().lstrip(".") or None,
+        )
+    return None
+
+
+def _dummy_health_preset() -> VoicePreset:
+    return VoicePreset(preset_id="health-check", name="Health check", provider_id="gpt_sovits")
+
+
 @router.get("/status")
 async def get_audio_status(request: Request) -> dict[str, object]:
     health = getattr(request.app.state, "audio_provider_health", None)
@@ -127,12 +166,12 @@ async def get_audio_status(request: Request) -> dict[str, object]:
 
 
 @router.post("/gpt-sovits/health")
-async def post_gpt_sovits_health(payload: GptSoVitsCandidateRequest) -> dict[str, object]:
+async def post_gpt_sovits_health(payload: GptSoVitsHealthCandidateRequest) -> dict[str, object]:
     try:
         provider = GptSoVitsProvider(
             config=payload.config,
-            preset=payload.preset,
-            reference_audio=payload.reference_audio_path,
+            preset=_dummy_health_preset(),
+            reference_audio="health-check.wav",
         )
     except TTSProviderError as exc:
         return exc.health().model_dump()
@@ -141,6 +180,25 @@ async def post_gpt_sovits_health(payload: GptSoVitsCandidateRequest) -> dict[str
 
 @router.post("/test-synthesis")
 async def post_test_synthesis(payload: GptSoVitsCandidateRequest) -> dict[str, object]:
+    path_guard = _validate_managed_reference_path(Path(payload.reference_audio_path))
+    if path_guard is not None:
+        return {
+            "provider_id": "gpt_sovits",
+            "ok": False,
+            "activation_allowed": False,
+            "audio_base64": None,
+            "media_type": "wav",
+            "sample_rate_hz": None,
+            "duration_ms": None,
+            "summary": "GPT-SoVITS could not read the copied reference audio.",
+            "failure": AudioProviderHealth(
+                provider_id="gpt_sovits",
+                kind="tts",
+                state="misconfigured",
+                summary="Reference audio path is outside managed storage.",
+                retryable=False,
+            ).model_dump(),
+        }
     try:
         provider = GptSoVitsProvider(
             config=payload.config,
@@ -181,6 +239,9 @@ async def validate_reference_audio(
     payload: ReferenceAudioValidationRequest,
 ) -> dict[str, object]:
     candidate = Path(payload.managed_path)
+    path_guard = _validate_managed_reference_path(candidate)
+    if path_guard is not None:
+        return path_guard
     audio_format = candidate.suffix.lower().lstrip(".")
     display_basename = Path(payload.display_basename).name
 

@@ -6,6 +6,13 @@ import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contrac
 import { canDeleteReferenceAudio } from './safe-storage'
 
 export interface ReferenceAudioValidationInput {
+  assetId: string
+  displayBasename: string
+  transcriptText: string
+  language: ReferenceAudioAsset['language']
+}
+
+export interface ManagedReferenceAudioValidationInput {
   managedPath: string
   displayBasename: string
   transcriptText: string
@@ -32,7 +39,7 @@ export interface PickAndImportReferenceAudioInput {
   transcriptText: string
   language: ReferenceAudioAsset['language']
   assetId?: string
-  validate: (input: ReferenceAudioValidationInput) => Promise<ReferenceAudioValidationResponse>
+  validate: (input: ManagedReferenceAudioValidationInput) => Promise<ReferenceAudioValidationResponse>
 }
 
 export type DeleteReferenceAudioAssetResult =
@@ -41,12 +48,30 @@ export type DeleteReferenceAudioAssetResult =
 
 const SUPPORTED_REFERENCE_AUDIO_FORMATS = new Set(['wav', 'flac', 'mp3', 'ogg'])
 
-function referenceAudioDirectory(): string {
+export function referenceAudioDirectory(): string {
   return path.join(app.getPath('userData'), 'reference-audio')
 }
 
 export function getManagedReferenceAudioPath(asset: ReferenceAudioAsset): string {
-  return path.join(app.getPath('userData'), asset.managed_path_token)
+  const managedPath = path.resolve(app.getPath('userData'), asset.managed_path_token)
+  assertManagedReferenceAudioPath(managedPath)
+  return managedPath
+}
+
+export function assertManagedReferenceAudioPath(candidatePath: string): string {
+  const root = path.resolve(referenceAudioDirectory())
+  const resolved = path.resolve(candidatePath)
+  const relative = path.relative(root, resolved)
+  if (relative === '' || relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error('Invalid managed reference audio path.')
+  }
+  return resolved
+}
+
+export function resolveReferenceAudioAssetPath(assetId: string, assets: ReferenceAudioAsset[]): { asset: ReferenceAudioAsset; managedPath: string } {
+  const asset = assets.find((item) => item.asset_id === assetId)
+  if (!asset) throw new Error('Unknown reference audio asset.')
+  return { asset, managedPath: getManagedReferenceAudioPath(asset) }
 }
 
 function sanitizeBasename(originalBasename: string): string {
@@ -61,7 +86,7 @@ function sanitizeBasename(originalBasename: string): string {
 
 export async function validateReferenceAudioWithSidecar(
   baseUrl: string,
-  input: ReferenceAudioValidationInput,
+  input: ManagedReferenceAudioValidationInput,
   fetchImpl: typeof fetch = fetch
 ): Promise<ReferenceAudioValidationResponse> {
   const resp = await fetchImpl(`${baseUrl}/admin/audio/reference-audio/validate`, {
@@ -97,7 +122,7 @@ export async function pickAndImportReferenceAudio(
   fs.copyFileSync(input.sourcePath, managedPath)
 
   const validation = await input.validate({
-    managedPath,
+    managedPath: assertManagedReferenceAudioPath(managedPath),
     displayBasename: originalBasename,
     transcriptText: input.transcriptText,
     language: input.language
