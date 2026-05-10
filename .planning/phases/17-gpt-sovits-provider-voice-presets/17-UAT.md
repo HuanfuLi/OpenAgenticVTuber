@@ -10,8 +10,9 @@ source:
   - 17-06-SUMMARY.md
   - 17-07-SUMMARY.md
   - 17-08-SUMMARY.md
+  - 17-09-SUMMARY.md
 started: 2026-05-10T00:00:00Z
-updated: 2026-05-10T05:12:00Z
+updated: 2026-05-10T00:04:00Z
 ---
 
 # Phase 17 UAT - GPT-SoVITS Provider + Voice Presets
@@ -22,7 +23,7 @@ number: 6
 name: Active GPT-SoVITS Chat Turn
 expected: |
   After activating a GPT-SoVITS voice preset, the next chat turn still shows sentence text normally and plays audio through the existing renderer audio/RMS/lipsync path.
-awaiting: diagnosis and fix plan after user-reported duplicated text chunks
+awaiting: user retest after Plan 17-09 renderer duplicate-dispatch fix
 
 ## Tests
 
@@ -59,7 +60,7 @@ severity: none
 ### 6. Active GPT-SoVITS Chat Turn
 expected: After activating a GPT-SoVITS voice preset, the next chat turn still shows sentence text normally and plays audio through the existing renderer audio/RMS/lipsync path.
 result: issue
-reported: "Fail: Showing duplicated text chunks like \"Hello!Hello!You've said hello quite a few times today, aren't you?You've said hello quite a few times today, aren't you?Maybe you just want to see my smile!Maybe you just want to see my smile!How are you doing?How are you doing?\""
+reported: "Fail: Showing duplicated text chunks like \"Hello!Hello!You've said hello quite a few times today, aren't you?You've said hello quite a few times today, aren't you?Maybe you just want to see my smile!Maybe you just want to see my smile!How are you doing?How are you doing?\" Plan 17-09 added an automated renderer duplicate-dispatch fix and regression coverage; live GPT-SoVITS chat retest is still required before this result can become pass."
 severity: major
 
 ### 7. Failed GPT-SoVITS Turn And Explicit Piper Fallback
@@ -159,27 +160,36 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
   debug_session: ""
 
 - truth: "After activating a GPT-SoVITS voice preset, the next chat turn still shows sentence text normally and plays audio through the existing renderer audio/RMS/lipsync path."
-  status: failed
-  reason: "User reported duplicated visible text chunks during an active GPT-SoVITS chat turn: each sentence appears twice inline."
+  status: fixed_pending_user_retest
+  reason: "Plan 17-09 fixed the diagnosed renderer duplicate-dispatch root cause and added automated coverage, but this UAT test remains issue/pending until the user confirms a live GPT-SoVITS chat turn no longer duplicates visible text."
   severity: major
   test: 6
   root_cause: "Renderer WebSocket dispatcher registration in apps/renderer/src/ws/store.ts runs at module top level and ignores unsubscribe handles, so Vite dev HMR or module re-evaluation can leave multiple dispatcher callbacks subscribed to the singleton WS client. Each incoming audio payload is then processed twice, and appendAssistantSentence concatenates the duplicate display_text into the same assistant bubble. Sidecar duplicate emission and GPT-SoVITS text mutation were ruled out."
   artifacts:
     - path: "apps/renderer/src/ws/store.ts"
-      issue: "Top-level subscribe(...) and subscribeSidecarReconnect(...) registrations are not idempotent and do not clean up on HMR dispose."
+      issue: "Plan 17-09 replaced unowned top-level subscribe(...) and subscribeSidecarReconnect(...) calls with idempotent ensure/dispose functions that retain unsubscribe handles and clean up on Vite HMR dispose."
     - path: "apps/renderer/src/ws/client.ts"
       issue: "subscribe(...) returns an unsubscribe function and client guards duplicate sockets, but store.ts does not use unsubscribe to guard duplicate dispatch listeners."
     - path: "apps/renderer/src/screens/Chat/useStreamingMessages.ts"
       issue: "appendAssistantSentence replaces Thinking on the first call and appends on the second; duplicate dispatch of the same audio message produces inline repeated sentence text."
     - path: "apps/renderer/tests/ChatStreaming.test.tsx"
-      issue: "Missing regression coverage for duplicate store registration/HMR re-evaluation processing one audio payload only once."
+      issue: "Plan 17-09 added regression coverage for duplicate store registration/HMR simulation, one normal audio payload after Thinking, and one failed GPT-SoVITS audio payload without duplicate visible text or playback."
   missing:
-    - "Make renderer WS store dispatcher registration idempotent and HMR-safe."
-    - "Retain unsubscribe handles and dispose duplicate subscriptions during Vite HMR/module re-evaluation."
-    - "Add a renderer regression test that re-imports or simulates duplicate store registration and verifies one audio payload appends visible text once."
+    - "User must retest a live active GPT-SoVITS chat turn and confirm visible assistant text no longer duplicates before Test 6 is marked pass."
   debug_session: "ses_1eff9979effezQ0PM6FYVIQ4na"
 
 ## Gap Fix Evidence
+
+### Plan 17-09 Duplicate GPT-SoVITS Chat Text Evidence
+
+- **Scope:** Closed the renderer-only root cause for active GPT-SoVITS chat text duplicating after Vite HMR/module re-evaluation: the WS store now owns `subscribe(...)` and `subscribeSidecarReconnect(...)` unsubscribe handles and exposes idempotent `ensureWSStoreSubscriptions()` / `disposeWSStoreSubscriptions()` helpers.
+- **Normal audio regression:** `ChatStreaming.test.tsx` simulates duplicate store registration, sends `conversation-chain-start`, then dispatches one `audio` payload with display text `Hello!`; the resulting assistant bubble text is `Hello!`, not `Hello!Hello!`, and audio playback is called once.
+- **Failed-audio regression:** The same duplicate-registration simulation dispatches one failed GPT-SoVITS audio payload; visible sentence text appears once, one `audioFailures` entry is recorded, the GPT-SoVITS failed-audio banner semantics remain intact, and `playAudioPayload` is not called.
+- **HMR cleanup:** `store.ts` disposes retained message and reconnect callbacks through `import.meta.hot.dispose(...)` before Vite replaces the module.
+- **Manual live-server UAT:** No live Test 6 pass is claimed here. Test 6 remains `result: issue` and awaits user retest with an active GPT-SoVITS server/preset.
+
+- `npm --workspace apps/renderer run test -- --run ChatStreaming.test.tsx` - passed after Plan 17-09 fix, 8 tests.
+- `npm --workspace apps/renderer run typecheck` - passed after Plan 17-09 fix.
 
 ### Plan 17-08 Per-Preset GPT-SoVITS Validation Evidence
 
