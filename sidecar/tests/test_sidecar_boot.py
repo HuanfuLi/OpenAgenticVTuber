@@ -1,6 +1,7 @@
 """Phase 1: end-to-end boot test — spawn sidecar, parse READY line, hit /health."""
 
 import asyncio
+import json
 import os
 import re
 import subprocess
@@ -78,6 +79,43 @@ def _rig_capabilities(*, hotkeys=None):
     from contracts import RigCapabilities
 
     return RigCapabilities(hotkeys=hotkeys or [])
+
+
+def test_loads_active_voice_preset_and_managed_reference_from_env(monkeypatch, tmp_path):
+    from sidecar.ws import server
+
+    user_data = tmp_path / "user-data"
+    reference = user_data / "reference-audio" / "ref-1-voice.wav"
+    reference.parent.mkdir(parents=True)
+    reference.write_bytes(b"audio")
+    monkeypatch.setenv("AGENTICLLMVTUBER_USER_DATA", str(user_data))
+    monkeypatch.setenv(
+        "AGENTICLLMVTUBER_VOICE_PRESET_CONFIG_JSON",
+        json.dumps({
+            "voicePresets": [{
+                "preset_id": "preset-1",
+                "name": "Akari",
+                "provider_id": "gpt_sovits",
+                "gpt_sovits": {"reference_audio_id": "ref-1", "prompt_text": "hello", "prompt_lang": "en", "text_lang": "en"},
+            }],
+            "referenceAudioAssets": [{
+                "asset_id": "ref-1",
+                "managed_path_token": "reference-audio/ref-1-voice.wav",
+                "display_basename": "voice.wav",
+                "duration_ms": 3000,
+                "format": "wav",
+                "transcript_text": "hello",
+                "language": "en",
+            }],
+            "activePresetByAvatarSession": {"avatar:teto|session:global": "preset-1"},
+        }),
+    )
+
+    preset, resolved_reference = server._load_active_voice_preset_and_reference("teto")
+
+    assert preset is not None
+    assert preset.preset_id == "preset-1"
+    assert resolved_reference == reference.resolve()
 
 
 async def _never():

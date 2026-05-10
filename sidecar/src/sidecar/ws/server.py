@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger as loguru_logger
+from contracts import ReferenceAudioAsset, VoicePreset
 
 from sidecar.avatar.overrides import load_avatar_overrides
 from sidecar.audio.config import load_audio_config_from_env
@@ -124,6 +125,52 @@ def _active_plugin_id() -> str:
 
 def _cursor_tracking_enabled() -> bool:
     return os.environ.get("AGENTICLLMVTUBER_CURSOR_TRACKING_ENABLED", "1") != "0"
+
+
+def _active_preset_key(avatar_id: str, session_id: str = "global") -> str:
+    avatar = avatar_id.strip() if avatar_id.strip() else "global"
+    session = session_id.strip() if session_id.strip() else "global"
+    return f"avatar:{avatar}|session:{session}"
+
+
+def _load_active_voice_preset_and_reference(active_avatar_id: str) -> tuple[VoicePreset | None, Path | None]:
+    raw = os.environ.get("AGENTICLLMVTUBER_VOICE_PRESET_CONFIG_JSON")
+    user_data = os.environ.get("AGENTICLLMVTUBER_USER_DATA")
+    if not raw or not user_data:
+        return None, None
+    try:
+        data = json.loads(raw)
+        presets = [VoicePreset.model_validate(item) for item in data.get("voicePresets", [])]
+        assets = [ReferenceAudioAsset.model_validate(item) for item in data.get("referenceAudioAssets", [])]
+        active_map = data.get("activePresetByAvatarSession", {})
+        if not isinstance(active_map, dict):
+            active_map = {}
+    except Exception as exc:
+        loguru_logger.warning("[TTS-INIT] invalid voice preset handoff: {}", exc)
+        return None, None
+
+    active_session = os.environ.get("AGENTICLLMVTUBER_ACTIVE_SESSION") or "global"
+    candidate_ids = [
+        active_map.get(_active_preset_key(active_avatar_id, active_session)),
+        active_map.get(_active_preset_key(active_avatar_id, "global")),
+        active_map.get(_active_preset_key("global", "global")),
+    ]
+    candidate_ids.extend(value for value in active_map.values() if isinstance(value, str))
+    preset_id = next((value for value in candidate_ids if value), None)
+    preset = next((item for item in presets if item.preset_id == preset_id), None)
+    if preset is None or not preset.gpt_sovits.reference_audio_id:
+        return preset, None
+    asset = next((item for item in assets if item.asset_id == preset.gpt_sovits.reference_audio_id), None)
+    if asset is None:
+        return preset, None
+    reference_path = (Path(user_data) / asset.managed_path_token).resolve()
+    reference_root = (Path(user_data) / "reference-audio").resolve()
+    try:
+        reference_path.relative_to(reference_root)
+    except ValueError:
+        loguru_logger.warning("[TTS-INIT] reference audio token escaped managed storage")
+        return preset, None
+    return preset, reference_path
 
 
 def _load_plugin_instance(manifest_path: Path, entrypoint: str) -> BodyMotionPlugin:
@@ -285,10 +332,13 @@ async def lifespan(app: FastAPI):
 
             persona = _persona_path(avatars, avatar_dir).read_text(encoding="utf-8")
             voice_model = overrides.voice.model if overrides.voice else "en_US-amy-medium"
+            active_voice_preset, reference_audio_path = _load_active_voice_preset_and_reference(active_avatar_id)
             tts_gateway = build_tts_gateway(
                 audio_config=app.state.audio_config,
                 repo_root=Path(__file__).resolve().parents[4],
                 avatar_voice_model=voice_model,
+                active_voice_preset=active_voice_preset,
+                reference_audio_path=reference_audio_path,
             )
             tts_gateway.boot()
             app.state.audio_provider_health = tts_gateway.provider.health()
