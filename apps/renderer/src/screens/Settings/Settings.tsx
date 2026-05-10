@@ -1297,8 +1297,14 @@ function TTSSection() {
         last_test_synthesis_at: new Date().toISOString()
       }
     }
+    const activePresetKey = avatarSessionPresetKey(currentAvatarId, activeSession.id)
+    const nextActivePresetByAvatarSession = {
+      ...(cfg.activePresetByAvatarSession ?? {}),
+      [activePresetKey]: selectedPreset.preset_id
+    }
     const nextCfg: StoredConfig = {
       ...cfg,
+      activePresetByAvatarSession: nextActivePresetByAvatarSession,
       audio: {
         ...cfg.audio,
         tts: {
@@ -1309,6 +1315,7 @@ function TTSSection() {
       }
     }
     await saveConfig(nextCfg)
+    setActivePresetByAvatarSession(nextActivePresetByAvatarSession)
     await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, selectedPreset.preset_id)
     setCandidate(activatedCandidate)
     setStatusText(C.GPT_SOVITS_ACTIVATION_SUCCESS)

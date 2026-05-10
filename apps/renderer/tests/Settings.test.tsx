@@ -426,6 +426,32 @@ describe('Settings TTS section', () => {
     }))
   })
 
+  it('persists the default first preset association in the activation config save', async () => {
+    const preset = gptPreset()
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [preset] })
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_PREVIEW_READY)
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET }))
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
+        activePresetByAvatarSession: expect.objectContaining({
+          'avatar:akari|session:s1': preset.preset_id
+        }),
+        audio: expect.objectContaining({
+          tts: expect.objectContaining({ active_provider: 'gpt_sovits' })
+        })
+      }))
+    })
+    expect(window.api.setActiveVoicePresetForAvatarSession).toHaveBeenCalledWith('akari', 's1', preset.preset_id)
+  })
+
   it('plays successful test synthesis audio without chat or history side effects', async () => {
     vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [gptPreset()] })
 

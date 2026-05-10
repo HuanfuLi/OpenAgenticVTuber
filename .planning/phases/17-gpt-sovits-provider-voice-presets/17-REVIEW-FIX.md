@@ -36,3 +36,9 @@ status: all_fixed
 ## Residual Notes
 
 - Live GPT-SoVITS server UAT remains environment-dependent as documented in `17-UAT.md`.
+
+## Iteration 2 Follow-up
+
+- Resolved the remaining CR-02 activation ordering blocker by persisting the active preset association in the same stored-config save that activates GPT-SoVITS, before sidecar restart can observe the config.
+- Added renderer regression coverage for activating the default first preset without a prior preset-radio click, while preserving explicit Piper selection/no silent fallback behavior.
+- Verification: `npm --workspace apps/renderer run test -- --run Settings.test.tsx` and `npm --workspace apps/renderer run typecheck` passed.
