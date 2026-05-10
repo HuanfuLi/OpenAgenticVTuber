@@ -162,3 +162,19 @@ def test_payload_includes_required_gpt_sovits_fields(tmp_path: Path) -> None:
             "repetition_penalty": 1.35,
         }
     ]
+
+
+def test_health_requires_successful_docs_response(tmp_path: Path) -> None:
+    reference = tmp_path / "ref.wav"
+    reference.write_bytes(_wav_bytes())
+    provider = GptSoVitsProvider(
+        config=_config(),
+        preset=_preset(),
+        reference_audio=reference,
+        transport=httpx.MockTransport(lambda _request: httpx.Response(404, text="not GPT-SoVITS")),
+    )
+
+    health = provider.health()
+
+    assert health.state == "external_service_failure"
+    assert "HTTP 404" in health.summary

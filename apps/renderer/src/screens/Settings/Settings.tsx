@@ -1109,6 +1109,26 @@ function createDraftVoicePreset(name: string, existing?: VoicePreset | null): Vo
   }
 }
 
+function withSelectedReferenceAsset(preset: VoicePreset | null, asset: ReferenceAudioAsset | null): VoicePreset | null {
+  if (!preset || !asset) return preset
+  if (
+    preset.gpt_sovits.reference_audio_id === asset.asset_id &&
+    preset.gpt_sovits.prompt_text === asset.transcript_text &&
+    preset.gpt_sovits.prompt_lang === asset.language
+  ) {
+    return preset
+  }
+  return {
+    ...preset,
+    gpt_sovits: {
+      ...preset.gpt_sovits,
+      reference_audio_id: asset.asset_id,
+      prompt_text: asset.transcript_text,
+      prompt_lang: asset.language
+    }
+  }
+}
+
 function playSynthesisPreview(result: GptSoVitsTestSynthesisResult): string | null {
   if (!result.ok || !result.audio_base64) return null
   const binary = atob(result.audio_base64)
@@ -1207,7 +1227,10 @@ function TTSSection() {
   const healthClass = healthState === 'ok' ? 'green' : healthState === 'unavailable' ? 'amber' : 'red'
   const selectedPreset = voicePresets.find((preset) => preset.preset_id === selectedPresetId) ?? voicePresets[0] ?? null
   const selectedReferenceAsset = referenceAudioAssets.find((asset) => asset.asset_id === selectedReferenceAssetId) ?? null
-  const activationReady = healthPassed && testPassed && selectedPreset !== null && selectedPreset.gpt_sovits.reference_audio_id !== null
+  const testCandidatePreset = withSelectedReferenceAsset(selectedPreset, selectedReferenceAsset)
+  const hasReferenceForTest = testCandidatePreset?.gpt_sovits.reference_audio_id !== null && testCandidatePreset?.gpt_sovits.reference_audio_id !== undefined
+  const testSynthesisReady = healthPassed && testCandidatePreset !== null && hasReferenceForTest
+  const activationReady = healthPassed && testPassed && testCandidatePreset !== null && hasReferenceForTest
 
   const saveConfig = async (nextCfg: StoredConfig): Promise<void> => {
     await window.api.saveStoredConfig(nextCfg)
@@ -1258,14 +1281,14 @@ function TTSSection() {
   }
 
   const runTestSynthesis = async (): Promise<void> => {
-    if (!selectedPreset || !selectedPreset.gpt_sovits.reference_audio_id) {
+    if (!testCandidatePreset || !testCandidatePreset.gpt_sovits.reference_audio_id) {
       setTestPassed(false)
       setStatusText(C.GPT_SOVITS_REFERENCE_PATH_FAILURE)
       return
     }
     const result = await window.api.testGptSoVitsSynthesis({
       config: candidate,
-      preset: selectedPreset,
+      preset: testCandidatePreset,
       text: 'This is a GPT-SoVITS test synthesis.'
     })
     if (!result.ok) {
@@ -1284,9 +1307,14 @@ function TTSSection() {
   }
 
   const activateGptSoVits = async (): Promise<void> => {
-    if (!activationReady || !selectedPreset) return
+    if (!activationReady || !testCandidatePreset) return
     const cfg = storedCfg ?? await window.api.getStoredConfig()
     if (!cfg) return
+    const presetToActivate = testCandidatePreset
+    if (selectedPreset && presetToActivate !== selectedPreset) {
+      const nextPresets = await window.api.saveVoicePreset(presetToActivate)
+      setVoicePresets(nextPresets)
+    }
     const activatedCandidate: GptSoVitsProviderConfig = {
       ...candidate,
       activation: {
@@ -1300,7 +1328,7 @@ function TTSSection() {
     const activePresetKey = avatarSessionPresetKey(currentAvatarId, activeSession.id)
     const nextActivePresetByAvatarSession = {
       ...(cfg.activePresetByAvatarSession ?? {}),
-      [activePresetKey]: selectedPreset.preset_id
+      [activePresetKey]: presetToActivate.preset_id
     }
     const nextCfg: StoredConfig = {
       ...cfg,
@@ -1316,7 +1344,7 @@ function TTSSection() {
     }
     await saveConfig(nextCfg)
     setActivePresetByAvatarSession(nextActivePresetByAvatarSession)
-    await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, selectedPreset.preset_id)
+    await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, presetToActivate.preset_id)
     setCandidate(activatedCandidate)
     setStatusText(C.GPT_SOVITS_ACTIVATION_SUCCESS)
   }
@@ -1492,7 +1520,7 @@ function TTSSection() {
           )}
           <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn btn-secondary" type="button" onClick={() => void runHealthCheck()}>{C.GPT_SOVITS_HEALTH_CHECK}</button>
-            <button className="btn btn-primary" type="button" onClick={() => void runTestSynthesis()} disabled={!healthPassed || !selectedPreset || !selectedPreset.gpt_sovits.reference_audio_id}>{C.GPT_SOVITS_TEST_SYNTHESIS}</button>
+            <button className="btn btn-primary" type="button" onClick={() => void runTestSynthesis()} disabled={!testSynthesisReady}>{C.GPT_SOVITS_TEST_SYNTHESIS}</button>
             <button className="btn btn-primary" type="button" onClick={() => void activateGptSoVits()} disabled={!activationReady}>{C.GPT_SOVITS_ACTIVATE_PRESET}</button>
           </div>
           <div className="tx-sm muted mt-2">{statusText}</div>

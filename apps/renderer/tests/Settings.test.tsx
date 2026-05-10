@@ -487,6 +487,49 @@ describe('Settings TTS section', () => {
     expect(window.api.testGptSoVitsSynthesis).not.toHaveBeenCalled()
   })
 
+  it('enables test synthesis after health when a selected reference asset can populate the preset', async () => {
+    const preset = gptPreset({
+      gpt_sovits: { ...gptPreset().gpt_sovits, reference_audio_id: null, prompt_text: '' }
+    })
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      voicePresets: [preset],
+      referenceAudioAssets: [
+        {
+          asset_id: 'ref-selected',
+          display_basename: 'selected.wav',
+          managed_path_token: 'reference-audio/ref-selected-selected.wav',
+          transcript_text: 'selected reference',
+          language: 'en',
+          format: 'wav',
+          duration_ms: 3200
+        }
+      ]
+    })
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
+    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+
+    const testButton = screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS })
+    expect(testButton).not.toBeDisabled()
+    fireEvent.click(testButton)
+
+    await waitFor(() => {
+      expect(window.api.testGptSoVitsSynthesis).toHaveBeenCalledWith(expect.objectContaining({
+        preset: expect.objectContaining({
+          gpt_sovits: expect.objectContaining({
+            reference_audio_id: 'ref-selected',
+            prompt_text: 'selected reference',
+            prompt_lang: 'en'
+          })
+        })
+      }))
+    })
+  })
+
   it('renders non-localhost GPT-SoVITS warning copy from settings copy', async () => {
     renderSettings()
 

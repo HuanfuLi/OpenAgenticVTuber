@@ -1,65 +1,116 @@
-# Phase 17 UAT — GPT-SoVITS Provider + Voice Presets
+---
+status: testing
+phase: 17-gpt-sovits-provider-voice-presets
+source:
+  - 17-01-SUMMARY.md
+  - 17-02-SUMMARY.md
+  - 17-03-SUMMARY.md
+  - 17-04-SUMMARY.md
+  - 17-05-SUMMARY.md
+  - 17-06-SUMMARY.md
+  - 17-07-SUMMARY.md
+started: 2026-05-10T00:00:00Z
+updated: 2026-05-10T01:12:00Z
+---
 
-**Date:** 2026-05-10  
-**Plan:** 17-07 Chat failure surface, final regression, and UAT  
-**Status:** Automated regression PASS; live GPT-SoVITS server UAT BLOCKED by environment
+# Phase 17 UAT - GPT-SoVITS Provider + Voice Presets
+
+## Current Test
+
+number: 1
+name: Provider Selection And Health Gate
+expected: |
+  In Settings -> TTS, Piper is available as a selectable local provider. Selecting GPT-SoVITS shows a single Base URL field, lets you run a health check, and does not activate GPT-SoVITS until a voice preset and audible test synthesis also pass.
+awaiting: user retest after fix
+
+## Tests
+
+### 1. Provider Selection And Health Gate
+expected: In Settings -> TTS, Piper is available as a selectable local provider. Selecting GPT-SoVITS shows a single Base URL field, lets you run a health check, and does not activate GPT-SoVITS until a voice preset and audible test synthesis also pass.
+result: issue
+reported: "Initial startup blocker was fixed by refreshing npm install. Retest still fails: GPT-SoVITS service had not started yet, but health check said reachable. After starting GPT-SoVITS, health check passed, but Test synthesis stayed disabled and unclickable."
+severity: blocker
+
+### 2. App-Managed Launch Controls
+expected: In app-launched GPT-SoVITS mode, Settings shows command, working directory, optional health URL, Start, Stop, and Restart controls. Stop/Restart only apply to the process AgenticLLMVTuber started; external server mode says to stop it outside the app.
+result: [pending]
+
+### 3. Reference Audio Import And Validation
+expected: Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
+result: [pending]
+
+### 4. Voice Preset Management
+expected: You can create, rename, select, and delete named voice presets with GPT-SoVITS tuning/reference fields. Deleting the active preset or in-use reference audio is blocked until reassignment rather than silently switching to Piper or cascade-deleting data.
+result: [pending]
+
+### 5. Audible Test Synthesis
+expected: With a healthy GPT-SoVITS server and a preset that has reference audio, clicking Test synthesis plays or previews generated audio without sending a chat message or adding anything to conversation history. Activation becomes available only after this test succeeds.
+result: [pending]
+
+### 6. Active GPT-SoVITS Chat Turn
+expected: After activating a GPT-SoVITS voice preset, the next chat turn still shows sentence text normally and plays audio through the existing renderer audio/RMS/lipsync path.
+result: [pending]
+
+### 7. Failed GPT-SoVITS Turn And Explicit Piper Fallback
+expected: If GPT-SoVITS fails during a chat turn, the affected sentence text remains visible, the UI marks audio failed for that sentence, logs hold technical detail, and the app does not switch to Piper until you explicitly select Piper for a later turn.
+result: [pending]
+
+## Summary
+
+total: 7
+passed: 0
+issues: 1
+pending: 6
+skipped: 0
+blocked: 0
 
 ## Automated Regression Evidence
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Contracts drift | PASS | `npm run check:contracts` completed and `git diff --exit-code packages/contracts/ts/ packages/contracts/generated/` returned clean. |
-| Renderer Settings + Chat failure tests | PASS | `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` passed: 2 files, 43 tests. |
-| Renderer typecheck | PASS | `npm --workspace apps/renderer run typecheck` passed. |
-| Electron main build | PASS | `npm --workspace apps/electron-main run build` passed for main, preload, and renderer bundles. |
-| Sidecar focused tests | PASS | `python -m pytest ...` was unavailable because system Python lacks pytest; fallback `uv run --project sidecar python -m pytest sidecar/tests/tts/test_gpt_sovits_provider.py sidecar/tests/admin/test_audio_test_tts_endpoint.py sidecar/tests/admin/test_audio_status_endpoint.py sidecar/tests/admin/test_reference_audio_validation_endpoint.py sidecar/tests/test_tts_gateway.py sidecar/tests/test_tts_manager.py -q` passed: 32 tests. |
-| No silent fallback grep gate | PASS | Git-tracked `apps`, `sidecar`, and `packages` search for `silent.*fallback\|fallback.*mid-turn`, excluding allowed documentation/negative assertions, found no implementation matches. |
-| Chat failed-audio UX | PASS | `ChatStreaming.test.tsx` verifies `audio=null` + `failed_audio.provider_id='gpt_sovits'` appends sentence text once, displays failed-audio copy, shows next-turn Piper fallback notice, does not play audio, and does not save config. |
-| Settings explicit Piper fallback path | PASS | `Settings.test.tsx` verifies selecting `Piper local TTS` explicitly saves `active_provider: 'piper'` for subsequent turns without GPT-SoVITS gates. |
-| Test synthesis isolation | PASS | `Settings.test.tsx` verifies test synthesis uses Blob/Audio preview and does not call chat/conversation-history APIs. |
+| Contracts drift | PASS | `npm run check:contracts` completed during Phase 17 execution/fix verification. |
+| Renderer Settings + Chat failure tests | PASS | `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` passed after review fixes. |
+| Renderer typecheck | PASS | `npm --workspace apps/renderer run typecheck` passed after review fixes. |
+| Electron main build/tests | PASS | Electron main focused tests and build passed after review fixes. |
+| Sidecar focused tests | PASS | `uv run --project sidecar python -m pytest ...` passed after review fixes. |
+| Code review | PASS | `17-REVIEW.md` status is clean after fixes. |
+| Goal verification | PASS | `17-VERIFICATION.md` passed 5/5 roadmap success criteria. |
 
-## Live GPT-SoVITS Server Availability
+## Previous Live Server Availability
 
-**Result:** BLOCKED BY ENVIRONMENT
+Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not connect, so live GPT-SoVITS server UAT was environment-blocked at execution time. This conversational UAT session resumes those user-facing checks.
 
-Probe attempted by automation:
+## Gaps
 
-```powershell
-Invoke-WebRequest -Uri "http://127.0.0.1:9880/docs" -UseBasicParsing -TimeoutSec 3
-```
+- truth: "In Settings -> TTS, Piper is available as a selectable local provider. Selecting GPT-SoVITS shows a single Base URL field, lets you run a health check, and does not activate GPT-SoVITS until a voice preset and audible test synthesis also pass."
+  status: failed
+  reason: "User reported: Initial startup blocker was fixed by refreshing npm install. Retest still fails: GPT-SoVITS service had not started yet, but health check said reachable. After starting GPT-SoVITS, health check passed, but Test synthesis stayed disabled and unclickable."
+  severity: blocker
+  test: 1
+  root_cause: "Startup sub-issue resolved: local npm workspace install was stale/incomplete. Health sub-issue fixed: GPT-SoVITS health accepted any non-5xx `/docs` response as reachable; it now requires a 2xx docs response and reports HTTP status failures. Test synthesis gate fixed: Settings previously required the selected preset to already contain `reference_audio_id`, ignoring a selected/imported reference asset that could populate the preset. Settings now builds the test/activation candidate from the selected reference asset and persists that association during activation."
+  artifacts:
+    - path: "node_modules/.bin/electron-vite"
+      issue: "Missing executable shim required by `npm run dev`."
+    - path: "apps/electron-main/package.json"
+      issue: "Dev script depends on `electron-vite dev`; package declares `electron-vite` but local install has not linked it into the workspace command PATH."
+    - path: "apps/renderer/src/screens/Settings/Settings.tsx"
+      issue: "Fixed selected reference asset not being considered for Test synthesis/activation readiness."
+    - path: "sidecar/src/sidecar/admin/audio.py"
+      issue: "Health route delegates to provider health; provider readiness semantics were too permissive."
+    - path: "sidecar/src/sidecar/tts/gpt_sovits_provider.py"
+      issue: "Fixed health check to require a 2xx `/docs` response instead of accepting 4xx as reachable."
+    - path: "apps/renderer/tests/Settings.test.tsx"
+      issue: "Added regression coverage for enabling Test synthesis after health when a selected reference asset populates the preset."
+    - path: "sidecar/tests/tts/test_gpt_sovits_provider.py"
+      issue: "Added regression coverage that non-2xx docs response is not healthy."
+  missing:
+    - "User retest confirmation that health fails before GPT-SoVITS is actually ready and Test synthesis enables after health plus selected reference/preset prerequisites."
+  debug_session: ""
 
-Observed result: unable to connect to the remote server. No live GPT-SoVITS API v2 server is available in this execution environment, so manual audible synthesis and mid-turn live server shutdown checks could not be completed here.
+## Gap Fix Evidence
 
-## Manual Live-Server Checklist
-
-When a GPT-SoVITS API v2 server is available, run this checklist and record observed pass/fail:
-
-1. Start or provide a GPT-SoVITS API v2 server, normally at `http://127.0.0.1:9880`, with reference audio accessible to that server.
-2. Open Settings → TTS. Confirm Piper remains active initially.
-3. Enter GPT-SoVITS base URL. Run health check. Expected: health can pass without activation; helper says test synthesis is still required.
-4. Import reference audio. Expected: UI shows managed asset metadata, transcript/language fields, and validation summary; it does not show the original absolute path.
-5. Create a voice preset and click `Test synthesis`. Expected: audible/previewable result without sending a chat turn or adding conversation history.
-6. Click `Activate voice preset`. Expected: `GPT-SoVITS is active for the next turn.`
-7. Send a chat turn. Expected: sentence text appears, audio plays through existing renderer payload/RMS/lipsync path.
-8. Stop the external server during a later GPT-SoVITS turn. Expected: affected sentence text remains visible, audio is marked failed, logs have detail, and the app does not switch to Piper until the user explicitly selects Piper for a next turn.
-
-## UAT Status Matrix
-
-| Behavior | Status | Notes |
-|---|---:|---|
-| Provider/preset/reference contracts and storage integrity | PASS (automated) | Covered by contracts, Settings, Electron bridge, and sidecar tests from Phase 17. |
-| Health + test synthesis gates before activation | PASS (automated), LIVE BLOCKED | Mocked/admin and Settings tests pass; real server unavailable for audible confirmation. |
-| Test synthesis has no chat-turn side effect | PASS (automated) | Verified via Settings test assertions against `commitConversationTurn`. |
-| Failed GPT-SoVITS chat sentence remains visible | PASS (automated), LIVE BLOCKED | Renderer failed-audio tests pass; real server shutdown scenario unavailable. |
-| No silent mid-turn Piper fallback | PASS (automated), LIVE BLOCKED | Sidecar manager tests, renderer tests, Settings explicit Piper test, and grep gate pass. |
-| Explicit Piper fallback for subsequent turns | PASS (automated) | Settings selection path saves `active_provider: 'piper'`; chat reducer does not mutate config. |
-
-## Manual Evidence Slot
-
-Live-server UAT remains blocked until a GPT-SoVITS server and accessible reference audio are available.
-
-- **Live server URL:** not available
-- **Reference audio:** not available
-- **Tester:** not run
-- **Observed result:** environment-blocked
-- **Follow-up needed:** run the checklist above during `/gsd-verify-work` or a later live UAT session.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed, 42 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed, 47 tests.
+- `npm --workspace apps/renderer run typecheck` - passed.
+- `uv run --project sidecar python -m pytest sidecar/tests/tts/test_gpt_sovits_provider.py -q` - passed, 5 tests.
+- `uv run --project sidecar python -m pytest sidecar/tests/tts/test_gpt_sovits_provider.py sidecar/tests/admin/test_audio_test_tts_endpoint.py sidecar/tests/admin/test_audio_status_endpoint.py sidecar/tests/admin/test_reference_audio_validation_endpoint.py sidecar/tests/test_tts_gateway.py sidecar/tests/test_tts_manager.py sidecar/tests/test_sidecar_boot.py -q` - passed, 42 tests.

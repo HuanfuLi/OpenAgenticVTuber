@@ -114,12 +114,12 @@ class GptSoVitsProvider:
                 detail=type(exc).__name__,
                 retryable=True,
             )
-        state = "ok" if response.status_code < 500 else "external_service_failure"
+        state = "ok" if 200 <= response.status_code < 300 else "external_service_failure"
         return AudioProviderHealth(
             provider_id=self.provider_id,
             kind="tts",
             state=state,
-            summary="GPT-SoVITS service is reachable." if state == "ok" else "GPT-SoVITS health check failed.",
+            summary="GPT-SoVITS service is reachable." if state == "ok" else f"GPT-SoVITS health check failed: HTTP {response.status_code}.",
             retryable=state != "ok",
             latency_ms=round((time.perf_counter() - started) * 1000, 2),
         )
