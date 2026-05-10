@@ -40,6 +40,24 @@ AudioProviderCapability = Literal[
 ]
 STTInputMode = Literal["push_to_talk", "vad"]
 STTLanguageMode = Literal["auto", "zh", "en"]
+STTModelCacheStatus = Literal[
+    "not_downloaded",
+    "downloaded",
+    "missing",
+    "incomplete",
+    "manual_path_required",
+    "operation_pending",
+]
+STTReadinessInvalidationReason = Literal[
+    "never_tested",
+    "config_changed",
+    "health_failed",
+    "test_failed",
+    "runtime_failure",
+    "missing_model",
+    "missing_credential",
+    "missing_consent",
+]
 
 
 class AudioProviderHealth(BaseModel):
@@ -62,6 +80,9 @@ class AudioProviderCatalogEntry(BaseModel):
     requires_api_key: bool = False
     requires_consent: bool = False
     enabled: bool = True
+    recommended: bool = False
+    default_model_id: Optional[str] = None
+    supported_language_modes: list[STTLanguageMode] = Field(default_factory=list)
     summary: str
 
 
@@ -136,6 +157,10 @@ class STTProviderConfig(BaseModel):
     active_provider: Optional[Literal["funasr", "faster_whisper", "openai", "groq"]] = None
     input_mode: STTInputMode = "push_to_talk"
     language_mode: STTLanguageMode = "auto"
+    local_model_id: Optional[str] = None
+    local_model_path_override: Optional[str] = None
+    cache_root: Optional[str] = None
+    readiness: "STTProviderReadiness" = Field(default_factory=lambda: STTProviderReadiness())
     capture_timeout_ms: int = Field(default=30_000, ge=1_000)
     execution: Literal["off_event_loop"] = "off_event_loop"
     cloud: dict[Literal["openai", "groq"], "CloudSTTProviderSettings"] = Field(
@@ -158,14 +183,67 @@ class AudioDiagnosticsConfig(BaseModel):
     redact_diagnostics: bool = True
 
 
+class STTProviderReadiness(BaseModel):
+    health_check_passed: bool = False
+    test_transcription_passed: bool = False
+    last_health_checked_at: Optional[str] = None
+    last_test_transcription_at: Optional[str] = None
+    fingerprint: Optional[str] = None
+    active_allowed: bool = False
+    invalidation_reason: STTReadinessInvalidationReason = "never_tested"
+
+
+class STTModelCatalogEntry(BaseModel):
+    provider_id: Literal["funasr", "faster_whisper"]
+    model_id: str
+    display_name: str
+    source_label: str
+    size_label: Optional[str] = None
+    size_bytes: Optional[int] = Field(default=None, ge=0)
+    cache_path_display: Optional[str] = None
+    status: STTModelCacheStatus = "not_downloaded"
+    app_managed: bool = True
+    removable: bool = False
+    loaded: bool = False
+    recommended: bool = False
+    summary: str
+
+
+class STTModelCacheCatalog(BaseModel):
+    cache_root_display: str
+    models: list[STTModelCatalogEntry] = Field(default_factory=list)
+
+
+class STTModelCacheOperationRequest(BaseModel):
+    provider_id: Literal["funasr", "faster_whisper"]
+    model_id: str
+
+
+class STTModelCacheOperationResult(BaseModel):
+    ok: bool
+    provider_id: Literal["funasr", "faster_whisper"]
+    model_id: str
+    status: STTModelCacheStatus
+    summary: str
+    cache_path_display: Optional[str] = None
+
+
 class STTTestRequest(BaseModel):
     config: STTProviderConfig
+    audio_base64_wav: Optional[str] = None
+    duration_ms: Optional[int] = Field(default=None, ge=0)
     sample_label: Optional[str] = None
 
 
 class STTTestResult(BaseModel):
     ok: bool
     provider_id: Literal["funasr", "faster_whisper", "openai", "groq"]
+    transcript: Optional[str] = None
+    language: Optional[str] = None
+    latency_ms: Optional[float] = Field(default=None, ge=0)
+    duration_ms: Optional[int] = Field(default=None, ge=0)
+    model_cache_state: Optional[STTModelCacheStatus] = None
+    readiness: Optional[STTProviderReadiness] = None
     summary: str
     failure: Optional[AudioProviderHealth] = None
     redacted_diagnostics: Optional[dict[str, str]] = None
@@ -181,6 +259,9 @@ class AudioConfig(BaseModel):
 class AudioProviderContracts(BaseModel):
     audio_config: AudioConfig = AudioConfig()
     audio_provider_catalog: AudioProviderCatalog = AudioProviderCatalog()
+    stt_model_cache_catalog: STTModelCacheCatalog = STTModelCacheCatalog(cache_root_display="")
+    stt_model_cache_operation_request: Optional[STTModelCacheOperationRequest] = None
+    stt_model_cache_operation_result: Optional[STTModelCacheOperationResult] = None
     gpt_sovits_health_request: Optional[GptSoVitsHealthRequest] = None
     gpt_sovits_test_synthesis_request: Optional[GptSoVitsTestSynthesisRequest] = None
     gpt_sovits_test_synthesis_result: Optional[GptSoVitsTestSynthesisResult] = None
@@ -193,4 +274,6 @@ from .voice_preset import VoicePreset  # noqa: E402
 GptSoVitsTestSynthesisRequest.model_rebuild()
 GptSoVitsHealthRequest.model_rebuild()
 STTProviderConfig.model_rebuild()
+STTTestRequest.model_rebuild()
+STTTestResult.model_rebuild()
 AudioProviderContracts.model_rebuild()

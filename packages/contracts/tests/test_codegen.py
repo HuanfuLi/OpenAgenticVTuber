@@ -156,11 +156,27 @@ def test_gpt_sovits_provider_config_uses_one_base_url_and_activation_gates() -> 
     assert "tts_url" not in cfg.model_dump()
     assert "health_url" not in cfg.model_dump()
 
-    health = GptSoVitsHealthRequest(config=cfg)
+    health = GptSoVitsHealthRequest(
+        config=cfg,
+        preset=VoicePreset(preset_id="preset_teto", name="Teto", provider_id="gpt_sovits"),
+    )
     assert health.config.base_url == "http://127.0.0.1:9880"
 
     with pytest.raises(ValidationError):
         GptSoVitsProviderConfig(provider_id="piper", base_url="http://127.0.0.1:9880")
+
+
+def test_stt_provider_config_tracks_cache_and_readiness_defaults() -> None:
+    cfg = AudioConfig()
+
+    assert cfg.stt.active_provider is None
+    assert cfg.stt.language_mode == "auto"
+    assert cfg.stt.cache_root is None
+    assert cfg.stt.local_model_id is None
+    assert cfg.stt.readiness.active_allowed is False
+    assert cfg.stt.readiness.invalidation_reason == "never_tested"
+    assert cfg.stt.cloud["openai"].consent_granted is False
+    assert cfg.stt.cloud["openai"].api_key is None
 
 
 def test_voice_preset_keeps_gpt_sovits_knobs_without_connection_fields() -> None:

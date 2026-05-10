@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
-status: ready_for_next_phase
-stopped_at: Phase 18 rich voice settings complete; ready for Phase 19
-last_updated: "2026-05-10T06:31:00Z"
-last_activity: 2026-05-10 - Phase 18 rich voice settings, STT consent, provider catalog, and diagnostics completed
+status: in_progress
+stopped_at: Phase 19 plan 19-01 foundation complete; ready for 19-02/19-03
+last_updated: "2026-05-10T06:40:00Z"
+last_activity: 2026-05-10 - Phase 19 plan 19-01 STT contracts, lazy registry, model cache, and readiness foundation completed
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 27
-  completed_plans: 19
-  percent: 70
+  completed_plans: 20
+  percent: 74
 ---
 
 # Project State
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 19 of 22 (STT Provider Abstraction + Local/Cloud Providers)
-Plan: Ready to execute Phase 19
-Status: Phase 18 complete; ready for next phase
-Last activity: 2026-05-10 - Phase 18 rich voice settings, STT consent, provider catalog, and diagnostics completed
+Plan: 19-02/19-03 next
+Status: Phase 19 in progress; 19-01 complete
+Last activity: 2026-05-10 - Phase 19 plan 19-01 STT contracts, lazy registry, model cache, and readiness foundation completed
 
-Progress: [███████░░░] 19/27 planned v3.0 plans complete
+Progress: [███████░░░] 20/27 planned v3.0 plans complete
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed in v3.0: 15
+- Total plans completed in v3.0: 16
 - Average duration: 10 min
 - Total execution time: 117 min
 
@@ -47,7 +47,7 @@ Progress: [███████░░░] 19/27 planned v3.0 plans complete
 | 16. Audio Contracts + TTS Provider Shell | 4/4 | same-session | same-session |
 | 17. GPT-SoVITS Provider + Voice Presets | 12/12 | 117 min | 10 min |
 | 18. Rich Voice Settings + Persistence | 3/3 | same-session | same-session |
-| 19. STT Provider Abstraction + Local/Cloud Providers | 0/TBD | - | - |
+| 19. STT Provider Abstraction + Local/Cloud Providers | 1/4 | same-session | same-session |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | 0/4 | - | - |
 | 21. Code-Switch Evaluation + Hardening | 0/4 | - | - |
 | 22. AEC Spike + No-Headphones Decision | 0/TBD | - | - |
@@ -77,7 +77,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Execute Phase 19 STT Provider Abstraction + Local/Cloud Providers.
+- Execute Phase 19 plans 19-02 through 19-04.
 
 ### Blockers/Concerns
 
@@ -94,6 +94,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 17 live retests after 17-10 through 17-12 remain useful for user confidence, but automated coverage and verification allow Phase 18 to proceed.
 - Phase 17 code review blockers were fixed and final `17-REVIEW.md` is clean; `17-VERIFICATION.md` passed all 5 roadmap success criteria.
 - Phase 18 added provider catalog labels, explicit cloud STT consent/API key persistence, redacted diagnostics, Voice in settings, and diagnostics-only STT tests without microphone capture or chat submission.
+- Phase 19 plan 19-01 added STT contracts, lazy registry, app-managed model cache metadata, readiness fingerprints, and admin endpoint skeletons without provider-library imports at boot.
 
 ## Deferred Items
 
@@ -105,6 +106,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-10T06:31:00Z
-Stopped at: Completed Phase 18 rich voice settings; ready for Phase 19
+Last session: 2026-05-10T06:40:00Z
+Stopped at: Completed Phase 19 plan 19-01 foundation; ready for 19-02/19-03
 Resume file: None

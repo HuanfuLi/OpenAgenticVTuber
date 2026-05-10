@@ -3,6 +3,15 @@
 
 import type { VoicePreset } from './voice-preset';
 import type { AudioProviderHealth } from './audio-provider-health';
+export type InvalidationReason =
+  | 'never_tested'
+  | 'config_changed'
+  | 'health_failed'
+  | 'test_failed'
+  | 'runtime_failure'
+  | 'missing_model'
+  | 'missing_credential'
+  | 'missing_consent';
 export type Capabilities = (
   | 'local'
   | 'cloud'
@@ -23,6 +32,23 @@ export type State1 =
   | 'external_service_failure'
   | 'timeout'
   | 'misconfigured';
+export type Status =
+  | 'not_downloaded'
+  | 'downloaded'
+  | 'missing'
+  | 'incomplete'
+  | 'manual_path_required'
+  | 'operation_pending';
+export type Status1 =
+  | 'not_downloaded'
+  | 'downloaded'
+  | 'missing'
+  | 'incomplete'
+  | 'manual_path_required'
+  | 'operation_pending';
+export type ModelCacheState =
+  | ('not_downloaded' | 'downloaded' | 'missing' | 'incomplete' | 'manual_path_required' | 'operation_pending')
+  | null;
 export type RedactedDiagnostics1 = {
   [k: string]: string
 } | null;
@@ -33,6 +59,9 @@ export interface AudioProviderContracts {
   gpt_sovits_health_request: GptSoVitsHealthRequest | null;
   gpt_sovits_test_synthesis_request: GptSoVitsTestSynthesisRequest | null;
   gpt_sovits_test_synthesis_result: GptSoVitsTestSynthesisResult | null;
+  stt_model_cache_catalog: STTModelCacheCatalog;
+  stt_model_cache_operation_request: STTModelCacheOperationRequest | null;
+  stt_model_cache_operation_result: STTModelCacheOperationResult | null;
   stt_test_request: STTTestRequest | null;
   stt_test_result: STTTestResult | null
 }
@@ -47,12 +76,16 @@ export interface AudioDiagnosticsConfig {
 }
 export interface STTProviderConfig {
   active_provider: ('funasr' | 'faster_whisper' | 'openai' | 'groq') | null;
+  cache_root: string | null;
   capture_timeout_ms: number;
   cloud: Cloud;
   enabled: boolean;
   execution: 'off_event_loop';
   input_mode: 'push_to_talk' | 'vad';
-  language_mode: 'auto' | 'zh' | 'en'
+  language_mode: 'auto' | 'zh' | 'en';
+  local_model_id: string | null;
+  local_model_path_override: string | null;
+  readiness: STTProviderReadiness
 }
 export interface Cloud {
   [k: string]: CloudSTTProviderSettings
@@ -63,6 +96,15 @@ export interface CloudSTTProviderSettings {
   endpoint_url: string | null;
   model_name: string | null;
   provider_id: 'openai' | 'groq'
+}
+export interface STTProviderReadiness {
+  active_allowed: boolean;
+  fingerprint: string | null;
+  health_check_passed: boolean;
+  invalidation_reason: InvalidationReason;
+  last_health_checked_at: string | null;
+  last_test_transcription_at: string | null;
+  test_transcription_passed: boolean
 }
 export interface TTSProviderConfig {
   active_provider: 'piper' | 'gpt_sovits';
@@ -104,14 +146,17 @@ export interface AudioProviderCatalog {
 }
 export interface AudioProviderCatalogEntry {
   capabilities: Capabilities;
+  default_model_id: string | null;
   display_name: string;
   enabled: boolean;
   kind: 'tts' | 'stt';
   local: boolean;
   provider_id: 'piper' | 'gpt_sovits' | 'funasr' | 'faster_whisper' | 'openai' | 'groq';
+  recommended: boolean;
   requires_api_key: boolean;
   requires_consent: boolean;
-  summary: string
+  summary: string;
+  supported_language_modes: ('auto' | 'zh' | 'en')[]
 }
 export interface GptSoVitsHealthRequest {
   config: GptSoVitsProviderConfig;
@@ -142,23 +187,66 @@ export interface GptSoVitsTestSynthesisResult {
   summary: string
 }
 
+export interface STTModelCacheCatalog {
+  cache_root_display: string;
+  models: STTModelCatalogEntry[]
+}
+export interface STTModelCatalogEntry {
+  app_managed: boolean;
+  cache_path_display: string | null;
+  display_name: string;
+  loaded: boolean;
+  model_id: string;
+  provider_id: 'funasr' | 'faster_whisper';
+  recommended: boolean;
+  removable: boolean;
+  size_bytes: number | null;
+  size_label: string | null;
+  source_label: string;
+  status: Status;
+  summary: string
+}
+export interface STTModelCacheOperationRequest {
+  model_id: string;
+  provider_id: 'funasr' | 'faster_whisper'
+}
+export interface STTModelCacheOperationResult {
+  cache_path_display: string | null;
+  model_id: string;
+  ok: boolean;
+  provider_id: 'funasr' | 'faster_whisper';
+  status: Status1;
+  summary: string
+}
 export interface STTTestRequest {
+  audio_base64_wav: string | null;
   config: STTProviderConfig1;
+  duration_ms: number | null;
   sample_label: string | null
 }
 export interface STTProviderConfig1 {
   active_provider: ('funasr' | 'faster_whisper' | 'openai' | 'groq') | null;
+  cache_root: string | null;
   capture_timeout_ms: number;
   cloud: Cloud;
   enabled: boolean;
   execution: 'off_event_loop';
   input_mode: 'push_to_talk' | 'vad';
-  language_mode: 'auto' | 'zh' | 'en'
+  language_mode: 'auto' | 'zh' | 'en';
+  local_model_id: string | null;
+  local_model_path_override: string | null;
+  readiness: STTProviderReadiness
 }
 export interface STTTestResult {
+  duration_ms: number | null;
   failure: AudioProviderHealth | null;
+  language: string | null;
+  latency_ms: number | null;
+  model_cache_state: ModelCacheState;
   ok: boolean;
   provider_id: 'funasr' | 'faster_whisper' | 'openai' | 'groq';
+  readiness: STTProviderReadiness | null;
   redacted_diagnostics: RedactedDiagnostics1;
-  summary: string
+  summary: string;
+  transcript: string | null
 }

@@ -152,7 +152,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
   5. Heavy local STT models lazy-load after boot rather than blocking app startup.
 **Plans**: 4
 **Wave 1**:
-  - `19-01`: STT Contracts, Registry, Cache, And Readiness Foundation - provider-neutral contracts, lazy registry, model-cache metadata, readiness gate, and admin endpoint skeletons.
+  - [x] `19-01`: STT Contracts, Registry, Cache, And Readiness Foundation - provider-neutral contracts, lazy registry, model-cache metadata, readiness gate, and admin endpoint skeletons.
 **Wave 2** *(blocked on Wave 1 completion)*:
   - `19-02`: Local STT Providers And Model Cache Controls - FunASR/SenseVoiceSmall, faster-whisper, explicit model download/remove/status, and local test transcription.
   - `19-03`: Cloud STT Providers, Consent, And Redacted Diagnostics - OpenAI/Groq adapters, separate STT credentials, persistent consent, and redacted cloud diagnostics.
@@ -227,7 +227,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 | 16. Audio Contracts + TTS Provider Shell | v3.0 | 4/4 | Complete | 2026-05-09 |
 | 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 12/12 | Complete | 2026-05-10 |
 | 18. Rich Voice Settings + Persistence | v3.0 | 3/3 | Complete | 2026-05-10 |
-| 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 0/4 | Planned | - |
+| 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 1/4 | In progress | - |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 0/TBD | Not started | - |
 | 21. Code-Switch Evaluation + Hardening | v3.0 | 0/TBD | Not started | - |
 | 22. AEC Spike + No-Headphones Decision | v3.0 | 0/TBD | Not started | - |

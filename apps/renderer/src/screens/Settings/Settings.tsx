@@ -2159,6 +2159,8 @@ function VoiceInputSection() {
     try {
       const result = await window.api.testSttProvider?.({
         config: sttConfig,
+        audio_base64_wav: null,
+        duration_ms: null,
         sample_label: 'settings-diagnostics'
       })
       if (result) {

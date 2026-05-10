@@ -375,6 +375,8 @@ describe('GPT-SoVITS audio IPC handlers', () => {
           }
         }
       },
+      audio_base64_wav: null,
+      duration_ms: null,
       sample_label: 'settings'
     }
 

@@ -18,6 +18,7 @@
           "$ref": "#/$defs/STTProviderConfig",
           "default": {
             "active_provider": null,
+            "cache_root": null,
             "capture_timeout_ms": 30000,
             "cloud": {
               "groq": {
@@ -38,7 +39,18 @@
             "enabled": false,
             "execution": "off_event_loop",
             "input_mode": "push_to_talk",
-            "language_mode": "auto"
+            "language_mode": "auto",
+            "local_model_id": null,
+            "local_model_path_override": null,
+            "readiness": {
+              "active_allowed": false,
+              "fingerprint": null,
+              "health_check_passed": false,
+              "invalidation_reason": "never_tested",
+              "last_health_checked_at": null,
+              "last_test_transcription_at": null,
+              "test_transcription_passed": false
+            }
           }
         },
         "tts": {
@@ -113,6 +125,18 @@
           "title": "Capabilities",
           "type": "array"
         },
+        "default_model_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Model Id"
+        },
         "display_name": {
           "title": "Display Name",
           "type": "string"
@@ -146,6 +170,11 @@
           "title": "Provider Id",
           "type": "string"
         },
+        "recommended": {
+          "default": false,
+          "title": "Recommended",
+          "type": "boolean"
+        },
         "requires_api_key": {
           "default": false,
           "title": "Requires Api Key",
@@ -159,14 +188,28 @@
         "summary": {
           "title": "Summary",
           "type": "string"
+        },
+        "supported_language_modes": {
+          "items": {
+            "enum": [
+              "auto",
+              "zh",
+              "en"
+            ],
+            "type": "string"
+          },
+          "title": "Supported Language Modes",
+          "type": "array"
         }
       },
       "required": [
+        "default_model_id",
         "display_name",
         "enabled",
         "kind",
         "local",
         "provider_id",
+        "recommended",
         "requires_api_key",
         "requires_consent",
         "summary"
@@ -886,6 +929,221 @@
       "title": "PiperTTSConfig",
       "type": "object"
     },
+    "STTModelCacheCatalog": {
+      "properties": {
+        "cache_root_display": {
+          "title": "Cache Root Display",
+          "type": "string"
+        },
+        "models": {
+          "items": {
+            "$ref": "#/$defs/STTModelCatalogEntry"
+          },
+          "title": "Models",
+          "type": "array"
+        }
+      },
+      "required": [
+        "cache_root_display"
+      ],
+      "title": "STTModelCacheCatalog",
+      "type": "object"
+    },
+    "STTModelCacheOperationRequest": {
+      "properties": {
+        "model_id": {
+          "title": "Model Id",
+          "type": "string"
+        },
+        "provider_id": {
+          "enum": [
+            "funasr",
+            "faster_whisper"
+          ],
+          "title": "Provider Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model_id",
+        "provider_id"
+      ],
+      "title": "STTModelCacheOperationRequest",
+      "type": "object"
+    },
+    "STTModelCacheOperationResult": {
+      "properties": {
+        "cache_path_display": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cache Path Display"
+        },
+        "model_id": {
+          "title": "Model Id",
+          "type": "string"
+        },
+        "ok": {
+          "title": "Ok",
+          "type": "boolean"
+        },
+        "provider_id": {
+          "enum": [
+            "funasr",
+            "faster_whisper"
+          ],
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "not_downloaded",
+            "downloaded",
+            "missing",
+            "incomplete",
+            "manual_path_required",
+            "operation_pending"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cache_path_display",
+        "model_id",
+        "ok",
+        "provider_id",
+        "status",
+        "summary"
+      ],
+      "title": "STTModelCacheOperationResult",
+      "type": "object"
+    },
+    "STTModelCatalogEntry": {
+      "properties": {
+        "app_managed": {
+          "default": true,
+          "title": "App Managed",
+          "type": "boolean"
+        },
+        "cache_path_display": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cache Path Display"
+        },
+        "display_name": {
+          "title": "Display Name",
+          "type": "string"
+        },
+        "loaded": {
+          "default": false,
+          "title": "Loaded",
+          "type": "boolean"
+        },
+        "model_id": {
+          "title": "Model Id",
+          "type": "string"
+        },
+        "provider_id": {
+          "enum": [
+            "funasr",
+            "faster_whisper"
+          ],
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "recommended": {
+          "default": false,
+          "title": "Recommended",
+          "type": "boolean"
+        },
+        "removable": {
+          "default": false,
+          "title": "Removable",
+          "type": "boolean"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size Bytes"
+        },
+        "size_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size Label"
+        },
+        "source_label": {
+          "title": "Source Label",
+          "type": "string"
+        },
+        "status": {
+          "default": "not_downloaded",
+          "enum": [
+            "not_downloaded",
+            "downloaded",
+            "missing",
+            "incomplete",
+            "manual_path_required",
+            "operation_pending"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "app_managed",
+        "cache_path_display",
+        "display_name",
+        "loaded",
+        "model_id",
+        "provider_id",
+        "recommended",
+        "removable",
+        "size_bytes",
+        "size_label",
+        "source_label",
+        "status",
+        "summary"
+      ],
+      "title": "STTModelCatalogEntry",
+      "type": "object"
+    },
     "STTProviderConfig": {
       "properties": {
         "active_provider": {
@@ -905,6 +1163,18 @@
           ],
           "default": null,
           "title": "Active Provider"
+        },
+        "cache_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cache Root"
         },
         "capture_timeout_ms": {
           "default": 30000,
@@ -954,23 +1224,159 @@
           ],
           "title": "Language Mode",
           "type": "string"
+        },
+        "local_model_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Local Model Id"
+        },
+        "local_model_path_override": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Local Model Path Override"
+        },
+        "readiness": {
+          "$ref": "#/$defs/STTProviderReadiness"
         }
       },
       "required": [
         "active_provider",
+        "cache_root",
         "capture_timeout_ms",
         "enabled",
         "execution",
         "input_mode",
-        "language_mode"
+        "language_mode",
+        "local_model_id",
+        "local_model_path_override"
       ],
       "title": "STTProviderConfig",
       "type": "object"
     },
+    "STTProviderReadiness": {
+      "properties": {
+        "active_allowed": {
+          "default": false,
+          "title": "Active Allowed",
+          "type": "boolean"
+        },
+        "fingerprint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fingerprint"
+        },
+        "health_check_passed": {
+          "default": false,
+          "title": "Health Check Passed",
+          "type": "boolean"
+        },
+        "invalidation_reason": {
+          "default": "never_tested",
+          "enum": [
+            "never_tested",
+            "config_changed",
+            "health_failed",
+            "test_failed",
+            "runtime_failure",
+            "missing_model",
+            "missing_credential",
+            "missing_consent"
+          ],
+          "title": "Invalidation Reason",
+          "type": "string"
+        },
+        "last_health_checked_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Health Checked At"
+        },
+        "last_test_transcription_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Test Transcription At"
+        },
+        "test_transcription_passed": {
+          "default": false,
+          "title": "Test Transcription Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "active_allowed",
+        "fingerprint",
+        "health_check_passed",
+        "invalidation_reason",
+        "last_health_checked_at",
+        "last_test_transcription_at",
+        "test_transcription_passed"
+      ],
+      "title": "STTProviderReadiness",
+      "type": "object"
+    },
     "STTTestRequest": {
       "properties": {
+        "audio_base64_wav": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audio Base64 Wav"
+        },
         "config": {
           "$ref": "#/$defs/STTProviderConfig"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
         },
         "sample_label": {
           "anyOf": [
@@ -986,7 +1392,9 @@
         }
       },
       "required": [
+        "audio_base64_wav",
         "config",
+        "duration_ms",
         "sample_label"
       ],
       "title": "STTTestRequest",
@@ -994,6 +1402,19 @@
     },
     "STTTestResult": {
       "properties": {
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
         "failure": {
           "anyOf": [
             {
@@ -1004,6 +1425,51 @@
             }
           ],
           "default": null
+        },
+        "language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Language"
+        },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latency Ms"
+        },
+        "model_cache_state": {
+          "anyOf": [
+            {
+              "enum": [
+                "not_downloaded",
+                "downloaded",
+                "missing",
+                "incomplete",
+                "manual_path_required",
+                "operation_pending"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Cache State"
         },
         "ok": {
           "title": "Ok",
@@ -1018,6 +1484,17 @@
           ],
           "title": "Provider Id",
           "type": "string"
+        },
+        "readiness": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/STTProviderReadiness"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "redacted_diagnostics": {
           "anyOf": [
@@ -1037,14 +1514,32 @@
         "summary": {
           "title": "Summary",
           "type": "string"
+        },
+        "transcript": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transcript"
         }
       },
       "required": [
+        "duration_ms",
         "failure",
+        "language",
+        "latency_ms",
+        "model_cache_state",
         "ok",
         "provider_id",
+        "readiness",
         "redacted_diagnostics",
-        "summary"
+        "summary",
+        "transcript"
       ],
       "title": "STTTestResult",
       "type": "object"
@@ -1205,6 +1700,7 @@
         "schema_version": 1,
         "stt": {
           "active_provider": null,
+          "cache_root": null,
           "capture_timeout_ms": 30000,
           "cloud": {
             "groq": {
@@ -1225,7 +1721,18 @@
           "enabled": false,
           "execution": "off_event_loop",
           "input_mode": "push_to_talk",
-          "language_mode": "auto"
+          "language_mode": "auto",
+          "local_model_id": null,
+          "local_model_path_override": null,
+          "readiness": {
+            "active_allowed": false,
+            "fingerprint": null,
+            "health_check_passed": false,
+            "invalidation_reason": "never_tested",
+            "last_health_checked_at": null,
+            "last_test_transcription_at": null,
+            "test_transcription_passed": false
+          }
         },
         "tts": {
           "active_provider": "piper",
@@ -1281,6 +1788,35 @@
       ],
       "default": null
     },
+    "stt_model_cache_catalog": {
+      "$ref": "#/$defs/STTModelCacheCatalog",
+      "default": {
+        "cache_root_display": "",
+        "models": []
+      }
+    },
+    "stt_model_cache_operation_request": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/STTModelCacheOperationRequest"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "stt_model_cache_operation_result": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/STTModelCacheOperationResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "stt_test_request": {
       "anyOf": [
         {
@@ -1310,6 +1846,9 @@
     "gpt_sovits_health_request",
     "gpt_sovits_test_synthesis_request",
     "gpt_sovits_test_synthesis_result",
+    "stt_model_cache_catalog",
+    "stt_model_cache_operation_request",
+    "stt_model_cache_operation_result",
     "stt_test_request",
     "stt_test_result"
   ],

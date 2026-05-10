@@ -41,6 +41,7 @@ from sidecar.plugins.loader import (
 )
 from sidecar.plugins.supervisor import NullPlugin, PluginSupervisor
 from sidecar.tts import TTSGateway, TTSTaskManager, build_tts_gateway
+from sidecar.stt import STTModelCache, STTProviderRegistry
 from sidecar.vts.handshake import connect_and_authenticate
 from sidecar.vts.discrete_dispatcher import DiscreteDispatcher
 from sidecar.vts.event_completion_tracker import EventCompletionTracker
@@ -268,6 +269,11 @@ async def lifespan(app: FastAPI):
     app.state.hud_tap = HudTap()
     app.state.audio_config = load_audio_config_from_env()
     app.state.audio_provider_health = None
+    app.state.stt_registry = STTProviderRegistry()
+    app.state.stt_model_cache = STTModelCache(
+        cache_root=app.state.audio_config.stt.cache_root,
+        user_data=os.environ.get("AGENTICLLMVTUBER_USER_DATA"),
+    )
 
     provider_cfg = _load_provider_config_from_env()
     avatars = _avatars_root()

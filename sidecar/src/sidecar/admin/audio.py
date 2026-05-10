@@ -18,12 +18,16 @@ from contracts import (
     AudioProviderCatalogEntry,
     AudioProviderHealth,
     GptSoVitsProviderConfig,
+    STTModelCacheOperationRequest,
+    STTProviderReadiness,
     STTProviderConfig,
     STTTestRequest,
     STTTestResult,
     VoicePreset,
 )
 from sidecar.audio.redaction import redact_audio_diagnostics
+from sidecar.stt import STTModelCache, STTProviderRegistry
+from sidecar.stt.readiness import compute_stt_readiness_fingerprint, validate_stt_readiness
 from sidecar.tts.gpt_sovits_provider import GptSoVitsProvider
 from sidecar.tts.provider import TTSProviderError, TTSSynthesisRequest
 
@@ -120,6 +124,7 @@ def _fallback_health(request: Request) -> AudioProviderHealth:
 
 
 def _provider_catalog() -> AudioProviderCatalog:
+    stt_catalog = STTProviderRegistry().catalog()
     return AudioProviderCatalog(
         providers=[
             AudioProviderCatalogEntry(
@@ -138,47 +143,16 @@ def _provider_catalog() -> AudioProviderCatalog:
                 local=True,
                 summary="External or app-launched voice synthesis server.",
             ),
-            AudioProviderCatalogEntry(
-                provider_id="funasr",
-                kind="stt",
-                display_name="FunASR",
-                capabilities=["local", "requires_local_model", "test_transcription", "chinese_english"],
-                local=True,
-                summary="Local STT adapter planned for Phase 19.",
-            ),
-            AudioProviderCatalogEntry(
-                provider_id="faster_whisper",
-                kind="stt",
-                display_name="faster-whisper",
-                capabilities=["local", "requires_local_model", "test_transcription"],
-                local=True,
-                summary="Local fallback STT adapter planned for Phase 19.",
-            ),
-            AudioProviderCatalogEntry(
-                provider_id="openai",
-                kind="stt",
-                display_name="OpenAI STT",
-                capabilities=["cloud", "requires_api_key", "test_transcription"],
-                local=False,
-                requires_api_key=True,
-                requires_consent=True,
-                summary="Cloud STT option; disabled until explicit consent and an API key are saved.",
-            ),
-            AudioProviderCatalogEntry(
-                provider_id="groq",
-                kind="stt",
-                display_name="Groq STT",
-                capabilities=["cloud", "requires_api_key", "test_transcription"],
-                local=False,
-                requires_api_key=True,
-                requires_consent=True,
-                summary="Cloud STT option; disabled until explicit consent and an API key are saved.",
-            ),
+            *stt_catalog.providers,
         ]
     )
 
 
 def _stt_provider_health(config: STTProviderConfig) -> AudioProviderHealth:
+    registry = STTProviderRegistry()
+    registry_health = registry.health(config)
+    if registry_health.state != "unavailable" or config.active_provider in {"openai", "groq"}:
+        return registry_health
     provider_id = config.active_provider or "funasr"
     if provider_id in {"openai", "groq"}:
         cloud = config.cloud.get(provider_id)
@@ -216,6 +190,11 @@ def _stt_provider_health(config: STTProviderConfig) -> AudioProviderHealth:
         retryable=True,
         redacted_diagnostics={"provider": provider_id, "adapter": "not_implemented"},
     )
+
+
+def _stt_model_cache(request: Request, config: STTProviderConfig | None = None) -> STTModelCache:
+    user_data = os.environ.get("AGENTICLLMVTUBER_USER_DATA")
+    return STTModelCache(cache_root=config.cache_root if config else None, user_data=user_data)
 
 
 def _pcm_to_wav_base64(pcm_int16: bytes, sample_rate: int) -> tuple[str, int]:
@@ -293,10 +272,66 @@ async def post_stt_test(payload: STTTestRequest) -> dict[str, object]:
     return STTTestResult(
         ok=False,
         provider_id=health.provider_id,
+        transcript=None,
+        language=None,
+        latency_ms=None,
+        duration_ms=payload.duration_ms,
+        model_cache_state="not_downloaded" if health.provider_id in {"funasr", "faster_whisper"} else None,
+        readiness=payload.config.readiness.model_copy(
+            update={
+                "active_allowed": False,
+                "health_check_passed": health.state == "ok",
+                "test_transcription_passed": False,
+                "fingerprint": compute_stt_readiness_fingerprint(payload.config),
+                "invalidation_reason": "test_failed",
+            }
+        ),
         summary=health.summary,
         failure=health,
         redacted_diagnostics=redacted_diagnostics,
     ).model_dump()
+
+
+@router.post("/stt/health")
+async def post_stt_health(payload: STTTestRequest) -> dict[str, object]:
+    health = _stt_provider_health(payload.config)
+    return health.model_dump()
+
+
+@router.post("/stt/readiness")
+async def post_stt_readiness(payload: STTTestRequest) -> dict[str, object]:
+    return validate_stt_readiness(payload.config).model_dump()
+
+
+@router.post("/stt/enable")
+async def post_stt_enable(payload: STTTestRequest) -> dict[str, object]:
+    readiness = validate_stt_readiness(payload.config)
+    if not readiness.active_allowed:
+        return STTProviderReadiness(
+            health_check_passed=readiness.health_check_passed,
+            test_transcription_passed=readiness.test_transcription_passed,
+            last_health_checked_at=readiness.last_health_checked_at,
+            last_test_transcription_at=readiness.last_test_transcription_at,
+            fingerprint=readiness.fingerprint,
+            active_allowed=False,
+            invalidation_reason=readiness.invalidation_reason,
+        ).model_dump()
+    return readiness.model_dump()
+
+
+@router.post("/stt/models")
+async def post_stt_models(request: Request, payload: STTTestRequest) -> dict[str, object]:
+    return _stt_model_cache(request, payload.config).catalog().model_dump()
+
+
+@router.post("/stt/models/download")
+async def post_stt_model_download(request: Request, payload: STTModelCacheOperationRequest) -> dict[str, object]:
+    return _stt_model_cache(request).download_placeholder(payload.provider_id, payload.model_id).model_dump()
+
+
+@router.post("/stt/models/remove")
+async def post_stt_model_remove(request: Request, payload: STTModelCacheOperationRequest) -> dict[str, object]:
+    return _stt_model_cache(request).remove(payload.provider_id, payload.model_id).model_dump()
 
 
 @router.post("/gpt-sovits/health")
