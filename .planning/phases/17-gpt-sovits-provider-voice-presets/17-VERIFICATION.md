@@ -1,16 +1,21 @@
 ---
 phase: 17-gpt-sovits-provider-voice-presets
-verified: 2026-05-10T03:55:00Z
-status: passed
-score: 5/5 must-haves verified
+verified: 2026-05-10T04:10:00Z
+status: human_needed
+score: 4/4 Plan 17-09 must-haves verified; 5/5 roadmap must-haves previously verified
 overrides_applied: 0
 re_verification:
   previous_status: passed
   previous_score: 5/5
   gaps_closed:
     - "17-08 UAT blocker: already validated matching GPT-SoVITS presets no longer require redundant test synthesis before activation; new/changed candidates still require current health plus successful test synthesis."
+    - "17-09 UAT Test 6 duplicate-dispatch gap: renderer WS store registration is idempotent, retains unsubscribe handles, disposes on Vite HMR, and focused ChatStreaming regression tests pass."
   gaps_remaining: []
   regressions: []
+human_verification:
+  - test: "UAT Test 6 live active GPT-SoVITS chat turn retest"
+    expected: "After renderer HMR/module re-evaluation, one GPT-SoVITS chat audio payload produces each visible assistant sentence chunk once, with no duplicated text like Hello!Hello!."
+    why_human: "Requires a live GPT-SoVITS server/model/reference-audio setup and Vite dev HMR behavior; automated tests verify the renderer duplicate-dispatch root cause only."
 residual_risk:
   - "Live GPT-SoVITS server UAT remains environment-blocked; 17-UAT.md records the blocked probe and checklist. Code-level mocked/provider coverage and static wiring checks pass the goal-backward criteria."
 ---
@@ -18,11 +23,31 @@ residual_risk:
 # Phase 17: GPT-SoVITS Provider + Voice Presets Verification Report
 
 **Phase Goal:** Users can choose GPT-SoVITS for character voice output, validate it before use, and organize voice presets without losing Piper fallback safety.
-**Verified:** 2026-05-10T03:55:00Z
-**Status:** passed
-**Re-verification:** Yes — after 17-08 UAT gap closure
+**Verified:** 2026-05-10T04:10:00Z
+**Status:** human_needed
+**Re-verification:** Yes — after 17-09 UAT Test 6 gap closure
 
 ## Goal Achievement
+
+### 17-09 UAT Test 6 Gap Closure Re-Verification
+
+| Question | Status | Evidence |
+|---|---|---|
+| Does `store.ts` retain unsubscribe handles from `subscribe` and `subscribeSidecarReconnect`? | ✓ VERIFIED | `unsubscribeMessages` and `unsubscribeSidecarReconnect` are module-level handles (`apps/renderer/src/ws/store.ts:51-52`), assigned from `subscribe(dispatchWSMessage)` and `subscribeSidecarReconnect(dispatchSidecarReconnect)` (`store.ts:134-140`), invoked and nulled during dispose (`store.ts:143-148`). |
+| Is WS store registration idempotent when called more than once? | ✓ VERIFIED | `ensureWSStoreSubscriptions()` only subscribes when each handle is null (`store.ts:134-140`). The focused test calls it twice and asserts one message listener and one reconnect listener (`apps/renderer/tests/ChatStreaming.test.tsx:161-170`). |
+| Does Vite HMR disposal unsubscribe message/reconnect listeners? | ✓ VERIFIED | `import.meta.hot.dispose(() => disposeWSStoreSubscriptions())` is wired in `store.ts:152-155`; dispose invokes both retained unsubscribe functions (`store.ts:143-145`). |
+| Does automatic module-load registration still happen for runtime imports? | ✓ VERIFIED | `ensureWSStoreSubscriptions()` is still called at module load before the HMR dispose hook (`store.ts:150-155`), so importing `@/ws/store` registers the dispatcher once. |
+| Does one normal audio payload after Thinking produce visible text once, not `Hello!Hello!`? | ✓ VERIFIED | Audio dispatch still calls `appendAssistantSentence(...)` once per store listener and `playAudioPayload` only for non-empty audio (`store.ts:78-99`). The regression test sends `conversation-chain-start`, dispatches one `Hello!` audio payload through `wsClientMock.dispatch`, and asserts one assistant message with text `Hello!`, not `Hello!Hello!`, plus one playback call (`ChatStreaming.test.tsx:172-184`). |
+| Does failed GPT-SoVITS audio visible text stay once with one audio failure marker and no Piper auto-switch? | ✓ VERIFIED | Failed GPT-SoVITS audio passes failure metadata to `appendAssistantSentence`, sets the GPT-SoVITS banner, does not call `playAudioPayload` because `msg.audio` is null, and never saves provider config (`store.ts:78-99`). Tests assert one visible failed sentence, one `audioFailures` entry, no playback, and no `saveStoredConfig` auto-switch (`ChatStreaming.test.tsx:186-200`, `203-242`). |
+| Do tests cover duplicate registration/HMR simulation through the real store dispatcher path? | ✓ VERIFIED | The test imports the real `@/ws/store`, calls `ensureWSStoreSubscriptions()` twice, and dispatches via the mocked client listener set rather than calling `appendAssistantSentence` directly (`ChatStreaming.test.tsx:21-43`, `72-74`, `161-200`). |
+| Does `17-UAT.md` record Plan 17-09 automated evidence without marking Test 6 passed before user retest? | ✓ VERIFIED | Test 6 remains `result: issue`, says live retest is required, and records Plan 17-09 automated evidence separately (`17-UAT.md:60-64`, `181-192`). |
+
+Focused automated re-verification commands passed in this verifier run:
+
+- `npm --workspace apps/renderer run test -- --run ChatStreaming.test.tsx` — PASS (8 tests)
+- `npm --workspace apps/renderer run typecheck` — PASS
+
+**Plan 17-09 score:** 4/4 must-haves verified. The renderer implementation is sound; live UAT Test 6 remains a human verification item by design.
 
 ### 17-08 UAT Gap Closure Re-Verification
 
@@ -121,7 +146,11 @@ Focused automated re-verification commands passed in this verifier run:
 
 ### Human Verification Required
 
-None blocking for this verification per user instruction: live GPT-SoVITS server UAT is environment-blocked and documented in `17-UAT.md`. Residual risk remains until a real server/model/reference-audio setup is available.
+#### 1. UAT Test 6 live active GPT-SoVITS chat turn retest
+
+**Test:** With Vite dev/HMR conditions and an active GPT-SoVITS voice preset, send a chat turn after renderer module re-evaluation/HMR.
+**Expected:** Each assistant sentence chunk appears once and audio plays through the existing renderer audio/RMS/lipsync path; no duplicated visible text such as `Hello!Hello!` appears.
+**Why human:** Requires a live GPT-SoVITS server/model/reference-audio setup and the dev HMR behavior that originally exposed the issue. Automated tests verify the renderer duplicate-dispatch root cause.
 
 ### Gaps Summary
 
@@ -129,5 +158,5 @@ No blocking implementation gaps found. The five roadmap success criteria are sup
 
 ---
 
-_Verified: 2026-05-10T03:55:00Z_
+_Verified: 2026-05-10T04:10:00Z_
 _Verifier: the agent (gsd-verifier)_
