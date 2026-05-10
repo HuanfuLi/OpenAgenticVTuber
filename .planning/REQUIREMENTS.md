@@ -17,19 +17,19 @@ v3.0 turns the app from text-first chat with Piper output into a configurable vo
 
 ### TTS + GPT-SoVITS
 
-- [ ] **TTS-01**: User can select Piper or GPT-SoVITS as the active TTS provider.
+- [x] **TTS-01**: User can select Piper or GPT-SoVITS as the active TTS provider.
 - [x] **TTS-02**: User can configure GPT-SoVITS external-server settings and run a health check before using it.
 - [x] **TTS-03**: User can configure an optional app-managed GPT-SoVITS launch command, working directory, health URL, and stop/restart action.
-- [ ] **TTS-04**: User can run test synthesis for the active TTS provider and hear the result without sending a chat turn.
+- [x] **TTS-04**: User can run test synthesis for the active TTS provider and hear the result without sending a chat turn.
 - [x] **TTS-05**: TTS output from every provider flows through the existing ordered playback, renderer audio payload, and RMS/lipsync path.
 - [ ] **TTS-06**: User sees a visible fallback/error state when GPT-SoVITS fails; the app never silently changes provider mid-turn.
 
 ### Voice Presets + Reference Audio
 
-- [ ] **PRESET-01**: User can create, rename, select, and delete named voice presets.
-- [ ] **PRESET-02**: User can configure backend-specific tuning controls for a preset, including GPT-SoVITS reference text/language and synthesis knobs.
-- [ ] **PRESET-03**: User can import/manage GPT-SoVITS reference audio with validation and sanitized app-managed storage.
-- [ ] **PRESET-04**: User can associate the active avatar/session with a voice preset without modifying avatar import catalogs.
+- [x] **PRESET-01**: User can create, rename, select, and delete named voice presets.
+- [x] **PRESET-02**: User can configure backend-specific tuning controls for a preset, including GPT-SoVITS reference text/language and synthesis knobs.
+- [x] **PRESET-03**: User can import/manage GPT-SoVITS reference audio with validation and sanitized app-managed storage.
+- [x] **PRESET-04**: User can associate the active avatar/session with a voice preset without modifying avatar import catalogs.
 
 ### STT Providers
 
@@ -115,16 +115,16 @@ Populated by the roadmapper during ROADMAP.md creation.
 | AUDIO-02 | Phase 16 | Complete |
 | AUDIO-03 | Phase 16 | Complete |
 | AUDIO-04 | Phase 16 | Complete |
-| TTS-01 | Phase 17 | Pending |
+| TTS-01 | Phase 17 | Complete |
 | TTS-02 | Phase 17 | Complete |
 | TTS-03 | Phase 17 | Complete |
-| TTS-04 | Phase 17 | Pending |
+| TTS-04 | Phase 17 | Complete |
 | TTS-05 | Phase 16 | Complete |
 | TTS-06 | Phase 17 | Pending |
-| PRESET-01 | Phase 17 | Pending |
-| PRESET-02 | Phase 17 | Pending |
-| PRESET-03 | Phase 17 | Pending |
-| PRESET-04 | Phase 17 | Pending |
+| PRESET-01 | Phase 17 | Complete |
+| PRESET-02 | Phase 17 | Complete |
+| PRESET-03 | Phase 17 | Complete |
+| PRESET-04 | Phase 17 | Complete |
 | STT-01 | Phase 19 | Pending |
 | STT-02 | Phase 19 | Pending |
 | STT-03 | Phase 19 | Pending |
@@ -158,4 +158,4 @@ Populated by the roadmapper during ROADMAP.md creation.
 
 ---
 *Requirements defined: 2026-05-09*  
-*Last updated: 2026-05-10 after Phase 17 plan 17-05 execution*
+*Last updated: 2026-05-10 after Phase 17 plan 17-06 execution*
