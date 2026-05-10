@@ -73,11 +73,27 @@ subscribe((msg: WSMessage) => {
     return
   }
   if (isAudioPayload(msg)) {
-    appendAssistantSentence(msg.display_text.text, msg.sentence_id)
+    const failedAudio = msg.audio === null ? msg.failed_audio : null
+    const isGptSoVitsFailure = failedAudio?.provider_id === 'gpt_sovits'
+    appendAssistantSentence(
+      msg.display_text.text,
+      msg.sentence_id,
+      isGptSoVitsFailure
+        ? {
+            failedProviderId: failedAudio.provider_id,
+            failureSummary: failedAudio.summary
+          }
+        : undefined
+    )
     if (msg.audio && msg.audio.trim().length > 0) {
       playAudioPayload(msg.audio)
     }
-    setSpeaking(true)
+    if (isGptSoVitsFailure) {
+      setBanner('GPT_SOVITS_AUDIO_FAILED')
+      setSpeaking(false)
+    } else {
+      setSpeaking(true)
+    }
     return
   }
   if (isForceNewMessage(msg)) {

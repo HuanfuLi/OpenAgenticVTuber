@@ -69,6 +69,9 @@ export const COPY = {
     THINKING: 'Thinking…',
     SPEAKING: 'Teto is still speaking…',
     STREAM_ERROR: "The model couldn't finish that reply. Try again.",
+    GPT_SOVITS_AUDIO_FAILED_SENTENCE: 'Audio failed for this sentence. Text is still shown.',
+    GPT_SOVITS_NEXT_TURN_FALLBACK: 'GPT-SoVITS failed. Select Piper for the next turn if you want fallback audio.',
+    GPT_SOVITS_OPEN_LOGS: 'Open logs for details.',
     CONTEXT_OVERFLOW:
       "Conversation got too long and won't fit in the model anymore. Start a new chat to continue."
   },

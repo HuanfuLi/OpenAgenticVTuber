@@ -27,9 +27,16 @@ export interface StreamingMessage {
   role: ChatRole
   text: string // bubble body -- accumulates per audio envelope
   isThinking?: boolean // true while sidecar is between chain-start and first audio
+  audioFailures: SentenceAudioFailure[]
 }
 
-export type BannerKind = 'STREAM_ERROR' | 'CONTEXT_OVERFLOW'
+export interface SentenceAudioFailure {
+  sentenceId: number
+  failedProviderId: string
+  failureSummary: string
+}
+
+export type BannerKind = 'STREAM_ERROR' | 'CONTEXT_OVERFLOW' | 'GPT_SOVITS_AUDIO_FAILED'
 
 export interface BannerState {
   kind: BannerKind
@@ -95,7 +102,7 @@ function genId(): string {
  * a banner if any stays visible).
  */
 export function appendUserMessage(text: string, sessionId?: string): void {
-  const next: StreamingMessage = { id: genId(), role: 'user', text }
+  const next: StreamingMessage = { id: genId(), role: 'user', text, audioFailures: [] }
   setState({
     messages: [...state.messages, next],
     inputDisabled: true,
@@ -134,7 +141,8 @@ export function setThinking(on: boolean): void {
       id: genId(),
       role: 'assistant',
       text: COPY.CHAT.THINKING,
-      isThinking: true
+      isThinking: true,
+      audioFailures: []
     }
     setState({
       messages: [...messages, next],
@@ -155,7 +163,11 @@ export function setThinking(on: boolean): void {
  * Merge the sentence into the last AI bubble unless the forceNewMessage flag
  * is set OR the last message is not an assistant bubble.
  */
-export function appendAssistantSentence(text: string, _sentenceId: number): void {
+export function appendAssistantSentence(
+  text: string,
+  sentenceId: number,
+  audioFailure?: Omit<SentenceAudioFailure, 'sentenceId'>
+): void {
   const messages = state.messages
   const last = messages[messages.length - 1]
   const startNew = state.forceNewMessage || !last || last.role !== 'assistant'
@@ -164,7 +176,8 @@ export function appendAssistantSentence(text: string, _sentenceId: number): void
     const next: StreamingMessage = {
       id: genId(),
       role: 'assistant',
-      text
+      text,
+      audioFailures: audioFailure ? [{ sentenceId, ...audioFailure }] : []
     }
     setState({
       messages: [...messages, next],
@@ -180,7 +193,10 @@ export function appendAssistantSentence(text: string, _sentenceId: number): void
   const updated: StreamingMessage = {
     ...last,
     text: newText,
-    isThinking: false
+    isThinking: false,
+    audioFailures: audioFailure
+      ? [...last.audioFailures, { sentenceId, ...audioFailure }]
+      : last.audioFailures
   }
   setState({
     messages: [...messages.slice(0, -1), updated]
@@ -208,7 +224,12 @@ export function setBanner(kind: BannerKind | null): void {
     setState({ banner: null })
     return
   }
-  const text = kind === 'STREAM_ERROR' ? COPY.CHAT.STREAM_ERROR : COPY.CHAT.CONTEXT_OVERFLOW
+  const text =
+    kind === 'STREAM_ERROR'
+      ? COPY.CHAT.STREAM_ERROR
+      : kind === 'GPT_SOVITS_AUDIO_FAILED'
+        ? COPY.CHAT.GPT_SOVITS_NEXT_TURN_FALLBACK
+        : COPY.CHAT.CONTEXT_OVERFLOW
   setState({
     banner: { kind, text },
     pendingTurn: state.pendingTurn ? { ...state.pendingTurn, failed: true } : null

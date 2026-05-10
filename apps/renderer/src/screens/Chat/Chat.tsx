@@ -38,6 +38,7 @@ export function Chat() {
       role: m.role,
       text: m.text,
       isThinking: false,
+      audioFailures: [],
       createdAt: m.createdAt
     })),
     ...messages.map((m) => ({
@@ -45,6 +46,7 @@ export function Chat() {
       role: m.role,
       text: m.text,
       isThinking: m.isThinking ?? false,
+      audioFailures: m.audioFailures,
       createdAt: null
     }))
   ]
@@ -140,6 +142,12 @@ export function Chat() {
                     </span>
                   ) : (
                     m.text
+                  )}
+                  {m.audioFailures.length > 0 && (
+                    <div className="audio-failure" role="note">
+                      <span>{COPY.CHAT.GPT_SOVITS_AUDIO_FAILED_SENTENCE}</span>
+                      <span className="footer-cap"> {COPY.CHAT.GPT_SOVITS_OPEN_LOGS}</span>
+                    </div>
                   )}
                 </div>
               </div>
