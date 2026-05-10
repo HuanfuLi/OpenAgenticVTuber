@@ -436,6 +436,72 @@ describe('Settings TTS section', () => {
     expect(screen.getByText(COPY.SETTINGS.GPT_SOVITS_NON_LOCAL_WARNING)).toBeInTheDocument()
   })
 
+  it('renders the empty voice preset library state', async () => {
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+
+    expect(screen.getByText(COPY.SETTINGS.VOICE_PRESETS_EMPTY_HEAD)).toBeInTheDocument()
+    expect(screen.getByText(COPY.SETTINGS.VOICE_PRESETS_EMPTY_BODY)).toBeInTheDocument()
+  })
+
+  it('creates, renames, selects, and deletes global presets without avatar catalog mutation', async () => {
+    const initialPreset = gptPreset()
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [initialPreset] })
+    vi.mocked(window.api.saveVoicePreset)
+      .mockResolvedValueOnce([gptPreset({ preset_id: 'preset-new', name: 'Soft Akari' })])
+      .mockResolvedValueOnce([gptPreset({ preset_id: 'preset-new', name: 'Bright Akari' })])
+    vi.mocked(window.api.deleteVoicePreset).mockResolvedValue([])
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Soft Akari' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
+
+    await waitFor(() => {
+      expect(window.api.saveVoicePreset).toHaveBeenCalledWith(expect.objectContaining({ name: 'Soft Akari' }))
+    })
+
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Bright Akari' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
+    await waitFor(() => {
+      expect(window.api.saveVoicePreset).toHaveBeenCalledWith(expect.objectContaining({ name: 'Bright Akari' }))
+    })
+
+    fireEvent.click(screen.getByRole('radio', { name: /Bright Akari/i }))
+    await waitFor(() => {
+      expect(window.api.setActiveVoicePresetForAvatarSession).toHaveBeenCalledWith('akari', 's1', 'preset-new')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_DELETE }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_DELETE_CONFIRM }))
+    await waitFor(() => {
+      expect(window.api.deleteVoicePreset).toHaveBeenCalledWith('preset-new')
+    })
+    expect(window.api.commitAvatarOverrides).toBeUndefined()
+  })
+
+  it('blocks active preset deletion without implicitly selecting Piper fallback', async () => {
+    const preset = gptPreset()
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      voicePresets: [preset],
+      activePresetByAvatarSession: { 'avatar:akari|session:s1': preset.preset_id }
+    })
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_DELETE }))
+
+    expect(screen.getByRole('alertdialog', { name: COPY.SETTINGS.VOICE_PRESET_DELETE_BLOCKED })).toBeInTheDocument()
+    expect(window.api.deleteVoicePreset).not.toHaveBeenCalled()
+    expect(window.api.saveStoredConfig).not.toHaveBeenCalledWith(expect.objectContaining({
+      audio: expect.objectContaining({ tts: expect.objectContaining({ active_provider: 'piper' }) })
+    }))
+  })
+
   it('renders one combined Avatars section with current catalog counts and actions', async () => {
     renderSettings()
 
