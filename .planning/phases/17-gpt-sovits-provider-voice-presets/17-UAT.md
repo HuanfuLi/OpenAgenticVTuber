@@ -11,18 +11,18 @@ source:
   - 17-07-SUMMARY.md
   - 17-08-SUMMARY.md
 started: 2026-05-10T00:00:00Z
-updated: 2026-05-10T04:42:00Z
+updated: 2026-05-10T05:12:00Z
 ---
 
 # Phase 17 UAT - GPT-SoVITS Provider + Voice Presets
 
 ## Current Test
 
-number: 3
-name: Reference Audio Import And Validation
+number: 6
+name: Active GPT-SoVITS Chat Turn
 expected: |
-  Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
-awaiting: user retest after removing unreliable activation mismatch banner
+  After activating a GPT-SoVITS voice preset, the next chat turn still shows sentence text normally and plays audio through the existing renderer audio/RMS/lipsync path.
+awaiting: diagnosis and fix plan after user-reported duplicated text chunks
 
 ## Tests
 
@@ -40,21 +40,27 @@ severity: none
 
 ### 3. Reference Audio Import And Validation
 expected: Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
-result: issue
-reported: "User reported: Import is not blocked when transcript/language are missing, saving a different preset name/config overwrites the first saved preset instead of creating a new preset, the first fixes still had the wrong user flow, incomplete config actions still showed no visible message, active preset deletion opened a dead-end cancel-only popover, duplicate preset names were allowed, and activation could show a Piper runtime mismatch even while GPT-SoVITS was actually working. Runtime-status polling was still unreliable, so the activation mismatch banner has been removed from the success path; awaiting user retest."
-severity: blocker
+result: pass
+reported: "User confirmed retest passed after fixes."
+severity: none
 
 ### 4. Voice Preset Management
 expected: You can create, rename, select, and delete named voice presets with GPT-SoVITS tuning/reference fields. Deleting the active preset or in-use reference audio is blocked until reassignment rather than silently switching to Piper or cascade-deleting data.
-result: [pending]
+result: pass
+reported: "User confirmed pass."
+severity: none
 
 ### 5. Audible Test Synthesis
 expected: With a healthy GPT-SoVITS server and a preset that has reference audio, clicking Test synthesis plays or previews generated audio without sending a chat message or adding anything to conversation history. Activation becomes available only after this test succeeds.
-result: [pending]
+result: pass
+reported: "User confirmed pass."
+severity: none
 
 ### 6. Active GPT-SoVITS Chat Turn
 expected: After activating a GPT-SoVITS voice preset, the next chat turn still shows sentence text normally and plays audio through the existing renderer audio/RMS/lipsync path.
-result: [pending]
+result: issue
+reported: "Fail: Showing duplicated text chunks like \"Hello!Hello!You've said hello quite a few times today, aren't you?You've said hello quite a few times today, aren't you?Maybe you just want to see my smile!Maybe you just want to see my smile!How are you doing?How are you doing?\""
+severity: major
 
 ### 7. Failed GPT-SoVITS Turn And Explicit Piper Fallback
 expected: If GPT-SoVITS fails during a chat turn, the affected sentence text remains visible, the UI marks audio failed for that sentence, logs hold technical detail, and the app does not switch to Piper until you explicitly select Piper for a later turn.
@@ -63,9 +69,9 @@ result: [pending]
 ## Summary
 
 total: 7
-passed: 2
+passed: 5
 issues: 1
-pending: 4
+pending: 1
 skipped: 0
 blocked: 0
 
@@ -134,9 +140,9 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
   debug_session: ""
 
 - truth: "Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path."
-  status: failed
-  reason: "User reported reference import was not clearly blocked without transcript/language and preset save overwrote the selected preset when trying to create a different named/configured preset."
-  severity: blocker
+  status: resolved
+  reason: "User confirmed retest passed after fixes: reference import validation is visible, new-preset creation no longer overwrites the selected preset, duplicate names are rejected, active preset deletion can reassign, and the false runtime mismatch banner is gone."
+  severity: none
   test: 3
   root_cause: "Reference import relied on disabled-button state and silently returned in the handler without visible validation feedback. Voice preset editing had no explicit create/update split, so Save always derived from the selected preset id and overwrote it. The first redesign treated New preset as a draft-clearing action, but the desired UX is direct-entry: enter config, import/select reference audio, then click New preset to persist a new record. Reference import also auto-saved into the selected preset, which could mutate the existing preset before a new record was created. The validation dialog overlay was absolute-positioned inside the Settings scroll layout instead of fixed to the viewport, making it easy to miss. Active preset deletion correctly required reassignment but presented only a cancel button instead of the reassignment action it requested. Preset identity was enforced only by preset_id, so duplicate display names were not validated at create or rename time."
   artifacts:
@@ -149,8 +155,29 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
     - path: "apps/renderer/tests/Settings.test.tsx"
       issue: "Updated regression coverage so users type config first, import/select reference audio, then click New preset to create a separate record; reference import no longer calls saveVoicePreset by itself; Save preset remains the existing-preset update action; missing import fields show an alertdialog; active preset deletion can reassign and delete; duplicate create/rename names are rejected."
   missing:
-    - "User retest confirmation that invalid reference import is blocked with visible feedback and New preset creates a second preset."
+    - "None for Test 3."
   debug_session: ""
+
+- truth: "After activating a GPT-SoVITS voice preset, the next chat turn still shows sentence text normally and plays audio through the existing renderer audio/RMS/lipsync path."
+  status: failed
+  reason: "User reported duplicated visible text chunks during an active GPT-SoVITS chat turn: each sentence appears twice inline."
+  severity: major
+  test: 6
+  root_cause: "Renderer WebSocket dispatcher registration in apps/renderer/src/ws/store.ts runs at module top level and ignores unsubscribe handles, so Vite dev HMR or module re-evaluation can leave multiple dispatcher callbacks subscribed to the singleton WS client. Each incoming audio payload is then processed twice, and appendAssistantSentence concatenates the duplicate display_text into the same assistant bubble. Sidecar duplicate emission and GPT-SoVITS text mutation were ruled out."
+  artifacts:
+    - path: "apps/renderer/src/ws/store.ts"
+      issue: "Top-level subscribe(...) and subscribeSidecarReconnect(...) registrations are not idempotent and do not clean up on HMR dispose."
+    - path: "apps/renderer/src/ws/client.ts"
+      issue: "subscribe(...) returns an unsubscribe function and client guards duplicate sockets, but store.ts does not use unsubscribe to guard duplicate dispatch listeners."
+    - path: "apps/renderer/src/screens/Chat/useStreamingMessages.ts"
+      issue: "appendAssistantSentence replaces Thinking on the first call and appends on the second; duplicate dispatch of the same audio message produces inline repeated sentence text."
+    - path: "apps/renderer/tests/ChatStreaming.test.tsx"
+      issue: "Missing regression coverage for duplicate store registration/HMR re-evaluation processing one audio payload only once."
+  missing:
+    - "Make renderer WS store dispatcher registration idempotent and HMR-safe."
+    - "Retain unsubscribe handles and dispose duplicate subscriptions during Vite HMR/module re-evaluation."
+    - "Add a renderer regression test that re-imports or simulates duplicate store registration and verifies one audio payload appends visible text once."
+  debug_session: "ses_1eff9979effezQ0PM6FYVIQ4na"
 
 ## Gap Fix Evidence
 
