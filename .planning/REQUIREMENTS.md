@@ -22,7 +22,7 @@ v3.0 turns the app from text-first chat with Piper output into a configurable vo
 - [x] **TTS-03**: User can configure an optional app-managed GPT-SoVITS launch command, working directory, health URL, and stop/restart action.
 - [x] **TTS-04**: User can run test synthesis for the active TTS provider and hear the result without sending a chat turn.
 - [x] **TTS-05**: TTS output from every provider flows through the existing ordered playback, renderer audio payload, and RMS/lipsync path.
-- [ ] **TTS-06**: User sees a visible fallback/error state when GPT-SoVITS fails; the app never silently changes provider mid-turn.
+- [x] **TTS-06**: User sees a visible fallback/error state when GPT-SoVITS fails; the app never silently changes provider mid-turn.
 
 ### Voice Presets + Reference Audio
 
@@ -120,7 +120,7 @@ Populated by the roadmapper during ROADMAP.md creation.
 | TTS-03 | Phase 17 | Complete |
 | TTS-04 | Phase 17 | Complete |
 | TTS-05 | Phase 16 | Complete |
-| TTS-06 | Phase 17 | Pending |
+| TTS-06 | Phase 17 | Complete |
 | PRESET-01 | Phase 17 | Complete |
 | PRESET-02 | Phase 17 | Complete |
 | PRESET-03 | Phase 17 | Complete |
@@ -158,4 +158,4 @@ Populated by the roadmapper during ROADMAP.md creation.
 
 ---
 *Requirements defined: 2026-05-09*  
-*Last updated: 2026-05-10 after Phase 17 plan 17-06 execution*
+*Last updated: 2026-05-10 after Phase 17 plan 17-07 execution*

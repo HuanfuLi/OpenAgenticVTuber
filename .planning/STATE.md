@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 17-06-PLAN.md
-last_updated: "2026-05-10T00:09:30Z"
-last_activity: 2026-05-10 - Completed Phase 17 plan 17-06 Settings provider, preset, reference-audio, and audible test UI
+stopped_at: Completed 17-07-PLAN.md
+last_updated: "2026-05-10T00:16:39Z"
+last_activity: 2026-05-10 - Completed Phase 17 plan 17-07 chat failure surface, final regression, and UAT evidence
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 14
-  completed_plans: 10
+  completed_plans: 11
   percent: 25
 ---
 
@@ -26,26 +26,26 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 17 of 22 (GPT-SoVITS Provider + Voice Presets)
-Plan: 6/7 complete
-Status: Executing Phase 17 plans
-Last activity: 2026-05-10 - Completed Phase 17 plan 17-06 Settings provider, preset, reference-audio, and audible test UI
+Plan: 7/7 complete
+Status: Phase 17 complete; ready for Phase 18 planning or Phase 17 verification
+Last activity: 2026-05-10 - Completed Phase 17 plan 17-07 chat failure surface, final regression, and UAT evidence
 
-Progress: [██████░░░░] 6/7 plans complete in Phase 17
+Progress: [██████████] 7/7 plans complete in Phase 17
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed in v3.0: 6
-- Average duration: 7 min
-- Total execution time: 43 min
+- Total plans completed in v3.0: 7
+- Average duration: 8 min
+- Total execution time: 55 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 16. Audio Contracts + TTS Provider Shell | 4/4 | same-session | same-session |
-| 17. GPT-SoVITS Provider + Voice Presets | 6/7 | 43 min | 7 min |
+| 17. GPT-SoVITS Provider + Voice Presets | 7/7 | 55 min | 8 min |
 | 18. Rich Voice Settings + Persistence | 0/TBD | - | - |
 | 19. STT Provider Abstraction + Local/Cloud Providers | 0/TBD | - | - |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | 0/TBD | - | - |
@@ -68,10 +68,11 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 17 plan 17-04 added Electron IPC/preload health and test-synthesis bridges with typed redacted failures.
 - Phase 17 plan 17-05 added app-owned GPT-SoVITS launch/status/stop/restart lifecycle controls that never terminate external servers.
 - Phase 17 plan 17-06 added Settings provider selection, gated GPT-SoVITS test synthesis preview, voice preset CRUD, and reference-audio management UI.
+- Phase 17 plan 17-07 added visible GPT-SoVITS failed-audio chat state, final cross-tier regression evidence, and environment-blocked live-server UAT tracking.
 
 ### Pending Todos
 
-- Execute Phase 17 plan 17-07.
+- Run Phase 17 verification/UAT with a live GPT-SoVITS server when one is available.
 
 ### Blockers/Concerns
 
@@ -84,6 +85,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 17 plan 17-04 keeps renderer GPT-SoVITS candidate checks behind fixed Electron IPC/preload methods.
 - Phase 17 plan 17-05 scopes stop/restart to the tracked app-owned child process only; external servers return not-app-managed status.
 - Phase 17 plan 17-06 keeps GPT-SoVITS activation behind health plus audible test synthesis and keeps preset/reference deletes guarded.
+- Phase 17 plan 17-07 keeps GPT-SoVITS chat failures visible without raw diagnostics inline and does not save config or switch to Piper from chat failure handling.
 
 ## Deferred Items
 
@@ -95,6 +97,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-10T00:09:30Z
-Stopped at: Completed 17-06-PLAN.md
+Last session: 2026-05-10T00:16:39Z
+Stopped at: Completed 17-07-PLAN.md
 Resume file: None
