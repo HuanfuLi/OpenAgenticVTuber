@@ -1076,6 +1076,39 @@ function isNonLocalGptSoVitsUrl(value: string): boolean {
   }
 }
 
+function avatarSessionPresetKey(avatarId: string | null, sessionId: string | null): string {
+  const avatar = avatarId && avatarId.trim().length > 0 ? avatarId.trim() : 'global'
+  const session = sessionId && sessionId.trim().length > 0 ? sessionId.trim() : 'global'
+  return `avatar:${avatar}|session:${session}`
+}
+
+function createDraftVoicePreset(name: string, existing?: VoicePreset | null): VoicePreset {
+  const now = new Date().toISOString()
+  return {
+    preset_id: existing?.preset_id ?? `preset-${Date.now()}`,
+    name: name.trim() || 'Untitled voice preset',
+    provider_id: 'gpt_sovits',
+    piper_voice_model: null,
+    created_at: existing?.created_at ?? now,
+    updated_at: now,
+    gpt_sovits: existing?.gpt_sovits ?? {
+      prompt_text: '',
+      prompt_lang: 'auto',
+      text_lang: 'auto',
+      reference_audio_id: null,
+      top_k: 15,
+      top_p: 1,
+      temperature: 1,
+      speed_factor: 1,
+      repetition_penalty: 1.35,
+      text_split_method: 'cut5',
+      batch_size: 1,
+      media_type: 'wav',
+      streaming_mode: false
+    }
+  }
+}
+
 function playSynthesisPreview(result: GptSoVitsTestSynthesisResult): string | null {
   if (!result.ok || !result.audio_base64) return null
   const binary = atob(result.audio_base64)
@@ -1102,6 +1135,10 @@ function TTSSection() {
   const [healthPassed, setHealthPassed] = useState(false)
   const [testPassed, setTestPassed] = useState(false)
   const [selectedPresetId, setSelectedPresetId] = useState<string>('')
+  const [activePresetByAvatarSession, setActivePresetByAvatarSession] = useState<Record<string, string>>({})
+  const [presetName, setPresetName] = useState('')
+  const [blockedDeletePreset, setBlockedDeletePreset] = useState<VoicePreset | null>(null)
+  const [confirmDeletePreset, setConfirmDeletePreset] = useState<VoicePreset | null>(null)
   const [statusText, setStatusText] = useState<string>(C.GPT_SOVITS_PROVIDER_NOT_READY)
   const [healthUrl, setHealthUrl] = useState('')
   const previewUrlRef = useRef<string | null>(null)
@@ -1135,6 +1172,7 @@ function TTSSection() {
         const loadedPresets = presets.length > 0 ? presets : cfg?.voicePresets ?? []
         setVoicePresets(loadedPresets)
         setReferenceAudioAssets(cfg?.referenceAudioAssets ?? [])
+        setActivePresetByAvatarSession(cfg?.activePresetByAvatarSession ?? {})
         setCurrentAvatarId(avatarId)
         const configuredGpt = cfg?.audio?.tts?.gpt_sovits ?? defaultGptSoVitsConfig()
         setCandidate(configuredGpt)
@@ -1142,6 +1180,7 @@ function TTSSection() {
         setHealthPassed(configuredGpt.activation.health_check_passed)
         setTestPassed(configuredGpt.activation.test_synthesis_passed)
         setSelectedPresetId(loadedPresets[0]?.preset_id ?? '')
+        setPresetName(loadedPresets[0]?.name ?? '')
         setHealthUrl(processStatus?.healthUrl ?? '')
       })
       .catch(() => undefined)
@@ -1268,6 +1307,41 @@ function TTSSection() {
     })
   }
 
+  const savePreset = async (): Promise<void> => {
+    const nextPreset = createDraftVoicePreset(presetName, selectedPreset)
+    const nextPresets = await window.api.saveVoicePreset(nextPreset)
+    setVoicePresets(nextPresets)
+    setSelectedPresetId(nextPreset.preset_id)
+    setPresetName(nextPreset.name)
+  }
+
+  const selectVoicePreset = async (presetId: string): Promise<void> => {
+    const preset = voicePresets.find((item) => item.preset_id === presetId)
+    setSelectedPresetId(presetId)
+    setPresetName(preset?.name ?? '')
+    const map = await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, presetId)
+    if (map) setActivePresetByAvatarSession(map)
+  }
+
+  const requestDeletePreset = (): void => {
+    if (!selectedPreset) return
+    const key = avatarSessionPresetKey(currentAvatarId, activeSession.id)
+    if (activePresetByAvatarSession[key] === selectedPreset.preset_id) {
+      setBlockedDeletePreset(selectedPreset)
+      return
+    }
+    setConfirmDeletePreset(selectedPreset)
+  }
+
+  const confirmDeleteSelectedPreset = async (): Promise<void> => {
+    if (!confirmDeletePreset) return
+    const nextPresets = await window.api.deleteVoicePreset(confirmDeletePreset.preset_id)
+    setVoicePresets(nextPresets)
+    setSelectedPresetId(nextPresets[0]?.preset_id ?? '')
+    setPresetName(nextPresets[0]?.name ?? '')
+    setConfirmDeletePreset(null)
+  }
+
   return (
     <section className="section" id="sec-tts">
       <h2>{C.TTS_HEADER}</h2>
@@ -1346,6 +1420,34 @@ function TTSSection() {
             <button className="btn btn-primary" type="button" onClick={() => void activateGptSoVits()} disabled={!activationReady}>{C.GPT_SOVITS_ACTIVATE_PRESET}</button>
           </div>
           <div className="tx-sm muted mt-2">{statusText}</div>
+          <div className="group-label mt-4">{C.VOICE_PRESETS_HEADER}</div>
+          {voicePresets.length === 0 ? (
+            <div className="preset-card">
+              <div className="semibold">{C.VOICE_PRESETS_EMPTY_HEAD}</div>
+              <div className="tx-sm muted">{C.VOICE_PRESETS_EMPTY_BODY}</div>
+            </div>
+          ) : (
+            <div className="radio-group" role="radiogroup" aria-label={C.VOICE_PRESETS_HEADER}>
+              {voicePresets.map((preset) => (
+                <RadioRow
+                  key={preset.preset_id}
+                  id={preset.preset_id}
+                  label={`${preset.name} — ${preset.provider_id} · ${preset.gpt_sovits.text_lang}`}
+                  checked={selectedPreset?.preset_id === preset.preset_id}
+                  onChange={(id) => void selectVoicePreset(id)}
+                />
+              ))}
+            </div>
+          )}
+          <div className="field">
+            <label className="label" htmlFor="voice-preset-name">{C.VOICE_PRESET_NAME}</label>
+            <input id="voice-preset-name" className="input" value={presetName} onChange={(e) => setPresetName(e.target.value)} />
+          </div>
+          <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn btn-secondary" type="button" onClick={() => void savePreset()}>{C.VOICE_PRESET_SAVE}</button>
+            <button className="btn btn-destructive" type="button" onClick={requestDeletePreset} disabled={!selectedPreset}>{C.VOICE_PRESET_DELETE}</button>
+          </div>
+          <div className="tx-sm muted mt-2">{C.VOICE_PRESET_ACTIVE_NOTE}</div>
         </div>
       )}
       <div className="kv-row">
@@ -1374,6 +1476,29 @@ function TTSSection() {
         {loading ? COPY.STATUS.REFRESHING : C.CONN_REFRESH}
       </button>
       <div className="tx-sm muted mt-2">{C.TTS_HELP}</div>
+      {blockedDeletePreset && (
+        <div className="dialog-overlay">
+          <div className="dialog" data-theme-surface role="alertdialog" aria-labelledby="voice-preset-delete-blocked-title">
+            <h3 id="voice-preset-delete-blocked-title">{C.VOICE_PRESET_DELETE_BLOCKED}</h3>
+            <p>{blockedDeletePreset.name}</p>
+            <div className="actions">
+              <button className="btn btn-secondary" onClick={() => setBlockedDeletePreset(null)}>{C.VOICE_PRESET_DELETE_CANCEL}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmDeletePreset && (
+        <div className="dialog-overlay">
+          <div className="dialog" data-theme-surface role="alertdialog" aria-labelledby="voice-preset-delete-title">
+            <h3 id="voice-preset-delete-title">{C.VOICE_PRESET_DELETE}</h3>
+            <p>{confirmDeletePreset.name}</p>
+            <div className="actions">
+              <button className="btn btn-secondary" onClick={() => setConfirmDeletePreset(null)}>{C.VOICE_PRESET_DELETE_CANCEL}</button>
+              <button className="btn btn-destructive" onClick={() => void confirmDeleteSelectedPreset()}>{C.VOICE_PRESET_DELETE_CONFIRM}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
