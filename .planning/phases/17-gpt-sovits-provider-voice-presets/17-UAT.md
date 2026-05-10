@@ -10,7 +10,7 @@ source:
   - 17-06-SUMMARY.md
   - 17-07-SUMMARY.md
 started: 2026-05-10T00:00:00Z
-updated: 2026-05-10T01:12:00Z
+updated: 2026-05-10T01:32:00Z
 ---
 
 # Phase 17 UAT - GPT-SoVITS Provider + Voice Presets
@@ -21,14 +21,14 @@ number: 1
 name: Provider Selection And Health Gate
 expected: |
   In Settings -> TTS, Piper is available as a selectable local provider. Selecting GPT-SoVITS shows a single Base URL field, lets you run a health check, and does not activate GPT-SoVITS until a voice preset and audible test synthesis also pass.
-awaiting: user retest after fix
+awaiting: diagnosis/fix planning
 
 ## Tests
 
 ### 1. Provider Selection And Health Gate
 expected: In Settings -> TTS, Piper is available as a selectable local provider. Selecting GPT-SoVITS shows a single Base URL field, lets you run a health check, and does not activate GPT-SoVITS until a voice preset and audible test synthesis also pass.
 result: issue
-reported: "Initial startup blocker was fixed by refreshing npm install. Retest still fails: GPT-SoVITS service had not started yet, but health check said reachable. After starting GPT-SoVITS, health check passed, but Test synthesis stayed disabled and unclickable."
+reported: "Initial startup blocker and health/test gate sub-issue were fixed. Retest still critically fails: Voice preset Save has no indication, user cannot tell whether it saved; saved preset disappears after leaving and returning to Settings; chat regressed and cannot get LLM response because sidecar startup raises `ValueError: GPT-SoVITS activation requires an active voice preset and reference audio.`"
 severity: blocker
 
 ### 2. App-Managed Launch Controls
@@ -84,10 +84,10 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
 
 - truth: "In Settings -> TTS, Piper is available as a selectable local provider. Selecting GPT-SoVITS shows a single Base URL field, lets you run a health check, and does not activate GPT-SoVITS until a voice preset and audible test synthesis also pass."
   status: failed
-  reason: "User reported: Initial startup blocker was fixed by refreshing npm install. Retest still fails: GPT-SoVITS service had not started yet, but health check said reachable. After starting GPT-SoVITS, health check passed, but Test synthesis stayed disabled and unclickable."
+  reason: "User reported: Initial startup blocker and health/test gate sub-issue were fixed. Retest still critically fails: Voice preset Save has no indication, user cannot tell whether it saved; saved preset disappears after leaving and returning to Settings; chat regressed and cannot get LLM response because sidecar startup raises `ValueError: GPT-SoVITS activation requires an active voice preset and reference audio.`"
   severity: blocker
   test: 1
-  root_cause: "Startup sub-issue resolved: local npm workspace install was stale/incomplete. Health sub-issue fixed: GPT-SoVITS health accepted any non-5xx `/docs` response as reachable; it now requires a 2xx docs response and reports HTTP status failures. Test synthesis gate fixed: Settings previously required the selected preset to already contain `reference_audio_id`, ignoring a selected/imported reference asset that could populate the preset. Settings now builds the test/activation candidate from the selected reference asset and persists that association during activation."
+  root_cause: "Startup sub-issue resolved: local npm workspace install was stale/incomplete. Health/test gate sub-issue fixed in commit 8504e17. Preset save feedback/persistence issue fixed by showing explicit save success/failure status, refreshing persisted preset state after save, and adding a return-to-Settings regression. Chat regression root cause: sidecar startup still built the active GPT-SoVITS gateway when persisted activation lacked a usable active preset/reference handoff, causing `ValueError` and leaving the orchestrator unavailable. Sidecar startup now detects incomplete GPT-SoVITS activation, reports a misconfigured GPT-SoVITS health state, and starts the Piper gateway so chat remains available."
   artifacts:
     - path: "node_modules/.bin/electron-vite"
       issue: "Missing executable shim required by `npm run dev`."
@@ -103,8 +103,18 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
       issue: "Added regression coverage for enabling Test synthesis after health when a selected reference asset populates the preset."
     - path: "sidecar/tests/tts/test_gpt_sovits_provider.py"
       issue: "Added regression coverage that non-2xx docs response is not healthy."
+    - path: "apps/electron-main/src/ipc.ts"
+      issue: "Investigating whether voice preset save/list writes and reloads persisted config correctly."
+    - path: "sidecar/src/sidecar/ws/server.py"
+      issue: "Fixed sidecar startup to use Piper gateway and visible misconfigured GPT-SoVITS health when active GPT-SoVITS lacks preset/reference handoff."
+    - path: "sidecar/src/sidecar/tts/tts_gateway.py"
+      issue: "Startup currently raises if active GPT-SoVITS lacks preset/reference, breaking chat instead of preserving Piper availability."
+    - path: "apps/renderer/src/lib/copy.ts"
+      issue: "Added voice preset save success/failure copy."
+    - path: "sidecar/tests/test_sidecar_boot.py"
+      issue: "Added regression coverage for incomplete active GPT-SoVITS config using Piper gateway config."
   missing:
-    - "User retest confirmation that health fails before GPT-SoVITS is actually ready and Test synthesis enables after health plus selected reference/preset prerequisites."
+    - "User retest confirmation that preset save has visible feedback, persists after leaving/returning to Settings, and chat responds when persisted GPT-SoVITS activation is incomplete/stale."
   debug_session: ""
 
 ## Gap Fix Evidence
@@ -114,3 +124,10 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
 - `npm --workspace apps/renderer run typecheck` - passed.
 - `uv run --project sidecar python -m pytest sidecar/tests/tts/test_gpt_sovits_provider.py -q` - passed, 5 tests.
 - `uv run --project sidecar python -m pytest sidecar/tests/tts/test_gpt_sovits_provider.py sidecar/tests/admin/test_audio_test_tts_endpoint.py sidecar/tests/admin/test_audio_status_endpoint.py sidecar/tests/admin/test_reference_audio_validation_endpoint.py sidecar/tests/test_tts_gateway.py sidecar/tests/test_tts_manager.py sidecar/tests/test_sidecar_boot.py -q` - passed, 42 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after preset persistence/boot robustness fix, 43 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after preset persistence/boot robustness fix, 48 tests.
+- `npm --workspace apps/renderer run typecheck` - passed after preset persistence/boot robustness fix.
+- `uv run --project sidecar python -m pytest sidecar/tests/test_sidecar_boot.py -q` - passed, 9 tests.
+- `uv run --project sidecar python -m pytest sidecar/tests/tts/test_gpt_sovits_provider.py sidecar/tests/admin/test_audio_test_tts_endpoint.py sidecar/tests/admin/test_audio_status_endpoint.py sidecar/tests/admin/test_reference_audio_validation_endpoint.py sidecar/tests/test_tts_gateway.py sidecar/tests/test_tts_manager.py sidecar/tests/test_sidecar_boot.py -q` - passed after preset persistence/boot robustness fix, 43 tests.
+- `npm --workspace apps/electron-main run test -- --run reference-audio.test.ts ipc-gpt-sovits-audio.test.ts safe-storage.test.ts` - passed, 15 tests.
+- `npm --workspace apps/electron-main run build` - passed.

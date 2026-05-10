@@ -587,6 +587,32 @@ describe('Settings TTS section', () => {
     expect(window.api.commitAvatarOverrides).toBeUndefined()
   })
 
+  it('shows save feedback and reloads persisted voice presets after returning to Settings', async () => {
+    let persistedPresets: VoicePreset[] = []
+    vi.mocked(window.api.getStoredConfig).mockImplementation(async () => ({
+      ...storedConfig,
+      voicePresets: persistedPresets
+    }))
+    vi.mocked(window.api.listVoicePresets).mockImplementation(async () => persistedPresets)
+    vi.mocked(window.api.saveVoicePreset).mockImplementation(async (preset: VoicePreset) => {
+      persistedPresets = [preset]
+      return persistedPresets
+    })
+
+    const firstRender = renderSettings()
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Persistent Akari' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
+
+    expect(await screen.findByText(COPY.SETTINGS.VOICE_PRESET_SAVE_SUCCESS)).toBeInTheDocument()
+    firstRender.unmount()
+
+    renderSettings()
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+
+    expect(await screen.findByRole('radio', { name: /Persistent Akari/i })).toBeInTheDocument()
+  })
+
   it('blocks active preset deletion without implicitly selecting Piper fallback', async () => {
     const preset = gptPreset()
     vi.mocked(window.api.getStoredConfig).mockResolvedValue({

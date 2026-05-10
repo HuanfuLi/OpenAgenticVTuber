@@ -118,6 +118,37 @@ def test_loads_active_voice_preset_and_managed_reference_from_env(monkeypatch, t
     assert resolved_reference == reference.resolve()
 
 
+def test_incomplete_active_gpt_sovits_config_uses_piper_gateway_config(monkeypatch):
+    from contracts import AudioConfig
+    from sidecar.ws import server
+
+    monkeypatch.delenv("AGENTICLLMVTUBER_VOICE_PRESET_CONFIG_JSON", raising=False)
+    audio_config = AudioConfig.model_validate({
+        "tts": {
+            "active_provider": "gpt_sovits",
+            "gpt_sovits": {
+                "provider_id": "gpt_sovits",
+                "enabled": True,
+                "base_url": "http://127.0.0.1:9880",
+                "activation": {
+                    "health_check_passed": True,
+                    "test_synthesis_passed": True,
+                    "active_allowed": True,
+                },
+            },
+        },
+    })
+
+    gateway_config, preset, reference_audio, health = server._prepare_tts_gateway_inputs(audio_config, "teto")
+
+    assert gateway_config.tts.active_provider == "piper"
+    assert preset is None
+    assert reference_audio is None
+    assert health is not None
+    assert health.state == "misconfigured"
+    assert "Piper remains available" in health.summary
+
+
 async def _never():
     await asyncio.Event().wait()
 

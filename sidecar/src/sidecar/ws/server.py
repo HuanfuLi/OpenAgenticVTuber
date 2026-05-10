@@ -13,7 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger as loguru_logger
-from contracts import ReferenceAudioAsset, VoicePreset
+from contracts import AudioProviderHealth, ReferenceAudioAsset, VoicePreset
 
 from sidecar.avatar.overrides import load_avatar_overrides
 from sidecar.audio.config import load_audio_config_from_env
@@ -171,6 +171,36 @@ def _load_active_voice_preset_and_reference(active_avatar_id: str) -> tuple[Voic
         loguru_logger.warning("[TTS-INIT] reference audio token escaped managed storage")
         return preset, None
     return preset, reference_path
+
+
+def _piper_audio_config(audio_config):
+    return audio_config.model_copy(
+        update={
+            "tts": audio_config.tts.model_copy(update={"active_provider": "piper"})
+        }
+    )
+
+
+def _prepare_tts_gateway_inputs(audio_config, active_avatar_id: str):
+    active_voice_preset, reference_audio_path = _load_active_voice_preset_and_reference(active_avatar_id)
+    startup_health = None
+    gateway_audio_config = audio_config
+    if audio_config.tts.active_provider == "gpt_sovits" and (
+        active_voice_preset is None or reference_audio_path is None
+    ):
+        startup_health = AudioProviderHealth(
+            provider_id="gpt_sovits",
+            kind="tts",
+            state="misconfigured",
+            summary="GPT-SoVITS activation is missing an active voice preset or reference audio; Piper remains available.",
+            detail=None,
+            retryable=False,
+        )
+        gateway_audio_config = _piper_audio_config(audio_config)
+        loguru_logger.warning(
+            "[TTS-INIT] GPT-SoVITS activation missing preset/reference; starting Piper gateway instead."
+        )
+    return gateway_audio_config, active_voice_preset, reference_audio_path, startup_health
 
 
 def _load_plugin_instance(manifest_path: Path, entrypoint: str) -> BodyMotionPlugin:
@@ -332,16 +362,19 @@ async def lifespan(app: FastAPI):
 
             persona = _persona_path(avatars, avatar_dir).read_text(encoding="utf-8")
             voice_model = overrides.voice.model if overrides.voice else "en_US-amy-medium"
-            active_voice_preset, reference_audio_path = _load_active_voice_preset_and_reference(active_avatar_id)
+            gateway_audio_config, active_voice_preset, reference_audio_path, startup_health = _prepare_tts_gateway_inputs(
+                app.state.audio_config,
+                active_avatar_id,
+            )
             tts_gateway = build_tts_gateway(
-                audio_config=app.state.audio_config,
+                audio_config=gateway_audio_config,
                 repo_root=Path(__file__).resolve().parents[4],
                 avatar_voice_model=voice_model,
                 active_voice_preset=active_voice_preset,
                 reference_audio_path=reference_audio_path,
             )
             tts_gateway.boot()
-            app.state.audio_provider_health = tts_gateway.provider.health()
+            app.state.audio_provider_health = startup_health or tts_gateway.provider.health()
 
             gateway = LLMGateway(provider_cfg)
             await _warmup_ping(gateway)

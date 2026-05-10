@@ -1370,10 +1370,22 @@ function TTSSection() {
           }
         }
       : draftPreset
-    const nextPresets = await window.api.saveVoicePreset(nextPreset)
-    setVoicePresets(nextPresets)
-    setSelectedPresetId(nextPreset.preset_id)
-    setPresetName(nextPreset.name)
+    try {
+      const savedPresets = await window.api.saveVoicePreset(nextPreset)
+      const persistedPresets = await (window.api.listVoicePresets?.().catch(() => savedPresets) ?? Promise.resolve(savedPresets))
+      const nextPresets = persistedPresets.length > 0 ? persistedPresets : savedPresets
+      setVoicePresets(nextPresets)
+      setStoredCfg((cur) => cur ? { ...cur, voicePresets: nextPresets } : cur)
+      setSelectedPresetId(nextPreset.preset_id)
+      setPresetName(nextPreset.name)
+      setStatusText(
+        nextPresets.some((preset) => preset.preset_id === nextPreset.preset_id)
+          ? C.VOICE_PRESET_SAVE_SUCCESS
+          : C.VOICE_PRESET_SAVE_FAILURE
+      )
+    } catch {
+      setStatusText(C.VOICE_PRESET_SAVE_FAILURE)
+    }
   }
 
   const selectVoicePreset = async (presetId: string): Promise<void> => {
