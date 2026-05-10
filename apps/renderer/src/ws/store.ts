@@ -48,7 +48,10 @@ export function subscribeWSLog(cb: LogSink): () => void {
 
 // -- WS dispatcher -----------------------------------------------------------
 
-subscribe((msg: WSMessage) => {
+let unsubscribeMessages: (() => void) | null = null
+let unsubscribeSidecarReconnect: (() => void) | null = null
+
+function dispatchWSMessage(msg: WSMessage): void {
   if (isControl(msg)) {
     if (msg.text === 'conversation-chain-start') {
       setThinking(true)
@@ -122,11 +125,35 @@ subscribe((msg: WSMessage) => {
     return
   }
   // Unknown envelope types silently dropped (matches OLVT _route_message).
-})
+}
 
-subscribeSidecarReconnect(() => {
+function dispatchSidecarReconnect(): void {
   resetStreaming()
-})
+}
+
+export function ensureWSStoreSubscriptions(): void {
+  if (!unsubscribeMessages) {
+    unsubscribeMessages = subscribe(dispatchWSMessage)
+  }
+  if (!unsubscribeSidecarReconnect) {
+    unsubscribeSidecarReconnect = subscribeSidecarReconnect(dispatchSidecarReconnect)
+  }
+}
+
+export function disposeWSStoreSubscriptions(): void {
+  unsubscribeMessages?.()
+  unsubscribeSidecarReconnect?.()
+  unsubscribeMessages = null
+  unsubscribeSidecarReconnect = null
+}
+
+ensureWSStoreSubscriptions()
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    disposeWSStoreSubscriptions()
+  })
+}
 
 // -- re-exports preserved from Phase 1 ---------------------------------------
 

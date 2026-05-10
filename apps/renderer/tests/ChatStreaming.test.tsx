@@ -63,7 +63,8 @@ import type { ConversationSession } from '@preload-types'
 type StoreModule = typeof import('@/ws/store')
 
 async function loadDispatcher(): Promise<(msg: WSMessage) => void> {
-  await import('@/ws/store')
+  const store = await import('@/ws/store')
+  store.ensureWSStoreSubscriptions()
   if (!wsClientMock.listener) throw new Error('WS dispatcher did not subscribe')
   return wsClientMock.listener
 }
@@ -117,7 +118,9 @@ describe('Chat streaming failed-audio surface', () => {
     messages: []
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const store = await import('@/ws/store')
+    store.disposeWSStoreSubscriptions()
     resetStreaming()
     playAudioPayloadMock.mockClear()
     wsClientMock.reset()
