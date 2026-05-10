@@ -10,7 +10,7 @@ source:
   - 17-06-SUMMARY.md
   - 17-07-SUMMARY.md
 started: 2026-05-10T00:00:00Z
-updated: 2026-05-10T04:20:00Z
+updated: 2026-05-10T04:25:00Z
 ---
 
 # Phase 17 UAT - GPT-SoVITS Provider + Voice Presets
@@ -21,7 +21,7 @@ number: 3
 name: Reference Audio Import And Validation
 expected: |
   Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
-awaiting: user retest after activation runtime-status polling fix
+awaiting: user retest after removing unreliable activation mismatch banner
 
 ## Tests
 
@@ -40,7 +40,7 @@ severity: none
 ### 3. Reference Audio Import And Validation
 expected: Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
 result: issue
-reported: "User reported: Import is not blocked when transcript/language are missing, saving a different preset name/config overwrites the first saved preset instead of creating a new preset, the first fixes still had the wrong user flow, incomplete config actions still showed no visible message, active preset deletion opened a dead-end cancel-only popover, duplicate preset names were allowed, and activation could show a Piper runtime mismatch even while GPT-SoVITS was actually working. Activation runtime-status polling fix now applied; awaiting user retest."
+reported: "User reported: Import is not blocked when transcript/language are missing, saving a different preset name/config overwrites the first saved preset instead of creating a new preset, the first fixes still had the wrong user flow, incomplete config actions still showed no visible message, active preset deletion opened a dead-end cancel-only popover, duplicate preset names were allowed, and activation could show a Piper runtime mismatch even while GPT-SoVITS was actually working. Runtime-status polling was still unreliable, so the activation mismatch banner has been removed from the success path; awaiting user retest."
 severity: blocker
 
 ### 4. Voice Preset Management
@@ -198,3 +198,6 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
 - `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after activation runtime-status polling fix, 50 tests.
 - `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after activation runtime-status polling fix, 55 tests.
 - `npm --workspace apps/renderer run typecheck` - passed after activation runtime-status polling fix.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after removing unreliable activation mismatch banner, 50 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after removing unreliable activation mismatch banner, 55 tests.
+- `npm --workspace apps/renderer run typecheck` - passed after removing unreliable activation mismatch banner.

@@ -539,33 +539,18 @@ describe('Settings TTS section', () => {
     expect(screen.getByText(/Runtime provider: gpt_sovits/i)).toBeInTheDocument()
   })
 
-  it('waits for GPT-SoVITS runtime status after activation before showing mismatch', async () => {
+  it('keeps activation success even when runtime status still reports Piper', async () => {
     const preset = gptPreset()
-    let statusCalls = 0
     vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [preset] })
-    vi.mocked(window.api.getAudioStatus).mockImplementation(async () => {
-      statusCalls += 1
-      return statusCalls < 3
-        ? {
-            provider_id: 'piper',
-            kind: 'tts',
-            state: 'ok',
-            summary: 'Piper provider ready.',
-            detail: 'voice=en_US-amy-medium',
-            retryable: false,
-            latency_ms: null,
-            redacted_diagnostics: null
-          }
-        : {
-            provider_id: 'gpt_sovits',
-            kind: 'tts',
-            state: 'ok',
-            summary: 'GPT-SoVITS service is reachable.',
-            detail: null,
-            retryable: false,
-            latency_ms: 12,
-            redacted_diagnostics: null
-          }
+    vi.mocked(window.api.getAudioStatus).mockResolvedValue({
+      provider_id: 'piper',
+      kind: 'tts',
+      state: 'ok',
+      summary: 'Piper provider ready.',
+      detail: 'voice=en_US-amy-medium',
+      retryable: false,
+      latency_ms: null,
+      redacted_diagnostics: null
     })
 
     renderSettings()
