@@ -289,6 +289,15 @@ describe('Settings TTS section', () => {
           lastMessageAt: null,
           messages: []
         }),
+        commitConversationTurn: vi.fn().mockResolvedValue({
+          id: 's1',
+          title: 'Croissant plan',
+          titleSource: 'manual',
+          createdAt: '2026-05-09T12:00:00.000Z',
+          updatedAt: '2026-05-09T12:01:00.000Z',
+          lastMessageAt: '2026-05-09T12:01:00.000Z',
+          messages: []
+        }),
         getConversationStats: vi.fn().mockResolvedValue({
           sessionCount: 1,
           messageCount: 2,
@@ -307,7 +316,9 @@ describe('Settings TTS section', () => {
       configurable: true,
       value: vi.fn()
     })
-    vi.stubGlobal('Audio', vi.fn().mockImplementation(() => ({ play: vi.fn().mockResolvedValue(undefined), pause: vi.fn() })))
+    vi.stubGlobal('Audio', vi.fn(function (_url: string) {
+      return { play: vi.fn().mockResolvedValue(undefined), pause: vi.fn() }
+    }))
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       value: vi.fn().mockReturnValue({

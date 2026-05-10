@@ -15,6 +15,8 @@ import type { AudioProviderHealth, BodyMotionPluginSummary, PluginRuntimeStatus,
 import { ProviderSelect } from '@/screens/LLMSetup/ProviderSelect'
 import { TestLog } from '@/screens/LLMSetup/TestLog'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
+import type { GptSoVitsProviderConfig, GptSoVitsTestSynthesisResult } from '@contracts/audio-provider'
+import type { ReferenceAudioAsset, VoicePreset } from '@contracts/voice-preset'
 import type { LogLevel } from '@preload-types'
 
 const LOG_LEVELS: LogLevel[] = ['error', 'warn', 'info', 'debug']
@@ -1041,10 +1043,68 @@ function DiagnosticsSection({ onResetClick }: { onResetClick: () => void }) {
 }
 
 // -------- §5 TTS / Voice out ---------------------------------------------
+type TtsProviderChoice = 'piper' | 'gpt_sovits'
+
+function defaultGptSoVitsConfig(): GptSoVitsProviderConfig {
+  return {
+    provider_id: 'gpt_sovits',
+    enabled: true,
+    base_url: 'http://127.0.0.1:9880',
+    request_timeout_ms: 30_000,
+    launch: {
+      mode: 'external',
+      command: null,
+      working_directory: null,
+      auto_start: false
+    },
+    activation: {
+      active_allowed: false,
+      health_check_passed: false,
+      test_synthesis_passed: false,
+      last_health_checked_at: null,
+      last_test_synthesis_at: null
+    }
+  }
+}
+
+function isNonLocalGptSoVitsUrl(value: string): boolean {
+  try {
+    const host = new URL(value).hostname.toLowerCase()
+    return host !== 'localhost' && host !== '127.0.0.1' && host !== '::1' && host !== '[::1]'
+  } catch {
+    return false
+  }
+}
+
+function playSynthesisPreview(result: GptSoVitsTestSynthesisResult): string | null {
+  if (!result.ok || !result.audio_base64) return null
+  const binary = atob(result.audio_base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
+  const blob = new Blob([bytes], { type: 'audio/wav' })
+  const url = URL.createObjectURL(blob)
+  const audio = new Audio(url)
+  void audio.play().catch(() => undefined)
+  return url
+}
+
 function TTSSection() {
   const C = COPY.SETTINGS
+  const { activeSession } = useConversationHistory()
   const [audioStatus, setAudioStatus] = useState<AudioProviderHealth | null>(null)
   const [loading, setLoading] = useState(false)
+  const [storedCfg, setStoredCfg] = useState<StoredConfig | null>(null)
+  const [voicePresets, setVoicePresets] = useState<VoicePreset[]>([])
+  const [referenceAudioAssets, setReferenceAudioAssets] = useState<ReferenceAudioAsset[]>([])
+  const [currentAvatarId, setCurrentAvatarId] = useState<string | null>(null)
+  const [providerChoice, setProviderChoice] = useState<TtsProviderChoice>('piper')
+  const [candidate, setCandidate] = useState<GptSoVitsProviderConfig>(defaultGptSoVitsConfig)
+  const [healthPassed, setHealthPassed] = useState(false)
+  const [testPassed, setTestPassed] = useState(false)
+  const [selectedPresetId, setSelectedPresetId] = useState<string>('')
+  const [statusText, setStatusText] = useState<string>(C.GPT_SOVITS_PROVIDER_NOT_READY)
+  const [healthUrl, setHealthUrl] = useState('')
+  const previewUrlRef = useRef<string | null>(null)
 
   const refreshAudioStatus = async (): Promise<void> => {
     setLoading(true)
@@ -1060,19 +1120,237 @@ function TTSSection() {
     void refreshAudioStatus()
   }, [])
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.api) return
+    let cancelled = false
+    Promise.all([
+      window.api.getStoredConfig(),
+      window.api.listVoicePresets?.() ?? Promise.resolve([]),
+      window.api.getCurrentAvatarId?.().catch(() => null) ?? Promise.resolve(null),
+      window.api.getGptSoVitsProcessStatus?.().catch(() => null) ?? Promise.resolve(null)
+    ])
+      .then(([cfg, presets, avatarId, processStatus]) => {
+        if (cancelled) return
+        setStoredCfg(cfg)
+        const loadedPresets = presets.length > 0 ? presets : cfg?.voicePresets ?? []
+        setVoicePresets(loadedPresets)
+        setReferenceAudioAssets(cfg?.referenceAudioAssets ?? [])
+        setCurrentAvatarId(avatarId)
+        const configuredGpt = cfg?.audio?.tts?.gpt_sovits ?? defaultGptSoVitsConfig()
+        setCandidate(configuredGpt)
+        setProviderChoice(cfg?.audio?.tts?.active_provider ?? 'piper')
+        setHealthPassed(configuredGpt.activation.health_check_passed)
+        setTestPassed(configuredGpt.activation.test_synthesis_passed)
+        setSelectedPresetId(loadedPresets[0]?.preset_id ?? '')
+        setHealthUrl(processStatus?.healthUrl ?? '')
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current)
+        previewUrlRef.current = null
+      }
+    }
+  }, [])
+
   const healthState = audioStatus?.state ?? 'unavailable'
   const healthClass = healthState === 'ok' ? 'green' : healthState === 'unavailable' ? 'amber' : 'red'
+  const selectedPreset = voicePresets.find((preset) => preset.preset_id === selectedPresetId) ?? voicePresets[0] ?? null
+  const activationReady = healthPassed && testPassed && selectedPreset !== null
+
+  const saveConfig = async (nextCfg: StoredConfig): Promise<void> => {
+    await window.api.saveStoredConfig(nextCfg)
+    setStoredCfg(nextCfg)
+  }
+
+  const selectProvider = async (id: string): Promise<void> => {
+    const provider = id as TtsProviderChoice
+    setProviderChoice(provider)
+    if (provider === 'piper') {
+      const cfg = storedCfg ?? await window.api.getStoredConfig()
+      if (!cfg) return
+      const nextCfg: StoredConfig = {
+        ...cfg,
+        audio: {
+          ...cfg.audio,
+          tts: {
+            ...cfg.audio.tts,
+            active_provider: 'piper'
+          }
+        }
+      }
+      await saveConfig(nextCfg)
+      setHealthPassed(false)
+      setTestPassed(false)
+      setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
+    } else {
+      setHealthPassed(false)
+      setTestPassed(false)
+      setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
+    }
+  }
+
+  const updateCandidate = (patch: Partial<GptSoVitsProviderConfig>): void => {
+    setCandidate((cur) => ({ ...cur, ...patch }))
+    setHealthPassed(false)
+    setTestPassed(false)
+    setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
+  }
+
+  const runHealthCheck = async (): Promise<void> => {
+    const status = await window.api.checkGptSoVitsHealth({ config: candidate })
+    const passed = status.state === 'ok'
+    setAudioStatus(status)
+    setHealthPassed(passed)
+    setTestPassed(false)
+    setStatusText(passed ? C.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING : C.GPT_SOVITS_CANDIDATE_FAILURE)
+  }
+
+  const runTestSynthesis = async (): Promise<void> => {
+    if (!selectedPreset) return
+    const result = await window.api.testGptSoVitsSynthesis({
+      config: candidate,
+      preset: selectedPreset,
+      text: 'This is a GPT-SoVITS test synthesis.'
+    })
+    if (!result.ok) {
+      setTestPassed(false)
+      setStatusText(
+        result.failure?.state === 'misconfigured'
+          ? C.GPT_SOVITS_REFERENCE_PATH_FAILURE
+          : C.GPT_SOVITS_CANDIDATE_FAILURE
+      )
+      return
+    }
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    previewUrlRef.current = playSynthesisPreview(result)
+    setTestPassed(true)
+    setStatusText(C.GPT_SOVITS_PREVIEW_READY)
+  }
+
+  const activateGptSoVits = async (): Promise<void> => {
+    if (!activationReady || !selectedPreset) return
+    const cfg = storedCfg ?? await window.api.getStoredConfig()
+    if (!cfg) return
+    const activatedCandidate: GptSoVitsProviderConfig = {
+      ...candidate,
+      activation: {
+        active_allowed: true,
+        health_check_passed: true,
+        test_synthesis_passed: true,
+        last_health_checked_at: new Date().toISOString(),
+        last_test_synthesis_at: new Date().toISOString()
+      }
+    }
+    const nextCfg: StoredConfig = {
+      ...cfg,
+      audio: {
+        ...cfg.audio,
+        tts: {
+          ...cfg.audio.tts,
+          active_provider: 'gpt_sovits',
+          gpt_sovits: activatedCandidate
+        }
+      }
+    }
+    await saveConfig(nextCfg)
+    await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, selectedPreset.preset_id)
+    setCandidate(activatedCandidate)
+    setStatusText(C.GPT_SOVITS_ACTIVATION_SUCCESS)
+  }
+
+  const runStart = async (): Promise<void> => {
+    await window.api.startGptSoVits?.({
+      command: candidate.launch.command,
+      workingDirectory: candidate.launch.working_directory,
+      healthUrl: healthUrl || null
+    })
+  }
 
   return (
     <section className="section" id="sec-tts">
       <h2>{C.TTS_HEADER}</h2>
-      <div className="kv-row">
-        <span className="k">{C.TTS_ENGINE}</span>
-        <span className="v">{C.TTS_ENGINE_VAL}</span>
+      <div className="group-label">{C.TTS_PROVIDER_GROUP}</div>
+      <div className="radio-group" role="radiogroup" aria-label={C.TTS_PROVIDER_GROUP}>
+        <RadioRow
+          id="piper"
+          label={`${C.TTS_PROVIDER_PIPER} — ${C.TTS_PROVIDER_PIPER_HELP}`}
+          checked={providerChoice === 'piper'}
+          onChange={(id) => void selectProvider(id)}
+        />
+        <RadioRow
+          id="gpt_sovits"
+          label={`${C.TTS_PROVIDER_GPT_SOVITS} — ${C.TTS_PROVIDER_GPT_HELP}`}
+          checked={providerChoice === 'gpt_sovits'}
+          onChange={(id) => void selectProvider(id)}
+        />
       </div>
       <div className="kv-row">
+        <span className="k">{C.TTS_ENGINE}</span>
+        <span className="v">{providerChoice === 'gpt_sovits' ? C.TTS_PROVIDER_GPT_SOVITS : C.TTS_ENGINE_VAL}</span>
+      </div>
+      {providerChoice === 'gpt_sovits' && (
+        <div className="settings-form tts-setup-panel">
+          <div className="group-label">{C.GPT_SOVITS_SETUP_HEADER}</div>
+          <div className="field">
+            <label className="label" htmlFor="gpt-sovits-base-url">{C.GPT_SOVITS_BASE_URL}</label>
+            <input
+              id="gpt-sovits-base-url"
+              className="input"
+              value={candidate.base_url}
+              onChange={(e) => updateCandidate({ base_url: e.target.value })}
+            />
+          </div>
+          {isNonLocalGptSoVitsUrl(candidate.base_url) && <div className="banner warn tts-inline-banner">{C.GPT_SOVITS_NON_LOCAL_WARNING}</div>}
+          <div className="field">
+            <label className="label" htmlFor="gpt-sovits-mode">{C.GPT_SOVITS_CONNECTION_MODE}</label>
+            <select
+              id="gpt-sovits-mode"
+              className="select"
+              value={candidate.launch.mode}
+              onChange={(e) => updateCandidate({
+                launch: { ...candidate.launch, mode: e.target.value as 'external' | 'app_managed' }
+              })}
+            >
+              <option value="external">{C.GPT_SOVITS_EXTERNAL_MODE}</option>
+              <option value="app_managed">{C.GPT_SOVITS_APP_MANAGED_MODE}</option>
+            </select>
+          </div>
+          {candidate.launch.mode === 'app_managed' ? (
+            <>
+              <div className="field">
+                <label className="label" htmlFor="gpt-sovits-command">{C.GPT_SOVITS_COMMAND}</label>
+                <input id="gpt-sovits-command" className="input" value={candidate.launch.command ?? ''} onChange={(e) => updateCandidate({ launch: { ...candidate.launch, command: e.target.value } })} />
+              </div>
+              <div className="field">
+                <label className="label" htmlFor="gpt-sovits-cwd">{C.GPT_SOVITS_WORKING_DIRECTORY}</label>
+                <input id="gpt-sovits-cwd" className="input" value={candidate.launch.working_directory ?? ''} onChange={(e) => updateCandidate({ launch: { ...candidate.launch, working_directory: e.target.value } })} />
+              </div>
+              <div className="field">
+                <label className="label" htmlFor="gpt-sovits-health-url">{C.GPT_SOVITS_HEALTH_URL}</label>
+                <input id="gpt-sovits-health-url" className="input" value={healthUrl} onChange={(e) => setHealthUrl(e.target.value)} />
+              </div>
+              <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button className="btn btn-secondary" type="button" onClick={() => void runStart()}>{C.GPT_SOVITS_START}</button>
+                <button className="btn btn-secondary" type="button" onClick={() => void window.api.stopGptSoVits?.()}>{C.GPT_SOVITS_STOP_APP_LAUNCHED}</button>
+                <button className="btn btn-secondary" type="button" onClick={() => void window.api.restartGptSoVits?.({ command: candidate.launch.command, workingDirectory: candidate.launch.working_directory, healthUrl: healthUrl || null })}>{C.GPT_SOVITS_RESTART_APP_LAUNCHED}</button>
+              </div>
+            </>
+          ) : (
+            <div className="tx-sm muted mt-2">{C.GPT_SOVITS_EXTERNAL_STOP_HELP}</div>
+          )}
+          <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn btn-secondary" type="button" onClick={() => void runHealthCheck()}>{C.GPT_SOVITS_HEALTH_CHECK}</button>
+            <button className="btn btn-primary" type="button" onClick={() => void runTestSynthesis()} disabled={!healthPassed || !selectedPreset}>{C.GPT_SOVITS_TEST_SYNTHESIS}</button>
+            <button className="btn btn-primary" type="button" onClick={() => void activateGptSoVits()} disabled={!activationReady}>{C.GPT_SOVITS_ACTIVATE_PRESET}</button>
+          </div>
+          <div className="tx-sm muted mt-2">{statusText}</div>
+        </div>
+      )}
+      <div className="kv-row">
         <span className="k">{C.TTS_VOICE}</span>
-        <span className="v">{audioStatus?.detail?.replace(/^voice=/, '') || C.TTS_VOICE_VAL}</span>
+        <span className="v">{selectedPreset?.name ?? audioStatus?.detail?.replace(/^voice=/, '') ?? C.TTS_VOICE_VAL}</span>
       </div>
       <div className="kv-row">
         <span className="k">Health</span>
