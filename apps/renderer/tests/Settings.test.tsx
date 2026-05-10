@@ -870,7 +870,11 @@ describe('Settings TTS section', () => {
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Broken Akari' } })
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(COPY.SETTINGS.VOICE_PRESET_SAVE_MISSING_REFERENCE)
+    const dialog = await screen.findByRole('alertdialog', { name: COPY.SETTINGS.VOICE_PRESET_SAVE_BLOCKED_TITLE })
+    expect(dialog).toHaveTextContent(COPY.SETTINGS.VOICE_PRESET_SAVE_MISSING_REFERENCE)
+    expect(dialog).toHaveTextContent(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT)
+    expect(dialog).toHaveTextContent(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE)
+    expect(dialog).toHaveTextContent(COPY.SETTINGS.REFERENCE_AUDIO_HEADER)
     expect(window.api.saveVoicePreset).not.toHaveBeenCalled()
   })
 

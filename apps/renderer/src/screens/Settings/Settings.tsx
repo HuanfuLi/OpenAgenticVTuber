@@ -1185,6 +1185,7 @@ function TTSSection() {
   const [selectedReferenceAssetId, setSelectedReferenceAssetId] = useState('')
   const [referenceStatusText, setReferenceStatusText] = useState<string>(C.REFERENCE_AUDIO_REQUIRED)
   const [presetValidationText, setPresetValidationText] = useState<string>('')
+  const [presetSaveBlockReasons, setPresetSaveBlockReasons] = useState<string[] | null>(null)
   const [blockedReferenceDeleteCount, setBlockedReferenceDeleteCount] = useState<number | null>(null)
   const [confirmStopGptSoVits, setConfirmStopGptSoVits] = useState(false)
   const [statusText, setStatusText] = useState<string>(C.GPT_SOVITS_PROVIDER_NOT_READY)
@@ -1409,8 +1410,15 @@ function TTSSection() {
     const draftPreset = createDraftVoicePreset(presetName, selectedPreset)
     const referenceText = selectedReferenceAsset?.transcript_text ?? referenceTranscript.trim()
     const referenceLang = selectedReferenceAsset?.language ?? referenceLanguage
-    if (!referenceText.trim() || !referenceLang || !selectedReferenceAsset) {
+    const missingPresetFields: string[] = [
+      !presetName.trim() ? C.VOICE_PRESET_NAME : null,
+      !referenceText.trim() ? C.REFERENCE_AUDIO_TRANSCRIPT : null,
+      !referenceLang ? C.REFERENCE_AUDIO_LANGUAGE : null,
+      !selectedReferenceAsset ? C.REFERENCE_AUDIO_HEADER : null
+    ].filter((item) => item !== null)
+    if (missingPresetFields.length > 0) {
       setPresetValidationText(C.VOICE_PRESET_SAVE_MISSING_REFERENCE)
+      setPresetSaveBlockReasons(missingPresetFields)
       setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
       setStatusText(C.VOICE_PRESET_SAVE_MISSING_REFERENCE)
       return
@@ -1432,6 +1440,7 @@ function TTSSection() {
       setStoredCfg((cur) => cur ? { ...cur, voicePresets: nextPresets } : cur)
       presetTouchedRef.current = false
       setPresetValidationText('')
+      setPresetSaveBlockReasons(null)
       setSelectedPresetId(nextPreset.preset_id)
       setPresetName(nextPreset.name)
       const map = await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, nextPreset.preset_id)
@@ -1443,6 +1452,7 @@ function TTSSection() {
       )
     } catch {
       setPresetValidationText(C.VOICE_PRESET_SAVE_FAILURE)
+      setPresetSaveBlockReasons([C.VOICE_PRESET_SAVE_FAILURE])
       setStatusText(C.VOICE_PRESET_SAVE_FAILURE)
     }
   }
@@ -1460,6 +1470,7 @@ function TTSSection() {
     setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
     setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
     setPresetValidationText('')
+    setPresetSaveBlockReasons(null)
   }
 
   const selectVoicePreset = async (presetId: string): Promise<void> => {
@@ -1478,6 +1489,7 @@ function TTSSection() {
         : C.REFERENCE_AUDIO_REQUIRED
     )
     setPresetValidationText('')
+    setPresetSaveBlockReasons(null)
     const map = await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, presetId)
     if (map) setActivePresetByAvatarSession(map)
   }
@@ -1822,6 +1834,21 @@ function TTSSection() {
             <div className="actions">
               <button className="btn btn-secondary" onClick={() => setConfirmStopGptSoVits(false)}>{C.REFERENCE_AUDIO_DELETE_CANCEL}</button>
               <button className="btn btn-destructive" onClick={() => void confirmStopAppLaunchedGptSoVits()}>{C.GPT_SOVITS_STOP_APP_LAUNCHED}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {presetSaveBlockReasons && (
+        <div className="dialog-overlay">
+          <div className="dialog" data-theme-surface role="alertdialog" aria-labelledby="voice-preset-save-blocked-title">
+            <h3 id="voice-preset-save-blocked-title">{C.VOICE_PRESET_SAVE_BLOCKED_TITLE}</h3>
+            <p>{C.VOICE_PRESET_SAVE_MISSING_REFERENCE}</p>
+            <div className="preset-card">
+              <div className="semibold">Missing:</div>
+              <div className="tx-sm">{presetSaveBlockReasons.join(', ')}</div>
+            </div>
+            <div className="actions">
+              <button className="btn btn-primary" autoFocus onClick={() => setPresetSaveBlockReasons(null)}>{C.VOICE_PRESET_SAVE_BLOCKED_CLOSE}</button>
             </div>
           </div>
         </div>

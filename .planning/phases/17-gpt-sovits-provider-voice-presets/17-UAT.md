@@ -10,7 +10,7 @@ source:
   - 17-06-SUMMARY.md
   - 17-07-SUMMARY.md
 started: 2026-05-10T00:00:00Z
-updated: 2026-05-10T03:45:00Z
+updated: 2026-05-10T03:50:00Z
 ---
 
 # Phase 17 UAT - GPT-SoVITS Provider + Voice Presets
@@ -21,7 +21,7 @@ number: 3
 name: Reference Audio Import And Validation
 expected: |
   Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
-awaiting: user retest after audited import/new-preset UX fix
+awaiting: user retest after blocking incomplete-preset save dialog fix
 
 ## Tests
 
@@ -40,7 +40,7 @@ severity: none
 ### 3. Reference Audio Import And Validation
 expected: Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
 result: issue
-reported: "User reported: Import is not blocked when transcript/language are missing, saving a different preset name/config overwrites the first saved preset instead of creating a new preset, and the first fix still had poor UX plus failed new-preset persistence. Audited fix now applied; awaiting user retest."
+reported: "User reported: Import is not blocked when transcript/language are missing, saving a different preset name/config overwrites the first saved preset instead of creating a new preset, and the first fixes still had poor UX because saving an empty new preset showed no obvious message. Blocking save-dialog fix now applied; awaiting user retest."
 severity: blocker
 
 ### 4. Voice Preset Management
@@ -136,14 +136,14 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
   reason: "User reported reference import was not clearly blocked without transcript/language and preset save overwrote the selected preset when trying to create a different named/configured preset."
   severity: blocker
   test: 3
-  root_cause: "Reference import relied on disabled-button state and silently returned in the handler without visible validation feedback. Voice preset editing had no explicit new-preset mode, so Save always derived from the selected preset id and overwrote it. The first fix still allowed async Settings hydration to overwrite user-edited preset/reference fields after typing, which made valid new-preset saves and import-failure messaging appear to disappear. The second fix still treated missing reference data mostly as an import-button validation issue; Save itself needed to block incomplete GPT-SoVITS presets with a visible reason."
+  root_cause: "Reference import relied on disabled-button state and silently returned in the handler without visible validation feedback. Voice preset editing had no explicit new-preset mode, so Save always derived from the selected preset id and overwrote it. The first fix still allowed async Settings hydration to overwrite user-edited preset/reference fields after typing, which made valid new-preset saves and import-failure messaging appear to disappear. The second fix still used an inline banner for missing reference data; in the actual user flow this was not prominent enough, so Save needed to open a focused blocking dialog that explains why no preset was created."
   artifacts:
     - path: "apps/renderer/src/screens/Settings/Settings.tsx"
-      issue: "Added explicit New preset action that clears selected preset state so Save creates a distinct preset id; added visible reference transcript/language validation/import failure status; guarded late async hydration from clobbering user-edited preset/reference fields; made Save preset show a prominent inline error and skip persistence when reference transcript/language/audio are incomplete."
+      issue: "Added explicit New preset action that clears selected preset state so Save creates a distinct preset id; added visible reference transcript/language validation/import failure status; guarded late async hydration from clobbering user-edited preset/reference fields; made incomplete Save preset open a focused alertdialog listing missing fields and skip persistence when reference transcript/language/audio are incomplete."
     - path: "apps/renderer/src/lib/copy.ts"
-      issue: "Added New preset, reference-required, and preset-save-missing-reference copy."
+      issue: "Added New preset, reference-required, preset-save-missing-reference, and blocking dialog copy."
     - path: "apps/renderer/tests/Settings.test.tsx"
-      issue: "Added regression coverage that New preset creates a separate preset instead of overwriting the selected one, persists as active across Settings reload, import failures remain visible, and incomplete new preset saves show why nothing was saved."
+      issue: "Added regression coverage that New preset creates a separate preset instead of overwriting the selected one, persists as active across Settings reload, import failures remain visible, and incomplete new preset saves open an alertdialog showing why nothing was saved."
   missing:
     - "User retest confirmation that invalid reference import is blocked with visible feedback and New preset creates a second preset."
   debug_session: ""
@@ -181,3 +181,6 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
 - `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after Save-preset missing-reference UX fix, 47 tests.
 - `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after Save-preset missing-reference UX fix, 52 tests.
 - `npm --workspace apps/renderer run typecheck` - passed after Save-preset missing-reference UX fix.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after blocking incomplete-preset save dialog fix, 47 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after blocking incomplete-preset save dialog fix, 52 tests.
+- `npm --workspace apps/renderer run typecheck` - passed after blocking incomplete-preset save dialog fix.
