@@ -212,6 +212,9 @@ describe('Settings TTS section', () => {
               requires_api_key: false,
               requires_consent: false,
               enabled: true,
+              recommended: true,
+              default_model_id: 'iic/SenseVoiceSmall',
+              supported_language_modes: ['auto', 'zh', 'en'],
               summary: 'Local STT adapter planned.'
             },
             {
@@ -223,6 +226,9 @@ describe('Settings TTS section', () => {
               requires_api_key: false,
               requires_consent: false,
               enabled: true,
+              recommended: false,
+              default_model_id: 'small',
+              supported_language_modes: ['auto', 'en'],
               summary: 'Local STT adapter planned.'
             },
             {
@@ -234,6 +240,9 @@ describe('Settings TTS section', () => {
               requires_api_key: true,
               requires_consent: true,
               enabled: true,
+              recommended: false,
+              default_model_id: 'gpt-4o-mini-transcribe',
+              supported_language_modes: ['auto', 'zh', 'en'],
               summary: 'Cloud STT option.'
             },
             {
@@ -245,6 +254,9 @@ describe('Settings TTS section', () => {
               requires_api_key: true,
               requires_consent: true,
               enabled: true,
+              recommended: false,
+              default_model_id: 'whisper-large-v3-turbo',
+              supported_language_modes: ['auto', 'zh', 'en'],
               summary: 'Cloud STT option.'
             }
           ]
@@ -252,6 +264,12 @@ describe('Settings TTS section', () => {
         testSttProvider: vi.fn().mockResolvedValue({
           ok: false,
           provider_id: 'funasr',
+          transcript: null,
+          language: null,
+          latency_ms: null,
+          duration_ms: null,
+          model_cache_state: 'not_downloaded',
+          readiness: null,
           summary: COPY.SETTINGS.VOICE_IN_TEST_NOT_READY,
           failure: {
             provider_id: 'funasr',
@@ -264,6 +282,57 @@ describe('Settings TTS section', () => {
             redacted_diagnostics: { adapter: 'not_implemented' }
           },
           redacted_diagnostics: { adapter: 'not_implemented' }
+        }),
+        getSttModels: vi.fn().mockResolvedValue({
+          cache_root_display: 'C:/AgenticLLMVTuberTest/stt-models',
+          models: [
+            {
+              provider_id: 'funasr',
+              model_id: 'iic/SenseVoiceSmall',
+              display_name: 'SenseVoiceSmall',
+              source_label: 'ModelScope',
+              size_label: 'approximately 1 GB',
+              size_bytes: null,
+              cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/funasr/iic__SenseVoiceSmall',
+              status: 'not_downloaded',
+              app_managed: true,
+              removable: false,
+              loaded: false,
+              recommended: true,
+              summary: 'Model has not been downloaded.'
+            },
+            {
+              provider_id: 'faster_whisper',
+              model_id: 'small',
+              display_name: 'faster-whisper small',
+              source_label: 'Hugging Face',
+              size_label: 'approximately 500 MB',
+              size_bytes: null,
+              cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/faster_whisper/small',
+              status: 'not_downloaded',
+              app_managed: true,
+              removable: false,
+              loaded: false,
+              recommended: false,
+              summary: 'Model has not been downloaded.'
+            }
+          ]
+        }),
+        downloadSttModel: vi.fn().mockResolvedValue({
+          ok: true,
+          provider_id: 'funasr',
+          model_id: 'iic/SenseVoiceSmall',
+          status: 'downloaded',
+          summary: 'Model cache entry prepared in app-managed storage.',
+          cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/funasr/iic__SenseVoiceSmall'
+        }),
+        removeSttModel: vi.fn().mockResolvedValue({
+          ok: true,
+          provider_id: 'funasr',
+          model_id: 'iic/SenseVoiceSmall',
+          status: 'not_downloaded',
+          summary: 'Model removed from the app-managed cache.',
+          cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/funasr/iic__SenseVoiceSmall'
         }),
         checkGptSoVitsHealth: vi.fn().mockResolvedValue({
           provider_id: 'gpt_sovits',
@@ -442,10 +511,12 @@ describe('Settings TTS section', () => {
     renderSettings()
 
     expect(await screen.findByRole('radio', { name: /FunASR/i })).toBeInTheDocument()
+    expect(await screen.findByText(COPY.SETTINGS.VOICE_IN_MODEL_CACHE)).toBeInTheDocument()
+    expect(screen.getByText(/SenseVoiceSmall/)).toBeInTheDocument()
     fireEvent.click(await screen.findByRole('radio', { name: /OpenAI STT/i }))
 
     expect(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_CLOUD_CONSENT)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_TEST })).toBeDisabled()
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_RECORD_TEST })).toBeDisabled()
     expect(screen.getByText(COPY.SETTINGS.VOICE_IN_TEST_BLOCKED)).toBeInTheDocument()
   })
 

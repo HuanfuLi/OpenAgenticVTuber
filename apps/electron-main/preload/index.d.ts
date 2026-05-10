@@ -5,6 +5,9 @@ import type {
   GptSoVitsHealthRequest,
   GptSoVitsTestSynthesisRequest,
   GptSoVitsTestSynthesisResult,
+  STTModelCacheCatalog,
+  STTModelCacheOperationRequest,
+  STTModelCacheOperationResult,
   STTTestRequest,
   STTTestResult
 } from '../../../packages/contracts/ts/audio-provider'
@@ -45,6 +48,9 @@ export type VoicePresetBridge = {
 export type GptSoVitsAudioBridge = {
   getAudioProviders(): Promise<AudioProviderCatalog>
   testSttProvider(input: STTTestRequest): Promise<STTTestResult>
+  getSttModels(input: STTTestRequest): Promise<STTModelCacheCatalog>
+  downloadSttModel(input: STTModelCacheOperationRequest): Promise<STTModelCacheOperationResult>
+  removeSttModel(input: STTModelCacheOperationRequest): Promise<STTModelCacheOperationResult>
   checkGptSoVitsHealth(input: GptSoVitsHealthRequest): Promise<AudioProviderHealth>
   testGptSoVitsSynthesis(input: GptSoVitsTestSynthesisRequest): Promise<GptSoVitsTestSynthesisResult>
   startGptSoVits(input: GptSoVitsProcessRequest): Promise<GptSoVitsProcessStatus>

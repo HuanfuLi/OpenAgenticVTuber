@@ -10,6 +10,9 @@ import type {
   GptSoVitsHealthRequest,
   GptSoVitsTestSynthesisRequest,
   GptSoVitsTestSynthesisResult,
+  STTModelCacheCatalog,
+  STTModelCacheOperationRequest,
+  STTModelCacheOperationResult,
   STTTestRequest,
   STTTestResult
 } from '../../../packages/contracts/ts/audio-provider'
@@ -124,6 +127,12 @@ const api = {
     ipcRenderer.invoke('sidecar:getAudioProviders'),
   testSttProvider: (input: STTTestRequest): Promise<STTTestResult> =>
     ipcRenderer.invoke('audio:testStt', input),
+  getSttModels: (input: STTTestRequest): Promise<STTModelCacheCatalog> =>
+    ipcRenderer.invoke('audio:getSttModels', input),
+  downloadSttModel: (input: STTModelCacheOperationRequest): Promise<STTModelCacheOperationResult> =>
+    ipcRenderer.invoke('audio:downloadSttModel', input),
+  removeSttModel: (input: STTModelCacheOperationRequest): Promise<STTModelCacheOperationResult> =>
+    ipcRenderer.invoke('audio:removeSttModel', input),
   checkGptSoVitsHealth: (input: GptSoVitsHealthRequest): Promise<AudioProviderHealth> =>
     ipcRenderer.invoke('gptSovits:checkHealth', input),
   testGptSoVitsSynthesis: (
@@ -217,6 +226,9 @@ export type {
   GptSoVitsHealthRequest,
   GptSoVitsTestSynthesisRequest,
   GptSoVitsTestSynthesisResult,
+  STTModelCacheCatalog,
+  STTModelCacheOperationRequest,
+  STTModelCacheOperationResult,
   STTTestRequest,
   STTTestResult
 } from '../../../packages/contracts/ts/audio-provider'

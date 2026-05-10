@@ -326,6 +326,9 @@ describe('GPT-SoVITS audio IPC handlers', () => {
           requires_api_key: true,
           requires_consent: true,
           enabled: true,
+          recommended: false,
+          default_model_id: 'gpt-4o-mini-transcribe',
+          supported_language_modes: ['auto', 'zh', 'en'],
           summary: 'Cloud STT option.'
         }
       ]
@@ -333,6 +336,12 @@ describe('GPT-SoVITS audio IPC handlers', () => {
     const sttResult: STTTestResult = {
       ok: false,
       provider_id: 'openai',
+      transcript: null,
+      language: null,
+      latency_ms: null,
+      duration_ms: null,
+      model_cache_state: null,
+      readiness: null,
       summary: 'Cloud STT is blocked until explicit consent is saved.',
       failure: {
         provider_id: 'openai',
@@ -356,6 +365,18 @@ describe('GPT-SoVITS audio IPC handlers', () => {
         active_provider: 'openai',
         input_mode: 'push_to_talk',
         language_mode: 'auto',
+        local_model_id: null,
+        local_model_path_override: null,
+        cache_root: null,
+        readiness: {
+          health_check_passed: false,
+          test_transcription_passed: false,
+          last_health_checked_at: null,
+          last_test_transcription_at: null,
+          fingerprint: null,
+          active_allowed: false,
+          invalidation_reason: 'never_tested'
+        },
         capture_timeout_ms: 30_000,
         execution: 'off_event_loop',
         cloud: {

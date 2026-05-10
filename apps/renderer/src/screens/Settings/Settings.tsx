@@ -19,9 +19,12 @@ import type {
   AudioProviderCatalogEntry,
   GptSoVitsProviderConfig,
   GptSoVitsTestSynthesisResult,
+  STTModelCacheCatalog,
+  STTModelCatalogEntry,
   STTProviderConfig,
   STTTestResult
 } from '@contracts/audio-provider'
+import { recordSettingsTestWav } from '@/audio/test-recorder'
 import type { GptSoVitsPresetConfig, ReferenceAudioAsset, VoicePreset } from '@contracts/voice-preset'
 import {
   buildGptSoVitsPresetValidationFingerprint,
@@ -2076,6 +2079,7 @@ function VoiceInputSection() {
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<STTTestResult | null>(null)
+  const [modelCatalog, setModelCatalog] = useState<STTModelCacheCatalog | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.api) return
@@ -2087,8 +2091,17 @@ function VoiceInputSection() {
       .then(([cfg, catalog]) => {
         if (cancelled) return
         setStoredCfg(cfg)
-        setSttConfig(normalizeSttConfig(cfg))
+        const nextSttConfig = normalizeSttConfig(cfg)
+        setSttConfig(nextSttConfig)
         setProviders(catalog.providers.filter((provider) => provider.kind === 'stt'))
+        return window.api.getSttModels?.({
+          config: nextSttConfig,
+          audio_base64_wav: null,
+          duration_ms: null,
+          sample_label: 'settings'
+        }).then((models) => {
+          if (!cancelled) setModelCatalog(models)
+        })
       })
       .catch(() => undefined)
     return () => {
@@ -2099,6 +2112,7 @@ function VoiceInputSection() {
   const activeProvider = sttConfig.active_provider ?? 'funasr'
   const selectedCloud = activeProvider === 'openai' || activeProvider === 'groq' ? sttConfig.cloud[activeProvider] : null
   const cloudBlocked = selectedCloud !== null && (!selectedCloud.consent_granted || !selectedCloud.api_key?.trim())
+  const selectedModel = modelCatalog?.models.find((model) => model.provider_id === activeProvider) ?? null
 
   const updateSttConfig = (patch: Partial<STTProviderConfig>): void => {
     setSttConfig((cur) => ({ ...cur, ...patch }))
@@ -2157,10 +2171,15 @@ function VoiceInputSection() {
     setTesting(true)
     setTestResult(null)
     try {
+      const recording = await recordSettingsTestWav().catch(() => null)
+      if (!recording) {
+        setStatusText(C.VOICE_IN_MIC_ERROR)
+        return
+      }
       const result = await window.api.testSttProvider?.({
         config: sttConfig,
-        audio_base64_wav: null,
-        duration_ms: null,
+        audio_base64_wav: recording.audioBase64Wav,
+        duration_ms: recording.durationMs,
         sample_label: 'settings-diagnostics'
       })
       if (result) {
@@ -2170,6 +2189,28 @@ function VoiceInputSection() {
     } finally {
       setTesting(false)
     }
+  }
+
+  const refreshModels = async (config: STTProviderConfig = sttConfig): Promise<void> => {
+    const models = await window.api.getSttModels?.({
+      config,
+      audio_base64_wav: null,
+      duration_ms: null,
+      sample_label: 'settings'
+    })
+    if (models) setModelCatalog(models)
+  }
+
+  const downloadSelectedModel = async (model: STTModelCatalogEntry): Promise<void> => {
+    const result = await window.api.downloadSttModel?.({ provider_id: model.provider_id, model_id: model.model_id })
+    setStatusText(result?.summary ?? C.VOICE_IN_TEST_NOT_READY)
+    await refreshModels()
+  }
+
+  const removeSelectedModel = async (model: STTModelCatalogEntry): Promise<void> => {
+    const result = await window.api.removeSttModel?.({ provider_id: model.provider_id, model_id: model.model_id })
+    setStatusText(result?.summary ?? C.VOICE_IN_TEST_NOT_READY)
+    await refreshModels()
   }
 
   return (
@@ -2279,6 +2320,21 @@ function VoiceInputSection() {
             </div>
           </>
         )}
+        {selectedModel && (
+          <div className="preset-card">
+            <div className="between">
+              <div>
+                <div className="semibold">{C.VOICE_IN_MODEL_CACHE}</div>
+                <div className="tx-sm muted">{selectedModel.display_name} · {selectedModel.status} · {selectedModel.size_label ?? 'size unknown'}</div>
+                <div className="tx-sm muted">{modelCatalog?.cache_root_display}</div>
+              </div>
+              <div className="row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button className="btn btn-secondary" type="button" onClick={() => void downloadSelectedModel(selectedModel)}>{C.VOICE_IN_MODEL_DOWNLOAD}</button>
+                <button className="btn btn-destructive" type="button" onClick={() => void removeSelectedModel(selectedModel)} disabled={!selectedModel.removable}>{C.VOICE_IN_MODEL_REMOVE}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -2286,11 +2342,14 @@ function VoiceInputSection() {
           {saving ? C.CONN_SAVING : C.VOICE_IN_SAVE}
         </button>
         <button className="btn btn-secondary" type="button" onClick={() => void runSttTest()} disabled={testing || cloudBlocked}>
-          {testing ? COPY.STATUS.TESTING : C.VOICE_IN_TEST}
+          {testing ? COPY.STATUS.TESTING : C.VOICE_IN_RECORD_TEST}
         </button>
       </div>
       <div className="preset-card mt-2" role="status" aria-live="polite">
         <div className="semibold">{cloudBlocked ? C.VOICE_IN_TEST_BLOCKED : statusText}</div>
+        {testResult?.transcript && (
+          <div className="tx-sm">{C.VOICE_IN_TEST_TRANSCRIPT}: {testResult.transcript}</div>
+        )}
         {testResult?.failure?.redacted_diagnostics && (
           <div className="tx-sm muted">{Object.entries(testResult.failure.redacted_diagnostics).map(([k, v]) => `${k}: ${v}`).join(' · ')}</div>
         )}

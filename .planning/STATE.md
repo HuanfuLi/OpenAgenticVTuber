@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
-status: in_progress
-stopped_at: Phase 19 plans 19-02 and 19-03 provider adapters complete; ready for 19-04
-last_updated: "2026-05-10T06:49:00Z"
-last_activity: 2026-05-10 - Phase 19 local and cloud STT provider adapters completed
+status: ready_for_next_phase
+stopped_at: Phase 19 STT provider abstraction complete; ready for Phase 20
+last_updated: "2026-05-10T06:58:00Z"
+last_activity: 2026-05-10 - Phase 19 STT provider abstraction, provider tests, cache controls, and Settings-only recorder completed
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 27
-  completed_plans: 22
-  percent: 81
+  completed_plans: 23
+  percent: 85
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon - v3.0 improves voice usability before memory/avatar identity work)
-**Current focus:** Phase 19: STT Provider Abstraction + Local/Cloud Providers
+**Current focus:** Phase 20: Renderer Voice Capture + PTT/VAD Preview UX
 
 ## Current Position
 
-Phase: 19 of 22 (STT Provider Abstraction + Local/Cloud Providers)
-Plan: 19-04 next
-Status: Phase 19 in progress; 19-01 through 19-03 complete
-Last activity: 2026-05-10 - Phase 19 local and cloud STT provider adapters completed
+Phase: 20 of 22 (Renderer Voice Capture + PTT/VAD Preview UX)
+Plan: Ready to execute Phase 20
+Status: Phase 19 complete; ready for next phase
+Last activity: 2026-05-10 - Phase 19 STT provider abstraction, provider tests, cache controls, and Settings-only recorder completed
 
-Progress: [████████░░] 22/27 planned v3.0 plans complete
+Progress: [████████░░] 23/27 planned v3.0 plans complete
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed in v3.0: 18
+- Total plans completed in v3.0: 19
 - Average duration: 10 min
 - Total execution time: 117 min
 
@@ -47,7 +47,7 @@ Progress: [████████░░] 22/27 planned v3.0 plans complete
 | 16. Audio Contracts + TTS Provider Shell | 4/4 | same-session | same-session |
 | 17. GPT-SoVITS Provider + Voice Presets | 12/12 | 117 min | 10 min |
 | 18. Rich Voice Settings + Persistence | 3/3 | same-session | same-session |
-| 19. STT Provider Abstraction + Local/Cloud Providers | 3/4 | same-session | same-session |
+| 19. STT Provider Abstraction + Local/Cloud Providers | 4/4 | same-session | same-session |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | 0/4 | - | - |
 | 21. Code-Switch Evaluation + Hardening | 0/4 | - | - |
 | 22. AEC Spike + No-Headphones Decision | 0/TBD | - | - |
@@ -77,7 +77,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Execute Phase 19 plan 19-04.
+- Execute Phase 20 Renderer Voice Capture + PTT/VAD Preview UX.
 
 ### Blockers/Concerns
 
@@ -96,6 +96,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 18 added provider catalog labels, explicit cloud STT consent/API key persistence, redacted diagnostics, Voice in settings, and diagnostics-only STT tests without microphone capture or chat submission.
 - Phase 19 plan 19-01 added STT contracts, lazy registry, app-managed model cache metadata, readiness fingerprints, and admin endpoint skeletons without provider-library imports at boot.
 - Phase 19 plans 19-02 and 19-03 added lazy local/cloud STT adapters, local model cache prepare/remove/status, provider-specific cloud consent/credential gates, and readiness-gated test transcription.
+- Phase 19 plan 19-04 added Electron STT model-cache bridges, Settings cache/test controls, and a Settings-only microphone recorder path without chat submission.
 
 ## Deferred Items
 
@@ -107,6 +108,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-10T06:49:00Z
-Stopped at: Completed Phase 19 plans 19-02 and 19-03; ready for 19-04
+Last session: 2026-05-10T06:58:00Z
+Stopped at: Completed Phase 19 STT provider abstraction; ready for Phase 20
 Resume file: None

@@ -52,6 +52,9 @@ import type {
   GptSoVitsHealthRequest,
   GptSoVitsTestSynthesisRequest,
   GptSoVitsTestSynthesisResult,
+  STTModelCacheCatalog,
+  STTModelCacheOperationRequest,
+  STTModelCacheOperationResult,
   STTTestRequest,
   STTTestResult
 } from '../../../packages/contracts/ts/audio-provider'
@@ -112,6 +115,9 @@ function fallbackAudioProviderCatalog(summary: string): AudioProviderCatalog {
         requires_api_key: false,
         requires_consent: false,
         enabled: true,
+        recommended: false,
+        default_model_id: null,
+        supported_language_modes: [],
         summary
       },
       {
@@ -123,6 +129,9 @@ function fallbackAudioProviderCatalog(summary: string): AudioProviderCatalog {
         requires_api_key: false,
         requires_consent: false,
         enabled: true,
+        recommended: false,
+        default_model_id: null,
+        supported_language_modes: [],
         summary
       },
       {
@@ -134,6 +143,9 @@ function fallbackAudioProviderCatalog(summary: string): AudioProviderCatalog {
         requires_api_key: false,
         requires_consent: false,
         enabled: true,
+        recommended: true,
+        default_model_id: 'iic/SenseVoiceSmall',
+        supported_language_modes: ['auto', 'zh', 'en'],
         summary
       },
       {
@@ -145,6 +157,9 @@ function fallbackAudioProviderCatalog(summary: string): AudioProviderCatalog {
         requires_api_key: false,
         requires_consent: false,
         enabled: true,
+        recommended: false,
+        default_model_id: 'small',
+        supported_language_modes: ['auto', 'en'],
         summary
       },
       {
@@ -156,6 +171,9 @@ function fallbackAudioProviderCatalog(summary: string): AudioProviderCatalog {
         requires_api_key: true,
         requires_consent: true,
         enabled: true,
+        recommended: false,
+        default_model_id: 'gpt-4o-mini-transcribe',
+        supported_language_modes: ['auto', 'zh', 'en'],
         summary
       },
       {
@@ -167,6 +185,9 @@ function fallbackAudioProviderCatalog(summary: string): AudioProviderCatalog {
         requires_api_key: true,
         requires_consent: true,
         enabled: true,
+        recommended: false,
+        default_model_id: 'whisper-large-v3-turbo',
+        supported_language_modes: ['auto', 'zh', 'en'],
         summary
       }
     ]
@@ -187,9 +208,36 @@ function failedSttTest(summary: string, providerId: STTTestResult['provider_id']
   return {
     ok: false,
     provider_id: providerId,
+    transcript: null,
+    language: null,
+    latency_ms: null,
+    duration_ms: null,
+    model_cache_state: null,
+    readiness: null,
     summary,
     failure,
     redacted_diagnostics: null
+  }
+}
+
+function fallbackSttModelCatalog(summary: string): STTModelCacheCatalog {
+  return {
+    cache_root_display: summary,
+    models: []
+  }
+}
+
+function failedSttModelOperation(
+  request: STTModelCacheOperationRequest,
+  summary: string
+): STTModelCacheOperationResult {
+  return {
+    ok: false,
+    provider_id: request.provider_id,
+    model_id: request.model_id,
+    status: 'missing',
+    summary,
+    cache_path_display: null
   }
 }
 
@@ -417,6 +465,39 @@ export function registerIpc(window: BrowserWindow): () => void {
         () => failedSttTest('STT test failed: sidecar request failed.', providerId, 'external_service_failure')
       )
     }
+  )
+  ipcMain.handle(
+    'audio:getSttModels',
+    async (_e, request: STTTestRequest): Promise<STTModelCacheCatalog> =>
+      postSidecarAdminJson<STTModelCacheCatalog>(
+        '/admin/audio/stt/models',
+        request,
+        () => fallbackSttModelCatalog('Sidecar is not ready.'),
+        (status) => fallbackSttModelCatalog(`STT model status unavailable: HTTP ${status}`),
+        () => fallbackSttModelCatalog('STT model status unavailable: sidecar request failed.')
+      )
+  )
+  ipcMain.handle(
+    'audio:downloadSttModel',
+    async (_e, request: STTModelCacheOperationRequest): Promise<STTModelCacheOperationResult> =>
+      postSidecarAdminJson<STTModelCacheOperationResult>(
+        '/admin/audio/stt/models/download',
+        request,
+        () => failedSttModelOperation(request, 'Sidecar is not ready.'),
+        (status) => failedSttModelOperation(request, `STT model download failed: HTTP ${status}`),
+        () => failedSttModelOperation(request, 'STT model download failed: sidecar request failed.')
+      )
+  )
+  ipcMain.handle(
+    'audio:removeSttModel',
+    async (_e, request: STTModelCacheOperationRequest): Promise<STTModelCacheOperationResult> =>
+      postSidecarAdminJson<STTModelCacheOperationResult>(
+        '/admin/audio/stt/models/remove',
+        request,
+        () => failedSttModelOperation(request, 'Sidecar is not ready.'),
+        (status) => failedSttModelOperation(request, `STT model remove failed: HTTP ${status}`),
+        () => failedSttModelOperation(request, 'STT model remove failed: sidecar request failed.')
+      )
   )
   ipcMain.handle(
     'gptSovits:checkHealth',
@@ -677,6 +758,9 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('sidecar:getAudioStatus')
     ipcMain.removeHandler('sidecar:getAudioProviders')
     ipcMain.removeHandler('audio:testStt')
+    ipcMain.removeHandler('audio:getSttModels')
+    ipcMain.removeHandler('audio:downloadSttModel')
+    ipcMain.removeHandler('audio:removeSttModel')
     ipcMain.removeHandler('gptSovits:checkHealth')
     ipcMain.removeHandler('gptSovits:testSynthesis')
     ipcMain.removeHandler('gptSovits:start')
