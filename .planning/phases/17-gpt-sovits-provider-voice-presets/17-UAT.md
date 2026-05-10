@@ -9,8 +9,9 @@ source:
   - 17-05-SUMMARY.md
   - 17-06-SUMMARY.md
   - 17-07-SUMMARY.md
+  - 17-08-SUMMARY.md
 started: 2026-05-10T00:00:00Z
-updated: 2026-05-10T04:25:00Z
+updated: 2026-05-10T04:42:00Z
 ---
 
 # Phase 17 UAT - GPT-SoVITS Provider + Voice Presets
@@ -79,6 +80,7 @@ blocked: 0
 | Sidecar focused tests | PASS | `uv run --project sidecar python -m pytest ...` passed after review fixes. |
 | Code review | PASS | `17-REVIEW.md` status is clean after fixes. |
 | Goal verification | PASS | `17-VERIFICATION.md` passed 5/5 roadmap success criteria. |
+| Plan 17-08 per-preset validation regression | PASS | `npm run check:contracts`; renderer Settings/Chat tests; renderer typecheck; Electron main focused tests; Electron main build; and sidecar boot/gateway tests all passed on 2026-05-10 after per-preset validation gap closure. |
 
 ## Previous Live Server Availability
 
@@ -151,6 +153,24 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
   debug_session: ""
 
 ## Gap Fix Evidence
+
+### Plan 17-08 Per-Preset GPT-SoVITS Validation Evidence
+
+- **Scope:** Closed the audit gap where GPT-SoVITS validation/test evidence was global instead of durable per voice preset and per synthesis-affecting candidate fingerprint.
+- **Per-preset metadata:** `VoicePreset.validation` now carries timestamped GPT-SoVITS validation evidence (`state`, `fingerprint`, `validated_at`, `health_checked_at`, `test_synthesis_at`, redacted `summary`) generated from the Python contract into TypeScript and JSON Schema.
+- **Shared fingerprint source:** `packages/contracts/ts/gpt-sovits-validation.ts` is the single shared runtime helper imported by both Settings and Electron main/safe-storage; renderer and main tests import the same helper path rather than duplicating field selection.
+- **Fingerprint invalidation:** The deterministic fingerprint excludes display-only `name`, so preset renames preserve validation. It includes provider/base launch fields and preset synthesis inputs, so reference audio, prompt text/language, base URL, launch mode/command/cwd, and tuning changes report `Changed since last test` and require retesting.
+- **Activation behavior:** A matching already-validated preset can activate after current health is OK without a redundant Test synthesis click. Untested or changed presets still require health plus successful test synthesis before activation.
+- **Failure behavior:** Failed Test synthesis does not write validation metadata and does not activate GPT-SoVITS. Successful Test synthesis persists validation metadata onto the selected preset before activation can rely on it.
+- **Runtime switch behavior:** Selecting/updating an already validated active preset writes `activePresetByAvatarSession` and Electron main restarts the sidecar so the runtime reads the new association/config handoff.
+- **Manual live-server UAT:** No new live-server pass is claimed here. Existing live GPT-SoVITS server checks remain pending/testing until explicitly confirmed by the user.
+
+- `npm run check:contracts` - passed after plan 17-08 contract/codegen changes.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after plan 17-08, 59 tests.
+- `npm --workspace apps/renderer run typecheck` - passed after plan 17-08.
+- `npm --workspace apps/electron-main run test -- --run ipc-gpt-sovits-audio.test.ts safe-storage.test.ts` - passed after plan 17-08, 16 tests.
+- `npm --workspace apps/electron-main run build` - passed after plan 17-08.
+- `uv run --project sidecar python -m pytest sidecar/tests/test_sidecar_boot.py sidecar/tests/test_tts_gateway.py -q` - passed after plan 17-08, 16 tests.
 
 - `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed, 42 tests.
 - `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed, 47 tests.
