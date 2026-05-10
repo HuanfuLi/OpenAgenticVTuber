@@ -360,7 +360,7 @@ export function registerIpc(window: BrowserWindow): () => void {
   })
   ipcMain.handle(
     'voicePresets:setActiveForAvatarSession',
-    (_e, avatarId: string | null, sessionId: string | null, presetId: string): Record<string, string> => {
+    async (_e, avatarId: string | null, sessionId: string | null, presetId: string): Promise<Record<string, string>> => {
       const cfg = loadConfig()
       if (!cfg) throw new Error('Stored config is not initialized.')
       if (!cfg.voicePresets.some((preset) => preset.preset_id === presetId)) {
@@ -369,6 +369,7 @@ export function registerIpc(window: BrowserWindow): () => void {
       const key = getAvatarSessionPresetKey(avatarId, sessionId)
       const activePresetByAvatarSession = { ...cfg.activePresetByAvatarSession, [key]: presetId }
       saveConfig({ ...cfg, activePresetByAvatarSession })
+      await restartSidecar()
       return activePresetByAvatarSession
     }
   )

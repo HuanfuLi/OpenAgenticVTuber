@@ -511,7 +511,7 @@ describe('Settings TTS section', () => {
 
     await openGptSoVitsSettings()
     await waitForPresetLibrary()
-    expect(await screen.findByText(COPY.SETTINGS.VOICE_PRESET_VALIDATED)).toBeInTheDocument()
+    expect(await screen.findByRole('radio', { name: /Akari bright.*Validated/i })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
     await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
     await waitFor(() => expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })).not.toBeDisabled())
@@ -535,7 +535,7 @@ describe('Settings TTS section', () => {
     renderSettings()
 
     await openGptSoVitsSettings()
-    expect(await screen.findByText(COPY.SETTINGS.VOICE_PRESET_VALIDATED)).toBeInTheDocument()
+    expect(await screen.findByRole('radio', { name: /Renamed Akari.*Validated/i })).toBeInTheDocument()
   })
 
   it('marks synthesis-affecting edits as changed since last test and blocks activation', async () => {
@@ -550,7 +550,7 @@ describe('Settings TTS section', () => {
     renderSettings()
 
     await openGptSoVitsSettings()
-    expect(await screen.findByText(COPY.SETTINGS.VOICE_PRESET_CHANGED_SINCE_TEST)).toBeInTheDocument()
+    expect(await screen.findByRole('radio', { name: /Akari bright.*Changed since last test/i })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
     await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
     expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })).toBeDisabled()

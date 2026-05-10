@@ -17,6 +17,11 @@ import { TestLog } from '@/screens/LLMSetup/TestLog'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
 import type { GptSoVitsProviderConfig, GptSoVitsTestSynthesisResult } from '@contracts/audio-provider'
 import type { GptSoVitsPresetConfig, ReferenceAudioAsset, VoicePreset } from '@contracts/voice-preset'
+import {
+  buildGptSoVitsPresetValidationFingerprint,
+  getGptSoVitsPresetValidationState,
+  type GptSoVitsPresetValidationState
+} from '@contracts/gpt-sovits-validation'
 import type { LogLevel } from '@preload-types'
 
 const LOG_LEVELS: LogLevel[] = ['error', 'warn', 'info', 'debug']
@@ -1106,6 +1111,7 @@ function createDraftVoicePreset(name: string, existing?: VoicePreset | null, for
     name: name.trim() || 'Untitled voice preset',
     provider_id: 'gpt_sovits',
     piper_voice_model: null,
+    validation: !forceNew ? (existing?.validation ?? null) : null,
     created_at: !forceNew && existing?.created_at ? existing.created_at : now,
     updated_at: now,
     gpt_sovits: gptSoVits
@@ -1136,6 +1142,12 @@ function upsertVoicePreset(presets: VoicePreset[], preset: VoicePreset): VoicePr
   const existingIndex = presets.findIndex((item) => item.preset_id === preset.preset_id)
   if (existingIndex < 0) return [...presets, preset]
   return presets.map((item, index) => index === existingIndex ? preset : item)
+}
+
+function presetValidationLabel(state: GptSoVitsPresetValidationState): string {
+  if (state === 'validated') return COPY.SETTINGS.VOICE_PRESET_VALIDATED
+  if (state === 'changed') return COPY.SETTINGS.VOICE_PRESET_CHANGED_SINCE_TEST
+  return COPY.SETTINGS.VOICE_PRESET_NEEDS_TEST
 }
 
 function chooseActiveVoicePreset(
@@ -1178,6 +1190,7 @@ function TTSSection() {
   const [candidate, setCandidate] = useState<GptSoVitsProviderConfig>(defaultGptSoVitsConfig)
   const [healthPassed, setHealthPassed] = useState(false)
   const [testPassed, setTestPassed] = useState(false)
+  const [lastTestFingerprint, setLastTestFingerprint] = useState<string | null>(null)
   const [selectedPresetId, setSelectedPresetId] = useState<string>('')
   const [activePresetByAvatarSession, setActivePresetByAvatarSession] = useState<Record<string, string>>({})
   const [presetName, setPresetName] = useState('')
@@ -1235,7 +1248,8 @@ function TTSSection() {
         setCandidate(configuredGpt)
         if (!providerTouchedRef.current) setProviderChoice(cfg?.audio?.tts?.active_provider ?? 'piper')
         setHealthPassed(configuredGpt.activation.health_check_passed)
-        setTestPassed(configuredGpt.activation.test_synthesis_passed)
+        setTestPassed(false)
+        setLastTestFingerprint(null)
         const initialPreset = chooseActiveVoicePreset(loadedPresets, activeMap, avatarId, activeSession.id)
         if (!presetTouchedRef.current) {
           setSelectedPresetId(initialPreset?.preset_id ?? '')
@@ -1275,9 +1289,16 @@ function TTSSection() {
       ? C.REFERENCE_AUDIO_READY
       : referenceStatusText
   const testCandidatePreset = withSelectedReferenceAsset(selectedPreset, selectedReferenceAsset)
+  const currentValidationFingerprint = testCandidatePreset
+    ? buildGptSoVitsPresetValidationFingerprint(candidate, testCandidatePreset)
+    : null
+  const selectedValidationState = testCandidatePreset
+    ? getGptSoVitsPresetValidationState(candidate, testCandidatePreset)
+    : 'needs_test'
   const hasReferenceForTest = testCandidatePreset?.gpt_sovits.reference_audio_id !== null && testCandidatePreset?.gpt_sovits.reference_audio_id !== undefined
   const testSynthesisReady = healthPassed && testCandidatePreset !== null && hasReferenceForTest
-  const activationReady = healthPassed && testPassed && testCandidatePreset !== null && hasReferenceForTest
+  const presetTestPassed = selectedValidationState === 'validated' || (testPassed && lastTestFingerprint === currentValidationFingerprint)
+  const activationReady = healthPassed && presetTestPassed && testCandidatePreset !== null && hasReferenceForTest
 
   const saveConfig = async (nextCfg: StoredConfig): Promise<void> => {
     await window.api.saveStoredConfig(nextCfg)
@@ -1304,10 +1325,12 @@ function TTSSection() {
       await saveConfig(nextCfg)
       setHealthPassed(false)
       setTestPassed(false)
+      setLastTestFingerprint(null)
       setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
     } else {
       setHealthPassed(false)
       setTestPassed(false)
+      setLastTestFingerprint(null)
       setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
     }
   }
@@ -1316,6 +1339,7 @@ function TTSSection() {
     setCandidate((cur) => ({ ...cur, ...patch }))
     setHealthPassed(false)
     setTestPassed(false)
+    setLastTestFingerprint(null)
     setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
   }
 
@@ -1325,12 +1349,14 @@ function TTSSection() {
     setAudioStatus(status)
     setHealthPassed(passed)
     setTestPassed(false)
+    setLastTestFingerprint(null)
     setStatusText(passed ? C.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING : C.GPT_SOVITS_CANDIDATE_FAILURE)
   }
 
   const runTestSynthesis = async (): Promise<void> => {
     if (!testCandidatePreset || !testCandidatePreset.gpt_sovits.reference_audio_id) {
       setTestPassed(false)
+      setLastTestFingerprint(null)
       setStatusText(C.GPT_SOVITS_REFERENCE_PATH_FAILURE)
       return
     }
@@ -1341,6 +1367,7 @@ function TTSSection() {
     })
     if (!result.ok) {
       setTestPassed(false)
+      setLastTestFingerprint(null)
       setStatusText(
         result.failure?.state === 'misconfigured'
           ? C.GPT_SOVITS_REFERENCE_PATH_FAILURE
@@ -1348,9 +1375,28 @@ function TTSSection() {
       )
       return
     }
+    const now = new Date().toISOString()
+    const fingerprint = buildGptSoVitsPresetValidationFingerprint(candidate, testCandidatePreset)
+    const validatedPreset: VoicePreset = {
+      ...testCandidatePreset,
+      validation: {
+        state: 'validated',
+        fingerprint,
+        validated_at: now,
+        health_checked_at: healthPassed ? now : null,
+        test_synthesis_at: now,
+        summary: result.summary || 'GPT-SoVITS test synthesis passed.'
+      },
+      updated_at: now
+    }
+    const savedPresets = await window.api.saveVoicePreset(validatedPreset)
+    const nextVoicePresets = upsertVoicePreset(savedPresets.length > 0 ? savedPresets : voicePresets, validatedPreset)
+    setVoicePresets(nextVoicePresets)
+    setStoredCfg((cur) => cur ? { ...cur, voicePresets: nextVoicePresets } : cur)
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
     previewUrlRef.current = playSynthesisPreview(result)
     setTestPassed(true)
+    setLastTestFingerprint(fingerprint)
     setStatusText(C.GPT_SOVITS_PREVIEW_READY)
   }
 
@@ -1495,6 +1541,8 @@ function TTSSection() {
     )
     setPresetValidationText('')
     setPresetSaveBlockReasons(null)
+    setTestPassed(false)
+    setLastTestFingerprint(null)
     const map = await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, presetId)
     if (map) setActivePresetByAvatarSession(map)
   }
@@ -1669,7 +1717,7 @@ function TTSSection() {
                 <RadioRow
                   key={preset.preset_id}
                   id={preset.preset_id}
-                  label={`${preset.name} — ${preset.provider_id} · ${preset.gpt_sovits.text_lang}`}
+                  label={`${preset.name} — ${preset.provider_id} · ${preset.gpt_sovits.text_lang} · ${presetValidationLabel(getGptSoVitsPresetValidationState(candidate, preset))}`}
                   checked={selectedPreset?.preset_id === preset.preset_id}
                   onChange={(id) => void selectVoicePreset(id)}
                 />
