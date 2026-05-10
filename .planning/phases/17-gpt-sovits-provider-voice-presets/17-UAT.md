@@ -10,7 +10,7 @@ source:
   - 17-06-SUMMARY.md
   - 17-07-SUMMARY.md
 started: 2026-05-10T00:00:00Z
-updated: 2026-05-10T04:08:00Z
+updated: 2026-05-10T04:14:00Z
 ---
 
 # Phase 17 UAT - GPT-SoVITS Provider + Voice Presets
@@ -21,7 +21,7 @@ number: 3
 name: Reference Audio Import And Validation
 expected: |
   Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
-awaiting: user retest after visible validation and active-delete reassignment fix
+awaiting: user retest after duplicate preset-name validation fix
 
 ## Tests
 
@@ -40,7 +40,7 @@ severity: none
 ### 3. Reference Audio Import And Validation
 expected: Importing reference audio copies it into app-managed storage, requires transcript text and language, displays validation details such as format and duration, and does not show the original absolute file path.
 result: issue
-reported: "User reported: Import is not blocked when transcript/language are missing, saving a different preset name/config overwrites the first saved preset instead of creating a new preset, the first fixes still had the wrong user flow, incomplete config actions still showed no visible message, and active preset deletion opened a dead-end cancel-only popover. Visible fixed-position validation and active-delete reassignment fix now applied; awaiting user retest."
+reported: "User reported: Import is not blocked when transcript/language are missing, saving a different preset name/config overwrites the first saved preset instead of creating a new preset, the first fixes still had the wrong user flow, incomplete config actions still showed no visible message, active preset deletion opened a dead-end cancel-only popover, and duplicate preset names were allowed. Duplicate-name validation fix now applied; awaiting user retest."
 severity: blocker
 
 ### 4. Voice Preset Management
@@ -136,16 +136,16 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
   reason: "User reported reference import was not clearly blocked without transcript/language and preset save overwrote the selected preset when trying to create a different named/configured preset."
   severity: blocker
   test: 3
-  root_cause: "Reference import relied on disabled-button state and silently returned in the handler without visible validation feedback. Voice preset editing had no explicit create/update split, so Save always derived from the selected preset id and overwrote it. The first redesign treated New preset as a draft-clearing action, but the desired UX is direct-entry: enter config, import/select reference audio, then click New preset to persist a new record. Reference import also auto-saved into the selected preset, which could mutate the existing preset before a new record was created. The validation dialog overlay was absolute-positioned inside the Settings scroll layout instead of fixed to the viewport, making it easy to miss. Active preset deletion correctly required reassignment but presented only a cancel button instead of the reassignment action it requested."
+  root_cause: "Reference import relied on disabled-button state and silently returned in the handler without visible validation feedback. Voice preset editing had no explicit create/update split, so Save always derived from the selected preset id and overwrote it. The first redesign treated New preset as a draft-clearing action, but the desired UX is direct-entry: enter config, import/select reference audio, then click New preset to persist a new record. Reference import also auto-saved into the selected preset, which could mutate the existing preset before a new record was created. The validation dialog overlay was absolute-positioned inside the Settings scroll layout instead of fixed to the viewport, making it easy to miss. Active preset deletion correctly required reassignment but presented only a cancel button instead of the reassignment action it requested. Preset identity was enforced only by preset_id, so duplicate display names were not validated at create or rename time."
   artifacts:
     - path: "apps/renderer/src/screens/Settings/Settings.tsx"
-      issue: "Redesigned preset persistence so New preset saves the current form as a new preset id, Save preset updates only the selected preset, and reference import selects an app-managed asset without implicitly saving into the selected preset. Missing required fields open a focused alertdialog and skip persistence; editing transcript/language clears stale selected reference audio; active preset deletion now lets the user choose another preset, set it active, then delete the original."
+      issue: "Redesigned preset persistence so New preset saves the current form as a new preset id, Save preset updates only the selected preset, and reference import selects an app-managed asset without implicitly saving into the selected preset. Missing required fields open a focused alertdialog and skip persistence; editing transcript/language clears stale selected reference audio; active preset deletion now lets the user choose another preset, set it active, then delete the original; create/rename rejects duplicate trimmed case-insensitive preset names."
     - path: "apps/renderer/src/index.css"
       issue: "Changed dialog overlay positioning to fixed so validation/delete dialogs appear over the current viewport instead of being lost in the Settings scroll layout."
     - path: "apps/renderer/src/lib/copy.ts"
-      issue: "Updated copy to describe direct-entry New preset behavior and distinguish new-preset creation success from existing-preset save success."
+      issue: "Updated copy to describe direct-entry New preset behavior, distinguish new-preset creation success from existing-preset save success, and explain duplicate preset-name rejection."
     - path: "apps/renderer/tests/Settings.test.tsx"
-      issue: "Updated regression coverage so users type config first, import/select reference audio, then click New preset to create a separate record; reference import no longer calls saveVoicePreset by itself; Save preset remains the existing-preset update action; missing import fields show an alertdialog; active preset deletion can reassign and delete."
+      issue: "Updated regression coverage so users type config first, import/select reference audio, then click New preset to create a separate record; reference import no longer calls saveVoicePreset by itself; Save preset remains the existing-preset update action; missing import fields show an alertdialog; active preset deletion can reassign and delete; duplicate create/rename names are rejected."
   missing:
     - "User retest confirmation that invalid reference import is blocked with visible feedback and New preset creates a second preset."
   debug_session: ""
@@ -192,3 +192,6 @@ Earlier automation attempted to probe `http://127.0.0.1:9880/docs` and could not
 - `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after visible validation and active-delete reassignment fix, 48 tests.
 - `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after visible validation and active-delete reassignment fix, 53 tests.
 - `npm --workspace apps/renderer run typecheck` - passed after visible validation and active-delete reassignment fix.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx` - passed after duplicate preset-name validation fix, 49 tests.
+- `npm --workspace apps/renderer run test -- --run Settings.test.tsx ChatStreaming.test.tsx` - passed after duplicate preset-name validation fix, 54 tests.
+- `npm --workspace apps/renderer run typecheck` - passed after duplicate preset-name validation fix.

@@ -1434,6 +1434,17 @@ function TTSSection() {
       setStatusText(C.VOICE_PRESET_SAVE_MISSING_REFERENCE)
       return
     }
+    const normalizedName = presetName.trim().toLocaleLowerCase()
+    const duplicateNamePreset = voicePresets.find((preset) =>
+      preset.name.trim().toLocaleLowerCase() === normalizedName &&
+      (mode === 'create' || preset.preset_id !== selectedPreset?.preset_id)
+    )
+    if (duplicateNamePreset) {
+      setPresetValidationText(C.VOICE_PRESET_DUPLICATE_NAME)
+      setPresetSaveBlockReasons([C.VOICE_PRESET_NAME])
+      setStatusText(C.VOICE_PRESET_DUPLICATE_NAME)
+      return
+    }
     const nextPreset = {
       ...draftPreset,
       gpt_sovits: {
@@ -1867,7 +1878,7 @@ function TTSSection() {
         <div className="dialog-overlay">
           <div className="dialog" data-theme-surface role="alertdialog" aria-labelledby="voice-preset-save-blocked-title">
             <h3 id="voice-preset-save-blocked-title">{C.VOICE_PRESET_SAVE_BLOCKED_TITLE}</h3>
-            <p>{C.VOICE_PRESET_SAVE_MISSING_REFERENCE}</p>
+            <p>{presetValidationText || C.VOICE_PRESET_SAVE_MISSING_REFERENCE}</p>
             <div className="preset-card">
               <div className="semibold">Missing:</div>
               <div className="tx-sm">{presetSaveBlockReasons.join(', ')}</div>

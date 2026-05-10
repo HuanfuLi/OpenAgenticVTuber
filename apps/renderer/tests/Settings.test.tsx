@@ -745,6 +745,41 @@ describe('Settings TTS section', () => {
     expect(screen.getByRole('radio', { name: /Akari bright/i })).not.toBeChecked()
   })
 
+  it('rejects duplicate preset names when creating or renaming presets', async () => {
+    const firstPreset = gptPreset()
+    const secondPreset = gptPreset({ preset_id: 'preset-soft', name: 'Akari soft' })
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      voicePresets: [firstPreset, secondPreset],
+      referenceAudioAssets: [{
+        asset_id: 'ref-akari',
+        display_basename: 'akari.wav',
+        managed_path_token: 'reference-audio/ref-akari.wav',
+        transcript_text: 'こんにちは',
+        language: 'ja',
+        format: 'wav',
+        duration_ms: 3000
+      }]
+    })
+    vi.mocked(window.api.listVoicePresets).mockResolvedValue([firstPreset, secondPreset])
+
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: ' akari BRIGHT ' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_NEW }))
+
+    expect(await screen.findByRole('alertdialog', { name: COPY.SETTINGS.VOICE_PRESET_SAVE_BLOCKED_TITLE })).toHaveTextContent(COPY.SETTINGS.VOICE_PRESET_DUPLICATE_NAME)
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE_BLOCKED_CLOSE }))
+    fireEvent.click(screen.getByRole('radio', { name: /Akari soft/i }))
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: firstPreset.name } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
+
+    expect(await screen.findByRole('alertdialog', { name: COPY.SETTINGS.VOICE_PRESET_SAVE_BLOCKED_TITLE })).toHaveTextContent(COPY.SETTINGS.VOICE_PRESET_DUPLICATE_NAME)
+    expect(window.api.saveVoicePreset).not.toHaveBeenCalled()
+  })
+
   it('shows save feedback and reloads persisted voice presets after returning to Settings', async () => {
     let persistedPresets: VoicePreset[] = []
     vi.mocked(window.api.getStoredConfig).mockImplementation(async () => ({

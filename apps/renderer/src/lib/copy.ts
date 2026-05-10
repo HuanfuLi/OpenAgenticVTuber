@@ -256,6 +256,7 @@ export const COPY = {
     VOICE_PRESET_CREATE_SUCCESS: 'New voice preset saved.',
     VOICE_PRESET_SAVE_FAILURE: 'Voice preset could not be saved. Open logs for details.',
     VOICE_PRESET_SAVE_MISSING_REFERENCE: 'Preset was not saved. Add reference transcript, choose a language, and import or select reference audio first.',
+    VOICE_PRESET_DUPLICATE_NAME: 'Preset was not saved. Voice preset names must be unique.',
     VOICE_PRESET_SAVE_BLOCKED_TITLE: 'Preset was not saved',
     VOICE_PRESET_SAVE_BLOCKED_CLOSE: 'Review missing fields',
     VOICE_PRESET_SAVE_NO_SELECTION: 'Select an existing preset to update, or click New preset to save the current fields as a separate preset.',
