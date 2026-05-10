@@ -502,6 +502,93 @@ describe('Settings TTS section', () => {
     }))
   })
 
+  it('imports reference audio and displays managed metadata without original absolute path', async () => {
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [gptPreset()] })
+    vi.mocked(window.api.pickAndImportReferenceAudio).mockResolvedValue({
+      asset_id: 'ref-imported',
+      display_basename: 'sample.wav',
+      managed_path_token: 'reference-audio/ref-imported-sample.wav',
+      transcript_text: 'こんにちは',
+      language: 'ja',
+      format: 'wav',
+      duration_ms: 4200
+    })
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT), { target: { value: 'こんにちは' } })
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'ja' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT }))
+
+    await waitFor(() => {
+      expect(window.api.pickAndImportReferenceAudio).toHaveBeenCalledWith({ transcriptText: 'こんにちは', language: 'ja' })
+    })
+    expect(await screen.findByText('sample.wav')).toBeInTheDocument()
+    expect(screen.getByText('reference-audio/ref-imported-sample.wav')).toBeInTheDocument()
+    expect(screen.queryByText(/C:\\Users/)).toBeNull()
+    expect(screen.queryByText(/\/Users\//)).toBeNull()
+  })
+
+  it('requires transcript and language before reference asset activation', async () => {
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT })).toBeDisabled()
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT), { target: { value: 'hello' } })
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT })).toBeDisabled()
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'en' } })
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT })).not.toBeDisabled()
+  })
+
+  it('renders reference audio validation summary including server access', async () => {
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, referenceAudioAssets: [{
+      asset_id: 'ref-akari',
+      display_basename: 'akari.wav',
+      managed_path_token: 'reference-audio/ref-akari.wav',
+      transcript_text: 'hello',
+      language: 'en',
+      format: 'wav',
+      duration_ms: 3000
+    }] })
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+
+    expect(screen.getByText(COPY.SETTINGS.REFERENCE_AUDIO_VALIDATION_FORMAT)).toBeInTheDocument()
+    expect(screen.getByText(COPY.SETTINGS.REFERENCE_AUDIO_VALIDATION_DURATION)).toBeInTheDocument()
+    expect(screen.getByText(COPY.SETTINGS.REFERENCE_AUDIO_VALIDATION_METADATA)).toBeInTheDocument()
+    expect(screen.getByText(COPY.SETTINGS.REFERENCE_AUDIO_VALIDATION_SERVER_ACCESS)).toBeInTheDocument()
+  })
+
+  it('blocks deleting in-use reference audio without cascade-deleting presets', async () => {
+    const preset = gptPreset()
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      voicePresets: [preset],
+      referenceAudioAssets: [{
+        asset_id: 'ref-akari',
+        display_basename: 'akari.wav',
+        managed_path_token: 'reference-audio/ref-akari.wav',
+        transcript_text: 'hello',
+        language: 'en',
+        format: 'wav',
+        duration_ms: 3000
+      }]
+    })
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_DELETE }))
+
+    expect(screen.getByRole('alertdialog', { name: COPY.SETTINGS.REFERENCE_AUDIO_DELETE_BLOCKED(1) })).toBeInTheDocument()
+    expect(window.api.deleteReferenceAudio).not.toHaveBeenCalled()
+    expect(window.api.deleteVoicePreset).not.toHaveBeenCalled()
+  })
+
   it('renders one combined Avatars section with current catalog counts and actions', async () => {
     renderSettings()
 
