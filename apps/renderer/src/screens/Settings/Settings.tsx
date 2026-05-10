@@ -1182,6 +1182,7 @@ function TTSSection() {
   const [activePresetByAvatarSession, setActivePresetByAvatarSession] = useState<Record<string, string>>({})
   const [presetName, setPresetName] = useState('')
   const [blockedDeletePreset, setBlockedDeletePreset] = useState<VoicePreset | null>(null)
+  const [deleteReplacementPresetId, setDeleteReplacementPresetId] = useState('')
   const [confirmDeletePreset, setConfirmDeletePreset] = useState<VoicePreset | null>(null)
   const [referenceTranscript, setReferenceTranscript] = useState('')
   const [referenceLanguage, setReferenceLanguage] = useState<ReferenceAudioAsset['language'] | ''>('')
@@ -1266,6 +1267,7 @@ function TTSSection() {
   const healthClass = healthState === 'ok' ? 'green' : healthState === 'unavailable' ? 'amber' : 'red'
   const selectedPreset = voicePresets.find((preset) => preset.preset_id === selectedPresetId) ?? null
   const selectedReferenceAsset = referenceAudioAssets.find((asset) => asset.asset_id === selectedReferenceAssetId) ?? null
+  const deleteReplacementOptions = blockedDeletePreset ? voicePresets.filter((preset) => preset.preset_id !== blockedDeletePreset.preset_id) : []
   const referenceRequired = !referenceTranscript.trim() || !referenceLanguage
   const referenceValidationText = referenceRequired
     ? C.REFERENCE_AUDIO_REQUIRED
@@ -1491,6 +1493,8 @@ function TTSSection() {
     if (!selectedPreset) return
     const key = avatarSessionPresetKey(currentAvatarId, activeSession.id)
     if (activePresetByAvatarSession[key] === selectedPreset.preset_id) {
+      const replacement = voicePresets.find((preset) => preset.preset_id !== selectedPreset.preset_id)
+      setDeleteReplacementPresetId(replacement?.preset_id ?? '')
       setBlockedDeletePreset(selectedPreset)
       return
     }
@@ -1506,8 +1510,26 @@ function TTSSection() {
     setConfirmDeletePreset(null)
   }
 
+  const reassignAndDeleteActivePreset = async (): Promise<void> => {
+    if (!blockedDeletePreset || !deleteReplacementPresetId) return
+    const map = await window.api.setActiveVoicePresetForAvatarSession?.(currentAvatarId, activeSession.id, deleteReplacementPresetId)
+    if (map) setActivePresetByAvatarSession(map)
+    const nextPresets = await window.api.deleteVoicePreset(blockedDeletePreset.preset_id)
+    setVoicePresets(nextPresets)
+    setSelectedPresetId(deleteReplacementPresetId)
+    setPresetName(nextPresets.find((preset) => preset.preset_id === deleteReplacementPresetId)?.name ?? '')
+    setBlockedDeletePreset(null)
+    setDeleteReplacementPresetId('')
+  }
+
   const importReferenceAudio = async (): Promise<void> => {
     if (referenceRequired) {
+      const missingReferenceFields: string[] = [
+        !referenceTranscript.trim() ? C.REFERENCE_AUDIO_TRANSCRIPT : null,
+        !referenceLanguage ? C.REFERENCE_AUDIO_LANGUAGE : null
+      ].filter((item) => item !== null)
+      setPresetValidationText(C.REFERENCE_AUDIO_REQUIRED)
+      setPresetSaveBlockReasons(missingReferenceFields)
       setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
       setStatusText(C.REFERENCE_AUDIO_REQUIRED)
       return
@@ -1673,6 +1695,7 @@ function TTSSection() {
               aria-describedby="reference-audio-status"
               onChange={(e) => {
                 referenceTouchedRef.current = true
+                setSelectedReferenceAssetId('')
                 setReferenceTranscript(e.target.value)
                 setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
               }}
@@ -1687,6 +1710,7 @@ function TTSSection() {
               aria-describedby="reference-audio-status"
               onChange={(e) => {
                 referenceTouchedRef.current = true
+                setSelectedReferenceAssetId('')
                 setReferenceLanguage(e.target.value as ReferenceAudioAsset['language'])
                 setReferenceStatusText(C.REFERENCE_AUDIO_REQUIRED)
               }}
@@ -1777,9 +1801,30 @@ function TTSSection() {
         <div className="dialog-overlay">
           <div className="dialog" data-theme-surface role="alertdialog" aria-labelledby="voice-preset-delete-blocked-title">
             <h3 id="voice-preset-delete-blocked-title">{C.VOICE_PRESET_DELETE_BLOCKED}</h3>
-            <p>{blockedDeletePreset.name}</p>
+            <p>{deleteReplacementOptions.length > 0 ? C.VOICE_PRESET_DELETE_REASSIGN_HELP : C.VOICE_PRESET_DELETE_LAST_ACTIVE}</p>
+            {deleteReplacementOptions.length > 0 && (
+              <div className="field">
+                <label className="label" htmlFor="voice-preset-delete-replacement">{C.VOICE_PRESET_DELETE_REASSIGN_LABEL}</label>
+                <select
+                  id="voice-preset-delete-replacement"
+                  className="select"
+                  value={deleteReplacementPresetId}
+                  onChange={(e) => setDeleteReplacementPresetId(e.target.value)}
+                >
+                  {deleteReplacementOptions.map((preset) => (
+                    <option key={preset.preset_id} value={preset.preset_id}>{preset.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="actions">
-              <button className="btn btn-secondary" onClick={() => setBlockedDeletePreset(null)}>{C.VOICE_PRESET_DELETE_CANCEL}</button>
+              <button className="btn btn-secondary" onClick={() => {
+                setBlockedDeletePreset(null)
+                setDeleteReplacementPresetId('')
+              }}>{C.VOICE_PRESET_DELETE_CANCEL}</button>
+              {deleteReplacementOptions.length > 0 && (
+                <button className="btn btn-destructive" onClick={() => void reassignAndDeleteActivePreset()}>{C.VOICE_PRESET_DELETE_REASSIGN_AND_DELETE}</button>
+              )}
             </div>
           </div>
         </div>

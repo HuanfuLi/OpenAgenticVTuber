@@ -725,7 +725,7 @@ textarea.input { height: auto; min-height: 36px; padding: 8px 12px; resize: none
 
 /* AlertDialog */
 .dialog-overlay {
-  position: absolute; inset: 0;
+  position: fixed; inset: 0;
   background: color-mix(in oklab, var(--background), transparent 40%);
   backdrop-filter: blur(2px);
   z-index: 80;

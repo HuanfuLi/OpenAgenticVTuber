@@ -800,10 +800,39 @@ describe('Settings TTS section', () => {
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_DELETE }))
 
     expect(screen.getByRole('alertdialog', { name: COPY.SETTINGS.VOICE_PRESET_DELETE_BLOCKED })).toBeInTheDocument()
+    expect(screen.getByText(COPY.SETTINGS.VOICE_PRESET_DELETE_LAST_ACTIVE)).toBeInTheDocument()
     expect(window.api.deleteVoicePreset).not.toHaveBeenCalled()
     expect(window.api.saveStoredConfig).not.toHaveBeenCalledWith(expect.objectContaining({
       audio: expect.objectContaining({ tts: expect.objectContaining({ active_provider: 'piper' }) })
     }))
+  })
+
+  it('lets users reassign the active preset before deleting it', async () => {
+    const activePreset = gptPreset()
+    const replacementPreset = gptPreset({ preset_id: 'preset-soft', name: 'Akari soft' })
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      voicePresets: [activePreset, replacementPreset],
+      activePresetByAvatarSession: { 'avatar:akari|session:s1': activePreset.preset_id }
+    })
+    vi.mocked(window.api.listVoicePresets).mockResolvedValue([activePreset, replacementPreset])
+    vi.mocked(window.api.setActiveVoicePresetForAvatarSession).mockResolvedValue({ 'avatar:akari|session:s1': replacementPreset.preset_id })
+    vi.mocked(window.api.deleteVoicePreset).mockResolvedValue([replacementPreset])
+
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_DELETE }))
+
+    const dialog = screen.getByRole('alertdialog', { name: COPY.SETTINGS.VOICE_PRESET_DELETE_BLOCKED })
+    expect(dialog).toHaveTextContent(COPY.SETTINGS.VOICE_PRESET_DELETE_REASSIGN_HELP)
+    expect(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_DELETE_REASSIGN_LABEL)).toHaveValue(replacementPreset.preset_id)
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_DELETE_REASSIGN_AND_DELETE }))
+
+    await waitFor(() => {
+      expect(window.api.setActiveVoicePresetForAvatarSession).toHaveBeenCalledWith('akari', 's1', replacementPreset.preset_id)
+    })
+    expect(window.api.deleteVoicePreset).toHaveBeenCalledWith(activePreset.preset_id)
   })
 
   it('imports reference audio and displays managed metadata without original absolute path', async () => {
@@ -844,9 +873,13 @@ describe('Settings TTS section', () => {
     await waitForReferenceReady()
 
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT }))
+    expect(await screen.findByRole('alertdialog', { name: COPY.SETTINGS.VOICE_PRESET_SAVE_BLOCKED_TITLE })).toHaveTextContent(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT)
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE_BLOCKED_CLOSE }))
     expect(screen.getAllByText(COPY.SETTINGS.REFERENCE_AUDIO_REQUIRED).length).toBeGreaterThan(0)
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_TRANSCRIPT), { target: { value: 'hello' } })
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_IMPORT }))
+    expect(await screen.findByRole('alertdialog', { name: COPY.SETTINGS.VOICE_PRESET_SAVE_BLOCKED_TITLE })).toHaveTextContent(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE)
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE_BLOCKED_CLOSE }))
     expect(screen.getAllByText(COPY.SETTINGS.REFERENCE_AUDIO_REQUIRED).length).toBeGreaterThan(0)
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.REFERENCE_AUDIO_LANGUAGE), { target: { value: 'en' } })
     expect(screen.getByText(COPY.SETTINGS.REFERENCE_AUDIO_READY)).toBeInTheDocument()
