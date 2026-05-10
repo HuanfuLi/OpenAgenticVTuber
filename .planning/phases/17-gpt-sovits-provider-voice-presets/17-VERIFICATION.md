@@ -1,8 +1,8 @@
 ---
 phase: 17-gpt-sovits-provider-voice-presets
-verified: 2026-05-10T04:10:00Z
-status: human_needed
-score: 4/4 Plan 17-09 must-haves verified; 5/5 roadmap must-haves previously verified
+verified: 2026-05-10T05:25:00Z
+status: passed
+score: 5/5 roadmap must-haves verified; 7/7 UAT tests passed
 overrides_applied: 0
 re_verification:
   previous_status: passed
@@ -14,17 +14,17 @@ re_verification:
   regressions: []
 human_verification:
   - test: "UAT Test 6 live active GPT-SoVITS chat turn retest"
-    expected: "After renderer HMR/module re-evaluation, one GPT-SoVITS chat audio payload produces each visible assistant sentence chunk once, with no duplicated text like Hello!Hello!."
-    why_human: "Requires a live GPT-SoVITS server/model/reference-audio setup and Vite dev HMR behavior; automated tests verify the renderer duplicate-dispatch root cause only."
+    status: passed
+    evidence: "User confirmed live retest passed after Plan 17-09; duplicated visible text chunks are gone."
 residual_risk:
-  - "Live GPT-SoVITS server UAT remains environment-blocked; 17-UAT.md records the blocked probe and checklist. Code-level mocked/provider coverage and static wiring checks pass the goal-backward criteria."
+  - "Future GPT-SoVITS regressions still depend on live external-server availability for full end-to-end retest; automated mocked/provider coverage covers the renderer duplicate-dispatch root cause."
 ---
 
 # Phase 17: GPT-SoVITS Provider + Voice Presets Verification Report
 
 **Phase Goal:** Users can choose GPT-SoVITS for character voice output, validate it before use, and organize voice presets without losing Piper fallback safety.
-**Verified:** 2026-05-10T04:10:00Z
-**Status:** human_needed
+**Verified:** 2026-05-10T05:25:00Z
+**Status:** passed
 **Re-verification:** Yes — after 17-09 UAT Test 6 gap closure
 
 ## Goal Achievement
@@ -40,14 +40,14 @@ residual_risk:
 | Does one normal audio payload after Thinking produce visible text once, not `Hello!Hello!`? | ✓ VERIFIED | Audio dispatch still calls `appendAssistantSentence(...)` once per store listener and `playAudioPayload` only for non-empty audio (`store.ts:78-99`). The regression test sends `conversation-chain-start`, dispatches one `Hello!` audio payload through `wsClientMock.dispatch`, and asserts one assistant message with text `Hello!`, not `Hello!Hello!`, plus one playback call (`ChatStreaming.test.tsx:172-184`). |
 | Does failed GPT-SoVITS audio visible text stay once with one audio failure marker and no Piper auto-switch? | ✓ VERIFIED | Failed GPT-SoVITS audio passes failure metadata to `appendAssistantSentence`, sets the GPT-SoVITS banner, does not call `playAudioPayload` because `msg.audio` is null, and never saves provider config (`store.ts:78-99`). Tests assert one visible failed sentence, one `audioFailures` entry, no playback, and no `saveStoredConfig` auto-switch (`ChatStreaming.test.tsx:186-200`, `203-242`). |
 | Do tests cover duplicate registration/HMR simulation through the real store dispatcher path? | ✓ VERIFIED | The test imports the real `@/ws/store`, calls `ensureWSStoreSubscriptions()` twice, and dispatches via the mocked client listener set rather than calling `appendAssistantSentence` directly (`ChatStreaming.test.tsx:21-43`, `72-74`, `161-200`). |
-| Does `17-UAT.md` record Plan 17-09 automated evidence without marking Test 6 passed before user retest? | ✓ VERIFIED | Test 6 remains `result: issue`, says live retest is required, and records Plan 17-09 automated evidence separately (`17-UAT.md:60-64`, `181-192`). |
+| Does `17-UAT.md` record Plan 17-09 automated evidence and final live retest outcome accurately? | ✓ VERIFIED | Plan 17-09 evidence is recorded separately, Test 6 was not marked passed until user retest, and it is now `result: pass` after user confirmation (`17-UAT.md:60-64`, `181-192`). |
 
 Focused automated re-verification commands passed in this verifier run:
 
 - `npm --workspace apps/renderer run test -- --run ChatStreaming.test.tsx` — PASS (8 tests)
 - `npm --workspace apps/renderer run typecheck` — PASS
 
-**Plan 17-09 score:** 4/4 must-haves verified. The renderer implementation is sound; live UAT Test 6 remains a human verification item by design.
+**Plan 17-09 score:** 4/4 must-haves verified. The renderer implementation is sound, and the live UAT Test 6 retest is now user-confirmed passed.
 
 ### 17-08 UAT Gap Closure Re-Verification
 
