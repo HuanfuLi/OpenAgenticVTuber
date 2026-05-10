@@ -10,6 +10,10 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { AudioConfig } from '../../../packages/contracts/ts/audio-provider'
 import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
+export {
+  buildGptSoVitsPresetValidationFingerprint,
+  getGptSoVitsPresetValidationState
+} from '../../../packages/contracts/ts/gpt-sovits-validation'
 
 const STORE_FILE = 'llm-config.enc'
 
@@ -99,6 +103,13 @@ export function defaultVoicePresetLibrary(): VoicePresetLibraryDefaults {
   }
 }
 
+function normalizeVoicePresetValidation(preset: VoicePreset): VoicePreset {
+  return {
+    ...preset,
+    validation: preset.validation ?? null
+  }
+}
+
 export function getAvatarSessionPresetKey(avatarId: string | null, sessionId: string | null): string {
   const normalizedAvatar = avatarId && avatarId.trim().length > 0 ? avatarId.trim() : 'global'
   const normalizedSession = sessionId && sessionId.trim().length > 0 ? sessionId.trim() : 'global'
@@ -143,7 +154,9 @@ export function migrateStoredConfig(raw: unknown): StoredConfig | null {
     return {
       ...(raw as unknown as StoredConfig),
       audio: isRecord(raw.audio) ? (raw.audio as unknown as AudioConfig) : defaultAudioConfig(),
-      voicePresets: Array.isArray(raw.voicePresets) ? (raw.voicePresets as VoicePreset[]) : defaults.voicePresets,
+      voicePresets: Array.isArray(raw.voicePresets)
+        ? (raw.voicePresets as VoicePreset[]).map(normalizeVoicePresetValidation)
+        : defaults.voicePresets,
       referenceAudioAssets: Array.isArray(raw.referenceAudioAssets)
         ? (raw.referenceAudioAssets as ReferenceAudioAsset[])
         : defaults.referenceAudioAssets,

@@ -23,12 +23,22 @@ class GptSoVitsPresetConfig(BaseModel):
     streaming_mode: bool = False
 
 
+class GptSoVitsPresetValidation(BaseModel):
+    state: Literal["validated", "needs_test", "changed"] = "needs_test"
+    fingerprint: str = Field(min_length=1)
+    validated_at: str = Field(min_length=1)
+    health_checked_at: Optional[str] = None
+    test_synthesis_at: Optional[str] = None
+    summary: Optional[str] = None
+
+
 class VoicePreset(BaseModel):
     preset_id: str = Field(min_length=1)
     name: str = Field(min_length=1)
     provider_id: Literal["piper", "gpt_sovits"] = "piper"
     piper_voice_model: Optional[str] = None
     gpt_sovits: GptSoVitsPresetConfig = GptSoVitsPresetConfig()
+    validation: Optional[GptSoVitsPresetValidation] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 

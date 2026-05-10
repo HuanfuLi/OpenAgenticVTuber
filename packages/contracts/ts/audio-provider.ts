@@ -6,7 +6,7 @@ import type { AudioProviderHealth } from './audio-provider-health';
 export type RedactedDiagnostics = {
   [k: string]: string
 } | null;
-export type State =
+export type State1 =
   | 'ok'
   | 'unavailable'
   | 'missing_credential'
@@ -75,6 +75,14 @@ export interface GptSoVitsTestSynthesisRequest {
   text: string
 }
 
+export interface GptSoVitsPresetValidation {
+  fingerprint: string;
+  health_checked_at: string | null;
+  state: 'validated' | 'needs_test' | 'changed';
+  summary: string | null;
+  test_synthesis_at: string | null;
+  validated_at: string
+}
 export interface GptSoVitsTestSynthesisResult {
   audio_base64: string | null;
   duration_ms: number | null;

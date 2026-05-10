@@ -20,7 +20,8 @@ export interface VoicePreset {
   piper_voice_model: string | null;
   preset_id: string;
   provider_id: 'piper' | 'gpt_sovits';
-  updated_at: string | null
+  updated_at: string | null;
+  validation: GptSoVitsPresetValidation | null
 }
 export interface GptSoVitsPresetConfig {
   batch_size: number;
@@ -36,6 +37,14 @@ export interface GptSoVitsPresetConfig {
   text_split_method: string;
   top_k: number;
   top_p: number
+}
+export interface GptSoVitsPresetValidation {
+  fingerprint: string;
+  health_checked_at: string | null;
+  state: 'validated' | 'needs_test' | 'changed';
+  summary: string | null;
+  test_synthesis_at: string | null;
+  validated_at: string
 }
 export interface ReferenceAudioAsset {
   asset_id: string;

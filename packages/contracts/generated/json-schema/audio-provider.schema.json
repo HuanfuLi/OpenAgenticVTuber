@@ -369,6 +369,76 @@
       "title": "GptSoVitsPresetConfig",
       "type": "object"
     },
+    "GptSoVitsPresetValidation": {
+      "properties": {
+        "fingerprint": {
+          "minLength": 1,
+          "title": "Fingerprint",
+          "type": "string"
+        },
+        "health_checked_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Health Checked At"
+        },
+        "state": {
+          "default": "needs_test",
+          "enum": [
+            "validated",
+            "needs_test",
+            "changed"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Summary"
+        },
+        "test_synthesis_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Test Synthesis At"
+        },
+        "validated_at": {
+          "minLength": 1,
+          "title": "Validated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fingerprint",
+        "health_checked_at",
+        "state",
+        "summary",
+        "test_synthesis_at",
+        "validated_at"
+      ],
+      "title": "GptSoVitsPresetValidation",
+      "type": "object"
+    },
     "GptSoVitsProviderConfig": {
       "properties": {
         "activation": {
@@ -756,6 +826,17 @@
           ],
           "default": null,
           "title": "Updated At"
+        },
+        "validation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GptSoVitsPresetValidation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -765,7 +846,8 @@
         "piper_voice_model",
         "preset_id",
         "provider_id",
-        "updated_at"
+        "updated_at",
+        "validation"
       ],
       "title": "VoicePreset",
       "type": "object"
