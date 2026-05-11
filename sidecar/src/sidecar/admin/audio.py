@@ -23,6 +23,10 @@ from contracts import (
     STTProviderConfig,
     STTTestRequest,
     STTTestResult,
+    VoiceInputReadiness,
+    VoiceInputReadinessRequest,
+    VoiceInputTranscriptionRequest,
+    VoiceInputTranscriptionResult,
     VoicePreset,
 )
 from sidecar.audio.redaction import redact_audio_diagnostics
@@ -233,6 +237,143 @@ def _stt_failure_result(payload: STTTestRequest, health: AudioProviderHealth, di
     )
 
 
+def _inactive_stt_readiness(config: STTProviderConfig, reason: str) -> STTProviderReadiness:
+    readiness = validate_stt_readiness(config)
+    return readiness.model_copy(
+        update={
+            "active_allowed": False,
+            "health_check_passed": False if reason == "runtime_failure" else readiness.health_check_passed,
+            "test_transcription_passed": False if reason == "runtime_failure" else readiness.test_transcription_passed,
+            "fingerprint": compute_stt_readiness_fingerprint(config),
+            "invalidation_reason": reason,
+        }
+    )
+
+
+def _voice_input_readiness(payload: VoiceInputReadinessRequest) -> VoiceInputReadiness:
+    config = payload.config
+    provider_id = config.active_provider
+    permission_state = payload.permission_state
+    if permission_state == "denied":
+        return VoiceInputReadiness(
+            ready=False,
+            capture_status="permission_needed",
+            stt_enabled=config.enabled,
+            provider_id=provider_id,
+            blocked_reason="permission_needed",
+            setup_destination="microphone_permission",
+            permission_state=permission_state,
+            readiness=validate_stt_readiness(config),
+            summary="Microphone permission is denied.",
+        )
+    if permission_state in {"unavailable", "no_input_device"}:
+        return VoiceInputReadiness(
+            ready=False,
+            capture_status="error",
+            stt_enabled=config.enabled,
+            provider_id=provider_id,
+            blocked_reason="microphone_unavailable",
+            setup_destination="microphone_permission",
+            permission_state=permission_state,
+            readiness=validate_stt_readiness(config),
+            summary="Microphone input is unavailable.",
+        )
+    if permission_state == "unexpected_failure":
+        return VoiceInputReadiness(
+            ready=False,
+            capture_status="error",
+            stt_enabled=config.enabled,
+            provider_id=provider_id,
+            blocked_reason="unexpected_failure",
+            setup_destination="microphone_permission",
+            permission_state=permission_state,
+            readiness=validate_stt_readiness(config),
+            summary="Microphone permission status could not be checked.",
+        )
+    if permission_state == "prompt":
+        return VoiceInputReadiness(
+            ready=False,
+            capture_status="permission_needed",
+            stt_enabled=config.enabled,
+            provider_id=provider_id,
+            blocked_reason="permission_denied",
+            setup_destination="microphone_permission",
+            permission_state=permission_state,
+            readiness=validate_stt_readiness(config),
+            summary="Microphone permission is required before voice input can start.",
+        )
+    if not config.enabled:
+        return VoiceInputReadiness(
+            ready=False,
+            capture_status="idle",
+            stt_enabled=False,
+            provider_id=provider_id,
+            blocked_reason="stt_disabled",
+            setup_destination="voice_settings",
+            permission_state=permission_state,
+            readiness=validate_stt_readiness(config),
+            summary="Voice input is disabled in Voice settings.",
+        )
+    if provider_id is None:
+        return VoiceInputReadiness(
+            ready=False,
+            capture_status="idle",
+            stt_enabled=True,
+            provider_id=None,
+            blocked_reason="provider_not_selected",
+            setup_destination="voice_settings",
+            permission_state=permission_state,
+            readiness=validate_stt_readiness(config),
+            summary="Select an STT provider before using voice input.",
+        )
+    readiness = validate_stt_readiness(config)
+    if not readiness.active_allowed:
+        return VoiceInputReadiness(
+            ready=False,
+            capture_status="idle",
+            stt_enabled=True,
+            provider_id=provider_id,
+            blocked_reason="readiness_not_active",
+            setup_destination="voice_settings",
+            permission_state=permission_state,
+            readiness=readiness,
+            summary="Run and pass the STT test in Voice settings before using voice input.",
+        )
+    return VoiceInputReadiness(
+        ready=True,
+        capture_status="idle",
+        stt_enabled=True,
+        provider_id=provider_id,
+        blocked_reason=None,
+        setup_destination=None,
+        permission_state=permission_state,
+        readiness=readiness,
+        summary="Voice input is ready.",
+    )
+
+
+def _voice_input_failure_result(
+    payload: VoiceInputTranscriptionRequest,
+    readiness: VoiceInputReadiness,
+    health: AudioProviderHealth | None = None,
+    diagnostics: dict[str, str] | None = None,
+) -> VoiceInputTranscriptionResult:
+    return VoiceInputTranscriptionResult(
+        ok=False,
+        mode=payload.mode,
+        sequence_id=payload.sequence_id,
+        transcript=None,
+        is_final=payload.mode == "final",
+        provider_id=payload.config.active_provider,
+        duration_ms=payload.duration_ms,
+        latency_ms=None,
+        readiness=readiness,
+        summary=health.summary if health else readiness.summary,
+        failure=health,
+        redacted_diagnostics=diagnostics,
+    )
+
+
 def _pcm_to_wav_base64(pcm_int16: bytes, sample_rate: int) -> tuple[str, int]:
     buf = BytesIO()
     with wave.open(buf, "wb") as wf:
@@ -386,6 +527,100 @@ async def post_stt_enable(payload: STTTestRequest) -> dict[str, object]:
             invalidation_reason=readiness.invalidation_reason,
         ).model_dump()
     return readiness.model_dump()
+
+
+@router.post("/voice-input/readiness")
+async def post_voice_input_readiness(payload: VoiceInputReadinessRequest) -> dict[str, object]:
+    return _voice_input_readiness(payload).model_dump()
+
+
+@router.post("/voice-input")
+async def post_voice_input(request: Request, payload: VoiceInputTranscriptionRequest) -> dict[str, object]:
+    readiness = _voice_input_readiness(
+        VoiceInputReadinessRequest(config=payload.config, permission_state="granted")
+    )
+    if not readiness.ready:
+        return _voice_input_failure_result(payload, readiness).model_dump()
+    provider_id = payload.config.active_provider or "funasr"
+    if provider_id in {"funasr", "faster_whisper"} and _local_model_status(request, payload.config) != "downloaded":
+        missing_model = AudioProviderHealth(
+            provider_id=provider_id,
+            kind="stt",
+            state="misconfigured",
+            summary="Local STT model is not downloaded in the app-managed cache.",
+            retryable=False,
+            redacted_diagnostics={"model_cache": "not_downloaded"},
+        )
+        blocked = readiness.model_copy(
+            update={
+                "ready": False,
+                "capture_status": "error",
+                "blocked_reason": "readiness_not_active",
+                "setup_destination": "voice_settings",
+                "readiness": _inactive_stt_readiness(payload.config, "missing_model"),
+                "summary": missing_model.summary,
+            }
+        )
+        return _voice_input_failure_result(payload, blocked, missing_model, missing_model.redacted_diagnostics).model_dump()
+    try:
+        audio_bytes = base64.b64decode(payload.audio_base64_wav)
+        provider = STTProviderRegistry().build_provider(payload.config)
+        stt_result = provider.transcribe(
+            STTRequest(
+                audio_bytes=audio_bytes,
+                sample_rate_hz=16_000,
+                duration_ms=payload.duration_ms,
+                language_mode=payload.config.language_mode,
+                provider_id=provider_id,
+                model_id=payload.config.local_model_id,
+            )
+        )
+        return VoiceInputTranscriptionResult(
+            ok=True,
+            mode=payload.mode,
+            sequence_id=payload.sequence_id,
+            transcript=stt_result.text,
+            is_final=payload.mode == "final",
+            provider_id=provider_id,
+            duration_ms=payload.duration_ms,
+            latency_ms=stt_result.latency_ms,
+            readiness=readiness,
+            summary="Voice input transcription succeeded.",
+            failure=None,
+            redacted_diagnostics=stt_result.redacted_diagnostics,
+        ).model_dump()
+    except STTProviderError as exc:
+        failed_readiness = readiness.model_copy(
+            update={
+                "ready": False,
+                "capture_status": "error",
+                "blocked_reason": "readiness_not_active",
+                "setup_destination": "voice_settings",
+                "readiness": _inactive_stt_readiness(payload.config, "runtime_failure"),
+                "summary": exc.summary,
+            }
+        )
+        return _voice_input_failure_result(payload, failed_readiness, exc.health(), exc.redacted_diagnostics).model_dump()
+    except Exception as exc:
+        failure = AudioProviderHealth(
+            provider_id=provider_id,
+            kind="stt",
+            state="external_service_failure",
+            summary="Voice input transcription failed.",
+            retryable=True,
+            redacted_diagnostics={"error_type": type(exc).__name__},
+        )
+        failed_readiness = readiness.model_copy(
+            update={
+                "ready": False,
+                "capture_status": "error",
+                "blocked_reason": "readiness_not_active",
+                "setup_destination": "voice_settings",
+                "readiness": _inactive_stt_readiness(payload.config, "runtime_failure"),
+                "summary": failure.summary,
+            }
+        )
+        return _voice_input_failure_result(payload, failed_readiness, failure, failure.redacted_diagnostics).model_dump()
 
 
 @router.post("/stt/models")

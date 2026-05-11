@@ -9,7 +9,10 @@ import type {
   STTModelCacheOperationRequest,
   STTModelCacheOperationResult,
   STTTestRequest,
-  STTTestResult
+  STTTestResult,
+  VoiceInputReadiness,
+  VoiceInputTranscriptionRequest,
+  VoiceInputTranscriptionResult
 } from '../../../packages/contracts/ts/audio-provider'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import type {
@@ -51,6 +54,9 @@ export type GptSoVitsAudioBridge = {
   getSttModels(input: STTTestRequest): Promise<STTModelCacheCatalog>
   downloadSttModel(input: STTModelCacheOperationRequest): Promise<STTModelCacheOperationResult>
   removeSttModel(input: STTModelCacheOperationRequest): Promise<STTModelCacheOperationResult>
+  getVoiceInputReadiness(): Promise<VoiceInputReadiness>
+  requestMicrophonePermission(): Promise<VoiceInputReadiness['permission_state']>
+  transcribeVoiceInput(input: Omit<VoiceInputTranscriptionRequest, 'config'>): Promise<VoiceInputTranscriptionResult>
   checkGptSoVitsHealth(input: GptSoVitsHealthRequest): Promise<AudioProviderHealth>
   testGptSoVitsSynthesis(input: GptSoVitsTestSynthesisRequest): Promise<GptSoVitsTestSynthesisResult>
   startGptSoVits(input: GptSoVitsProcessRequest): Promise<GptSoVitsProcessStatus>

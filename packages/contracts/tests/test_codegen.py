@@ -24,6 +24,11 @@ from contracts import (  # noqa: E402
     GptSoVitsTestSynthesisResult,
     ReferenceAudioAsset,
     RigCapabilities,
+    STTProviderConfig,
+    VoiceInputReadiness,
+    VoiceInputReadinessRequest,
+    VoiceInputTranscriptionRequest,
+    VoiceInputTranscriptionResult,
     VoicePreset,
     VoicePresetLibrary,
 )
@@ -177,6 +182,74 @@ def test_stt_provider_config_tracks_cache_and_readiness_defaults() -> None:
     assert cfg.stt.readiness.invalidation_reason == "never_tested"
     assert cfg.stt.cloud["openai"].consent_granted is False
     assert cfg.stt.cloud["openai"].api_key is None
+
+
+def test_voice_input_runtime_contracts_distinguish_preview_and_final() -> None:
+    cfg = STTProviderConfig(
+        enabled=True,
+        active_provider="funasr",
+        readiness={
+            "health_check_passed": True,
+            "test_transcription_passed": True,
+            "last_health_checked_at": "2026-05-10T00:00:00Z",
+            "last_test_transcription_at": "2026-05-10T00:00:00Z",
+            "fingerprint": "abc123",
+            "active_allowed": True,
+            "invalidation_reason": "never_tested",
+        },
+    )
+    readiness_request = VoiceInputReadinessRequest(config=cfg, permission_state="granted")
+    readiness = VoiceInputReadiness(
+        ready=True,
+        stt_enabled=True,
+        provider_id="funasr",
+        permission_state="granted",
+        readiness=cfg.readiness,
+        summary="Voice input is ready.",
+    )
+    preview_request = VoiceInputTranscriptionRequest(
+        config=cfg,
+        audio_base64_wav="UklGRg==",
+        duration_ms=240,
+        sequence_id="seq-1",
+        mode="preview",
+        session_id="session-1",
+    )
+    preview_result = VoiceInputTranscriptionResult(
+        ok=True,
+        mode="preview",
+        sequence_id="seq-1",
+        transcript="hello",
+        is_final=False,
+        provider_id="funasr",
+        duration_ms=240,
+        latency_ms=12,
+        readiness=readiness,
+        summary="Preview transcript ready.",
+    )
+    final_result = VoiceInputTranscriptionResult(
+        ok=True,
+        mode="final",
+        sequence_id="seq-2",
+        transcript="hello there",
+        is_final=True,
+        provider_id="funasr",
+        duration_ms=800,
+        latency_ms=20,
+        readiness=readiness,
+        summary="Final transcript ready.",
+    )
+
+    assert readiness_request.permission_state == "granted"
+    assert preview_request.mode == "preview"
+    assert preview_result.is_final is False
+    assert final_result.is_final is True
+    dumped = final_result.model_dump()
+    assert dumped["transcript"] == "hello there"
+    assert "conversation" not in dumped
+    assert "history" not in dumped
+    assert "translation" not in dumped
+    assert "normalized" not in dumped
 
 
 def test_voice_preset_keeps_gpt_sovits_knobs_without_connection_fields() -> None:

@@ -5,6 +5,7 @@ import { store } from './window-store'
 import { spawnSidecar, shutdownSidecar } from './sidecar'
 import { registerIpc } from './ipc'
 import { closeHudWindow } from './hud-window'
+import { configureVoiceInputPermissionHandlers, rendererAllowedOrigins } from './voice-input-permissions'
 
 // Augment Electron's App with a quitting flag so multiple before-quit handlers cooperate.
 declare global {
@@ -18,6 +19,7 @@ app.isQuitting = false
 
 let mainWindow: BrowserWindow | null = null
 let cleanupIpc: (() => void) | null = null
+let cleanupVoiceInputPermissions: (() => void) | null = null
 
 function createWindow(): BrowserWindow {
   const saved = store.get('window')
@@ -60,6 +62,12 @@ function createWindow(): BrowserWindow {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
+
+  cleanupVoiceInputPermissions?.()
+  cleanupVoiceInputPermissions = configureVoiceInputPermissionHandlers(
+    window.webContents.session,
+    rendererAllowedOrigins(process.env['ELECTRON_RENDERER_URL'])
+  )
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     window.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -117,6 +125,8 @@ app.on('before-quit', async (e) => {
     e.preventDefault()
     cleanupIpc?.()
     cleanupIpc = null
+    cleanupVoiceInputPermissions?.()
+    cleanupVoiceInputPermissions = null
     closeHudWindow()
     try {
       await shutdownSidecar()

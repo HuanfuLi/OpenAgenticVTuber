@@ -52,6 +52,46 @@ export type ModelCacheState =
 export type RedactedDiagnostics1 = {
   [k: string]: string
 } | null;
+export type BlockedReason =
+  | (
+  | 'stt_disabled'
+  | 'provider_not_selected'
+  | 'readiness_not_active'
+  | 'permission_needed'
+  | 'permission_denied'
+  | 'microphone_unavailable'
+  | 'sidecar_unavailable'
+  | 'unexpected_failure'
+    )
+  | null;
+export type CaptureStatus =
+  | 'idle'
+  | 'permission_needed'
+  | 'listening'
+  | 'recording'
+  | 'previewing'
+  | 'finalizing'
+  | 'queued'
+  | 'error';
+export type PermissionState =
+  | 'unknown'
+  | 'granted'
+  | 'prompt'
+  | 'denied'
+  | 'unavailable'
+  | 'no_input_device'
+  | 'unexpected_failure';
+export type PermissionState1 =
+  | 'unknown'
+  | 'granted'
+  | 'prompt'
+  | 'denied'
+  | 'unavailable'
+  | 'no_input_device'
+  | 'unexpected_failure';
+export type RedactedDiagnostics2 = {
+  [k: string]: string
+} | null;
 
 export interface AudioProviderContracts {
   audio_config: AudioConfig;
@@ -63,7 +103,11 @@ export interface AudioProviderContracts {
   stt_model_cache_operation_request: STTModelCacheOperationRequest | null;
   stt_model_cache_operation_result: STTModelCacheOperationResult | null;
   stt_test_request: STTTestRequest | null;
-  stt_test_result: STTTestResult | null
+  stt_test_result: STTTestResult | null;
+  voice_input_readiness: VoiceInputReadiness | null;
+  voice_input_readiness_request: VoiceInputReadinessRequest | null;
+  voice_input_transcription_request: VoiceInputTranscriptionRequest | null;
+  voice_input_transcription_result: VoiceInputTranscriptionResult | null
 }
 export interface AudioConfig {
   diagnostics: AudioDiagnosticsConfig;
@@ -247,6 +291,43 @@ export interface STTTestResult {
   provider_id: 'funasr' | 'faster_whisper' | 'openai' | 'groq';
   readiness: STTProviderReadiness | null;
   redacted_diagnostics: RedactedDiagnostics1;
+  summary: string;
+  transcript: string | null
+}
+export interface VoiceInputReadiness {
+  blocked_reason: BlockedReason;
+  capture_status: CaptureStatus;
+  permission_state: PermissionState;
+  provider_id: ('funasr' | 'faster_whisper' | 'openai' | 'groq') | null;
+  readiness: STTProviderReadiness | null;
+  ready: boolean;
+  setup_destination: ('voice_settings' | 'microphone_permission') | null;
+  stt_enabled: boolean;
+  summary: string
+}
+export interface VoiceInputReadinessRequest {
+  config: STTProviderConfig1;
+  permission_state: PermissionState1
+}
+export interface VoiceInputTranscriptionRequest {
+  audio_base64_wav: string;
+  config: STTProviderConfig1;
+  duration_ms: number;
+  mode: 'preview' | 'final';
+  sequence_id: string;
+  session_id: string | null
+}
+export interface VoiceInputTranscriptionResult {
+  duration_ms: number | null;
+  failure: AudioProviderHealth | null;
+  is_final: boolean;
+  latency_ms: number | null;
+  mode: 'preview' | 'final';
+  ok: boolean;
+  provider_id: ('funasr' | 'faster_whisper' | 'openai' | 'groq') | null;
+  readiness: VoiceInputReadiness | null;
+  redacted_diagnostics: RedactedDiagnostics2;
+  sequence_id: string;
   summary: string;
   transcript: string | null
 }

@@ -2,7 +2,7 @@
 // declared in apps/electron-main/preload/index.ts. Returns a cleanup callback
 // that unregisters all listeners (called when the window is destroyed).
 
-import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron'
+import { app, dialog, ipcMain, shell, systemPreferences, type BrowserWindow } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
@@ -56,7 +56,11 @@ import type {
   STTModelCacheOperationRequest,
   STTModelCacheOperationResult,
   STTTestRequest,
-  STTTestResult
+  STTTestResult,
+  VoiceInputReadiness,
+  VoiceInputReadinessRequest,
+  VoiceInputTranscriptionRequest,
+  VoiceInputTranscriptionResult
 } from '../../../packages/contracts/ts/audio-provider'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
@@ -238,6 +242,84 @@ function failedSttModelOperation(
     status: 'missing',
     summary,
     cache_path_display: null
+  }
+}
+
+type VoiceInputPermissionState = VoiceInputReadiness['permission_state']
+type RendererVoiceInputTranscriptionRequest = Omit<VoiceInputTranscriptionRequest, 'config'>
+
+function microphonePermissionState(): VoiceInputPermissionState {
+  try {
+    const status = systemPreferences.getMediaAccessStatus('microphone')
+    if (status === 'granted') return 'granted'
+    if (status === 'denied') return 'denied'
+    if (status === 'restricted') return 'unavailable'
+    if (status === 'not-determined') return 'prompt'
+    return 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
+async function requestMicrophonePermissionState(): Promise<VoiceInputPermissionState> {
+  try {
+    if (process.platform === 'darwin' && typeof systemPreferences.askForMediaAccess === 'function') {
+      return (await systemPreferences.askForMediaAccess('microphone')) ? 'granted' : 'denied'
+    }
+    const current = microphonePermissionState()
+    return current === 'unknown' ? 'prompt' : current
+  } catch {
+    return 'unexpected_failure'
+  }
+}
+
+function voiceInputReadinessFallback(
+  summary: string,
+  blockedReason: VoiceInputReadiness['blocked_reason'],
+  permissionState: VoiceInputPermissionState = 'unknown'
+): VoiceInputReadiness {
+  return {
+    ready: false,
+    capture_status: blockedReason === 'permission_denied' ? 'permission_needed' : 'idle',
+    stt_enabled: false,
+    provider_id: null,
+    blocked_reason: blockedReason,
+    setup_destination: blockedReason === 'permission_denied' ? 'microphone_permission' : 'voice_settings',
+    permission_state: permissionState,
+    readiness: null,
+    summary
+  }
+}
+
+function failedVoiceInputTranscription(
+  request: RendererVoiceInputTranscriptionRequest,
+  summary: string,
+  blockedReason: VoiceInputReadiness['blocked_reason'],
+  state: AudioProviderHealth['state'] = 'unavailable'
+): VoiceInputTranscriptionResult {
+  const readiness = voiceInputReadinessFallback(summary, blockedReason)
+  return {
+    ok: false,
+    mode: request.mode,
+    sequence_id: request.sequence_id,
+    transcript: null,
+    is_final: request.mode === 'final',
+    provider_id: null,
+    duration_ms: request.duration_ms,
+    latency_ms: null,
+    readiness,
+    summary,
+    failure: {
+      provider_id: 'funasr',
+      kind: 'stt',
+      state,
+      summary,
+      detail: null,
+      retryable: state === 'unavailable',
+      latency_ms: null,
+      redacted_diagnostics: null
+    },
+    redacted_diagnostics: null
   }
 }
 
@@ -498,6 +580,45 @@ export function registerIpc(window: BrowserWindow): () => void {
         (status) => failedSttModelOperation(request, `STT model remove failed: HTTP ${status}`),
         () => failedSttModelOperation(request, 'STT model remove failed: sidecar request failed.')
       )
+  )
+  ipcMain.handle('voiceInput:requestMicrophonePermission', async (): Promise<VoiceInputPermissionState> =>
+    requestMicrophonePermissionState()
+  )
+  ipcMain.handle('voiceInput:getReadiness', async (): Promise<VoiceInputReadiness> => {
+    const cfg = loadConfig()
+    const permissionState = microphonePermissionState()
+    if (!cfg) return voiceInputReadinessFallback('Stored config is not initialized.', 'stt_disabled', permissionState)
+    const request: VoiceInputReadinessRequest = {
+      config: cfg.audio.stt,
+      permission_state: permissionState
+    }
+    return postSidecarAdminJson<VoiceInputReadiness>(
+      '/admin/audio/voice-input/readiness',
+      request,
+      () => voiceInputReadinessFallback('Sidecar is not ready.', 'sidecar_unavailable', permissionState),
+      (status) => voiceInputReadinessFallback(`Voice input readiness unavailable: HTTP ${status}`, 'sidecar_unavailable', permissionState),
+      () => voiceInputReadinessFallback('Voice input readiness unavailable: sidecar request failed.', 'sidecar_unavailable', permissionState)
+    )
+  })
+  ipcMain.handle(
+    'voiceInput:transcribe',
+    async (_e, request: RendererVoiceInputTranscriptionRequest): Promise<VoiceInputTranscriptionResult> => {
+      const cfg = loadConfig()
+      if (!cfg) {
+        return failedVoiceInputTranscription(request, 'Stored config is not initialized.', 'stt_disabled', 'misconfigured')
+      }
+      const sidecarRequest: VoiceInputTranscriptionRequest = {
+        ...request,
+        config: cfg.audio.stt
+      }
+      return postSidecarAdminJson<VoiceInputTranscriptionResult>(
+        '/admin/audio/voice-input',
+        sidecarRequest,
+        () => failedVoiceInputTranscription(request, 'Sidecar is not ready.', 'sidecar_unavailable'),
+        (status) => failedVoiceInputTranscription(request, `Voice input transcription failed: HTTP ${status}`, 'sidecar_unavailable', 'external_service_failure'),
+        () => failedVoiceInputTranscription(request, 'Voice input transcription failed: sidecar request failed.', 'sidecar_unavailable', 'external_service_failure')
+      )
+    }
   )
   ipcMain.handle(
     'gptSovits:checkHealth',
@@ -761,6 +882,9 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('audio:getSttModels')
     ipcMain.removeHandler('audio:downloadSttModel')
     ipcMain.removeHandler('audio:removeSttModel')
+    ipcMain.removeHandler('voiceInput:requestMicrophonePermission')
+    ipcMain.removeHandler('voiceInput:getReadiness')
+    ipcMain.removeHandler('voiceInput:transcribe')
     ipcMain.removeHandler('gptSovits:checkHealth')
     ipcMain.removeHandler('gptSovits:testSynthesis')
     ipcMain.removeHandler('gptSovits:start')

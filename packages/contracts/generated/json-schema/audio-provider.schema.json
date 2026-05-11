@@ -1587,6 +1587,347 @@
       "title": "TTSProviderConfig",
       "type": "object"
     },
+    "VoiceInputReadiness": {
+      "properties": {
+        "blocked_reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "stt_disabled",
+                "provider_not_selected",
+                "readiness_not_active",
+                "permission_needed",
+                "permission_denied",
+                "microphone_unavailable",
+                "sidecar_unavailable",
+                "unexpected_failure"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Blocked Reason"
+        },
+        "capture_status": {
+          "default": "idle",
+          "enum": [
+            "idle",
+            "permission_needed",
+            "listening",
+            "recording",
+            "previewing",
+            "finalizing",
+            "queued",
+            "error"
+          ],
+          "title": "Capture Status",
+          "type": "string"
+        },
+        "permission_state": {
+          "default": "unknown",
+          "enum": [
+            "unknown",
+            "granted",
+            "prompt",
+            "denied",
+            "unavailable",
+            "no_input_device",
+            "unexpected_failure"
+          ],
+          "title": "Permission State",
+          "type": "string"
+        },
+        "provider_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "funasr",
+                "faster_whisper",
+                "openai",
+                "groq"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Id"
+        },
+        "readiness": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/STTProviderReadiness"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ready": {
+          "title": "Ready",
+          "type": "boolean"
+        },
+        "setup_destination": {
+          "anyOf": [
+            {
+              "enum": [
+                "voice_settings",
+                "microphone_permission"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Setup Destination"
+        },
+        "stt_enabled": {
+          "title": "Stt Enabled",
+          "type": "boolean"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "blocked_reason",
+        "capture_status",
+        "permission_state",
+        "provider_id",
+        "readiness",
+        "ready",
+        "setup_destination",
+        "stt_enabled",
+        "summary"
+      ],
+      "title": "VoiceInputReadiness",
+      "type": "object"
+    },
+    "VoiceInputReadinessRequest": {
+      "properties": {
+        "config": {
+          "$ref": "#/$defs/STTProviderConfig"
+        },
+        "permission_state": {
+          "default": "unknown",
+          "enum": [
+            "unknown",
+            "granted",
+            "prompt",
+            "denied",
+            "unavailable",
+            "no_input_device",
+            "unexpected_failure"
+          ],
+          "title": "Permission State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "config",
+        "permission_state"
+      ],
+      "title": "VoiceInputReadinessRequest",
+      "type": "object"
+    },
+    "VoiceInputTranscriptionRequest": {
+      "properties": {
+        "audio_base64_wav": {
+          "minLength": 1,
+          "title": "Audio Base64 Wav",
+          "type": "string"
+        },
+        "config": {
+          "$ref": "#/$defs/STTProviderConfig"
+        },
+        "duration_ms": {
+          "minimum": 0,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "preview",
+            "final"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "sequence_id": {
+          "minLength": 1,
+          "title": "Sequence Id",
+          "type": "string"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        }
+      },
+      "required": [
+        "audio_base64_wav",
+        "config",
+        "duration_ms",
+        "mode",
+        "sequence_id",
+        "session_id"
+      ],
+      "title": "VoiceInputTranscriptionRequest",
+      "type": "object"
+    },
+    "VoiceInputTranscriptionResult": {
+      "properties": {
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AudioProviderHealth"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "is_final": {
+          "title": "Is Final",
+          "type": "boolean"
+        },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latency Ms"
+        },
+        "mode": {
+          "enum": [
+            "preview",
+            "final"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "ok": {
+          "title": "Ok",
+          "type": "boolean"
+        },
+        "provider_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "funasr",
+                "faster_whisper",
+                "openai",
+                "groq"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Id"
+        },
+        "readiness": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VoiceInputReadiness"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "redacted_diagnostics": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redacted Diagnostics"
+        },
+        "sequence_id": {
+          "title": "Sequence Id",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "transcript": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transcript"
+        }
+      },
+      "required": [
+        "duration_ms",
+        "failure",
+        "is_final",
+        "latency_ms",
+        "mode",
+        "ok",
+        "provider_id",
+        "readiness",
+        "redacted_diagnostics",
+        "sequence_id",
+        "summary",
+        "transcript"
+      ],
+      "title": "VoiceInputTranscriptionResult",
+      "type": "object"
+    },
     "VoicePreset": {
       "properties": {
         "created_at": {
@@ -1838,6 +2179,50 @@
         }
       ],
       "default": null
+    },
+    "voice_input_readiness": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VoiceInputReadiness"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "voice_input_readiness_request": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VoiceInputReadinessRequest"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "voice_input_transcription_request": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VoiceInputTranscriptionRequest"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "voice_input_transcription_result": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VoiceInputTranscriptionResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [
@@ -1850,7 +2235,11 @@
     "stt_model_cache_operation_request",
     "stt_model_cache_operation_result",
     "stt_test_request",
-    "stt_test_result"
+    "stt_test_result",
+    "voice_input_readiness",
+    "voice_input_readiness_request",
+    "voice_input_transcription_request",
+    "voice_input_transcription_result"
   ],
   "title": "AudioProviderContracts",
   "type": "object"

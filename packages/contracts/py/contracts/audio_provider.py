@@ -58,6 +58,36 @@ STTReadinessInvalidationReason = Literal[
     "missing_credential",
     "missing_consent",
 ]
+VoiceInputCaptureStatus = Literal[
+    "idle",
+    "permission_needed",
+    "listening",
+    "recording",
+    "previewing",
+    "finalizing",
+    "queued",
+    "error",
+]
+VoiceInputPermissionState = Literal[
+    "unknown",
+    "granted",
+    "prompt",
+    "denied",
+    "unavailable",
+    "no_input_device",
+    "unexpected_failure",
+]
+VoiceInputBlockedReason = Literal[
+    "stt_disabled",
+    "provider_not_selected",
+    "readiness_not_active",
+    "permission_needed",
+    "permission_denied",
+    "microphone_unavailable",
+    "sidecar_unavailable",
+    "unexpected_failure",
+]
+VoiceInputTranscriptionMode = Literal["preview", "final"]
 
 
 class AudioProviderHealth(BaseModel):
@@ -249,6 +279,47 @@ class STTTestResult(BaseModel):
     redacted_diagnostics: Optional[dict[str, str]] = None
 
 
+class VoiceInputReadinessRequest(BaseModel):
+    config: STTProviderConfig
+    permission_state: VoiceInputPermissionState = "unknown"
+
+
+class VoiceInputReadiness(BaseModel):
+    ready: bool
+    capture_status: VoiceInputCaptureStatus = "idle"
+    stt_enabled: bool
+    provider_id: Optional[Literal["funasr", "faster_whisper", "openai", "groq"]] = None
+    blocked_reason: Optional[VoiceInputBlockedReason] = None
+    setup_destination: Optional[Literal["voice_settings", "microphone_permission"]] = None
+    permission_state: VoiceInputPermissionState = "unknown"
+    readiness: Optional[STTProviderReadiness] = None
+    summary: str
+
+
+class VoiceInputTranscriptionRequest(BaseModel):
+    config: STTProviderConfig
+    audio_base64_wav: str = Field(min_length=1)
+    duration_ms: int = Field(ge=0)
+    sequence_id: str = Field(min_length=1)
+    mode: VoiceInputTranscriptionMode
+    session_id: Optional[str] = None
+
+
+class VoiceInputTranscriptionResult(BaseModel):
+    ok: bool
+    mode: VoiceInputTranscriptionMode
+    sequence_id: str
+    transcript: Optional[str] = None
+    is_final: bool
+    provider_id: Optional[Literal["funasr", "faster_whisper", "openai", "groq"]] = None
+    duration_ms: Optional[int] = Field(default=None, ge=0)
+    latency_ms: Optional[float] = Field(default=None, ge=0)
+    readiness: Optional[VoiceInputReadiness] = None
+    summary: str
+    failure: Optional[AudioProviderHealth] = None
+    redacted_diagnostics: Optional[dict[str, str]] = None
+
+
 class AudioConfig(BaseModel):
     schema_version: Literal[1] = 1
     tts: TTSProviderConfig = TTSProviderConfig()
@@ -267,6 +338,10 @@ class AudioProviderContracts(BaseModel):
     gpt_sovits_test_synthesis_result: Optional[GptSoVitsTestSynthesisResult] = None
     stt_test_request: Optional[STTTestRequest] = None
     stt_test_result: Optional[STTTestResult] = None
+    voice_input_readiness_request: Optional[VoiceInputReadinessRequest] = None
+    voice_input_readiness: Optional[VoiceInputReadiness] = None
+    voice_input_transcription_request: Optional[VoiceInputTranscriptionRequest] = None
+    voice_input_transcription_result: Optional[VoiceInputTranscriptionResult] = None
 
 
 from .voice_preset import VoicePreset  # noqa: E402
@@ -276,4 +351,8 @@ GptSoVitsHealthRequest.model_rebuild()
 STTProviderConfig.model_rebuild()
 STTTestRequest.model_rebuild()
 STTTestResult.model_rebuild()
+VoiceInputReadinessRequest.model_rebuild()
+VoiceInputReadiness.model_rebuild()
+VoiceInputTranscriptionRequest.model_rebuild()
+VoiceInputTranscriptionResult.model_rebuild()
 AudioProviderContracts.model_rebuild()

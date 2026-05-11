@@ -14,7 +14,10 @@ import type {
   STTModelCacheOperationRequest,
   STTModelCacheOperationResult,
   STTTestRequest,
-  STTTestResult
+  STTTestResult,
+  VoiceInputReadiness,
+  VoiceInputTranscriptionRequest,
+  VoiceInputTranscriptionResult
 } from '../../../packages/contracts/ts/audio-provider'
 import type { AudioProviderHealth } from '../../../packages/contracts/ts/audio-provider-health'
 import type { ReferenceAudioAsset, VoicePreset } from '../../../packages/contracts/ts/voice-preset'
@@ -34,6 +37,8 @@ import type {
 } from '../src/conversation-store'
 
 type Unsubscribe = () => void
+type VoiceInputPermissionState = VoiceInputReadiness['permission_state']
+type RendererVoiceInputTranscriptionRequest = Omit<VoiceInputTranscriptionRequest, 'config'>
 
 export interface VtsStatus {
   state:
@@ -133,6 +138,14 @@ const api = {
     ipcRenderer.invoke('audio:downloadSttModel', input),
   removeSttModel: (input: STTModelCacheOperationRequest): Promise<STTModelCacheOperationResult> =>
     ipcRenderer.invoke('audio:removeSttModel', input),
+  getVoiceInputReadiness: (): Promise<VoiceInputReadiness> =>
+    ipcRenderer.invoke('voiceInput:getReadiness'),
+  requestMicrophonePermission: (): Promise<VoiceInputPermissionState> =>
+    ipcRenderer.invoke('voiceInput:requestMicrophonePermission'),
+  transcribeVoiceInput: (
+    input: RendererVoiceInputTranscriptionRequest
+  ): Promise<VoiceInputTranscriptionResult> =>
+    ipcRenderer.invoke('voiceInput:transcribe', input),
   checkGptSoVitsHealth: (input: GptSoVitsHealthRequest): Promise<AudioProviderHealth> =>
     ipcRenderer.invoke('gptSovits:checkHealth', input),
   testGptSoVitsSynthesis: (
@@ -230,7 +243,10 @@ export type {
   STTModelCacheOperationRequest,
   STTModelCacheOperationResult,
   STTTestRequest,
-  STTTestResult
+  STTTestResult,
+  VoiceInputReadiness,
+  VoiceInputTranscriptionRequest,
+  VoiceInputTranscriptionResult
 } from '../../../packages/contracts/ts/audio-provider'
 export type {
   ReferenceAudioValidationInput,
