@@ -116,11 +116,11 @@ export function VoiceInputControl({
 
   useEffect(() => {
     if (!recoverableSidecarUnavailable) return
-    const retry = window.setTimeout(() => {
+    const retry = window.setInterval(() => {
       void refreshVoiceInputReadiness()
-    }, 750)
-    return () => window.clearTimeout(retry)
-  }, [recoverableSidecarUnavailable, voice.readiness?.summary])
+    }, 1_000)
+    return () => window.clearInterval(retry)
+  }, [recoverableSidecarUnavailable])
 
   useEffect(() => {
     return () => {

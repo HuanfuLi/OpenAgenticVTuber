@@ -265,6 +265,21 @@ describe('voice input IPC handlers', () => {
     expect(JSON.stringify(result)).not.toContain('SECRET_AUDIO_BASE64')
   })
 
+  it('does not mislabel voice readiness HTTP failures as sidecar unavailable', async () => {
+    installHandlers()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 422,
+      text: vi.fn().mockResolvedValue('validation failed')
+    }))
+
+    const readiness = await invoke<VoiceInputReadiness>('voiceInput:getReadiness')
+
+    expect(readiness.ready).toBe(false)
+    expect(readiness.blocked_reason).toBe('unexpected_failure')
+    expect(readiness.summary).toBe('Voice input readiness failed: HTTP 422.')
+  })
+
   it('unregisters voice input handlers during IPC cleanup', () => {
     const cleanup = installHandlers()
 

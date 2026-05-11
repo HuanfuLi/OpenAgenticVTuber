@@ -3,7 +3,7 @@ status: testing
 phase: 20-renderer-voice-capture-ptt-vad-preview-ux
 source: [20-VERIFICATION.md, 20-UAT.md]
 started: 2026-05-11T05:50:00Z
-updated: 2026-05-11T07:12:00Z
+updated: 2026-05-11T10:17:00Z
 ---
 
 # Phase 20 Human UAT
@@ -79,4 +79,6 @@ blocked: 0
     - "FIXED inline: Chat regression covers the exact `Voice input readiness unavailable: sidecar request failed.` startup text and verifies it is hidden while later sidecar-ready enables PTT."
     - "FIXED inline: `VoiceInputControl` now retries recoverable `sidecar_unavailable` readiness after startup even when no sidecar-ready event arrives."
     - "FIXED inline: Electron voice readiness fallbacks no longer emit the alarming `Voice input readiness unavailable: sidecar request failed.` text for recoverable sidecar-unavailable startup states."
+    - "FIXED inline: recoverable `sidecar_unavailable` readiness now retries continuously instead of only once."
+    - "FIXED inline: HTTP failures from `/admin/audio/voice-input/readiness` are now visible `unexpected_failure` readiness errors instead of being mislabeled as sidecar unavailable."
   debug_session: "inline verify-work 2026-05-11"

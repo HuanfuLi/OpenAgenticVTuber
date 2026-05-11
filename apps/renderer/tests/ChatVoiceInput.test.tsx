@@ -379,7 +379,7 @@ describe('Chat voice input', () => {
     expect(screen.queryByText('Voice input readiness unavailable: sidecar request failed.')).toBeNull()
   })
 
-  it('retries recoverable sidecar startup readiness when no ready event arrives', async () => {
+  it('keeps retrying recoverable sidecar startup readiness when no ready event arrives', async () => {
     const unavailable = readiness({
       ready: false,
       permission_state: 'unknown',
@@ -391,6 +391,7 @@ describe('Chat voice input', () => {
     installApi(sessionWithHistory(), unavailable)
     vi.mocked(window.api.getVoiceInputReadiness)
       .mockResolvedValueOnce(unavailable)
+      .mockResolvedValueOnce(unavailable)
       .mockResolvedValue(readiness({ summary: 'Voice input is ready.' }))
 
     renderChat()
@@ -399,8 +400,26 @@ describe('Chat voice input', () => {
     expect(mic).toBeDisabled()
     expect(screen.queryByText('Voice input readiness unavailable: sidecar request failed.')).toBeNull()
 
-    await waitFor(() => expect(window.api.getVoiceInputReadiness).toHaveBeenCalledTimes(2), { timeout: 2_000 })
+    await waitFor(() => expect(window.api.getVoiceInputReadiness).toHaveBeenCalledTimes(3), { timeout: 3_000 })
     await waitFor(() => expect(mic).not.toBeDisabled())
+  })
+
+  it('shows voice readiness HTTP failures as real errors instead of waiting for sidecar', async () => {
+    installApi(sessionWithHistory(), readiness({
+      ready: false,
+      permission_state: 'granted',
+      capture_status: 'idle',
+      blocked_reason: 'unexpected_failure',
+      setup_destination: 'voice_settings',
+      summary: 'Voice input readiness failed: HTTP 422.'
+    }))
+
+    renderChat()
+
+    const mic = await screen.findByRole('button', { name: COPY.CHAT.VOICE_MIC })
+    expect(mic).toBeDisabled()
+    expect(await screen.findByText('Voice input readiness failed: HTTP 422.')).toBeInTheDocument()
+    expect(screen.queryByText('Voice input is waiting for the sidecar.')).toBeNull()
   })
 
   it('renders preview outside chat bubbles and never commits it to history', async () => {

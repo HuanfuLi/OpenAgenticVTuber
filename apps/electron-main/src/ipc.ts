@@ -596,7 +596,7 @@ export function registerIpc(window: BrowserWindow): () => void {
       '/admin/audio/voice-input/readiness',
       request,
       () => voiceInputReadinessFallback('Voice input is waiting for the sidecar.', 'sidecar_unavailable', permissionState),
-      () => voiceInputReadinessFallback('Voice input is waiting for the sidecar.', 'sidecar_unavailable', permissionState),
+      (status) => voiceInputReadinessFallback(`Voice input readiness failed: HTTP ${status}.`, 'unexpected_failure', permissionState),
       () => voiceInputReadinessFallback('Voice input is waiting for the sidecar.', 'sidecar_unavailable', permissionState)
     )
   })
