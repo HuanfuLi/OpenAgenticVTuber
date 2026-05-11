@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
 status: in_progress
-stopped_at: Phase 20 plan 20-03 complete; ready for 20-04
-last_updated: "2026-05-11T05:28:54Z"
-last_activity: 2026-05-11 - Phase 20 Chat PTT voice input, transient preview, final transcript submission, and safe queueing completed
+stopped_at: Phase 20 complete; ready for Phase 21 planning/execution
+last_updated: "2026-05-11T05:39:32Z"
+last_activity: 2026-05-11 - Phase 20 VAD auto-submit, conservative safety copy, final regression, and UAT evidence completed
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 27
-  completed_plans: 26
-  percent: 96
+  completed_plans: 27
+  percent: 100
 ---
 
 # Project State
@@ -21,24 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon - v3.0 improves voice usability before memory/avatar identity work)
-**Current focus:** Phase 20: Renderer Voice Capture + PTT/VAD Preview UX
+**Current focus:** Phase 21: Code-Switch Evaluation + Hardening
 
 ## Current Position
 
-Phase: 20 of 22 (Renderer Voice Capture + PTT/VAD Preview UX)
-Plan: Ready to execute Phase 20 plan 20-04
-Status: Phase 20 in progress
-Last activity: 2026-05-11 - Phase 20 Chat PTT voice input, transient preview, final transcript submission, and safe queueing completed
+Phase: 21 of 22 (Code-Switch Evaluation + Hardening)
+Plan: Ready to plan/execute Phase 21
+Status: Phase 20 complete; v3.0 voice input implementation ready for code-switch hardening
+Last activity: 2026-05-11 - Phase 20 VAD auto-submit, conservative safety copy, final regression, and UAT evidence completed
 
-Progress: [█████████░] 26/27 planned v3.0 plans complete
+Progress: [██████████] 27/27 planned through Phase 20 complete
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed in v3.0: 22
+- Total plans completed in v3.0: 27
 - Average duration: 10 min
-- Total execution time: 154 min
+- Total execution time: 172 min
 
 **By Phase:**
 
@@ -48,7 +48,7 @@ Progress: [█████████░] 26/27 planned v3.0 plans complete
 | 17. GPT-SoVITS Provider + Voice Presets | 12/12 | 117 min | 10 min |
 | 18. Rich Voice Settings + Persistence | 3/3 | same-session | same-session |
 | 19. STT Provider Abstraction + Local/Cloud Providers | 4/4 | same-session | same-session |
-| 20. Renderer Voice Capture + PTT/VAD Preview UX | 3/4 | 37 min | 12 min |
+| 20. Renderer Voice Capture + PTT/VAD Preview UX | 4/4 | 55 min | 14 min |
 | 21. Code-Switch Evaluation + Hardening | 0/4 | - | - |
 | 22. AEC Spike + No-Headphones Decision | 0/TBD | - | - |
 
@@ -75,10 +75,11 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 17 plan 17-11 added per-preset GPT/SoVITS weight paths and independent synthesized Text language validation.
 - Phase 17 plan 17-12 decoupled websocket audio delivery from sidecar playback, queued renderer audio playback, and damped GPT-SoVITS mouth motion.
 - Phase 20 plan 20-02 keeps PTT/VAD UI preferences in renderer-local audio settings to avoid changing generated STT provider contracts; preview transcripts remain transient and Chat submission remains 20-03 scope.
+- Phase 20 plan 20-04 keeps VAD conservative and explicit opt-in, reuses the existing VoiceCapture and Chat final-text path, and defers no-headphones/AEC claims to Phase 22.
 
 ### Pending Todos
 
-- Execute Phase 20 plan 20-04.
+- Execute Phase 21 code-switch evaluation and hardening.
 
 ### Blockers/Concerns
 
@@ -101,6 +102,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 20 plan 20-01 added runtime voice input contracts, narrow Electron microphone permission handling, preload IPC, and readiness-gated sidecar runtime transcription using the selected Phase 19 STT provider only.
 - Phase 20 plan 20-02 added renderer microphone capture, sequence-gated preview transcription state, one queued final slot, Settings-only PTT shortcut configuration, and disabled-by-default conservative VAD settings.
 - Phase 20 plan 20-03 added Chat-visible PTT mic controls, transient preview outside bubbles, unchanged final transcript submission through the existing text-input path, and one queued final transcript during active turns without barge-in.
+- Phase 20 plan 20-04 added opt-in conservative VAD auto-submit, VAD state/safety copy, final regression evidence, and UAT tracking without wake word, barge-in, or AEC/no-headphones claims.
 
 ## Deferred Items
 
@@ -112,6 +114,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-11T05:28:54Z
-Stopped at: Completed Phase 20 plan 20-03; ready for 20-04
+Last session: 2026-05-11T05:39:32Z
+Stopped at: Completed Phase 20 plan 20-04; ready for Phase 21
 Resume file: None

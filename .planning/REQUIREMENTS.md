@@ -44,7 +44,7 @@ v3.0 turns the app from text-first chat with Piper output into a configurable vo
 
 - [x] **VIN-01**: User can grant microphone permission and see the current microphone/listening state.
 - [x] **VIN-02**: User can use push-to-talk voice input to record an utterance, preview transcription chunks, and submit only the final transcript.
-- [ ] **VIN-03**: User can enable VAD auto-submit with visible sensitivity and silence-timeout controls. *(20-02 added Settings controls; auto-submit execution completes in 20-04.)*
+- [x] **VIN-03**: User can enable VAD auto-submit with visible sensitivity and silence-timeout controls.
 - [x] **VIN-04**: User sees recording/preview/finalizing/error states that distinguish preview text from submitted chat text.
 - [x] **VIN-05**: Final STT text enters the existing chat pipeline unchanged, preserving conversation history semantics and applying no translation.
 - [x] **VIN-06**: User speech captured while a turn is in progress is queued safely rather than corrupting active TTS/playback state.
@@ -133,7 +133,7 @@ Populated by the roadmapper during ROADMAP.md creation.
 | STT-06 | Phase 19 | Pending |
 | VIN-01 | Phase 20 | Complete |
 | VIN-02 | Phase 20 | Complete |
-| VIN-03 | Phase 20 | Pending |
+| VIN-03 | Phase 20 | Complete |
 | VIN-04 | Phase 20 | Complete |
 | VIN-05 | Phase 20 | Complete |
 | VIN-06 | Phase 20 | Complete |
@@ -158,4 +158,4 @@ Populated by the roadmapper during ROADMAP.md creation.
 
 ---
 *Requirements defined: 2026-05-09*  
-*Last updated: 2026-05-11 after Phase 20 plan 20-03 Chat voice input execution*
+*Last updated: 2026-05-11 after Phase 20 plan 20-04 VAD/UAT execution*

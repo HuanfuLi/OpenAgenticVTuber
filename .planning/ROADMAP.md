@@ -65,7 +65,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - [x] **Phase 17: GPT-SoVITS Provider + Voice Presets** - GPT-SoVITS external/app-launched provider, test synthesis, reference audio, named presets, visible failed-audio chat/UAT evidence, and GPT-SoVITS gap closures through plan 17-12.
 - [x] **Phase 18: Rich Voice Settings + Persistence** - User-facing audio settings, provider catalog labels, privacy copy, credential redaction, and diagnostics.
 - [x] **Phase 19: STT Provider Abstraction + Local/Cloud Providers** - FunASR, faster-whisper, OpenAI, and Groq through one lazy-loaded STT provider layer.
-- [ ] **Phase 20: Renderer Voice Capture + PTT/VAD Preview UX** - Microphone capture, push-to-talk, VAD controls, transcript preview, and final-text submission through the existing chat path.
+- [x] **Phase 20: Renderer Voice Capture + PTT/VAD Preview UX** - Microphone capture, push-to-talk, VAD controls, transcript preview, and final-text submission through the existing chat path.
 - [ ] **Phase 21: Code-Switch Evaluation + Hardening** - Locked bilingual eval corpus, provider scorecard, no-translation checks, and evidence-backed provider copy.
 - [ ] **Phase 22: AEC Spike + No-Headphones Decision** - Browser/WebRTC AEC prototype, self-speech suppression, conservative VAD defaults, and truthful no-headphones status.
 
@@ -181,7 +181,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - [x] 20-01-PLAN.md — Voice input contracts, Electron permission handling, preload bridge, and sidecar runtime transcription endpoint
 - [x] 20-02-PLAN.md — Renderer capture controller, PTT hotkey Settings integration, and voice input state
 - [x] 20-03-PLAN.md — Chat PTT UI, transient preview, final text submission, and queueing
-- [ ] 20-04-PLAN.md — VAD controls, conservative safety states, final regression, and UAT evidence
+- [x] 20-04-PLAN.md — VAD controls, conservative safety states, final regression, and UAT evidence
 **UI hint**: yes
 
 ### Phase 21: Code-Switch Evaluation + Hardening
@@ -253,4 +253,4 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - v3.0 excludes GPT-SoVITS installer/training/voice cloning, wake-word activation, translation before LLM submission, barge-in interruption, silent cloud STT fallback, and any promise that no-headphones/AEC is solved before Phase 22 evidence.
 
 ---
-*Last updated: 2026-05-11 after Phase 20 plan 20-03 Chat voice input execution*
+*Last updated: 2026-05-11 after Phase 20 plan 20-04 VAD/UAT execution*
