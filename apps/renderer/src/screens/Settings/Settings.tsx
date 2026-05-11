@@ -25,6 +25,13 @@ import type {
   STTTestResult
 } from '@contracts/audio-provider'
 import { recordSettingsTestWav } from '@/audio/test-recorder'
+import {
+  isReservedShortcut,
+  loadVoiceInputSettings,
+  saveVoiceInputSettings,
+  type VoiceInputSettings
+} from '@/state/audio-settings'
+import { VoiceInputPreferencesFields } from './VoiceInputSection'
 import type { GptSoVitsPresetConfig, ReferenceAudioAsset, VoicePreset } from '@contracts/voice-preset'
 import {
   buildGptSoVitsPresetValidationFingerprint,
@@ -2080,6 +2087,7 @@ function VoiceInputSection() {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<STTTestResult | null>(null)
   const [modelCatalog, setModelCatalog] = useState<STTModelCacheCatalog | null>(null)
+  const [voiceSettings, setVoiceSettings] = useState<VoiceInputSettings>(() => loadVoiceInputSettings())
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.api) return
@@ -2136,6 +2144,10 @@ function VoiceInputSection() {
   }
 
   const saveVoiceInput = async (): Promise<StoredConfig | null> => {
+    if (isReservedShortcut(voiceSettings.pttShortcut)) {
+      setStatusText(C.VOICE_IN_PTT_SHORTCUT_RESERVED)
+      return null
+    }
     setSaving(true)
     try {
       const cfg = storedCfg ?? await window.api.getStoredConfig()
@@ -2151,6 +2163,7 @@ function VoiceInputSection() {
           }
         }
       }
+      saveVoiceInputSettings(voiceSettings)
       await window.api.saveStoredConfig(nextCfg)
       setStoredCfg(nextCfg)
       setStatusText(C.VOICE_IN_SAVED)
@@ -2275,6 +2288,7 @@ function VoiceInputSection() {
             onChange={(e) => updateSttConfig({ capture_timeout_ms: Number(e.target.value) || 30_000 })}
           />
         </div>
+        <VoiceInputPreferencesFields settings={voiceSettings} onChange={setVoiceSettings} />
         {selectedCloud && (
           <>
             <div className="kv-row" style={{ alignItems: 'flex-start' }}>
@@ -2338,7 +2352,7 @@ function VoiceInputSection() {
       </div>
 
       <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button className="btn btn-primary" type="button" onClick={() => void saveVoiceInput()} disabled={saving}>
+        <button className="btn btn-primary" type="button" onClick={() => void saveVoiceInput()} disabled={saving || isReservedShortcut(voiceSettings.pttShortcut)}>
           {saving ? C.CONN_SAVING : C.VOICE_IN_SAVE}
         </button>
         <button className="btn btn-secondary" type="button" onClick={() => void runSttTest()} disabled={testing || cloudBlocked}>

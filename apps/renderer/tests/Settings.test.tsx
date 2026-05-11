@@ -5,6 +5,11 @@ import { ThemeProvider } from '@/state/theme-provider'
 import { COPY } from '@/lib/copy'
 import { Settings } from '@/screens/Settings/Settings'
 import { defaultAudioConfig } from '@/state/setup-store'
+import {
+  DEFAULT_PTT_SHORTCUT,
+  VOICE_INPUT_SETTINGS_STORAGE_KEY,
+  type VoiceInputSettings
+} from '@/state/audio-settings'
 import type { StoredConfig } from '@preload-types'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
 import type { GptSoVitsProviderConfig } from '@contracts/audio-provider'
@@ -169,6 +174,7 @@ describe('Settings TTS section', () => {
   }
 
   beforeEach(() => {
+    window.localStorage.clear()
     Object.defineProperty(window, 'api', {
       configurable: true,
       value: {
@@ -538,6 +544,54 @@ describe('Settings TTS section', () => {
       }))
     })
     expect(window.api.commitConversationTurn).not.toHaveBeenCalled()
+  })
+
+  it('saves push-to-talk shortcut and conservative VAD settings through Settings', async () => {
+    renderSettings()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.VOICE_IN_HEADER })
+      .then((heading) => heading.closest('section')!)
+    const shortcutInput = within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_PTT_SHORTCUT)
+    expect(shortcutInput).toHaveValue(DEFAULT_PTT_SHORTCUT)
+    expect(within(section).getByRole('switch', { name: COPY.SETTINGS.VOICE_IN_VAD_ENABLED }))
+      .toHaveAttribute('aria-checked', 'false')
+    expect(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_VAD_SENSITIVITY)).toHaveValue('medium')
+
+    fireEvent.change(shortcutInput, { target: { value: 'Ctrl+Alt+M' } })
+    fireEvent.click(within(section).getByRole('switch', { name: COPY.SETTINGS.VOICE_IN_VAD_ENABLED }))
+    fireEvent.change(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_VAD_SENSITIVITY), {
+      target: { value: 'low' }
+    })
+    fireEvent.change(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_VAD_SILENCE_TIMEOUT), {
+      target: { value: '1500' }
+    })
+    fireEvent.click(within(section).getByRole('button', { name: COPY.SETTINGS.VOICE_IN_SAVE }))
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalled()
+    })
+    const stored = JSON.parse(window.localStorage.getItem(VOICE_INPUT_SETTINGS_STORAGE_KEY)!) as VoiceInputSettings
+    expect(stored).toEqual({
+      pttShortcut: 'Ctrl+Alt+M',
+      vad: {
+        enabled: true,
+        sensitivity: 'low',
+        silenceTimeoutMs: 1500
+      }
+    })
+  })
+
+  it('blocks app-reserved push-to-talk shortcuts in Settings', async () => {
+    renderSettings()
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.VOICE_IN_HEADER })
+      .then((heading) => heading.closest('section')!)
+    fireEvent.change(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_PTT_SHORTCUT), {
+      target: { value: 'Ctrl+R' }
+    })
+
+    expect(within(section).getByText(COPY.SETTINGS.VOICE_IN_PTT_SHORTCUT_RESERVED)).toBeInTheDocument()
+    expect(within(section).getByRole('button', { name: COPY.SETTINGS.VOICE_IN_SAVE })).toBeDisabled()
   })
 
   it('selecting Piper local TTS explicitly saves piper without GPT-SoVITS gates', async () => {
