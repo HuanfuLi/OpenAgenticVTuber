@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
-status: ready_for_next_phase
-stopped_at: Phase 19 STT provider abstraction complete; ready for Phase 20
-last_updated: "2026-05-10T06:58:00Z"
-last_activity: 2026-05-10 - Phase 19 STT provider abstraction, provider tests, cache controls, and Settings-only recorder completed
+status: in_progress
+stopped_at: Phase 20 plan 20-01 complete; ready for 20-02
+last_updated: "2026-05-11T05:01:21Z"
+last_activity: 2026-05-11 - Phase 20 voice input contracts, Electron permission bridge, and sidecar runtime transcription endpoint completed
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 27
-  completed_plans: 23
-  percent: 85
+  completed_plans: 24
+  percent: 89
 ---
 
 # Project State
@@ -26,19 +26,19 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 20 of 22 (Renderer Voice Capture + PTT/VAD Preview UX)
-Plan: Ready to execute Phase 20
-Status: Phase 19 complete; ready for next phase
-Last activity: 2026-05-10 - Phase 19 STT provider abstraction, provider tests, cache controls, and Settings-only recorder completed
+Plan: Ready to execute Phase 20 plan 20-02
+Status: Phase 20 in progress
+Last activity: 2026-05-11 - Phase 20 voice input contracts, Electron permission bridge, and sidecar runtime transcription endpoint completed
 
-Progress: [████████░░] 23/27 planned v3.0 plans complete
+Progress: [█████████░] 24/27 planned v3.0 plans complete
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed in v3.0: 19
+- Total plans completed in v3.0: 20
 - Average duration: 10 min
-- Total execution time: 117 min
+- Total execution time: 129 min
 
 **By Phase:**
 
@@ -48,7 +48,7 @@ Progress: [████████░░] 23/27 planned v3.0 plans complete
 | 17. GPT-SoVITS Provider + Voice Presets | 12/12 | 117 min | 10 min |
 | 18. Rich Voice Settings + Persistence | 3/3 | same-session | same-session |
 | 19. STT Provider Abstraction + Local/Cloud Providers | 4/4 | same-session | same-session |
-| 20. Renderer Voice Capture + PTT/VAD Preview UX | 0/4 | - | - |
+| 20. Renderer Voice Capture + PTT/VAD Preview UX | 1/4 | 12 min | 12 min |
 | 21. Code-Switch Evaluation + Hardening | 0/4 | - | - |
 | 22. AEC Spike + No-Headphones Decision | 0/TBD | - | - |
 
@@ -77,7 +77,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Execute Phase 20 Renderer Voice Capture + PTT/VAD Preview UX.
+- Execute Phase 20 plans 20-02 through 20-04.
 
 ### Blockers/Concerns
 
@@ -97,6 +97,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 19 plan 19-01 added STT contracts, lazy registry, app-managed model cache metadata, readiness fingerprints, and admin endpoint skeletons without provider-library imports at boot.
 - Phase 19 plans 19-02 and 19-03 added lazy local/cloud STT adapters, local model cache prepare/remove/status, provider-specific cloud consent/credential gates, and readiness-gated test transcription.
 - Phase 19 plan 19-04 added Electron STT model-cache bridges, Settings cache/test controls, and a Settings-only microphone recorder path without chat submission.
+- Phase 20 plan 20-01 added runtime voice input contracts, narrow Electron microphone permission handling, preload IPC, and readiness-gated sidecar runtime transcription using the selected Phase 19 STT provider only.
 
 ## Deferred Items
 
@@ -108,6 +109,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-10T06:58:00Z
-Stopped at: Completed Phase 19 STT provider abstraction; ready for Phase 20
+Last session: 2026-05-11T05:01:21Z
+Stopped at: Completed Phase 20 plan 20-01; ready for 20-02
 Resume file: None

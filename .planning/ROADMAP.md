@@ -176,7 +176,12 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
   3. User can enable VAD auto-submit with visible sensitivity and silence-timeout controls.
   4. Preview text never appears in conversation history; only final STT text enters the existing chat pipeline unchanged with no translation.
   5. Speech captured while a turn is in progress queues safely instead of corrupting active TTS/playback state.
-**Plans**: TBD
+**Plans**: 4
+**Plan list**:
+- [x] 20-01-PLAN.md — Voice input contracts, Electron permission handling, preload bridge, and sidecar runtime transcription endpoint
+- [ ] 20-02-PLAN.md — Renderer capture controller, PTT hotkey Settings integration, and voice input state
+- [ ] 20-03-PLAN.md — Chat PTT UI, transient preview, final text submission, and queueing
+- [ ] 20-04-PLAN.md — VAD controls, conservative safety states, final regression, and UAT evidence
 **UI hint**: yes
 
 ### Phase 21: Code-Switch Evaluation + Hardening
@@ -228,7 +233,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 | 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 12/12 | Complete | 2026-05-10 |
 | 18. Rich Voice Settings + Persistence | v3.0 | 3/3 | Complete | 2026-05-10 |
 | 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 4/4 | Complete | 2026-05-10 |
-| 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 0/TBD | Not started | - |
+| 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 1/4 | In progress | - |
 | 21. Code-Switch Evaluation + Hardening | v3.0 | 0/TBD | Not started | - |
 | 22. AEC Spike + No-Headphones Decision | v3.0 | 0/TBD | Not started | - |
 
