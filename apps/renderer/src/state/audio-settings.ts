@@ -11,13 +11,13 @@ export interface VoiceInputSettings {
 
 export const VOICE_INPUT_SETTINGS_STORAGE_KEY = 'agenticllmvtuber.voiceInputSettings.v1'
 export const DEFAULT_PTT_SHORTCUT = 'Ctrl+Shift+Space'
-export const DEFAULT_VAD_SILENCE_TIMEOUT_MS = 1200
+export const DEFAULT_VAD_SILENCE_TIMEOUT_MS = 1800
 
 export const DEFAULT_VOICE_INPUT_SETTINGS: VoiceInputSettings = {
   pttShortcut: DEFAULT_PTT_SHORTCUT,
   vad: {
     enabled: false,
-    sensitivity: 'medium',
+    sensitivity: 'low',
     silenceTimeoutMs: DEFAULT_VAD_SILENCE_TIMEOUT_MS
   }
 }

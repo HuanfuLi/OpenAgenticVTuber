@@ -8,6 +8,8 @@ const captureStartMock = vi.hoisted(() => vi.fn(async () => undefined))
 const captureStopMock = vi.hoisted(() => vi.fn(async () => undefined))
 const captureCancelMock = vi.hoisted(() => vi.fn(async () => undefined))
 const captureDisposeMock = vi.hoisted(() => vi.fn())
+const vadStartMock = vi.hoisted(() => vi.fn(async () => undefined))
+const vadStopMock = vi.hoisted(() => vi.fn(async () => undefined))
 
 vi.mock('@/ws/client', () => ({
   send: sendMock,
@@ -33,6 +35,24 @@ vi.mock('@/audio/voice-capture', () => ({
       stop: captureStopMock,
       cancel: captureCancelMock,
       dispose: captureDisposeMock
+    }
+  })
+}))
+
+vi.mock('@/audio/vad-controller', () => ({
+  VadController: vi.fn(function VadControllerMock(
+    _options: unknown,
+    deps: { onMonitoringChange?: (monitoring: boolean) => void }
+  ) {
+    return {
+      start: vi.fn(async () => {
+        await vadStartMock()
+        deps.onMonitoringChange?.(true)
+      }),
+      stop: vi.fn(async () => {
+        await vadStopMock()
+        deps.onMonitoringChange?.(false)
+      })
     }
   })
 }))
@@ -192,6 +212,8 @@ describe('Chat voice input', () => {
     captureStopMock.mockClear()
     captureCancelMock.mockClear()
     captureDisposeMock.mockClear()
+    vadStartMock.mockClear()
+    vadStopMock.mockClear()
     resetStreaming()
     resetVoiceInputStoreForTests()
     vi.mocked(commitConversationTurnFromDispatcher).mockClear()
@@ -255,6 +277,45 @@ describe('Chat voice input', () => {
 
     fireEvent.keyUp(window, { key: 'm', ctrlKey: true, altKey: true })
     await waitFor(() => expect(captureStopMock).toHaveBeenCalledTimes(1))
+  })
+
+  it('keeps VAD disabled by default in Chat', async () => {
+    renderChat()
+    await screen.findByText('Hello.')
+
+    expect(vadStartMock).not.toHaveBeenCalled()
+    expect(screen.queryByText(COPY.SETTINGS.VOICE_IN_INPUT_VAD)).toBeNull()
+  })
+
+  it('starts VAD monitoring only after settings opt-in and readiness are ready', async () => {
+    saveVoiceInputSettings({
+      pttShortcut: 'Ctrl+Shift+Space',
+      vad: { enabled: true, sensitivity: 'low', silenceTimeoutMs: 1800 }
+    })
+    installApi(sessionWithHistory(), readiness({
+      ready: false,
+      permission_state: 'prompt',
+      capture_status: 'permission_needed',
+      blocked_reason: 'permission_needed',
+      setup_destination: 'microphone_permission',
+      summary: 'Microphone permission is needed.'
+    }))
+    renderChat()
+
+    await screen.findByText('Microphone permission is needed.')
+    expect(vadStartMock).not.toHaveBeenCalled()
+  })
+
+  it('shows VAD state after explicit opt-in and readiness pass', async () => {
+    saveVoiceInputSettings({
+      pttShortcut: 'Ctrl+Shift+Space',
+      vad: { enabled: true, sensitivity: 'low', silenceTimeoutMs: 1800 }
+    })
+    renderChat()
+
+    await waitFor(() => expect(vadStartMock).toHaveBeenCalledTimes(1))
+    expect(await screen.findByText(COPY.CHAT.VOICE_VAD_ACTIVE)).toBeInTheDocument()
+    expect(screen.getByText(COPY.SETTINGS.VOICE_IN_INPUT_VAD)).toBeInTheDocument()
   })
 
   it('requests microphone permission on first use when the preload bridge reports prompt state', async () => {
@@ -359,5 +420,20 @@ describe('Chat voice input', () => {
     expect(screen.getByTestId('speaking-label')).toHaveTextContent(COPY.CHAT.SPEAKING)
     expect(screen.getByText('Active speech continues.')).toBeInTheDocument()
     expect(sendMock).not.toHaveBeenCalled()
+  })
+
+  it('shows that VAD waits while Teto is speaking', async () => {
+    saveVoiceInputSettings({
+      pttShortcut: 'Ctrl+Shift+Space',
+      vad: { enabled: true, sensitivity: 'low', silenceTimeoutMs: 1800 }
+    })
+    renderChat()
+
+    act(() => {
+      setSpeaking(true)
+    })
+
+    expect(await screen.findByTestId('voice-vad-blocked')).toHaveTextContent(COPY.CHAT.VOICE_VAD_BLOCKED)
+    expect(screen.getByTestId('speaking-label')).toHaveTextContent(COPY.CHAT.SPEAKING)
   })
 })

@@ -41,6 +41,7 @@ export function VoiceInputPreferencesFields({
         <div>
           <div className="v">{C.VOICE_IN_VAD_ENABLED}</div>
           <div className="tx-sm muted" style={{ marginTop: 2 }}>{C.VOICE_IN_VAD_HELP}</div>
+          <div className="tx-sm muted" style={{ marginTop: 2 }}>{C.VOICE_IN_VAD_SAFETY}</div>
         </div>
         <button
           className={`switch${settings.vad.enabled ? ' on' : ''}`}

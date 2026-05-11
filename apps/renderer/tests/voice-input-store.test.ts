@@ -72,8 +72,8 @@ describe('voice-input-store', () => {
     expect(state.settings.pttShortcut).toBe(DEFAULT_PTT_SHORTCUT)
     expect(state.settings.vad).toEqual({
       enabled: false,
-      sensitivity: 'medium',
-      silenceTimeoutMs: 1200
+      sensitivity: 'low',
+      silenceTimeoutMs: 1800
     })
   })
 

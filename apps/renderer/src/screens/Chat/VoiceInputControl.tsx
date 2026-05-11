@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Mic } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { VoiceCapture } from '@/audio/voice-capture'
+import { VadController } from '@/audio/vad-controller'
 import {
   clearQueuedFinalCandidate,
   patchVoiceInputState,
@@ -55,6 +56,16 @@ function statusLabel(status: ReturnType<typeof useVoiceInput>['captureStatus']):
   return COPY.CHAT.VOICE_IDLE
 }
 
+function vadStatusLabel(
+  vadEnabled: boolean,
+  status: ReturnType<typeof useVoiceInput>['captureStatus']
+): string {
+  if (!vadEnabled) return statusLabel(status)
+  if (status === 'idle') return COPY.CHAT.VOICE_VAD_READY
+  if (status === 'listening') return COPY.CHAT.VOICE_VAD_ACTIVE
+  return statusLabel(status)
+}
+
 export function VoiceInputControl({
   sessionId,
   turnInProgress,
@@ -62,8 +73,11 @@ export function VoiceInputControl({
 }: VoiceInputControlProps) {
   const voice = useVoiceInput()
   const captureRef = useRef<VoiceCapture | null>(null)
+  const vadRef = useRef<VadController | null>(null)
+  const voiceRef = useRef(voice)
   const shortcutDownRef = useRef(false)
   const turnInProgressRef = useRef(turnInProgress)
+  voiceRef.current = voice
   turnInProgressRef.current = turnInProgress
 
   const ready = voice.readiness?.ready === true
@@ -74,7 +88,7 @@ export function VoiceInputControl({
     voice.captureStatus !== 'finalizing' &&
     voice.captureStatus !== 'queued'
   const shortcut = useMemo(() => parseShortcut(voice.settings.pttShortcut), [voice.settings.pttShortcut])
-  const stateLabel = statusLabel(voice.captureStatus)
+  const stateLabel = vadStatusLabel(voice.settings.vad.enabled, voice.captureStatus)
   const blockedText = voice.error ?? voice.readiness?.summary ?? COPY.CHAT.VOICE_BLOCKED
   const needsSetup = !ready || voice.permissionState !== 'granted'
 
@@ -84,6 +98,8 @@ export function VoiceInputControl({
 
   useEffect(() => {
     return () => {
+      void vadRef.current?.stop()
+      vadRef.current = null
       captureRef.current?.dispose()
       captureRef.current = null
     }
@@ -105,7 +121,7 @@ export function VoiceInputControl({
   }
 
   const requestPermissionIfNeeded = async (): Promise<boolean> => {
-    let readiness = voice.readiness
+    let readiness = voiceRef.current.readiness
     if (!readiness) readiness = await refreshVoiceInputReadiness()
     if (readiness?.permission_state === 'prompt' || readiness?.setup_destination === 'microphone_permission') {
       const permissionState = await window.api.requestMicrophonePermission()
@@ -115,22 +131,70 @@ export function VoiceInputControl({
     return readiness?.ready === true
   }
 
-  const startCapture = async (): Promise<void> => {
-    if (voice.captureStatus === 'queued') return
+  const startCapture = async (): Promise<boolean> => {
+    if (voiceRef.current.captureStatus === 'queued' || voiceRef.current.captureStatus === 'finalizing') {
+      return false
+    }
     const permissionReady = await requestPermissionIfNeeded()
     if (!permissionReady) {
       patchVoiceInputState({
         captureStatus: 'permission_needed',
-        error: voice.readiness?.summary ?? COPY.CHAT.VOICE_PERMISSION_NEEDED
+        error: voiceRef.current.readiness?.summary ?? COPY.CHAT.VOICE_PERMISSION_NEEDED
       })
-      return
+      return false
     }
     await getCapture().start()
+    return true
   }
 
   const stopCapture = async (): Promise<void> => {
     await captureRef.current?.stop()
   }
+
+  useEffect(() => {
+    if (!voice.settings.vad.enabled || !ready || voice.permissionState !== 'granted') {
+      void vadRef.current?.stop()
+      vadRef.current = null
+      return
+    }
+
+    const vad = new VadController(
+      {
+        sensitivity: voice.settings.vad.sensitivity,
+        silenceTimeoutMs: voice.settings.vad.silenceTimeoutMs
+      },
+      {
+        startRecording: startCapture,
+        stopRecording: stopCapture,
+        isRecording: () => captureRef.current?.active === true,
+        shouldIgnoreSpeech: () => turnInProgressRef.current,
+        onMonitoringChange: (monitoring) => {
+          const currentVoice = voiceRef.current
+          if (monitoring) {
+            if (currentVoice.captureStatus === 'idle') patchVoiceInputState({ captureStatus: 'listening', error: null })
+          } else if (currentVoice.captureStatus === 'listening') {
+            patchVoiceInputState({ captureStatus: 'idle' })
+          }
+        },
+        onError: (message) => {
+          patchVoiceInputState({ captureStatus: 'error', error: message })
+        }
+      }
+    )
+    vadRef.current = vad
+    void vad.start()
+    return () => {
+      if (vadRef.current === vad) vadRef.current = null
+      void vad.stop()
+    }
+  }, [
+    ready,
+    sessionId,
+    voice.permissionState,
+    voice.settings.vad.enabled,
+    voice.settings.vad.sensitivity,
+    voice.settings.vad.silenceTimeoutMs
+  ])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -185,6 +249,11 @@ export function VoiceInputControl({
         <span className="voice-state-main">{stateLabel}</span>
         <span className="voice-state-sub">{voice.settings.pttShortcut}</span>
       </div>
+      {voice.settings.vad.enabled && (
+        <span className="voice-vad-chip" title={COPY.SETTINGS.VOICE_IN_VAD_HELP}>
+          {COPY.SETTINGS.VOICE_IN_INPUT_VAD}
+        </span>
+      )}
       {needsSetup && (
         <button type="button" className="btn btn-link voice-setup" onClick={onOpenSetup}>
           {COPY.CHAT.VOICE_SETUP}
@@ -198,6 +267,11 @@ export function VoiceInputControl({
       {voice.captureStatus === 'finalizing' && (
         <div className="voice-preview" data-testid="voice-finalizing">
           {COPY.CHAT.VOICE_FINALIZING}
+        </div>
+      )}
+      {voice.settings.vad.enabled && turnInProgress && (
+        <div className="voice-preview" data-testid="voice-vad-blocked">
+          {COPY.CHAT.VOICE_VAD_BLOCKED}
         </div>
       )}
       {voice.queuedFinalCandidate && (

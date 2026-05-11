@@ -555,7 +555,7 @@ describe('Settings TTS section', () => {
     expect(shortcutInput).toHaveValue(DEFAULT_PTT_SHORTCUT)
     expect(within(section).getByRole('switch', { name: COPY.SETTINGS.VOICE_IN_VAD_ENABLED }))
       .toHaveAttribute('aria-checked', 'false')
-    expect(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_VAD_SENSITIVITY)).toHaveValue('medium')
+    expect(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_VAD_SENSITIVITY)).toHaveValue('low')
 
     fireEvent.change(shortcutInput, { target: { value: 'Ctrl+Alt+M' } })
     fireEvent.click(within(section).getByRole('switch', { name: COPY.SETTINGS.VOICE_IN_VAD_ENABLED }))

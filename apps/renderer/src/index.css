@@ -411,7 +411,7 @@ textarea.input { height: auto; min-height: 36px; padding: 8px 12px; resize: none
 
 .voice-input {
   display: grid;
-  grid-template-columns: 36px minmax(80px, auto) auto;
+  grid-template-columns: 36px minmax(80px, 1fr) auto auto;
   align-items: center;
   gap: 8px;
   padding: 8px 16px 0;
@@ -444,6 +444,17 @@ textarea.input { height: auto; min-height: 36px; padding: 8px 12px; resize: none
 .voice-state-main { font-weight: 600; }
 .voice-state-sub {
   color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.voice-vad-chip {
+  justify-self: start;
+  border: 1px solid color-mix(in oklab, var(--primary), transparent 55%);
+  border-radius: 8px;
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary), var(--background) 88%);
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1.4;
   white-space: nowrap;
 }
 .voice-setup { justify-self: start; padding: 0; height: auto; }
