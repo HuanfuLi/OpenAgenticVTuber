@@ -12,9 +12,16 @@ import {
 } from '@/state/audio-settings'
 import type { StoredConfig } from '@preload-types'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
-import type { GptSoVitsProviderConfig } from '@contracts/audio-provider'
+import type { GptSoVitsProviderConfig, STTProviderReadiness } from '@contracts/audio-provider'
 import type { VoicePreset } from '@contracts/voice-preset'
 import { buildGptSoVitsPresetValidationFingerprint } from '@contracts/gpt-sovits-validation'
+
+vi.mock('@/audio/test-recorder', () => ({
+  recordSettingsTestWav: vi.fn().mockResolvedValue({
+    audioBase64Wav: 'UklGRg==',
+    durationMs: 1200
+  })
+}))
 
 function renderSettings() {
   return render(
@@ -544,6 +551,50 @@ describe('Settings TTS section', () => {
       }))
     })
     expect(window.api.commitConversationTurn).not.toHaveBeenCalled()
+  })
+
+  it('persists successful STT test readiness when saving voice input', async () => {
+    const readyGate: STTProviderReadiness = {
+      health_check_passed: true,
+      test_transcription_passed: true,
+      last_health_checked_at: '2026-05-11T06:00:00Z',
+      last_test_transcription_at: '2026-05-11T06:00:01Z',
+      fingerprint: 'tested-fingerprint',
+      active_allowed: true,
+      invalidation_reason: 'never_tested'
+    }
+    vi.mocked(window.api.testSttProvider).mockResolvedValue({
+      ok: true,
+      provider_id: 'funasr',
+      transcript: 'hello teto',
+      language: 'en',
+      latency_ms: 42,
+      duration_ms: 1200,
+      model_cache_state: 'downloaded',
+      readiness: readyGate,
+      summary: 'STT test transcription succeeded.',
+      failure: null,
+      redacted_diagnostics: null
+    })
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('radio', { name: /FunASR/i }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_RECORD_TEST }))
+
+    expect(await screen.findByText('STT test transcription succeeded.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_SAVE }))
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
+        audio: expect.objectContaining({
+          stt: expect.objectContaining({
+            enabled: true,
+            active_provider: 'funasr',
+            readiness: readyGate
+          })
+        })
+      }))
+    })
   })
 
   it('saves push-to-talk shortcut and conservative VAD settings through Settings', async () => {

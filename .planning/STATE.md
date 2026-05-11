@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
-status: ready_to_execute_gap_closure
-stopped_at: Phase 20 live UI/UX gaps planned; ready to execute gap closure
-last_updated: "2026-05-11T06:05:00Z"
-last_activity: 2026-05-11 - Phase 20 live voice input gaps audited and gap-closure plans 20-05/20-06 created
+status: executing_gap_closure
+stopped_at: Phase 20 plan 20-05 complete; ready for 20-06 truthful model-cache gap closure
+last_updated: "2026-05-11T06:43:00Z"
+last_activity: 2026-05-11 - Phase 20 plan 20-05 fixed voice input readiness recovery and STT readiness persistence
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 29
-  completed_plans: 27
-  percent: 93
+  completed_plans: 28
+  percent: 97
 ---
 
 # Project State
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 20 of 22 (Renderer Voice Capture + PTT/VAD Preview UX)
-Plan: 20-05 and 20-06 ready to execute
-Status: Phase 20 live UI/UX gaps planned for closure
-Last activity: 2026-05-11 - Phase 20 live voice input gaps audited and gap-closure plans 20-05/20-06 created
+Plan: 20-06 ready to execute
+Status: Phase 20 gap closure executing
+Last activity: 2026-05-11 - Phase 20 plan 20-05 fixed voice input readiness recovery and STT readiness persistence
 
-Progress: [█████████░] 27/29 v3.0 plans complete; Phase 20 gap closure pending
+Progress: [█████████░] 28/29 v3.0 plans complete; Phase 20 gap closure pending
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed in v3.0: 27
+- Total plans completed in v3.0: 28
 - Average duration: 10 min
 - Total execution time: 172 min
 
@@ -48,7 +48,7 @@ Progress: [█████████░] 27/29 v3.0 plans complete; Phase 20 g
 | 17. GPT-SoVITS Provider + Voice Presets | 12/12 | 117 min | 10 min |
 | 18. Rich Voice Settings + Persistence | 3/3 | same-session | same-session |
 | 19. STT Provider Abstraction + Local/Cloud Providers | 4/4 | same-session | same-session |
-| 20. Renderer Voice Capture + PTT/VAD Preview UX | 4/6 | 55 min | 14 min |
+| 20. Renderer Voice Capture + PTT/VAD Preview UX | 5/6 | 55 min | 11 min |
 | 21. Code-Switch Evaluation + Hardening | 0/4 | - | - |
 | 22. AEC Spike + No-Headphones Decision | 0/TBD | - | - |
 
@@ -76,11 +76,11 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 17 plan 17-12 decoupled websocket audio delivery from sidecar playback, queued renderer audio playback, and damped GPT-SoVITS mouth motion.
 - Phase 20 plan 20-02 keeps PTT/VAD UI preferences in renderer-local audio settings to avoid changing generated STT provider contracts; preview transcripts remain transient and Chat submission remains 20-03 scope.
 - Phase 20 plan 20-04 keeps VAD conservative and explicit opt-in, reuses the existing VoiceCapture and Chat final-text path, and defers no-headphones/AEC claims to Phase 22.
-- Phase 20 live UAT exposed readiness lifecycle and model-cache truthfulness gaps; 20-05/20-06 are planned as gap closures before Phase 20 can be accepted.
+- Phase 20 live UAT exposed readiness lifecycle and model-cache truthfulness gaps; 20-05 fixed readiness recovery/STT readiness persistence, and 20-06 remains before Phase 20 can be accepted.
 
 ### Pending Todos
 
-- Execute Phase 20 gap-closure plans 20-05 and 20-06.
+- Execute Phase 20 gap-closure plan 20-06.
 
 ### Blockers/Concerns
 

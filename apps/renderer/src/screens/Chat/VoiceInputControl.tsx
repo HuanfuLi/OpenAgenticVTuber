@@ -3,10 +3,12 @@ import { Mic } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { VoiceCapture } from '@/audio/voice-capture'
 import { VadController } from '@/audio/vad-controller'
+import { subscribeSidecarReconnect } from '@/ws/client'
 import {
   clearQueuedFinalCandidate,
   patchVoiceInputState,
   refreshVoiceInputReadiness,
+  VOICE_INPUT_CONFIG_CHANGED_EVENT,
   useVoiceInput
 } from '@/state/voice-input-store'
 
@@ -94,6 +96,20 @@ export function VoiceInputControl({
 
   useEffect(() => {
     void refreshVoiceInputReadiness()
+  }, [])
+
+  useEffect(() => {
+    const refresh = (): void => {
+      void refreshVoiceInputReadiness()
+    }
+    const offReady = window.api?.onSidecarReady?.(() => refresh()) ?? (() => undefined)
+    const offReconnect = subscribeSidecarReconnect(() => refresh())
+    window.addEventListener(VOICE_INPUT_CONFIG_CHANGED_EVENT, refresh)
+    return () => {
+      offReady()
+      offReconnect()
+      window.removeEventListener(VOICE_INPUT_CONFIG_CHANGED_EVENT, refresh)
+    }
   }, [])
 
   useEffect(() => {

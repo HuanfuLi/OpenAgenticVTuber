@@ -118,6 +118,41 @@ describe('voice-input-store', () => {
     })
   })
 
+  it('clears transient sidecar-unavailable readiness after a later ready response', async () => {
+    vi.mocked(window.api.getVoiceInputReadiness)
+      .mockResolvedValueOnce(readiness({
+        ready: false,
+        permission_state: 'unknown',
+        capture_status: 'idle',
+        blocked_reason: 'sidecar_unavailable',
+        setup_destination: 'voice_settings',
+        summary: 'Sidecar is not ready.'
+      }))
+      .mockResolvedValueOnce(readiness({ summary: 'Voice input is ready.' }))
+
+    await refreshVoiceInputReadiness()
+
+    expect(getVoiceInputState()).toMatchObject({
+      captureStatus: 'idle',
+      error: null,
+      readiness: expect.objectContaining({
+        blocked_reason: 'sidecar_unavailable',
+        summary: 'Sidecar is not ready.'
+      })
+    })
+
+    await refreshVoiceInputReadiness()
+
+    expect(getVoiceInputState()).toMatchObject({
+      captureStatus: 'idle',
+      error: null,
+      readiness: expect.objectContaining({
+        ready: true,
+        summary: 'Voice input is ready.'
+      })
+    })
+  })
+
   it('keeps one queued final slot when a turn is already in progress', () => {
     applyFinalResult(finalResult('final-1', 'first transcript'), true)
     applyFinalResult(finalResult('final-2', 'replacement transcript'), true)

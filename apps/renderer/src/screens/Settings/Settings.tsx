@@ -31,6 +31,7 @@ import {
   saveVoiceInputSettings,
   type VoiceInputSettings
 } from '@/state/audio-settings'
+import { notifyVoiceInputConfigChanged } from '@/state/voice-input-store'
 import { VoiceInputPreferencesFields } from './VoiceInputSection'
 import type { GptSoVitsPresetConfig, ReferenceAudioAsset, VoicePreset } from '@contracts/voice-preset'
 import {
@@ -2165,6 +2166,7 @@ function VoiceInputSection() {
       }
       saveVoiceInputSettings(voiceSettings)
       await window.api.saveStoredConfig(nextCfg)
+      notifyVoiceInputConfigChanged()
       setStoredCfg(nextCfg)
       setStatusText(C.VOICE_IN_SAVED)
       return nextCfg
@@ -2183,6 +2185,7 @@ function VoiceInputSection() {
     }
     setTesting(true)
     setTestResult(null)
+    const testedConfig = sttConfig
     try {
       const recording = await recordSettingsTestWav().catch(() => null)
       if (!recording) {
@@ -2197,6 +2200,12 @@ function VoiceInputSection() {
       })
       if (result) {
         setTestResult(result)
+        if (result.ok && result.transcript?.trim() && result.readiness?.active_allowed) {
+          setSttConfig({
+            ...testedConfig,
+            readiness: result.readiness
+          })
+        }
         setStatusText(result.summary)
       }
     } finally {

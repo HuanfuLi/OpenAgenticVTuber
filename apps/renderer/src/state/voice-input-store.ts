@@ -33,6 +33,7 @@ export interface VoiceInputState {
 type Listener = (state: VoiceInputState) => void
 
 const listeners = new Set<Listener>()
+export const VOICE_INPUT_CONFIG_CHANGED_EVENT = 'voice-input-config-changed'
 
 function initialState(): VoiceInputState {
   return {
@@ -80,6 +81,12 @@ export function setVoiceCaptureStatus(captureStatus: CaptureStatus, error: strin
   return patchVoiceInputState({ captureStatus, error })
 }
 
+function readinessError(readiness: VoiceInputReadiness): string | null {
+  if (readiness.ready) return null
+  if (readiness.blocked_reason === 'sidecar_unavailable') return null
+  return readiness.summary
+}
+
 export async function refreshVoiceInputReadiness(): Promise<VoiceInputReadiness | null> {
   try {
     const readiness = await window.api.getVoiceInputReadiness()
@@ -92,7 +99,7 @@ export async function refreshVoiceInputReadiness(): Promise<VoiceInputReadiness 
       readiness,
       permissionState: readiness.permission_state,
       captureStatus,
-      error: readiness.ready ? null : readiness.summary
+      error: readinessError(readiness)
     })
     return readiness
   } catch (error) {
@@ -103,6 +110,11 @@ export async function refreshVoiceInputReadiness(): Promise<VoiceInputReadiness 
     })
     return null
   }
+}
+
+export function notifyVoiceInputConfigChanged(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(VOICE_INPUT_CONFIG_CHANGED_EVENT))
 }
 
 export function setTransientPreview(sequenceId: string, transcript: string | null): VoiceInputState {
