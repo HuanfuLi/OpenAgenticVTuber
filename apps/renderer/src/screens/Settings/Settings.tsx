@@ -2144,34 +2144,40 @@ function VoiceInputSection() {
     setStatusText(C.VOICE_IN_TEST_NOT_READY)
   }
 
-  const saveVoiceInput = async (): Promise<StoredConfig | null> => {
-    if (isReservedShortcut(voiceSettings.pttShortcut)) {
+  const sttConfigWithProvider = (config: STTProviderConfig): STTProviderConfig => ({
+    ...config,
+    active_provider: config.active_provider ?? activeProvider
+  })
+
+  const persistVoiceInput = async (
+    nextSttConfig: STTProviderConfig,
+    nextVoiceSettings: VoiceInputSettings = voiceSettings
+  ): Promise<StoredConfig | null> => {
+    if (isReservedShortcut(nextVoiceSettings.pttShortcut)) {
       setStatusText(C.VOICE_IN_PTT_SHORTCUT_RESERVED)
       return null
     }
     setSaving(true)
     try {
-      const cfg = storedCfg ?? await window.api.getStoredConfig()
+      const cfg = await window.api.getStoredConfig().catch(() => storedCfg)
       if (!cfg) return null
-      const nextSttConfig: STTProviderConfig = {
-        ...sttConfig,
-        active_provider: sttConfig.active_provider ?? activeProvider
-      }
+      const normalizedSttConfig = sttConfigWithProvider(nextSttConfig)
       const nextCfg: StoredConfig = {
         ...cfg,
         audio: {
           ...cfg.audio,
-          stt: nextSttConfig,
+          stt: normalizedSttConfig,
           diagnostics: {
             ...(cfg.audio.diagnostics ?? defaultAudioConfig().diagnostics),
             redact_diagnostics: true
           }
         }
       }
-      saveVoiceInputSettings(voiceSettings)
+      saveVoiceInputSettings(nextVoiceSettings)
       await window.api.saveStoredConfig(nextCfg)
       notifyVoiceInputConfigChanged()
       setStoredCfg(nextCfg)
+      setSttConfig(normalizedSttConfig)
       setStatusText(C.VOICE_IN_SAVED)
       return nextCfg
     } catch {
@@ -2180,6 +2186,19 @@ function VoiceInputSection() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const saveVoiceInput = async (): Promise<StoredConfig | null> => persistVoiceInput(sttConfig)
+
+  const toggleVoiceInputEnabled = (): void => {
+    const nextSttConfig = sttConfigWithProvider({
+      ...sttConfig,
+      enabled: !sttConfig.enabled
+    })
+    setSttConfig(nextSttConfig)
+    setTestResult(null)
+    setStatusText(C.CONN_SAVING)
+    void persistVoiceInput(nextSttConfig)
   }
 
   const runSttTest = async (): Promise<void> => {
@@ -2259,10 +2278,8 @@ function VoiceInputSection() {
           aria-checked={sttConfig.enabled}
           role="switch"
           type="button"
-          onClick={() => updateSttConfig({
-            enabled: !sttConfig.enabled,
-            active_provider: sttConfig.active_provider ?? activeProvider
-          })}
+          onClick={toggleVoiceInputEnabled}
+          disabled={saving}
         />
       </div>
 

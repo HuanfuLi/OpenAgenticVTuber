@@ -3,7 +3,7 @@ status: testing
 phase: 20-renderer-voice-capture-ptt-vad-preview-ux
 source: [20-VERIFICATION.md, 20-UAT.md]
 started: 2026-05-11T05:50:00Z
-updated: 2026-05-11T10:21:00Z
+updated: 2026-05-11T10:31:00Z
 ---
 
 # Phase 20 Human UAT
@@ -83,4 +83,6 @@ blocked: 0
     - "FIXED inline: HTTP failures from `/admin/audio/voice-input/readiness` are now visible `unexpected_failure` readiness errors instead of being mislabeled as sidecar unavailable."
     - "FIXED inline: Voice settings now has an explicit `Enable voice input` switch, and saving an enabled default-visible provider persists `active_provider: funasr` instead of leaving voice disabled."
     - "FIXED inline: Settings STT test requests now use an enabled provider config so a passing test plus save can unblock Chat readiness."
+    - "FIXED inline: The `Enable voice input` switch now persists immediately, hydrates from stored config, and refreshes Chat voice readiness after save."
+    - "FIXED inline: App-store LLM config writes now preserve persisted audio/plugin/preset settings instead of rebuilding config with default audio."
   debug_session: "inline verify-work 2026-05-11"

@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { AppStoreProvider, useStore } from '@/state/app-store'
+import { defaultAudioConfig } from '@/state/setup-store'
+import type { StoredConfig } from '@preload-types'
 
 function StatusProbe() {
-  const { logsDrawer, resetAll, setLogsDrawer, status } = useStore()
+  const { logsDrawer, resetAll, setLlmConfig, setLogsDrawer, status } = useStore()
   return (
     <div>
       <span data-testid="sidecar-status">{status.sidecar}</span>
@@ -18,6 +20,16 @@ function StatusProbe() {
         enable logs
       </button>
       <button onClick={resetAll}>reset all</button>
+      <button
+        onClick={() => setLlmConfig({
+          provider: 'openai',
+          endpoint: 'https://api.openai.com/v1',
+          model: 'gpt-test',
+          apiKey: 'sk-test'
+        })}
+      >
+        save llm
+      </button>
     </div>
   )
 }
@@ -33,6 +45,7 @@ describe('AppStore sidecar status', () => {
       configurable: true,
       value: {
         getStoredConfig: vi.fn().mockResolvedValue(null),
+        saveStoredConfig: vi.fn().mockResolvedValue(undefined),
         clearStoredConfig: vi.fn().mockResolvedValue(undefined),
         getReadyUrl: vi.fn().mockResolvedValue(null),
         getVtsStatus: vi.fn().mockResolvedValue({
@@ -142,6 +155,54 @@ describe('AppStore sidecar status', () => {
         logsDrawerCollapsed: true,
         logsDrawerHeight: 200
       })
+    })
+  })
+
+  it('preserves persisted audio settings when saving LLM config', async () => {
+    const persistedAudio = {
+      ...defaultAudioConfig(),
+      stt: {
+        ...defaultAudioConfig().stt,
+        enabled: true,
+        active_provider: 'funasr' as const
+      }
+    }
+    const persisted: StoredConfig = {
+      provider: {
+        provider: 'lm_studio',
+        endpointUrl: 'http://localhost:1234/v1',
+        apiKey: '',
+        modelName: 'old-model'
+      },
+      plugin: { activePluginName: 'motion-plugin', cursorTrackingEnabled: false },
+      hasCompletedSetup: true,
+      schemaVersion: 2,
+      audio: persistedAudio,
+      voicePresets: [],
+      referenceAudioAssets: [],
+      activePresetByAvatarSession: {}
+    }
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue(persisted)
+
+    render(
+      <AppStoreProvider>
+        <StatusProbe />
+      </AppStoreProvider>
+    )
+
+    act(() => {
+      screen.getByRole('button', { name: 'save llm' }).click()
+    })
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
+        provider: expect.objectContaining({
+          provider: 'openai',
+          modelName: 'gpt-test'
+        }),
+        plugin: persisted.plugin,
+        audio: persistedAudio
+      }))
     })
   })
 })

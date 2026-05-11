@@ -570,13 +570,12 @@ describe('Settings TTS section', () => {
     expect(window.api.commitConversationTurn).not.toHaveBeenCalled()
   })
 
-  it('shows an explicit voice input enable switch and saves the default visible provider', async () => {
+  it('shows an explicit voice input enable switch and persists the default visible provider immediately', async () => {
     renderSettings()
 
     const enableSwitch = await screen.findByRole('switch', { name: COPY.SETTINGS.VOICE_IN_ENABLED })
     expect(enableSwitch).toHaveAttribute('aria-checked', 'false')
     fireEvent.click(enableSwitch)
-    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_SAVE }))
 
     await waitFor(() => {
       expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
@@ -588,6 +587,25 @@ describe('Settings TTS section', () => {
         })
       }))
     })
+    expect(enableSwitch).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('hydrates the explicit voice input enable switch from persisted config', async () => {
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      audio: {
+        ...storedConfig.audio,
+        stt: {
+          ...storedConfig.audio.stt,
+          enabled: true,
+          active_provider: 'funasr'
+        }
+      }
+    })
+    renderSettings()
+
+    expect(await screen.findByRole('switch', { name: COPY.SETTINGS.VOICE_IN_ENABLED }))
+      .toHaveAttribute('aria-checked', 'true')
   })
 
   it('persists successful STT test readiness when saving voice input', async () => {

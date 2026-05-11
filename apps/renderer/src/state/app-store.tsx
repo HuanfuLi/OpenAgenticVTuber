@@ -124,7 +124,7 @@ function storedToLlmConfig(cfg: StoredConfig): LLMConfig {
   }
 }
 
-function llmConfigToStoredConfig(cfg: LLMConfig, completed: boolean): StoredConfig {
+function llmConfigToStoredConfig(cfg: LLMConfig, completed: boolean, base?: StoredConfig | null): StoredConfig {
   const provider =
     cfg.provider === 'lmstudio'
       ? 'lm_studio'
@@ -132,19 +132,20 @@ function llmConfigToStoredConfig(cfg: LLMConfig, completed: boolean): StoredConf
         ? 'custom_openai'
         : cfg.provider
   return {
+    ...(base ?? {}),
     provider: {
       provider: provider as Provider,
       endpointUrl: cfg.endpoint,
       apiKey: cfg.apiKey,
       modelName: cfg.model
     },
-    plugin: { activePluginName: 'default' },
+    plugin: base?.plugin ?? { activePluginName: 'default' },
     hasCompletedSetup: completed,
     schemaVersion: 2,
-    audio: defaultAudioConfig(),
-    voicePresets: [],
-    referenceAudioAssets: [],
-    activePresetByAvatarSession: {}
+    audio: base?.audio ?? defaultAudioConfig(),
+    voicePresets: base?.voicePresets ?? [],
+    referenceAudioAssets: base?.referenceAudioAssets ?? [],
+    activePresetByAvatarSession: base?.activePresetByAvatarSession ?? {}
   }
 }
 
@@ -320,9 +321,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const setLlmConfig = useCallback(async (cfg: LLMConfig) => {
     setLlmConfigState(cfg)
-    patchStatus(llmStatusFromConfig(llmConfigToStoredConfig(cfg, true)))
+    const existing = window.api?.getStoredConfig
+      ? await window.api.getStoredConfig().catch(() => null)
+      : null
+    const nextStored = llmConfigToStoredConfig(cfg, hasCompletedSetup || existing?.hasCompletedSetup === true, existing)
+    patchStatus(llmStatusFromConfig(nextStored))
     if (window.api?.saveStoredConfig) {
-      await window.api.saveStoredConfig(llmConfigToStoredConfig(cfg, hasCompletedSetup))
+      await window.api.saveStoredConfig(nextStored)
     }
   }, [hasCompletedSetup, patchStatus])
 
@@ -340,11 +345,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const completeSetup = useCallback(
     (cfg: LLMConfig) => {
-      void setLlmConfig(cfg)
-      void window.api?.saveStoredConfig?.(llmConfigToStoredConfig(cfg, true))
-      setHasCompletedSetup(true)
+      void (async () => {
+        const existing = window.api?.getStoredConfig
+          ? await window.api.getStoredConfig().catch(() => null)
+          : null
+        const nextStored = llmConfigToStoredConfig(cfg, true, existing)
+        setLlmConfigState(cfg)
+        patchStatus(llmStatusFromConfig(nextStored))
+        await window.api?.saveStoredConfig?.(nextStored)
+        setHasCompletedSetup(true)
+      })()
     },
-    [setLlmConfig]
+    [patchStatus]
   )
 
   const restartSidecarAction = useCallback(async () => {
