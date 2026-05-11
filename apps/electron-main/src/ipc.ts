@@ -595,9 +595,9 @@ export function registerIpc(window: BrowserWindow): () => void {
     return postSidecarAdminJson<VoiceInputReadiness>(
       '/admin/audio/voice-input/readiness',
       request,
-      () => voiceInputReadinessFallback('Sidecar is not ready.', 'sidecar_unavailable', permissionState),
-      (status) => voiceInputReadinessFallback(`Voice input readiness unavailable: HTTP ${status}`, 'sidecar_unavailable', permissionState),
-      () => voiceInputReadinessFallback('Voice input readiness unavailable: sidecar request failed.', 'sidecar_unavailable', permissionState)
+      () => voiceInputReadinessFallback('Voice input is waiting for the sidecar.', 'sidecar_unavailable', permissionState),
+      () => voiceInputReadinessFallback('Voice input is waiting for the sidecar.', 'sidecar_unavailable', permissionState),
+      () => voiceInputReadinessFallback('Voice input is waiting for the sidecar.', 'sidecar_unavailable', permissionState)
     )
   })
   ipcMain.handle(

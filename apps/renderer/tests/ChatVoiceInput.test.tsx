@@ -379,6 +379,30 @@ describe('Chat voice input', () => {
     expect(screen.queryByText('Voice input readiness unavailable: sidecar request failed.')).toBeNull()
   })
 
+  it('retries recoverable sidecar startup readiness when no ready event arrives', async () => {
+    const unavailable = readiness({
+      ready: false,
+      permission_state: 'unknown',
+      capture_status: 'idle',
+      blocked_reason: 'sidecar_unavailable',
+      setup_destination: 'voice_settings',
+      summary: 'Voice input readiness unavailable: sidecar request failed.'
+    })
+    installApi(sessionWithHistory(), unavailable)
+    vi.mocked(window.api.getVoiceInputReadiness)
+      .mockResolvedValueOnce(unavailable)
+      .mockResolvedValue(readiness({ summary: 'Voice input is ready.' }))
+
+    renderChat()
+
+    const mic = await screen.findByRole('button', { name: COPY.CHAT.VOICE_MIC })
+    expect(mic).toBeDisabled()
+    expect(screen.queryByText('Voice input readiness unavailable: sidecar request failed.')).toBeNull()
+
+    await waitFor(() => expect(window.api.getVoiceInputReadiness).toHaveBeenCalledTimes(2), { timeout: 2_000 })
+    await waitFor(() => expect(mic).not.toBeDisabled())
+  })
+
   it('renders preview outside chat bubbles and never commits it to history', async () => {
     renderChat()
 
