@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
-status: in_progress
-stopped_at: Phase 20 complete; ready for Phase 21 planning/execution
-last_updated: "2026-05-11T05:39:32Z"
-last_activity: 2026-05-11 - Phase 20 VAD auto-submit, conservative safety copy, final regression, and UAT evidence completed
+status: human_verification_pending
+stopped_at: Phase 20 implementation complete; live microphone UAT approval pending
+last_updated: "2026-05-11T05:50:00Z"
+last_activity: 2026-05-11 - Phase 20 automated verification passed; live PTT, VAD, and active-turn queue UAT pending
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 4
   total_plans: 27
   completed_plans: 27
   percent: 100
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon - v3.0 improves voice usability before memory/avatar identity work)
-**Current focus:** Phase 21: Code-Switch Evaluation + Hardening
+**Current focus:** Phase 20: live voice input UAT approval
 
 ## Current Position
 
-Phase: 21 of 22 (Code-Switch Evaluation + Hardening)
-Plan: Ready to plan/execute Phase 21
-Status: Phase 20 complete; v3.0 voice input implementation ready for code-switch hardening
-Last activity: 2026-05-11 - Phase 20 VAD auto-submit, conservative safety copy, final regression, and UAT evidence completed
+Phase: 20 of 22 (Renderer Voice Capture + PTT/VAD Preview UX)
+Plan: Human UAT approval pending after automated verification
+Status: Phase 20 implementation complete; verifier reported human_needed for live microphone/playback checks
+Last activity: 2026-05-11 - Phase 20 automated verification passed; live PTT, VAD, and active-turn queue UAT pending
 
-Progress: [██████████] 27/27 planned through Phase 20 complete
+Progress: [██████████] 27/27 Phase 20 plans complete; human UAT gate pending
 
 ## Performance Metrics
 
@@ -79,7 +79,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Execute Phase 21 code-switch evaluation and hardening.
+- Complete or approve Phase 20 live microphone UAT.
 
 ### Blockers/Concerns
 
@@ -114,6 +114,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-11T05:39:32Z
-Stopped at: Completed Phase 20 plan 20-04; ready for Phase 21
+Last session: 2026-05-11T05:50:00Z
+Stopped at: Completed Phase 20 implementation and automated verification; live human UAT pending
 Resume file: None
