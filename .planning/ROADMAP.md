@@ -180,7 +180,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 **Plan list**:
 - [x] 20-01-PLAN.md — Voice input contracts, Electron permission handling, preload bridge, and sidecar runtime transcription endpoint
 - [x] 20-02-PLAN.md — Renderer capture controller, PTT hotkey Settings integration, and voice input state
-- [ ] 20-03-PLAN.md — Chat PTT UI, transient preview, final text submission, and queueing
+- [x] 20-03-PLAN.md — Chat PTT UI, transient preview, final text submission, and queueing
 - [ ] 20-04-PLAN.md — VAD controls, conservative safety states, final regression, and UAT evidence
 **UI hint**: yes
 
@@ -233,7 +233,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 | 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 12/12 | Complete | 2026-05-10 |
 | 18. Rich Voice Settings + Persistence | v3.0 | 3/3 | Complete | 2026-05-10 |
 | 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 4/4 | Complete | 2026-05-10 |
-| 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 2/4 | In progress | - |
+| 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 3/4 | In progress | - |
 | 21. Code-Switch Evaluation + Hardening | v3.0 | 0/TBD | Not started | - |
 | 22. AEC Spike + No-Headphones Decision | v3.0 | 0/TBD | Not started | - |
 
@@ -253,4 +253,4 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - v3.0 excludes GPT-SoVITS installer/training/voice cloning, wake-word activation, translation before LLM submission, barge-in interruption, silent cloud STT fallback, and any promise that no-headphones/AEC is solved before Phase 22 evidence.
 
 ---
-*Last updated: 2026-05-11 after Phase 20 plan 20-02 renderer voice capture execution*
+*Last updated: 2026-05-11 after Phase 20 plan 20-03 Chat voice input execution*
