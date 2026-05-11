@@ -409,6 +409,67 @@ textarea.input { height: auto; min-height: 36px; padding: 8px 12px; resize: none
 }
 .input-row .send:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.voice-input {
+  display: grid;
+  grid-template-columns: 36px minmax(80px, auto) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 0;
+  background: var(--background);
+  border-top: 1px solid color-mix(in oklab, var(--border), transparent 60%);
+}
+.voice-input + .input-row { border-top: 0; padding-top: 8px; }
+.voice-mic {
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in oklab, var(--border), transparent 40%);
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.voice-mic[aria-pressed="true"] {
+  background: color-mix(in oklab, var(--primary), var(--background) 72%);
+  border-color: color-mix(in oklab, var(--primary), transparent 45%);
+  color: var(--primary);
+}
+.voice-mic:disabled { opacity: 0.5; cursor: not-allowed; }
+.voice-state {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+.voice-state-main { font-weight: 600; }
+.voice-state-sub {
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.voice-setup { justify-self: start; padding: 0; height: auto; }
+.voice-preview,
+.voice-error {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  border: 1px solid color-mix(in oklab, var(--border), transparent 55%);
+  background: color-mix(in oklab, var(--card), var(--background) 28%);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.voice-preview.queued {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.voice-preview.queued .btn { height: 24px; padding: 0 8px; font-size: 12px; }
+.voice-error {
+  color: var(--destructive);
+  border-color: color-mix(in oklab, var(--destructive), transparent 72%);
+  background: color-mix(in oklab, var(--destructive), var(--background) 90%);
+}
+
 /* Banner above input */
 .banner {
   margin: 0 16px 8px;

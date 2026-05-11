@@ -153,7 +153,7 @@ export function applyFinalResult(result: VoiceInputTranscriptionResult, turnInPr
     return patchVoiceInputState({
       captureStatus: 'queued',
       queuedFinalCandidate: candidate,
-      error: null
+      error: state.queuedFinalCandidate ? 'Queued voice replaced.' : null
     })
   }
   return patchVoiceInputState({
@@ -167,6 +167,23 @@ export function consumeFinalCandidate(): VoiceTranscriptCandidate | null {
   const candidate = state.finalCandidate
   if (candidate) patchVoiceInputState({ finalCandidate: null })
   return candidate
+}
+
+export function queueFinalCandidate(candidate: VoiceTranscriptCandidate, replacedMessage = 'Queued voice replaced.'): VoiceInputState {
+  return patchVoiceInputState({
+    captureStatus: 'queued',
+    finalCandidate: null,
+    queuedFinalCandidate: candidate,
+    error: state.queuedFinalCandidate ? replacedMessage : null
+  })
+}
+
+export function clearQueuedFinalCandidate(): VoiceInputState {
+  return patchVoiceInputState({
+    captureStatus: state.captureStatus === 'queued' ? 'idle' : state.captureStatus,
+    queuedFinalCandidate: null,
+    error: null
+  })
 }
 
 export function promoteQueuedFinalCandidate(): VoiceTranscriptCandidate | null {

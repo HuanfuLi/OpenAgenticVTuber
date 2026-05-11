@@ -125,6 +125,14 @@ export const Send = makeIcon(
     <polygon points="22 2 15 22 11 13 2 9 22 2" />
   </>
 )
+export const Mic = makeIcon(
+  <>
+    <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z" />
+    <path d="M5 10v2a7 7 0 0 0 14 0v-2" />
+    <path d="M12 19v3" />
+    <path d="M8 22h8" />
+  </>
+)
 export const Search = makeIcon(
   <>
     <circle cx="11" cy="11" r="7" />
@@ -163,6 +171,7 @@ export const ICONS = {
   Folder,
   Circle,
   Send,
+  Mic,
   Search,
   Wrench,
   Lock,

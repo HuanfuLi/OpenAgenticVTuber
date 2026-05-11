@@ -73,7 +73,21 @@ export const COPY = {
     GPT_SOVITS_NEXT_TURN_FALLBACK: 'GPT-SoVITS failed. Select Piper for the next turn if you want fallback audio.',
     GPT_SOVITS_OPEN_LOGS: 'Open logs for details.',
     CONTEXT_OVERFLOW:
-      "Conversation got too long and won't fit in the model anymore. Start a new chat to continue."
+      "Conversation got too long and won't fit in the model anymore. Start a new chat to continue.",
+    VOICE_MIC: 'Voice input',
+    VOICE_SETUP: 'Set up',
+    VOICE_IDLE: 'PTT',
+    VOICE_LISTENING: 'Listening',
+    VOICE_RECORDING: 'Recording',
+    VOICE_PREVIEWING: 'Preview',
+    VOICE_FINALIZING: 'Finalizing',
+    VOICE_QUEUED: 'Queued',
+    VOICE_ERROR: 'Voice input error',
+    VOICE_BLOCKED: 'Voice input is not ready.',
+    VOICE_PERMISSION_NEEDED: 'Microphone permission needed.',
+    VOICE_QUEUED_CANCEL: 'Cancel queued voice',
+    VOICE_QUEUED_PENDING: 'Queued after this turn',
+    VOICE_QUEUE_REPLACED: 'Queued voice replaced.'
   },
   HISTORY: {
     HEADER: 'History',

@@ -12,6 +12,13 @@ import { Send } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
 import { useConversationHistory } from '@/state/conversation-history'
+import {
+  clearTransientPreview,
+  consumeFinalCandidate,
+  promoteQueuedFinalCandidate,
+  queueFinalCandidate,
+  useVoiceInput
+} from '@/state/voice-input-store'
 import { send } from '@/ws/client'
 import { appendUserMessage, useWSConnected } from '@/ws/store'
 import {
@@ -20,17 +27,20 @@ import {
   useInputDisabled,
   useSpeaking
 } from './useStreamingMessages'
+import { VoiceInputControl } from './VoiceInputControl'
 
 export function Chat() {
-  const { status, banners, refreshStatus, restartSidecar, setBanners } = useStore()
+  const { status, banners, refreshStatus, restartSidecar, setBanners, setView } = useStore()
   const { activeSession } = useConversationHistory()
   const messages = useStreamingMessages()
   const streamBanner = useStreamingBanner()
   const turnInFlight = useInputDisabled()
   const isSpeaking = useSpeaking()
   const wsOpen = useWSConnected()
+  const voice = useVoiceInput()
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const inputDisabled = turnInFlight || banners.llm || !wsOpen
 
   const merged = [
     ...activeSession.messages.map((m) => ({
@@ -64,11 +74,10 @@ export function Chat() {
     }
   }, [merged.length, textKey])
 
-  const onSend = (): void => {
-    const text = input.trim()
-    if (!text) return
-    if (banners.llm || turnInFlight) return // disabled by banner or turn-in-flight
-    setInput('')
+  const submitFinalText = (rawText: string): boolean => {
+    const text = rawText.trim()
+    if (!text) return false
+    if (banners.llm || turnInFlight || !wsOpen) return false
     appendUserMessage(text, activeSession.id)
     // OLVT-shape envelope per packages/contracts/ts/ws-message.ts.
     const ok = send({
@@ -83,11 +92,60 @@ export function Chat() {
     if (!ok) {
       // WS not ready -- no-op for skeleton (the local-echo bubble is still added).
     }
+    return true
   }
+
+  const onSend = (): void => {
+    const submitted = submitFinalText(input)
+    if (submitted) setInput('')
+  }
+
+  useEffect(() => {
+    const candidate = voice.finalCandidate
+    if (!candidate) return
+    if (inputDisabled || isSpeaking) {
+      queueFinalCandidate(candidate, COPY.CHAT.VOICE_QUEUE_REPLACED)
+      return
+    }
+    const submitted = submitFinalText(candidate.transcript)
+    if (submitted) {
+      consumeFinalCandidate()
+      clearTransientPreview()
+    }
+  }, [
+    activeSession.id,
+    activeSession.messages,
+    banners.llm,
+    inputDisabled,
+    isSpeaking,
+    turnInFlight,
+    voice.finalCandidate,
+    wsOpen
+  ])
+
+  useEffect(() => {
+    if (!voice.queuedFinalCandidate || inputDisabled || isSpeaking || !wsOpen || banners.llm) return
+    const candidate = promoteQueuedFinalCandidate()
+    if (!candidate) return
+    const submitted = submitFinalText(candidate.transcript)
+    if (submitted) {
+      consumeFinalCandidate()
+      clearTransientPreview()
+    } else {
+      queueFinalCandidate(candidate, COPY.CHAT.VOICE_QUEUE_REPLACED)
+    }
+  }, [
+    activeSession.id,
+    activeSession.messages,
+    banners.llm,
+    inputDisabled,
+    isSpeaking,
+    voice.queuedFinalCandidate,
+    wsOpen
+  ])
 
   const empty = merged.length === 0
   const vtsReady = status.vts === 'green'
-  const inputDisabled = turnInFlight || banners.llm || !wsOpen
 
   return (
     <div className="view">
@@ -210,6 +268,14 @@ export function Chat() {
       )}
       {banners.tts && <div className="banner warn">{COPY.ERRORS.TTS_UNAVAILABLE}</div>}
 
+      <VoiceInputControl
+        sessionId={activeSession.id}
+        turnInProgress={Boolean(inputDisabled || isSpeaking)}
+        onOpenSetup={() => {
+          setView('settings')
+          window.location.hash = 'sec-voice-in'
+        }}
+      />
       <div className="input-row">
         <input
           className="input"
