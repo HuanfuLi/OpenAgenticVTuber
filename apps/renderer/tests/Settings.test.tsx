@@ -524,6 +524,8 @@ describe('Settings TTS section', () => {
     renderSettings()
 
     expect(await screen.findByRole('radio', { name: /FunASR/i })).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: COPY.SETTINGS.VOICE_IN_ENABLED }))
+      .toHaveAttribute('aria-checked', 'false')
     expect(await screen.findByText(COPY.SETTINGS.VOICE_IN_MODEL_CACHE)).toBeInTheDocument()
     expect(screen.getByText(/SenseVoiceSmall/)).toBeInTheDocument()
     expect(screen.getByText(COPY.SETTINGS.VOICE_IN_VAD_HELP)).toBeInTheDocument()
@@ -566,6 +568,26 @@ describe('Settings TTS section', () => {
       }))
     })
     expect(window.api.commitConversationTurn).not.toHaveBeenCalled()
+  })
+
+  it('shows an explicit voice input enable switch and saves the default visible provider', async () => {
+    renderSettings()
+
+    const enableSwitch = await screen.findByRole('switch', { name: COPY.SETTINGS.VOICE_IN_ENABLED })
+    expect(enableSwitch).toHaveAttribute('aria-checked', 'false')
+    fireEvent.click(enableSwitch)
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_SAVE }))
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
+        audio: expect.objectContaining({
+          stt: expect.objectContaining({
+            enabled: true,
+            active_provider: 'funasr'
+          })
+        })
+      }))
+    })
   })
 
   it('persists successful STT test readiness when saving voice input', async () => {

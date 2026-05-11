@@ -3,7 +3,7 @@ status: testing
 phase: 20-renderer-voice-capture-ptt-vad-preview-ux
 source: [20-VERIFICATION.md, 20-UAT.md]
 started: 2026-05-11T05:50:00Z
-updated: 2026-05-11T10:17:00Z
+updated: 2026-05-11T10:21:00Z
 ---
 
 # Phase 20 Human UAT
@@ -81,4 +81,6 @@ blocked: 0
     - "FIXED inline: Electron voice readiness fallbacks no longer emit the alarming `Voice input readiness unavailable: sidecar request failed.` text for recoverable sidecar-unavailable startup states."
     - "FIXED inline: recoverable `sidecar_unavailable` readiness now retries continuously instead of only once."
     - "FIXED inline: HTTP failures from `/admin/audio/voice-input/readiness` are now visible `unexpected_failure` readiness errors instead of being mislabeled as sidecar unavailable."
+    - "FIXED inline: Voice settings now has an explicit `Enable voice input` switch, and saving an enabled default-visible provider persists `active_provider: funasr` instead of leaving voice disabled."
+    - "FIXED inline: Settings STT test requests now use an enabled provider config so a passing test plus save can unblock Chat readiness."
   debug_session: "inline verify-work 2026-05-11"

@@ -317,6 +317,8 @@ export const COPY = {
     GPT_SOVITS_NON_LOCAL_WARNING: 'Advanced: this sends text/reference paths to a non-local GPT-SoVITS server.',
     VOICE_IN_HEADER: 'Voice in',
     VOICE_IN_HELP: 'Voice input settings are saved here. Push-to-talk is the default capture path; VAD stays opt-in.',
+    VOICE_IN_ENABLED: 'Enable voice input',
+    VOICE_IN_ENABLED_HELP: 'Required before Chat can use the microphone. Run a passing STT test, then save.',
     VOICE_IN_PROVIDER_GROUP: 'STT provider',
     VOICE_IN_INPUT_MODE: 'Input mode',
     VOICE_IN_INPUT_PUSH_TO_TALK: 'Push to talk',

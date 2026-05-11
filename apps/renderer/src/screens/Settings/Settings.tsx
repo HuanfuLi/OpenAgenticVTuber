@@ -2153,11 +2153,15 @@ function VoiceInputSection() {
     try {
       const cfg = storedCfg ?? await window.api.getStoredConfig()
       if (!cfg) return null
+      const nextSttConfig: STTProviderConfig = {
+        ...sttConfig,
+        active_provider: sttConfig.active_provider ?? activeProvider
+      }
       const nextCfg: StoredConfig = {
         ...cfg,
         audio: {
           ...cfg.audio,
-          stt: sttConfig,
+          stt: nextSttConfig,
           diagnostics: {
             ...(cfg.audio.diagnostics ?? defaultAudioConfig().diagnostics),
             redact_diagnostics: true
@@ -2185,7 +2189,11 @@ function VoiceInputSection() {
     }
     setTesting(true)
     setTestResult(null)
-    const testedConfig = sttConfig
+    const testedConfig: STTProviderConfig = {
+      ...sttConfig,
+      enabled: true,
+      active_provider: sttConfig.active_provider ?? activeProvider
+    }
     try {
       const recording = await recordSettingsTestWav().catch(() => null)
       if (!recording) {
@@ -2193,7 +2201,7 @@ function VoiceInputSection() {
         return
       }
       const result = await window.api.testSttProvider?.({
-        config: sttConfig,
+        config: testedConfig,
         audio_base64_wav: recording.audioBase64Wav,
         duration_ms: recording.durationMs,
         sample_label: 'settings-diagnostics'
@@ -2239,6 +2247,24 @@ function VoiceInputSection() {
     <section className="section" id="sec-voice-in">
       <h2>{C.VOICE_IN_HEADER}</h2>
       <div className="tx-sm muted">{C.VOICE_IN_HELP}</div>
+
+      <div className="kv-row mt-4" style={{ alignItems: 'flex-start' }}>
+        <div>
+          <div className="v">{C.VOICE_IN_ENABLED}</div>
+          <div className="tx-sm muted" style={{ marginTop: 2 }}>{C.VOICE_IN_ENABLED_HELP}</div>
+        </div>
+        <button
+          className={`switch${sttConfig.enabled ? ' on' : ''}`}
+          aria-label={C.VOICE_IN_ENABLED}
+          aria-checked={sttConfig.enabled}
+          role="switch"
+          type="button"
+          onClick={() => updateSttConfig({
+            enabled: !sttConfig.enabled,
+            active_provider: sttConfig.active_provider ?? activeProvider
+          })}
+        />
+      </div>
 
       <div className="group-label mt-4">{C.VOICE_IN_PROVIDER_GROUP}</div>
       <div className="radio-group" role="radiogroup" aria-label={C.VOICE_IN_PROVIDER_GROUP}>
