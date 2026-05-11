@@ -91,7 +91,9 @@ export function VoiceInputControl({
     voice.captureStatus !== 'queued'
   const shortcut = useMemo(() => parseShortcut(voice.settings.pttShortcut), [voice.settings.pttShortcut])
   const stateLabel = vadStatusLabel(voice.settings.vad.enabled, voice.captureStatus)
-  const blockedText = voice.error ?? voice.readiness?.summary ?? COPY.CHAT.VOICE_BLOCKED
+  const recoverableSidecarUnavailable =
+    voice.readiness?.ready === false && voice.readiness.blocked_reason === 'sidecar_unavailable'
+  const blockedText = voice.error ?? (recoverableSidecarUnavailable ? null : voice.readiness?.summary) ?? COPY.CHAT.VOICE_BLOCKED
   const needsSetup = !ready || voice.permissionState !== 'granted'
 
   useEffect(() => {
@@ -302,7 +304,7 @@ export function VoiceInputControl({
           </button>
         </div>
       )}
-      {(voice.error || !ready) && (
+      {(voice.error || (!ready && !recoverableSidecarUnavailable)) && (
         <div className="voice-error" role="note">
           {blockedText}
         </div>

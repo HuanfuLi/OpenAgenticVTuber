@@ -343,14 +343,14 @@ describe('Chat voice input', () => {
     })
   })
 
-  it('refreshes stale sidecar startup readiness after sidecar-ready and enables PTT', async () => {
+  it('hides recoverable sidecar startup readiness, then enables PTT after sidecar-ready', async () => {
     const unavailable = readiness({
       ready: false,
       permission_state: 'unknown',
       capture_status: 'idle',
       blocked_reason: 'sidecar_unavailable',
       setup_destination: 'voice_settings',
-      summary: 'Sidecar is not ready.'
+      summary: 'Voice input readiness unavailable: sidecar request failed.'
     })
     const sidecarReadyHandlers: Array<(url: string) => void> = []
     installApi(sessionWithHistory(), unavailable)
@@ -366,7 +366,7 @@ describe('Chat voice input', () => {
 
     const mic = await screen.findByRole('button', { name: COPY.CHAT.VOICE_MIC })
     expect(mic).toBeDisabled()
-    expect(screen.getByText('Sidecar is not ready.')).toBeInTheDocument()
+    expect(screen.queryByText('Voice input readiness unavailable: sidecar request failed.')).toBeNull()
 
     await waitFor(() => expect(sidecarReadyHandlers.length).toBeGreaterThan(1))
     act(() => {
@@ -376,7 +376,7 @@ describe('Chat voice input', () => {
     await waitFor(() => expect(window.api.getVoiceInputReadiness).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(getVoiceInputState().readiness?.ready).toBe(true))
     await waitFor(() => expect(mic).not.toBeDisabled())
-    expect(screen.queryByText('Sidecar is not ready.')).toBeNull()
+    expect(screen.queryByText('Voice input readiness unavailable: sidecar request failed.')).toBeNull()
   })
 
   it('renders preview outside chat bubbles and never commits it to history', async () => {
