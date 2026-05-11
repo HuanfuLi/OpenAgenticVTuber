@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
 status: in_progress
-stopped_at: Phase 20 plan 20-01 complete; ready for 20-02
-last_updated: "2026-05-11T05:01:21Z"
-last_activity: 2026-05-11 - Phase 20 voice input contracts, Electron permission bridge, and sidecar runtime transcription endpoint completed
+stopped_at: Phase 20 plan 20-02 complete; ready for 20-03
+last_updated: "2026-05-11T05:16:21Z"
+last_activity: 2026-05-11 - Phase 20 renderer voice capture controller, state store, PTT hotkey settings, and VAD settings completed
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 27
-  completed_plans: 24
-  percent: 89
+  completed_plans: 25
+  percent: 93
 ---
 
 # Project State
@@ -26,19 +26,19 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 20 of 22 (Renderer Voice Capture + PTT/VAD Preview UX)
-Plan: Ready to execute Phase 20 plan 20-02
+Plan: Ready to execute Phase 20 plan 20-03
 Status: Phase 20 in progress
-Last activity: 2026-05-11 - Phase 20 voice input contracts, Electron permission bridge, and sidecar runtime transcription endpoint completed
+Last activity: 2026-05-11 - Phase 20 renderer voice capture controller, state store, PTT hotkey settings, and VAD settings completed
 
-Progress: [█████████░] 24/27 planned v3.0 plans complete
+Progress: [█████████░] 25/27 planned v3.0 plans complete
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed in v3.0: 20
+- Total plans completed in v3.0: 21
 - Average duration: 10 min
-- Total execution time: 129 min
+- Total execution time: 144 min
 
 **By Phase:**
 
@@ -48,7 +48,7 @@ Progress: [█████████░] 24/27 planned v3.0 plans complete
 | 17. GPT-SoVITS Provider + Voice Presets | 12/12 | 117 min | 10 min |
 | 18. Rich Voice Settings + Persistence | 3/3 | same-session | same-session |
 | 19. STT Provider Abstraction + Local/Cloud Providers | 4/4 | same-session | same-session |
-| 20. Renderer Voice Capture + PTT/VAD Preview UX | 1/4 | 12 min | 12 min |
+| 20. Renderer Voice Capture + PTT/VAD Preview UX | 2/4 | 27 min | 14 min |
 | 21. Code-Switch Evaluation + Hardening | 0/4 | - | - |
 | 22. AEC Spike + No-Headphones Decision | 0/TBD | - | - |
 
@@ -74,10 +74,11 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 17 plan 17-10 aligned GPT-SoVITS returned PCM, renderer WAV payloads, and RMS envelopes to the output stream sample rate.
 - Phase 17 plan 17-11 added per-preset GPT/SoVITS weight paths and independent synthesized Text language validation.
 - Phase 17 plan 17-12 decoupled websocket audio delivery from sidecar playback, queued renderer audio playback, and damped GPT-SoVITS mouth motion.
+- Phase 20 plan 20-02 keeps PTT/VAD UI preferences in renderer-local audio settings to avoid changing generated STT provider contracts; preview transcripts remain transient and Chat submission remains 20-03 scope.
 
 ### Pending Todos
 
-- Execute Phase 20 plans 20-02 through 20-04.
+- Execute Phase 20 plans 20-03 through 20-04.
 
 ### Blockers/Concerns
 
@@ -98,6 +99,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 19 plans 19-02 and 19-03 added lazy local/cloud STT adapters, local model cache prepare/remove/status, provider-specific cloud consent/credential gates, and readiness-gated test transcription.
 - Phase 19 plan 19-04 added Electron STT model-cache bridges, Settings cache/test controls, and a Settings-only microphone recorder path without chat submission.
 - Phase 20 plan 20-01 added runtime voice input contracts, narrow Electron microphone permission handling, preload IPC, and readiness-gated sidecar runtime transcription using the selected Phase 19 STT provider only.
+- Phase 20 plan 20-02 added renderer microphone capture, sequence-gated preview transcription state, one queued final slot, Settings-only PTT shortcut configuration, and disabled-by-default conservative VAD settings.
 
 ## Deferred Items
 
@@ -109,6 +111,6 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session Continuity
 
-Last session: 2026-05-11T05:01:21Z
-Stopped at: Completed Phase 20 plan 20-01; ready for 20-02
+Last session: 2026-05-11T05:16:21Z
+Stopped at: Completed Phase 20 plan 20-02; ready for 20-03
 Resume file: None

@@ -42,10 +42,10 @@ v3.0 turns the app from text-first chat with Piper output into a configurable vo
 
 ### Voice Input UX
 
-- [ ] **VIN-01**: User can grant microphone permission and see the current microphone/listening state.
-- [ ] **VIN-02**: User can use push-to-talk voice input to record an utterance, preview transcription chunks, and submit only the final transcript.
-- [ ] **VIN-03**: User can enable VAD auto-submit with visible sensitivity and silence-timeout controls.
-- [ ] **VIN-04**: User sees recording/preview/finalizing/error states that distinguish preview text from submitted chat text.
+- [ ] **VIN-01**: User can grant microphone permission and see the current microphone/listening state. *(20-02 added renderer readiness/capture state foundation; Chat-visible UI completes in 20-03.)*
+- [ ] **VIN-02**: User can use push-to-talk voice input to record an utterance, preview transcription chunks, and submit only the final transcript. *(20-02 added capture and preview/final state; Chat submission completes in 20-03.)*
+- [ ] **VIN-03**: User can enable VAD auto-submit with visible sensitivity and silence-timeout controls. *(20-02 added Settings controls; auto-submit execution completes in 20-04.)*
+- [ ] **VIN-04**: User sees recording/preview/finalizing/error states that distinguish preview text from submitted chat text. *(20-02 added renderer states; Chat-visible rendering completes in 20-03.)*
 - [ ] **VIN-05**: Final STT text enters the existing chat pipeline unchanged, preserving conversation history semantics and applying no translation.
 - [ ] **VIN-06**: User speech captured while a turn is in progress is queued safely rather than corrupting active TTS/playback state.
 
@@ -158,4 +158,4 @@ Populated by the roadmapper during ROADMAP.md creation.
 
 ---
 *Requirements defined: 2026-05-09*  
-*Last updated: 2026-05-10 after Phase 17 plan 17-08 gap closure*
+*Last updated: 2026-05-11 after Phase 20 plan 20-02 renderer voice capture execution*
