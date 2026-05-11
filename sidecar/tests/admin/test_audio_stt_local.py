@@ -67,7 +67,9 @@ def test_local_stt_success_marks_readiness(tmp_path, monkeypatch) -> None:
 
     monkeypatch.setitem(sys.modules, "funasr", SimpleNamespace(AutoModel=_AutoModel))
     with _client() as client:
-        client.post("/admin/audio/stt/models/download", json={"provider_id": "funasr", "model_id": "iic/SenseVoiceSmall"})
+        model_path = tmp_path / "stt-models" / "funasr" / "iic__SenseVoiceSmall"
+        model_path.mkdir(parents=True)
+        (model_path / "model.bin").write_bytes(b"model")
         payload = {
             "config": {
                 "enabled": True,
@@ -103,3 +105,49 @@ def test_local_stt_success_marks_readiness(tmp_path, monkeypatch) -> None:
     assert body["transcript"] == "ready transcript"
     assert body["readiness"]["active_allowed"] is True
 
+
+def test_stt_model_download_reports_manual_setup_without_fake_success(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AGENTICLLMVTUBER_USER_DATA", str(tmp_path))
+
+    with _client() as client:
+        body = client.post(
+            "/admin/audio/stt/models/download",
+            json={"provider_id": "funasr", "model_id": "iic/SenseVoiceSmall"},
+        ).json()
+        catalog = client.post(
+            "/admin/audio/stt/models",
+            json={
+                "config": {
+                    "enabled": True,
+                    "active_provider": "funasr",
+                    "input_mode": "push_to_talk",
+                    "language_mode": "auto",
+                    "local_model_id": "iic/SenseVoiceSmall",
+                    "local_model_path_override": None,
+                    "cache_root": None,
+                    "readiness": {
+                        "health_check_passed": False,
+                        "test_transcription_passed": False,
+                        "last_health_checked_at": None,
+                        "last_test_transcription_at": None,
+                        "fingerprint": None,
+                        "active_allowed": False,
+                        "invalidation_reason": "never_tested",
+                    },
+                    "capture_timeout_ms": 30000,
+                    "execution": "off_event_loop",
+                    "cloud": {
+                        "openai": {"provider_id": "openai", "consent_granted": False, "api_key": None, "endpoint_url": None, "model_name": None},
+                        "groq": {"provider_id": "groq", "consent_granted": False, "api_key": None, "endpoint_url": None, "model_name": None},
+                    },
+                },
+                "audio_base64_wav": None,
+                "duration_ms": None,
+                "sample_label": "settings",
+            },
+        ).json()
+
+    assert body["ok"] is False
+    assert body["status"] == "manual_path_required"
+    assert "Automatic STT model download is not implemented" in body["summary"]
+    assert catalog["models"][0]["status"] == "not_downloaded"

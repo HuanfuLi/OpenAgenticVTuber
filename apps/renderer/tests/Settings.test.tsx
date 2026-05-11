@@ -332,11 +332,11 @@ describe('Settings TTS section', () => {
           ]
         }),
         downloadSttModel: vi.fn().mockResolvedValue({
-          ok: true,
+          ok: false,
           provider_id: 'funasr',
           model_id: 'iic/SenseVoiceSmall',
-          status: 'downloaded',
-          summary: 'Model cache entry prepared in app-managed storage.',
+          status: 'manual_path_required',
+          summary: 'Automatic STT model download is not implemented yet. Place real model files in the app-managed cache or configure a local model path.',
           cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/funasr/iic__SenseVoiceSmall'
         }),
         removeSttModel: vi.fn().mockResolvedValue({
@@ -526,11 +526,26 @@ describe('Settings TTS section', () => {
     expect(await screen.findByRole('radio', { name: /FunASR/i })).toBeInTheDocument()
     expect(await screen.findByText(COPY.SETTINGS.VOICE_IN_MODEL_CACHE)).toBeInTheDocument()
     expect(screen.getByText(/SenseVoiceSmall/)).toBeInTheDocument()
+    expect(screen.getByText(COPY.SETTINGS.VOICE_IN_VAD_HELP)).toBeInTheDocument()
     fireEvent.click(await screen.findByRole('radio', { name: /OpenAI STT/i }))
 
     expect(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_CLOUD_CONSENT)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_RECORD_TEST })).toBeDisabled()
     expect(screen.getByText(COPY.SETTINGS.VOICE_IN_TEST_BLOCKED)).toBeInTheDocument()
+  })
+
+  it('does not present STT model download as an instant success', async () => {
+    renderSettings()
+
+    expect(await screen.findByText(COPY.SETTINGS.VOICE_IN_MODEL_CACHE)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_MODEL_DOWNLOAD }))
+
+    expect(await screen.findByText(/Automatic STT model download is not implemented yet/)).toBeInTheDocument()
+    expect(window.api.downloadSttModel).toHaveBeenCalledWith({
+      provider_id: 'funasr',
+      model_id: 'iic/SenseVoiceSmall'
+    })
+    expect(screen.queryByText('Model cache entry prepared in app-managed storage.')).toBeNull()
   })
 
   it('saves voice input settings without committing a conversation turn', async () => {

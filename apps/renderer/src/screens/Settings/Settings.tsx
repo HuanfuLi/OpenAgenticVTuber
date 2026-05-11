@@ -2349,6 +2349,7 @@ function VoiceInputSection() {
               <div>
                 <div className="semibold">{C.VOICE_IN_MODEL_CACHE}</div>
                 <div className="tx-sm muted">{selectedModel.display_name} · {selectedModel.status} · {selectedModel.size_label ?? 'size unknown'}</div>
+                <div className="tx-sm muted">{selectedModel.summary}</div>
                 <div className="tx-sm muted">{modelCatalog?.cache_root_display}</div>
               </div>
               <div className="row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

@@ -207,6 +207,8 @@ def _local_model_status(request: Request, config: STTProviderConfig) -> str:
     provider_id = config.active_provider
     if provider_id not in {"funasr", "faster_whisper"}:
         return "downloaded"
+    if config.local_model_path_override:
+        return STTModelCache.model_status_for_path(config.local_model_path_override)
     model_id = config.local_model_id or ("iic/SenseVoiceSmall" if provider_id == "funasr" else "small")
     catalog = _stt_model_cache(request, config).catalog()
     model = next((item for item in catalog.models if item.provider_id == provider_id and item.model_id == model_id), None)
@@ -630,7 +632,7 @@ async def post_stt_models(request: Request, payload: STTTestRequest) -> dict[str
 
 @router.post("/stt/models/download")
 async def post_stt_model_download(request: Request, payload: STTModelCacheOperationRequest) -> dict[str, object]:
-    return _stt_model_cache(request).download_placeholder(payload.provider_id, payload.model_id).model_dump()
+    return _stt_model_cache(request).download_unavailable(payload.provider_id, payload.model_id).model_dump()
 
 
 @router.post("/stt/models/remove")

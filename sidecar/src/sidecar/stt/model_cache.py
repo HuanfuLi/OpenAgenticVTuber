@@ -6,6 +6,11 @@ from pathlib import Path
 
 from contracts import STTModelCacheCatalog, STTModelCacheOperationResult, STTModelCatalogEntry
 
+MODEL_CACHE_MARKER = ".agenticllmvtuber-model-cache.json"
+DOWNLOAD_UNAVAILABLE_SUMMARY = (
+    "Automatic STT model download is not implemented yet. Place real model files in the "
+    "app-managed cache or configure a local model path."
+)
 
 LOCAL_MODEL_DEFINITIONS = [
     {
@@ -43,11 +48,37 @@ class STTModelCache:
         except ValueError:
             return False
 
+    @staticmethod
+    def has_model_contents(path: str | Path | None) -> bool:
+        if path is None:
+            return False
+        candidate = Path(path)
+        if not candidate.exists():
+            return False
+        if candidate.is_file():
+            return candidate.name != MODEL_CACHE_MARKER and candidate.stat().st_size > 0
+        if not candidate.is_dir():
+            return False
+        for child in candidate.rglob("*"):
+            if child.is_file() and child.name != MODEL_CACHE_MARKER and child.stat().st_size > 0:
+                return True
+        return False
+
+    @staticmethod
+    def model_status_for_path(path: str | Path | None) -> str:
+        if path is None:
+            return "missing"
+        candidate = Path(path)
+        if not candidate.exists():
+            return "missing"
+        return "downloaded" if STTModelCache.has_model_contents(candidate) else "incomplete"
+
     def catalog(self) -> STTModelCacheCatalog:
         models: list[STTModelCatalogEntry] = []
         for definition in LOCAL_MODEL_DEFINITIONS:
             path = self.model_path(definition["provider_id"], definition["model_id"])
             exists = path.exists()
+            status = self.model_status_for_path(path) if exists else "not_downloaded"
             models.append(
                 STTModelCatalogEntry(
                     provider_id=definition["provider_id"],
@@ -56,12 +87,18 @@ class STTModelCache:
                     source_label=definition["source_label"],
                     size_label=definition["size_label"],
                     cache_path_display=str(path),
-                    status="downloaded" if exists else "not_downloaded",
+                    status=status,
                     app_managed=True,
                     removable=exists,
                     loaded=False,
                     recommended=definition["recommended"],
-                    summary="Model is present in the app-managed cache." if exists else "Model has not been downloaded.",
+                    summary=(
+                        "Model is present in the app-managed cache."
+                        if status == "downloaded"
+                        else "Model cache entry exists but does not contain usable model files."
+                        if status == "incomplete"
+                        else "Model has not been downloaded."
+                    ),
                 )
             )
         return STTModelCacheCatalog(cache_root_display=str(self.cache_root), models=models)
@@ -99,18 +136,13 @@ class STTModelCache:
             cache_path_display=str(path),
         )
 
-    def download_placeholder(self, provider_id: str, model_id: str) -> STTModelCacheOperationResult:
+    def download_unavailable(self, provider_id: str, model_id: str) -> STTModelCacheOperationResult:
         path = self.model_path(provider_id, model_id)
-        path.mkdir(parents=True, exist_ok=True)
-        (path / ".agenticllmvtuber-model-cache.json").write_text(
-            '{"status":"downloaded","note":"provider-specific download placeholder"}',
-            encoding="utf-8",
-        )
         return STTModelCacheOperationResult(
-            ok=True,
+            ok=False,
             provider_id=provider_id,
             model_id=model_id,
-            status="downloaded",
-            summary="Model cache entry prepared in app-managed storage.",
+            status="manual_path_required",
+            summary=DOWNLOAD_UNAVAILABLE_SUMMARY,
             cache_path_display=str(path),
         )

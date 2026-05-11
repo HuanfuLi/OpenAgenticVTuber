@@ -16,17 +16,21 @@
 | VIN-05 final transcript submitted unchanged through `text-input` | `npm --workspace apps/renderer run test -- --run ChatVoiceInput` | PASS |
 | VIN-06 active turn queueing without playback interruption | `npm --workspace apps/renderer run test -- --run ChatVoiceInput`; `npm --workspace apps/renderer run test -- --run ChatStreaming` | PASS |
 | No wake word, no barge-in cancellation, no no-headphones/AEC claim | VAD tests assert no wake-word surface; copy scan shows only Phase 22 deferral/no-headphones warning | PASS |
+| GAP-20-01/03 readiness recovery and stale Chat error clearing | `npm --workspace apps/renderer run test -- --run voice-input-store`; `npm --workspace apps/renderer run test -- --run ChatVoiceInput` | PASS |
+| GAP-20-02 successful STT test readiness persists on save | `npm --workspace apps/renderer run test -- --run Settings` | PASS |
+| GAP-20-04 fake model download removed | `cd sidecar; uv run pytest tests/admin/test_audio_stt_local.py tests/admin/test_audio_voice_input_endpoint.py tests/stt -q`; `npm --workspace apps/renderer run test -- --run Settings` | PASS |
+| GAP-20-05 VAD copy separated from STT model cache | `npm --workspace apps/renderer run test -- --run Settings`; renderer copy inspection | PASS |
 
 ## Required Regression Results
 
 - `npm --workspace apps/renderer run test -- --run voice-capture` - PASS, 5 tests.
 - `npm --workspace apps/renderer run test -- --run vad-controller` - PASS, 7 tests.
-- `npm --workspace apps/renderer run test -- --run ChatVoiceInput` - PASS, 13 tests.
+- `npm --workspace apps/renderer run test -- --run ChatVoiceInput` - PASS, 14 tests.
 - `npm --workspace apps/renderer run test -- --run ChatStreaming` - PASS, 8 tests.
-- `npm --workspace apps/renderer run test -- --run Settings` - PASS, 61 tests.
+- `npm --workspace apps/renderer run test -- --run Settings` - PASS, 63 tests.
 - `npm --workspace apps/renderer run typecheck` - PASS.
 - `npm --workspace apps/electron-main run build` - PASS.
-- `cd sidecar; uv run pytest tests/admin/test_audio_voice_input_endpoint.py tests/stt -q` - PASS, 15 tests.
+- `cd sidecar; uv run pytest tests/admin/test_audio_stt_local.py tests/admin/test_audio_voice_input_endpoint.py tests/stt -q` - PASS, 20 tests.
 
 ## Manual Checks
 
@@ -40,7 +44,11 @@
 | UAT-20-06 | Preview isolation | Speak with PTT or VAD and inspect chat history before finalization. | Preview text is absent from conversation history and chat bubbles. | PENDING - requires live microphone/STT |
 | UAT-20-07 | Final text unchanged | Submit Chinese, English, and mixed Chinese/English utterances. | Final text enters chat unchanged; no translation or language normalization is applied. | PENDING - requires live microphone/STT |
 | UAT-20-08 | Active-turn queueing | Start a Teto reply/speaking state, then capture speech with PTT or VAD. | Voice final transcript queues until active turn/speaking clears; playback is not canceled or interrupted. | PENDING - requires live app playback |
-| UAT-20-09 | No AEC/no-headphones claim | Inspect Chat and Settings copy. | Copy says to keep headphones on and states no-headphones echo handling is deferred to Phase 22; no AEC success claim appears. | PASS automated copy inspection; live visual confirmation pending |
+| UAT-20-09 | No AEC/no-headphones claim | Inspect Chat and Settings copy. | Copy states no-headphones echo handling is deferred to Phase 22; no AEC success claim appears. | PASS automated copy inspection; live visual confirmation pending |
+| UAT-20-10 | Startup sidecar readiness recovery | Launch app before sidecar is ready, wait for sidecar-ready/reconnect. | Any startup `Sidecar is not ready.` message clears after fresh ready response; PTT enables if STT readiness and permission are valid. | PASS automated regression; live confirmation pending |
+| UAT-20-11 | STT test + save enables Chat PTT | In Settings, run a successful STT test, save Voice settings, then return to Chat. | Chat refreshes readiness and does not keep stale `Voice input is disabled in Voice settings.` text. | PASS automated regression; live confirmation pending |
+| UAT-20-12 | Truthful STT model cache action | In Settings, inspect local STT model cache and click the model action. | UI does not claim instant model download; it reports automatic download unavailable/manual setup until real model files exist. | PASS automated regression; live confirmation pending |
+| UAT-20-13 | VAD/model copy separation | Inspect Voice settings VAD and STT model cache areas. | VAD copy says browser volume/silence detection with no VAD model; STT cache is labeled separately. | PASS automated regression; live visual confirmation pending |
 
 ## Notes
 
