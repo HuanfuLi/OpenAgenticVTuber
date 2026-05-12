@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+from io import BytesIO
 import time
 
 from contracts import AudioProviderHealth, STTProviderConfig
@@ -56,7 +57,7 @@ class FasterWhisperSTTProvider:
         started = time.perf_counter()
         try:
             segments, info = self._model.transcribe(
-                request.audio_bytes,
+                BytesIO(request.audio_bytes),
                 language=None if request.language_mode == "auto" else request.language_mode,
                 condition_on_previous_text=False,
             )

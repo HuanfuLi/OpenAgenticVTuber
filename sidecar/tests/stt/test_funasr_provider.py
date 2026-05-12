@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 from contracts import STTProviderConfig
@@ -14,13 +15,17 @@ def test_funasr_provider_lazy_import_and_fake_transcription(monkeypatch) -> None
     provider = FunASRSTTProvider(cfg)
     assert "funasr" not in sys.modules
     constructor_calls: list[dict] = []
+    generate_inputs: list[str] = []
 
     class _AutoModel:
         def __init__(self, **kwargs) -> None:
             constructor_calls.append(kwargs)
             self.kwargs = kwargs
 
-        def generate(self, **_kwargs):
+        def generate(self, **kwargs):
+            path = str(kwargs["input"])
+            generate_inputs.append(path)
+            assert Path(path).read_bytes() == b"wav"
             return [{"text": "你好 hello"}]
 
     monkeypatch.setitem(sys.modules, "funasr", SimpleNamespace(AutoModel=_AutoModel))
@@ -29,3 +34,5 @@ def test_funasr_provider_lazy_import_and_fake_transcription(monkeypatch) -> None
     assert result.text == "你好 hello"
     assert result.provider_id == "funasr"
     assert constructor_calls[0]["model"] == "C:/cache/funasr"
+    assert generate_inputs
+    assert not Path(generate_inputs[0]).exists()

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib
+import tempfile
 import time
+from pathlib import Path
 
 from contracts import AudioProviderHealth, STTProviderConfig
 from sidecar.stt.provider import STTProviderError, STTRequest, STTResult
@@ -75,8 +77,12 @@ class FunASRSTTProvider:
             )
         self.ensure_loaded()
         started = time.perf_counter()
+        audio_path: Path | None = None
         try:
-            generated = self._model.generate(input=request.audio_bytes, language=request.language_mode)
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as audio_file:
+                audio_file.write(request.audio_bytes)
+                audio_path = Path(audio_file.name)
+            generated = self._model.generate(input=str(audio_path), language=request.language_mode)
         except Exception as exc:
             raise STTProviderError(
                 provider_id=self.provider_id,
@@ -85,6 +91,9 @@ class FunASRSTTProvider:
                 retryable=True,
                 redacted_diagnostics={"error_type": type(exc).__name__},
             ) from exc
+        finally:
+            if audio_path is not None:
+                audio_path.unlink(missing_ok=True)
         text = _extract_text(generated)
         if not text:
             raise STTProviderError(
