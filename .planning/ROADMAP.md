@@ -65,7 +65,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - [x] **Phase 17: GPT-SoVITS Provider + Voice Presets** - GPT-SoVITS external/app-launched provider, test synthesis, reference audio, named presets, visible failed-audio chat/UAT evidence, and GPT-SoVITS gap closures through plan 17-12.
 - [x] **Phase 18: Rich Voice Settings + Persistence** - User-facing audio settings, provider catalog labels, privacy copy, credential redaction, and diagnostics.
 - [ ] **Phase 19: STT Provider Abstraction + Local/Cloud Providers** - FunASR, faster-whisper, OpenAI, and Groq through one lazy-loaded STT provider layer. Automated implementation and gap closures complete; live local/cloud provider UAT pending.
-- [ ] **Phase 20: Renderer Voice Capture + PTT/VAD Preview UX** - Microphone capture, push-to-talk, VAD controls, transcript preview, and final-text submission through the existing chat path. Implementation and gap closures complete; live microphone/STT UAT pending acceptance.
+- [ ] **Phase 20: Renderer Voice Capture + PTT/VAD Preview UX** - Microphone capture, push-to-talk, VAD controls, transcript preview, and final-text submission through the existing chat path. Integration gap plan 20-07 is ready after Phase 19/20 audit found stale download copy, model-readiness invalidation, cache-root, and preview chunk issues.
 - [ ] **Phase 21: Code-Switch Evaluation + Hardening** - Locked bilingual eval corpus, provider scorecard, no-translation checks, and evidence-backed provider copy.
 - [ ] **Phase 22: AEC Spike + No-Headphones Decision** - Browser/WebRTC AEC prototype, self-speech suppression, conservative VAD defaults, and truthful no-headphones status.
 
@@ -180,7 +180,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
   3. User can enable VAD auto-submit with visible sensitivity and silence-timeout controls.
   4. Preview text never appears in conversation history; only final STT text enters the existing chat pipeline unchanged with no translation.
   5. Speech captured while a turn is in progress queues safely instead of corrupting active TTS/playback state.
-**Plans**: 4
+**Plans**: 7
 **Plan list**:
 - [x] 20-01-PLAN.md — Voice input contracts, Electron permission handling, preload bridge, and sidecar runtime transcription endpoint
 - [x] 20-02-PLAN.md — Renderer capture controller, PTT hotkey Settings integration, and voice input state
@@ -188,6 +188,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - [x] 20-04-PLAN.md — VAD controls, conservative safety states, final regression, and UAT evidence
 - [x] 20-05-PLAN.md — Gap closure: readiness recovery, Settings STT readiness persistence, and stale Chat voice error clearing
 - [x] 20-06-PLAN.md — Gap closure: truthful STT model cache behavior and VAD/model copy separation
+- [ ] 20-07-PLAN.md — Gap closure: Phase 19/20 STT runtime integration fixes
 **UI hint**: yes
 
 ### Phase 21: Code-Switch Evaluation + Hardening
@@ -239,7 +240,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 | 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 12/12 | Complete | 2026-05-10 |
 | 18. Rich Voice Settings + Persistence | v3.0 | 3/3 | Complete | 2026-05-10 |
 | 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 6/6 | Live provider UAT pending | - |
-| 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 6/6 | Live UAT pending | - |
+| 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 6/7 | Integration gap planned | - |
 | 21. Code-Switch Evaluation + Hardening | v3.0 | 0/TBD | Not started | - |
 | 22. AEC Spike + No-Headphones Decision | v3.0 | 0/TBD | Not started | - |
 
@@ -259,4 +260,4 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - v3.0 excludes GPT-SoVITS installer/training/voice cloning, wake-word activation, translation before LLM submission, barge-in interruption, silent cloud STT fallback, and any promise that no-headphones/AEC is solved before Phase 22 evidence.
 
 ---
-*Last updated: 2026-05-12 after Phase 19 gap-closure execution 19-05 and 19-06*
+*Last updated: 2026-05-12 after Phase 20 integration gap plan 20-07*

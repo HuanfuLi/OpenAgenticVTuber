@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
-status: phase_19_gap_closure_automated_complete_live_uat_pending
-stopped_at: Phase 19 gap closure implementation complete; live local/cloud provider UAT pending before resuming Phase 20 live microphone/STT UAT
-last_updated: "2026-05-12T05:20:00Z"
-last_activity: 2026-05-12 - Phase 19 gap closures implemented real explicit local STT downloads, cache-path provider binding, valid WAV Settings tests, coherent readiness, off-event-loop provider work, and cloud language propagation
+status: phase_20_integration_gap_planned
+stopped_at: Phase 20 integration gap plan 20-07 ready; execute before resuming live microphone/STT UAT
+last_updated: "2026-05-12T05:58:00Z"
+last_activity: 2026-05-12 - Phase 19/20 integration audit planned gap closure for stale download copy, missing-model readiness invalidation, cache-root-aware model operations, and robust preview chunk encoding
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 31
+  total_plans: 32
   completed_plans: 31
-  percent: 100
+  percent: 97
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon - v3.0 improves voice usability before memory/avatar identity work)
-**Current focus:** Phase 19: live STT provider acceptance
+**Current focus:** Phase 20: STT runtime integration gap closure
 
 ## Current Position
 
-Phase: 19 of 22 (STT Provider Abstraction + Local/Cloud Providers)
-Plan: 19-05 and 19-06 implemented
-Status: Phase 19 automated gap closure complete; live local/cloud provider UAT pending
-Last activity: 2026-05-12 - Phase 19 gap closures implemented real explicit local STT downloads, cache-path provider binding, valid WAV Settings tests, coherent readiness, off-event-loop provider work, and cloud language propagation
+Phase: 20 of 22 (Renderer Voice Capture + PTT/VAD Preview UX)
+Plan: 20-07 ready
+Status: Phase 20 integration gap planned
+Last activity: 2026-05-12 - Phase 19/20 integration audit planned gap closure for stale download copy, missing-model readiness invalidation, cache-root-aware model operations, and robust preview chunk encoding
 
-Progress: [██████████] 31/31 currently planned v3.0 plans complete; Phase 19/20 live STT UAT pending
+Progress: [█████████░] 31/32 currently planned v3.0 plans complete; Phase 20 integration gap pending
 
 ## Performance Metrics
 
@@ -48,7 +48,7 @@ Progress: [██████████] 31/31 currently planned v3.0 plans co
 | 17. GPT-SoVITS Provider + Voice Presets | 12/12 | 117 min | 10 min |
 | 18. Rich Voice Settings + Persistence | 3/3 | same-session | same-session |
 | 19. STT Provider Abstraction + Local/Cloud Providers | 6/6 | same-session | same-session |
-| 20. Renderer Voice Capture + PTT/VAD Preview UX | 6/6 | 55 min | 9 min |
+| 20. Renderer Voice Capture + PTT/VAD Preview UX | 6/7 | 55 min | 9 min |
 | 21. Code-Switch Evaluation + Hardening | 0/4 | - | - |
 | 22. AEC Spike + No-Headphones Decision | 0/TBD | - | - |
 
@@ -80,9 +80,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Run Phase 19 live local-provider download and Settings transcription acceptance.
+- Execute Phase 20 integration gap plan 20-07.
+- Then run Phase 19 live local-provider download and Settings transcription acceptance.
 - Run Phase 19 live cloud-provider Settings transcription if credentials are available.
-- Run Phase 20 live microphone/STT UAT after Phase 19 live provider acceptance or explicit waiver.
+- Run Phase 20 live microphone/STT UAT after Phase 20 integration gap and Phase 19 live provider acceptance or explicit waiver.
 
 ### Blockers/Concerns
 
@@ -108,6 +109,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 20 plan 20-03 added Chat-visible PTT mic controls, transient preview outside bubbles, unchanged final transcript submission through the existing text-input path, and one queued final transcript during active turns without barge-in.
 - Phase 20 plan 20-04 added opt-in conservative VAD auto-submit, VAD state/safety copy, final regression evidence, and UAT tracking without wake word, barge-in, or AEC/no-headphones claims.
 - Phase 20 gap review found stale sidecar-unavailable readiness, missing STT readiness persistence after Settings test, stale Chat readiness after config save, placeholder model-cache download, and unclear STT-model vs VAD copy.
+- Phase 20 integration audit after Phase 19 gap closure found stale Settings download copy, Chat readiness that can stay active after local model removal, model download/remove cache-root mismatch, and preview transcription that assumes standalone MediaRecorder chunks are decodable. Plan 20-07 is ready to execute those fixes.
 
 ## Deferred Items
 
