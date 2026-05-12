@@ -654,6 +654,69 @@ describe('Settings TTS section', () => {
     })
   })
 
+  it('persists missing-model invalidation when removing a local STT model', async () => {
+    const readyGate: STTProviderReadiness = {
+      health_check_passed: true,
+      test_transcription_passed: true,
+      last_health_checked_at: '2026-05-11T06:00:00Z',
+      last_test_transcription_at: '2026-05-11T06:00:01Z',
+      fingerprint: 'tested-fingerprint',
+      active_allowed: true,
+      invalidation_reason: 'ready'
+    }
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      audio: {
+        ...storedConfig.audio,
+        stt: {
+          ...storedConfig.audio.stt,
+          enabled: true,
+          active_provider: 'funasr',
+          readiness: readyGate
+        }
+      }
+    })
+    vi.mocked(window.api.getSttModels).mockResolvedValue({
+      cache_root_display: 'C:/AgenticLLMVTuberTest/stt-models',
+      models: [
+        {
+          provider_id: 'funasr',
+          model_id: 'iic/SenseVoiceSmall',
+          display_name: 'SenseVoiceSmall',
+          source_label: 'ModelScope',
+          size_label: 'approximately 1 GB',
+          size_bytes: null,
+          cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/funasr/iic__SenseVoiceSmall',
+          status: 'downloaded',
+          app_managed: true,
+          removable: true,
+          loaded: false,
+          recommended: true,
+          summary: 'Model is present in the app-managed cache.'
+        }
+      ]
+    })
+    renderSettings()
+
+    fireEvent.click(await screen.findByRole('button', { name: COPY.SETTINGS.VOICE_IN_MODEL_REMOVE }))
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
+        audio: expect.objectContaining({
+          stt: expect.objectContaining({
+            active_provider: 'funasr',
+            readiness: expect.objectContaining({
+              active_allowed: false,
+              health_check_passed: false,
+              test_transcription_passed: false,
+              invalidation_reason: 'missing_model'
+            })
+          })
+        })
+      }))
+    })
+  })
+
   it('saves push-to-talk shortcut and conservative VAD settings through Settings', async () => {
     renderSettings()
 

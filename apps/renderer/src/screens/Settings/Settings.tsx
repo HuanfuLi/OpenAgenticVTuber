@@ -2268,17 +2268,19 @@ function VoiceInputSection() {
       cache_root: sttConfig.cache_root ?? null
     })
     if (result?.ok) {
-      setSttConfig((cur) => ({
-        ...cur,
+      const invalidatedConfig: STTProviderConfig = {
+        ...sttConfig,
         readiness: {
-          ...cur.readiness,
+          ...sttConfig.readiness,
           active_allowed: false,
           health_check_passed: false,
           test_transcription_passed: false,
           invalidation_reason: 'missing_model'
         }
-      }))
+      }
+      setSttConfig(invalidatedConfig)
       setTestResult(null)
+      await persistVoiceInput(invalidatedConfig)
     }
     setStatusText(result?.summary ?? C.VOICE_IN_TEST_NOT_READY)
     await refreshModels()
