@@ -2251,15 +2251,38 @@ function VoiceInputSection() {
   }
 
   const downloadSelectedModel = async (model: STTModelCatalogEntry): Promise<void> => {
-    const result = await window.api.downloadSttModel?.({ provider_id: model.provider_id, model_id: model.model_id })
+    const result = await window.api.downloadSttModel?.({
+      provider_id: model.provider_id,
+      model_id: model.model_id,
+      cache_root: sttConfig.cache_root ?? null
+    })
     setStatusText(result?.summary ?? C.VOICE_IN_TEST_NOT_READY)
     await refreshModels()
+    notifyVoiceInputConfigChanged()
   }
 
   const removeSelectedModel = async (model: STTModelCatalogEntry): Promise<void> => {
-    const result = await window.api.removeSttModel?.({ provider_id: model.provider_id, model_id: model.model_id })
+    const result = await window.api.removeSttModel?.({
+      provider_id: model.provider_id,
+      model_id: model.model_id,
+      cache_root: sttConfig.cache_root ?? null
+    })
+    if (result?.ok) {
+      setSttConfig((cur) => ({
+        ...cur,
+        readiness: {
+          ...cur.readiness,
+          active_allowed: false,
+          health_check_passed: false,
+          test_transcription_passed: false,
+          invalidation_reason: 'missing_model'
+        }
+      }))
+      setTestResult(null)
+    }
     setStatusText(result?.summary ?? C.VOICE_IN_TEST_NOT_READY)
     await refreshModels()
+    notifyVoiceInputConfigChanged()
   }
 
   return (

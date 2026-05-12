@@ -3,7 +3,7 @@ status: testing
 phase: 20-renderer-voice-capture-ptt-vad-preview-ux
 source: [20-VERIFICATION.md, 20-UAT.md]
 started: 2026-05-11T05:50:00Z
-updated: 2026-05-12T04:20:17Z
+updated: 2026-05-12T06:18:00Z
 ---
 
 # Phase 20 Human UAT
@@ -51,12 +51,27 @@ result: pending
 expected: STT model cache no longer reports instant fake download; VAD copy is clearly browser volume/silence detection with no downloadable model.
 result: pending
 
+### 7. Live Model Removal Blocks Chat Readiness
+
+expected: Removing or deleting the selected local STT model after a passing Settings test blocks Chat PTT before recording starts.
+result: pending
+
+### 8. Live Custom Cache Root Consistency
+
+expected: STT model catalog, download, remove, readiness, and provider loading all refer to the same configured cache root.
+result: pending
+
+### 9. Live Multi-Chunk Preview Robustness
+
+expected: Holding PTT long enough for multiple preview chunks does not prevent final transcript submission if preview is delayed or absent.
+result: pending
+
 ## Summary
 
-total: 6
+total: 9
 passed: 0
 issues: 1
-pending: 5
+pending: 8
 skipped: 0
 blocked: 0
 
@@ -87,3 +102,22 @@ blocked: 0
     - "FIXED inline: The `Enable voice input` switch now persists immediately, hydrates from stored config, and refreshes Chat voice readiness after save."
     - "FIXED inline: App-store LLM config writes now preserve persisted audio/plugin/preset settings instead of rebuilding config with default audio."
   debug_session: "inline verify-work 2026-05-11"
+
+- truth: "Phase 19 STT model/cache behavior and Phase 20 live voice capture readiness stay synchronized."
+  status: fixed_automated
+  reason: "Phase 20 plan 20-07 added cache-root-aware model operations, local model presence re-checks in voice readiness, Settings copy updates for real explicit download, and accumulated-chunk preview encoding."
+  severity: blocker
+  test: 7
+  artifacts:
+    - path: "sidecar/src/sidecar/admin/audio.py"
+      issue: "Voice readiness now blocks with missing_model when active local readiness outlives model files."
+    - path: "packages/contracts/py/contracts/audio_provider.py"
+      issue: "STT model operation requests carry cache_root only, not full STT config or credentials."
+    - path: "apps/renderer/src/audio/voice-capture.ts"
+      issue: "Preview encoding now uses accumulated chunks and preview failures are non-fatal to final submission."
+    - path: "apps/renderer/src/screens/Settings/Settings.tsx"
+      issue: "Model download/remove passes cache_root and refreshes Chat readiness."
+  missing:
+    - "LIVE PENDING: confirm model download/remove/cache root behavior in the packaged app."
+    - "LIVE PENDING: confirm Chat PTT blocks after removing a previously tested local model."
+    - "LIVE PENDING: confirm long PTT captures still produce final transcript if preview is delayed or absent."

@@ -336,7 +336,7 @@ describe('Settings TTS section', () => {
           provider_id: 'funasr',
           model_id: 'iic/SenseVoiceSmall',
           status: 'manual_path_required',
-          summary: 'Automatic STT model download is not implemented yet. Place real model files in the app-managed cache or configure a local model path.',
+          summary: 'ModelScope is not installed; cannot download the FunASR model.',
           cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/funasr/iic__SenseVoiceSmall'
         }),
         removeSttModel: vi.fn().mockResolvedValue({
@@ -536,17 +536,19 @@ describe('Settings TTS section', () => {
     expect(screen.getByText(COPY.SETTINGS.VOICE_IN_TEST_BLOCKED)).toBeInTheDocument()
   })
 
-  it('does not present STT model download as an instant success', async () => {
+  it('starts explicit STT model download and surfaces provider failure summaries', async () => {
     renderSettings()
 
     expect(await screen.findByText(COPY.SETTINGS.VOICE_IN_MODEL_CACHE)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_MODEL_DOWNLOAD }))
 
-    expect(await screen.findByText(/Automatic STT model download is not implemented yet/)).toBeInTheDocument()
+    expect(await screen.findByText(/ModelScope is not installed/)).toBeInTheDocument()
     expect(window.api.downloadSttModel).toHaveBeenCalledWith({
       provider_id: 'funasr',
-      model_id: 'iic/SenseVoiceSmall'
+      model_id: 'iic/SenseVoiceSmall',
+      cache_root: null
     })
+    expect(screen.queryByRole('button', { name: /Automatic download unavailable/i })).toBeNull()
     expect(screen.queryByText('Model cache entry prepared in app-managed storage.')).toBeNull()
   })
 

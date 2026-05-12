@@ -248,6 +248,7 @@ class STTModelCacheCatalog(BaseModel):
 class STTModelCacheOperationRequest(BaseModel):
     provider_id: Literal["funasr", "faster_whisper"]
     model_id: str
+    cache_root: Optional[str] = None
 
 
 class STTModelCacheOperationResult(BaseModel):

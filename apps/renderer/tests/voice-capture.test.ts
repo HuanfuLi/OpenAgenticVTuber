@@ -79,6 +79,11 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
+async function waitForMicrotasks(): Promise<void> {
+  await Promise.resolve()
+  await Promise.resolve()
+}
+
 describe('VoiceCapture', () => {
   let getUserMedia: ReturnType<typeof vi.fn>
   let transcribeVoiceInput: ReturnType<typeof vi.fn<TranscribeMock>>
@@ -182,6 +187,41 @@ describe('VoiceCapture', () => {
     second.resolve(result(secondSequence, 'preview', 'latest preview'))
     await Promise.resolve()
     expect(getVoiceInputState().previewTranscript).toBe('latest preview')
+  })
+
+  it('encodes accumulated chunks for preview instead of standalone MediaRecorder chunks', async () => {
+    await capture().start()
+    const recorder = FakeMediaRecorder.instances[0]!
+    recorder.emitData('first')
+    await Promise.resolve()
+    recorder.emitData('second')
+    await Promise.resolve()
+
+    expect(encodeVoiceBlob).toHaveBeenCalledTimes(2)
+    await expect(encodeVoiceBlob.mock.calls[0][0].text()).resolves.toBe('first')
+    await expect(encodeVoiceBlob.mock.calls[1][0].text()).resolves.toBe('firstsecond')
+  })
+
+  it('keeps final transcription working after an opportunistic preview encode failure', async () => {
+    encodeVoiceBlob
+      .mockRejectedValueOnce(new Error('preview chunk decode failed'))
+      .mockResolvedValueOnce({ audioBase64Wav: 'UklGRg==', durationMs: 700 })
+      .mockResolvedValueOnce({ audioBase64Wav: 'UklGRg==', durationMs: 700 })
+
+    const controller = capture()
+    await controller.start()
+    FakeMediaRecorder.instances[0]!.emitData('preview')
+    await Promise.resolve()
+    await controller.stop()
+
+    await waitForMicrotasks()
+    expect(transcribeVoiceInput).toHaveBeenLastCalledWith(expect.objectContaining({ mode: 'final' }))
+    expect(getVoiceInputState()).toMatchObject({
+      captureStatus: 'idle',
+      finalCandidate: {
+        transcript: 'final'
+      }
+    })
   })
 
   it('finalizes into the one queued final slot when a turn is in progress', async () => {

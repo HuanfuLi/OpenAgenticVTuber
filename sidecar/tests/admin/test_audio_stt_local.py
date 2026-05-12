@@ -177,6 +177,68 @@ def test_stt_model_download_uses_real_download_and_catalog_state(tmp_path, monke
     assert catalog["models"][0]["status"] == "downloaded"
 
 
+def test_stt_model_operations_honor_custom_cache_root(tmp_path, monkeypatch) -> None:
+    default_root = tmp_path / "default-user-data"
+    custom_root = tmp_path / "custom-stt-cache"
+    monkeypatch.setenv("AGENTICLLMVTUBER_USER_DATA", str(default_root))
+
+    def fake_download(_provider_id: str, _model_id: str, destination) -> None:
+        destination.mkdir(parents=True)
+        (destination / "model.bin").write_bytes(b"model")
+
+    monkeypatch.setattr("sidecar.stt.model_cache.download_local_stt_model", fake_download)
+    with _client() as client:
+        body = client.post(
+            "/admin/audio/stt/models/download",
+            json={"provider_id": "funasr", "model_id": "iic/SenseVoiceSmall", "cache_root": str(custom_root)},
+        ).json()
+        catalog = client.post(
+            "/admin/audio/stt/models",
+            json={
+                "config": {
+                    "enabled": True,
+                    "active_provider": "funasr",
+                    "input_mode": "push_to_talk",
+                    "language_mode": "auto",
+                    "local_model_id": "iic/SenseVoiceSmall",
+                    "local_model_path_override": None,
+                    "cache_root": str(custom_root),
+                    "readiness": {
+                        "health_check_passed": False,
+                        "test_transcription_passed": False,
+                        "last_health_checked_at": None,
+                        "last_test_transcription_at": None,
+                        "fingerprint": None,
+                        "active_allowed": False,
+                        "invalidation_reason": "never_tested",
+                    },
+                    "capture_timeout_ms": 30000,
+                    "execution": "off_event_loop",
+                    "cloud": {
+                        "openai": {"provider_id": "openai", "consent_granted": False, "api_key": "secret", "endpoint_url": None, "model_name": None},
+                        "groq": {"provider_id": "groq", "consent_granted": False, "api_key": None, "endpoint_url": None, "model_name": None},
+                    },
+                },
+                "audio_base64_wav": None,
+                "duration_ms": None,
+                "sample_label": "settings",
+            },
+        ).json()
+        removed = client.post(
+            "/admin/audio/stt/models/remove",
+            json={"provider_id": "funasr", "model_id": "iic/SenseVoiceSmall", "cache_root": str(custom_root)},
+        ).json()
+
+    assert body["ok"] is True
+    assert str(custom_root) in body["cache_path_display"]
+    assert catalog["cache_root_display"] == str(custom_root.resolve())
+    assert catalog["models"][0]["status"] == "downloaded"
+    assert not (default_root / "stt-models").exists()
+    assert removed["ok"] is True
+    assert removed["status"] == "not_downloaded"
+    assert not (custom_root / "funasr" / "iic__SenseVoiceSmall").exists()
+
+
 def test_local_stt_rejects_invalid_wav_payload(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("AGENTICLLMVTUBER_USER_DATA", str(tmp_path))
     model_path = tmp_path / "stt-models" / "funasr" / "iic__SenseVoiceSmall"

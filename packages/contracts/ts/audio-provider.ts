@@ -252,6 +252,7 @@ export interface STTModelCatalogEntry {
   summary: string
 }
 export interface STTModelCacheOperationRequest {
+  cache_root: string | null;
   model_id: string;
   provider_id: 'funasr' | 'faster_whisper'
 }

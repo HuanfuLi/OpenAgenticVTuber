@@ -951,6 +951,18 @@
     },
     "STTModelCacheOperationRequest": {
       "properties": {
+        "cache_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cache Root"
+        },
         "model_id": {
           "title": "Model Id",
           "type": "string"
@@ -965,6 +977,7 @@
         }
       },
       "required": [
+        "cache_root",
         "model_id",
         "provider_id"
       ],

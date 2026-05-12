@@ -177,7 +177,7 @@ export class VoiceCapture {
     recorder.ondataavailable = (event) => {
       if (!event.data || event.data.size <= 0 || captureId !== this.captureId) return
       this.chunks.push(event.data)
-      void this.transcribePreview(event.data, captureId)
+      void this.transcribePreview(captureId)
     }
     recorder.onerror = () => {
       this.captureId += 1
@@ -191,10 +191,11 @@ export class VoiceCapture {
     recorder.onstop = () => this.finalizeRecording(captureId)
   }
 
-  private async transcribePreview(blob: Blob, captureId: number): Promise<void> {
+  private async transcribePreview(captureId: number): Promise<void> {
     const sequenceId = `${captureId}:preview:${this.previewCounter += 1}`
     setTransientPreview(sequenceId, null)
     try {
+      const blob = new Blob([...this.chunks])
       const encoded = await this.encodeVoiceBlob(blob)
       if (captureId !== this.captureId) return
       const result = await this.transcribeVoiceInput({
@@ -206,22 +207,7 @@ export class VoiceCapture {
       })
       applyPreviewResult(result)
     } catch {
-      if (captureId === this.captureId) {
-        applyPreviewResult({
-          ok: false,
-          mode: 'preview',
-          sequence_id: sequenceId,
-          transcript: null,
-          is_final: false,
-          provider_id: null,
-          duration_ms: null,
-          latency_ms: null,
-          readiness: null,
-          summary: 'Preview transcription failed.',
-          failure: null,
-          redacted_diagnostics: null
-        })
-      }
+      // Preview is opportunistic; final transcription still uses the full recording.
     }
   }
 

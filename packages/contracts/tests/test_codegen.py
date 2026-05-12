@@ -25,6 +25,7 @@ from contracts import (  # noqa: E402
     ReferenceAudioAsset,
     RigCapabilities,
     STTProviderConfig,
+    STTModelCacheOperationRequest,
     VoiceInputReadiness,
     VoiceInputReadinessRequest,
     VoiceInputTranscriptionRequest,
@@ -182,6 +183,23 @@ def test_stt_provider_config_tracks_cache_and_readiness_defaults() -> None:
     assert cfg.stt.readiness.invalidation_reason == "never_tested"
     assert cfg.stt.cloud["openai"].consent_granted is False
     assert cfg.stt.cloud["openai"].api_key is None
+
+
+def test_stt_model_cache_operation_request_carries_only_cache_root() -> None:
+    request = STTModelCacheOperationRequest(
+        provider_id="funasr",
+        model_id="iic/SenseVoiceSmall",
+        cache_root="C:/AgenticLLMVTuberTest/stt-models",
+    )
+
+    dumped = request.model_dump()
+    assert dumped == {
+        "provider_id": "funasr",
+        "model_id": "iic/SenseVoiceSmall",
+        "cache_root": "C:/AgenticLLMVTuberTest/stt-models",
+    }
+    assert "cloud" not in dumped
+    assert "api_key" not in dumped
 
 
 def test_voice_input_runtime_contracts_distinguish_preview_and_final() -> None:

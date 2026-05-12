@@ -93,6 +93,22 @@ def test_voice_input_transcription_refuses_unready_stt(monkeypatch) -> None:
     assert body["readiness"]["blocked_reason"] == "readiness_not_active"
 
 
+def test_voice_input_readiness_rechecks_missing_local_model(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AGENTICLLMVTUBER_USER_DATA", str(tmp_path))
+
+    with _client() as client:
+        body = client.post(
+            "/admin/audio/voice-input/readiness",
+            json={"config": _ready_config("funasr"), "permission_state": "granted"},
+        ).json()
+
+    assert body["ready"] is False
+    assert body["blocked_reason"] == "readiness_not_active"
+    assert body["setup_destination"] == "voice_settings"
+    assert body["summary"].startswith("Local STT model is not downloaded")
+    assert body["readiness"]["invalidation_reason"] == "missing_model"
+
+
 def test_voice_input_transcription_uses_selected_provider_without_fallback(monkeypatch) -> None:
     built_provider_ids: list[str] = []
 

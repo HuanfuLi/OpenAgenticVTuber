@@ -280,6 +280,37 @@ describe('voice input IPC handlers', () => {
     expect(readiness.summary).toBe('Voice input readiness failed: HTTP 422.')
   })
 
+  it('proxies STT model operations with cache root but without STT config secrets', async () => {
+    installHandlers()
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        ok: false,
+        provider_id: 'funasr',
+        model_id: 'iic/SenseVoiceSmall',
+        status: 'not_downloaded',
+        summary: 'download failed',
+        cache_path_display: 'C:/custom/funasr/iic__SenseVoiceSmall'
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await invoke('audio:downloadSttModel', {
+      provider_id: 'funasr',
+      model_id: 'iic/SenseVoiceSmall',
+      cache_root: 'C:/custom'
+    })
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body).toEqual({
+      provider_id: 'funasr',
+      model_id: 'iic/SenseVoiceSmall',
+      cache_root: 'C:/custom'
+    })
+    expect(JSON.stringify(body)).not.toContain('secret')
+    expect(body.config).toBeUndefined()
+  })
+
   it('unregisters voice input handlers during IPC cleanup', () => {
     const cleanup = installHandlers()
 

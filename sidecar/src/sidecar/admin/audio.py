@@ -311,7 +311,18 @@ def _inactive_stt_readiness(config: STTProviderConfig, reason: str) -> STTProvid
     )
 
 
-def _voice_input_readiness(payload: VoiceInputReadinessRequest) -> VoiceInputReadiness:
+def _missing_local_model_health(provider_id: str) -> AudioProviderHealth:
+    return AudioProviderHealth(
+        provider_id=provider_id,
+        kind="stt",
+        state="misconfigured",
+        summary="Local STT model is not downloaded in the app-managed cache.",
+        retryable=False,
+        redacted_diagnostics={"model_cache": "not_downloaded"},
+    )
+
+
+def _voice_input_readiness(request: Request, payload: VoiceInputReadinessRequest) -> VoiceInputReadiness:
     config = payload.config
     provider_id = config.active_provider
     permission_state = payload.permission_state
@@ -399,6 +410,19 @@ def _voice_input_readiness(payload: VoiceInputReadinessRequest) -> VoiceInputRea
             permission_state=permission_state,
             readiness=readiness,
             summary="Run and pass the STT test in Voice settings before using voice input.",
+        )
+    if provider_id in {"funasr", "faster_whisper"} and _local_model_status(request, config) != "downloaded":
+        missing_model = _missing_local_model_health(provider_id)
+        return VoiceInputReadiness(
+            ready=False,
+            capture_status="idle",
+            stt_enabled=True,
+            provider_id=provider_id,
+            blocked_reason="readiness_not_active",
+            setup_destination="voice_settings",
+            permission_state=permission_state,
+            readiness=_inactive_stt_readiness(config, "missing_model"),
+            summary=missing_model.summary,
         )
     return VoiceInputReadiness(
         ready=True,
@@ -595,27 +619,21 @@ async def post_stt_enable(payload: STTTestRequest) -> dict[str, object]:
 
 
 @router.post("/voice-input/readiness")
-async def post_voice_input_readiness(payload: VoiceInputReadinessRequest) -> dict[str, object]:
-    return _voice_input_readiness(payload).model_dump()
+async def post_voice_input_readiness(request: Request, payload: VoiceInputReadinessRequest) -> dict[str, object]:
+    return _voice_input_readiness(request, payload).model_dump()
 
 
 @router.post("/voice-input")
 async def post_voice_input(request: Request, payload: VoiceInputTranscriptionRequest) -> dict[str, object]:
     readiness = _voice_input_readiness(
+        request,
         VoiceInputReadinessRequest(config=payload.config, permission_state="granted")
     )
     if not readiness.ready:
         return _voice_input_failure_result(payload, readiness).model_dump()
     provider_id = payload.config.active_provider or "funasr"
     if provider_id in {"funasr", "faster_whisper"} and _local_model_status(request, payload.config) != "downloaded":
-        missing_model = AudioProviderHealth(
-            provider_id=provider_id,
-            kind="stt",
-            state="misconfigured",
-            summary="Local STT model is not downloaded in the app-managed cache.",
-            retryable=False,
-            redacted_diagnostics={"model_cache": "not_downloaded"},
-        )
+        missing_model = _missing_local_model_health(provider_id)
         blocked = readiness.model_copy(
             update={
                 "ready": False,
@@ -710,13 +728,13 @@ async def post_stt_models(request: Request, payload: STTTestRequest) -> dict[str
 
 @router.post("/stt/models/download")
 async def post_stt_model_download(request: Request, payload: STTModelCacheOperationRequest) -> dict[str, object]:
-    result = await asyncio.to_thread(_stt_model_cache(request).download, payload.provider_id, payload.model_id)
+    result = await asyncio.to_thread(STTModelCache(cache_root=payload.cache_root).download, payload.provider_id, payload.model_id)
     return result.model_dump()
 
 
 @router.post("/stt/models/remove")
 async def post_stt_model_remove(request: Request, payload: STTModelCacheOperationRequest) -> dict[str, object]:
-    return _stt_model_cache(request).remove(payload.provider_id, payload.model_id).model_dump()
+    return STTModelCache(cache_root=payload.cache_root).remove(payload.provider_id, payload.model_id).model_dump()
 
 
 @router.post("/gpt-sovits/health")

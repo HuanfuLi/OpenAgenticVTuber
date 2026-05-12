@@ -20,17 +20,18 @@
 | GAP-20-02 successful STT test readiness persists on save | `npm --workspace apps/renderer run test -- --run Settings` | PASS |
 | GAP-20-04 fake model download removed | `cd sidecar; uv run pytest tests/admin/test_audio_stt_local.py tests/admin/test_audio_voice_input_endpoint.py tests/stt -q`; `npm --workspace apps/renderer run test -- --run Settings` | PASS |
 | GAP-20-05 VAD copy separated from STT model cache | `npm --workspace apps/renderer run test -- --run Settings`; renderer copy inspection | PASS |
+| GAP-20-07 Phase 19/20 STT runtime integration | `cd sidecar; uv run pytest tests/admin/test_audio_stt_local.py tests/admin/test_audio_voice_input_endpoint.py tests/stt/test_model_cache.py -q`; `npm --workspace apps/renderer run test -- --run voice-capture voice-input-store ChatVoiceInput Settings`; `npm --workspace apps/electron-main run test -- --run ipc-voice-input` | PASS |
 
 ## Required Regression Results
 
-- `npm --workspace apps/renderer run test -- --run voice-capture` - PASS, 5 tests.
+- `npm --workspace apps/renderer run test -- --run voice-capture` - PASS, includes accumulated-preview and preview-failure/final-success regressions.
 - `npm --workspace apps/renderer run test -- --run vad-controller` - PASS, 7 tests.
-- `npm --workspace apps/renderer run test -- --run ChatVoiceInput` - PASS, 14 tests.
+- `npm --workspace apps/renderer run test -- --run ChatVoiceInput` - PASS.
 - `npm --workspace apps/renderer run test -- --run ChatStreaming` - PASS, 8 tests.
-- `npm --workspace apps/renderer run test -- --run Settings` - PASS, 63 tests.
+- `npm --workspace apps/renderer run test -- --run Settings` - PASS, includes real download-copy/cache-root operation regression.
 - `npm --workspace apps/renderer run typecheck` - PASS.
 - `npm --workspace apps/electron-main run build` - PASS.
-- `cd sidecar; uv run pytest tests/admin/test_audio_stt_local.py tests/admin/test_audio_voice_input_endpoint.py tests/stt -q` - PASS, 20 tests.
+- `cd sidecar; uv run pytest tests/admin/test_audio_stt_local.py tests/admin/test_audio_voice_input_endpoint.py tests/stt/test_model_cache.py -q` - PASS, includes missing-model readiness and custom cache-root operation regressions.
 
 ## Manual Checks
 
@@ -47,8 +48,11 @@
 | UAT-20-09 | No AEC/no-headphones claim | Inspect Chat and Settings copy. | Copy states no-headphones echo handling is deferred to Phase 22; no AEC success claim appears. | PASS automated copy inspection; live visual confirmation pending |
 | UAT-20-10 | Startup sidecar readiness recovery | Launch app before sidecar is ready, wait for sidecar-ready/reconnect. | Any startup `Sidecar is not ready.` message clears after fresh ready response; PTT enables if STT readiness and permission are valid. | PASS automated regression; live confirmation pending |
 | UAT-20-11 | STT test + save enables Chat PTT | In Settings, run a successful STT test, save Voice settings, then return to Chat. | Chat refreshes readiness and does not keep stale `Voice input is disabled in Voice settings.` text. | PASS automated regression; live confirmation pending |
-| UAT-20-12 | Truthful STT model cache action | In Settings, inspect local STT model cache and click the model action. | UI does not claim instant model download; it reports automatic download unavailable/manual setup until real model files exist. | PASS automated regression; live confirmation pending |
+| UAT-20-12 | Truthful STT model cache action | In Settings, inspect local STT model cache and click the model action. | UI shows the real explicit download action and surfaces dependency/network/provider failure summaries; it reports `downloaded` only after real model files exist. | PASS automated regression; live confirmation pending |
 | UAT-20-13 | VAD/model copy separation | Inspect Voice settings VAD and STT model cache areas. | VAD copy says browser volume/silence detection with no VAD model; STT cache is labeled separately. | PASS automated regression; live visual confirmation pending |
+| UAT-20-14 | Local model removal blocks Chat readiness | After a passing local STT Settings test/save, remove the local model or delete the app-managed model files, then return to Chat. | Chat PTT is disabled before recording and points back to Voice settings; runtime transcription also fails with `missing_model` if attempted. | PASS automated regression; live confirmation pending |
+| UAT-20-15 | Custom cache root consistency | Configure/use a custom STT cache root, download/remove a local model, and inspect the displayed path. | Catalog, download, remove, and readiness checks all use the same custom cache root; no cloud credentials are sent in model-operation requests. | PASS automated regression; live confirmation pending |
+| UAT-20-16 | Preview chunk robustness | Hold PTT long enough for multiple preview chunks, then release. | Preview may update opportunistically, but final transcription still succeeds even if an intermediate preview chunk cannot be decoded. | PASS automated regression; live confirmation pending |
 
 ## Notes
 
