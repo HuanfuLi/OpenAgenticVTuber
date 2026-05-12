@@ -21,7 +21,8 @@
 | GAP-20-04 fake model download removed | `cd sidecar; uv run pytest tests/admin/test_audio_stt_local.py tests/admin/test_audio_voice_input_endpoint.py tests/stt -q`; `npm --workspace apps/renderer run test -- --run Settings` | PASS |
 | GAP-20-05 VAD copy separated from STT model cache | `npm --workspace apps/renderer run test -- --run Settings`; renderer copy inspection | PASS |
 | GAP-20-07 Phase 19/20 STT runtime integration | `cd sidecar; uv run pytest tests/admin/test_audio_stt_local.py tests/admin/test_audio_voice_input_endpoint.py tests/stt/test_model_cache.py -q`; `npm --workspace apps/renderer run test -- --run voice-capture voice-input-store ChatVoiceInput Settings`; `npm --workspace apps/electron-main run test -- --run ipc-voice-input` | PASS |
-| GAP-20-08 local STT runtime dependency packaging | `cd sidecar; uv run python -c "import faster_whisper; import funasr; import torch; import torchaudio"`; `cd sidecar; uv run pytest tests/stt/test_local_stt_runtime_dependencies.py tests/stt/test_faster_whisper_provider.py tests/stt/test_funasr_provider.py tests/stt/test_model_cache.py tests/admin/test_audio_stt_local.py tests/admin/test_audio_voice_input_endpoint.py -q` | PASS |
+| GAP-20-08 local STT runtime dependency packaging | `cd sidecar; uv run python -c "import faster_whisper; import funasr; import torch; import torchaudio"`; `cd sidecar; uv run pytest tests/stt/test_local_stt_runtime_dependencies.py tests/stt/test_faster_whisper_provider.py tests/stt/test_funasr_provider.py tests/stt/test_model_cache.py tests/admin/test_audio_stt_local.py tests/admin/test_audio_voice_input_endpoint.py -q` | AUTOMATED REAL DEPENDENCY PASS |
+| GAP-20-09 live local STT acceptance gate | `cd sidecar; uv run pytest tests/stt/test_live_local_stt.py -q` with live env vars | LIVE-GATED AVAILABLE; skipped unless env vars are set |
 
 ## Required Regression Results
 

@@ -75,6 +75,7 @@ def _orchestrator(**kwargs) -> Orchestrator:
         gateway=_Gateway(),
         persona_text="persona",
         action_codes_section="",
+        allow_no_tts_test_stub=True,
         **kwargs,
     )
 
@@ -174,6 +175,24 @@ async def test_stub_audio_payload_contains_dispatches_and_no_actions() -> None:
 
     assert ws.writes[0]["dispatches"] == [dispatch.model_dump() for dispatch in dispatches]
     assert "actions" not in ws.writes[0]
+
+
+@pytest.mark.asyncio
+async def test_no_tts_emit_requires_explicit_test_stub_opt_in() -> None:
+    ws = _WS()
+    sentence = SentenceOutput(
+        display_text=DisplayText(text="Hello"),
+        tts_text="Hello",
+        plugin_text="Hello",
+        dispatches=[],
+    )
+
+    with pytest.raises(RuntimeError, match="TTSTaskManager"):
+        await Orchestrator(
+            gateway=_Gateway(),
+            persona_text="persona",
+            action_codes_section="",
+        )._emit_sentence(ws, sentence, sentence_id=7)
 
 
 @pytest.mark.asyncio

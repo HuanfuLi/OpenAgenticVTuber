@@ -109,7 +109,7 @@ export function LogsDrawer({ logLines }: LogsDrawerProps) {
         {logLines.map((line, i) => {
           // Phase 7 dispatch logs: lines starting with [DISPATCH] get the
           // prefix span styled --success so SC #2 verification can scan the
-          // drawer at a glance. [STUB-TTS], [INFO], [READY], [ERROR], etc.
+          // drawer at a glance. [INFO], [READY], [ERROR], etc.
           // stay in default --foreground (IP-5).
           if (line.startsWith('[DISPATCH]')) {
             return (

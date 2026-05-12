@@ -69,7 +69,7 @@ export interface ErrorMessage {
 }
 /**
  * Sidecar stdout/loguru bridge to renderer Logs drawer (Phase 1 channel,
- * re-used in Phase 2 for [INTENT] and [STUB-TTS] lines per D-14, D-23).
+ * re-used for structured sidecar log lines per D-14, D-23).
  */
 export interface LogMessage {
   level: string;

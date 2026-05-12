@@ -33,7 +33,7 @@ export function AppShell() {
   // Subscribe to two log sources when the drawer is enabled:
   //   1. Sidecar stdout/stderr lines via contextBridge (Phase 1).
   //   2. WS log envelopes from the orchestrator (Phase 2 plan 02-03 -- carries
-  //      [INTENT] / [STUB-TTS] structured lines emitted via loguru).
+  //      [INTENT] and other structured lines emitted via loguru).
   // Both subscriptions are cancelled when disabled so we don't accumulate
   // lines in the background.
   useEffect(() => {

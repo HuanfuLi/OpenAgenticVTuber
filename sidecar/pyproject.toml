@@ -64,3 +64,6 @@ allow-direct-references = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "live_stt: opt-in live STT acceptance tests that require local model/audio env vars or network downloads",
+]

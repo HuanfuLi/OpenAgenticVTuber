@@ -30,6 +30,7 @@ def _build_orch(gateway, persona="You are Teto.") -> Orchestrator:
         action_codes_section=ACTION_CODES_SECTION,
         tts_preprocessor_config=TTSPreprocessorConfig(),
         valid_expression_names={"joy"},
+        allow_no_tts_test_stub=True,
     )
 
 
@@ -114,6 +115,7 @@ def _build_phase3_orch(tts_manager: _FakeTTSManager | None = None) -> Orchestrat
         tts_manager=tts_manager,
         compositor_speech_queue=asyncio.Queue(),
         pending_inputs=asyncio.Queue(),
+        allow_no_tts_test_stub=tts_manager is None,
     )
 
 
@@ -133,7 +135,7 @@ async def test_emits_canonical_envelope_sequence():
     audio_writes = [w for w in ws.writes if w.get("type") == "audio"]
     assert len(audio_writes) >= 1
     for aw in audio_writes:
-        assert aw["audio"] is None              # Phase 2 stub
+        assert aw["audio"] is None              # test-only no-TTS stub
         assert aw["volumes"] == []              # Phase 3 fills
         assert aw["slice_length"] == 20
         assert aw["forwarded"] is False
@@ -236,6 +238,7 @@ async def test_plugin_adapter_receives_bracketed_sentence_while_display_and_tts_
         tts_preprocessor_config=TTSPreprocessorConfig(),
         plugin_adapter=plugin_adapter,
         valid_expression_names={"joy"},
+        allow_no_tts_test_stub=True,
     )
     ws = _WSRecorder()
 
@@ -374,6 +377,7 @@ async def test_system_prompt_freezes_combined_dispatch_section() -> None:
         gateway=gw,
         persona_text="You are Teto.",
         action_codes_section=section,
+        allow_no_tts_test_stub=True,
     )
     ws = _WSRecorder()
 
@@ -417,6 +421,7 @@ async def test_forced_assistant_codes_produce_all_dispatch_kinds() -> None:
         variant_state_manager=variant_state_manager,
         discrete_dispatcher=discrete_dispatcher,
         event_completion_tracker=event_completion_tracker,
+        allow_no_tts_test_stub=True,
     )
     ws = _WSRecorder()
 
@@ -439,8 +444,8 @@ async def test_forced_assistant_codes_produce_all_dispatch_kinds() -> None:
 
 
 @pytest.mark.asyncio
-async def test_stub_tts_log_line_emitted():
-    """D-23 stub-TTS log line surfaces via loguru for Logs drawer."""
+async def test_test_stub_tts_log_line_emitted():
+    """Explicit test-only no-TTS log line surfaces via loguru for Logs drawer."""
     from loguru import logger
 
     records: list[str] = []
@@ -455,7 +460,7 @@ async def test_stub_tts_log_line_emitted():
     finally:
         logger.remove(sink_id)
     assert any(
-        re.match(r'^\[STUB-TTS\] sentence_id=\d+ text=".*"', r)
+        re.match(r'^\[TEST-STUB-TTS\] sentence_id=\d+ text=".*"', r)
         for r in records
     ), records
 
@@ -478,6 +483,7 @@ async def test_dispatch_log_line_emitted():
             tts_preprocessor_config=TTSPreprocessorConfig(),
             plugin_adapter=_FakePluginAdapter(),
             valid_expression_names={"joy"},
+            allow_no_tts_test_stub=True,
         )
         ws = _WSRecorder()
         await orch.turn("hi", ws)

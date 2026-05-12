@@ -50,6 +50,6 @@ per recovery path above.
 | D1: type=`audio-payload` vs OLVT `audio` | Adopted OLVT-canonical `audio` per port-verbatim memory. CONTEXT-AMENDMENT.md records the change. |
 | D2: `audio_b64` vs OLVT `audio` | Adopted OLVT-canonical `audio`. |
 | D3: missing `volumes`/`slice_length`/`forwarded` | Included all three in AudioPayloadMessage with Phase-2 stubs (volumes=[], slice_length=20, forwarded=False). |
-| D4: `sentence_id` not in OLVT | Skeleton-side extension; required for [STUB-TTS] sentence trace per UI-SPEC IP-5. Documented divergence. |
+| D4: `sentence_id` not in OLVT | Skeleton-side extension; retained for explicit test-only no-TTS sentence traces. Documented divergence. |
 | D5: OLVT `Actions{exp,pic,sou}` shape | Diverged to ActionIntent[] per CONTEXT D-12. Documented divergence. |
 | D6: ROADMAP SC #4 wording | Resolved in 02-03 Task 3 (planner amends ROADMAP). |

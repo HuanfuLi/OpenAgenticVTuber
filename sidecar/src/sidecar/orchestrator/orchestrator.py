@@ -105,6 +105,7 @@ class Orchestrator:
         variants=None,
         events=None,
         valid_expression_names: set[str] | None = None,
+        allow_no_tts_test_stub: bool = False,
     ):
         self._gateway = gateway
         # SYSTEM PROMPT FROZEN AT BOOT -- D-17, D-19, Pitfall 6.
@@ -137,6 +138,7 @@ class Orchestrator:
         self._tts_pp = tts_preprocessor_config or TTSPreprocessorConfig()
         self._sentence_counter = count(1)       # sentence_id starts at 1
         self._tts_manager = tts_manager
+        self._allow_no_tts_test_stub = allow_no_tts_test_stub
         self.compositor_speech_queue = (
             compositor_speech_queue or asyncio.Queue()
         )
@@ -242,7 +244,7 @@ class Orchestrator:
         sentence_output: SentenceOutput,
         sentence_id: int,
     ) -> None:
-        """Emit one sentence via TTSTaskManager, or the Phase 2 stub path."""
+        """Emit one sentence via TTSTaskManager."""
         display_text = DisplayTextField(
             text=sentence_output.display_text.text,
             name=sentence_output.display_text.name or "Teto",
@@ -257,6 +259,8 @@ class Orchestrator:
                 ws=ws,
             )
         else:
+            if not self._allow_no_tts_test_stub:
+                raise RuntimeError("Orchestrator cannot emit audio without a TTSTaskManager.")
             payload = AudioPayloadMessage(
                 audio=None,
                 volumes=[],
@@ -268,7 +272,7 @@ class Orchestrator:
             )
             await emit_audio_payload(ws, payload)
             logger.info(
-                f'[STUB-TTS] sentence_id={sentence_id} '
+                f'[TEST-STUB-TTS] sentence_id={sentence_id} '
                 f'text="{sentence_output.tts_text}"'
             )
 

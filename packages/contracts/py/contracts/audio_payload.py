@@ -6,7 +6,7 @@ OpenLLM_Vtuber/src/open_llm_vtuber/utils/stream_audio.py:50-60):
     audio:str|None  (base64 string in Phase 3, None in Phase 2; NOT "audio_b64")
 
 Phase-2 extension over OLVT (documented divergence per Discrepancy 4):
-    sentence_id:int -- needed for [STUB-TTS]/sentence-trace logs (UI-SPEC IP-5).
+    sentence_id:int -- needed for sentence-trace logs (UI-SPEC IP-5).
 
 Per Phase 7 D-A4, the `dispatches` field carries ordered Dispatch records
 instead of OLVT's Actions{expressions,pictures,sounds} dataclass.
@@ -34,7 +34,7 @@ class FailedAudioMetadata(BaseModel):
 
 class AudioPayloadMessage(BaseModel):
     type: Literal["audio"] = "audio"
-    audio: Optional[str] = None      # base64 wav in Phase 3; None in Phase 2 stub
+    audio: Optional[str] = None      # base64 wav in live paths; None only in explicit no-TTS tests
     volumes: List[float] = []        # filled in Phase 3 from RMS envelope
     slice_length: int = 20           # OLVT default chunk_length_ms
     display_text: DisplayTextField
