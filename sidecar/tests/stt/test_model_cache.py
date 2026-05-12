@@ -47,13 +47,34 @@ def test_model_cache_does_not_treat_empty_or_placeholder_directory_as_downloaded
     assert model.status == "incomplete"
 
 
-def test_model_cache_download_reports_manual_setup_without_creating_placeholder(tmp_path) -> None:
+def test_model_cache_download_writes_real_model_files(tmp_path, monkeypatch) -> None:
     cache = STTModelCache(cache_root=tmp_path / "cache")
     path = cache.model_path("funasr", "iic/SenseVoiceSmall")
 
-    result = cache.download_unavailable("funasr", "iic/SenseVoiceSmall")
+    def fake_download(provider_id: str, model_id: str, destination) -> None:
+        assert provider_id == "funasr"
+        assert model_id == "iic/SenseVoiceSmall"
+        destination.mkdir(parents=True)
+        (destination / "model.bin").write_bytes(b"model")
+
+    monkeypatch.setattr("sidecar.stt.model_cache.download_local_stt_model", fake_download)
+    result = cache.download("funasr", "iic/SenseVoiceSmall")
+
+    assert result.ok is True
+    assert result.status == "downloaded"
+    assert path.exists()
+    assert "downloaded" in result.summary
+
+
+def test_model_cache_download_failure_never_reports_downloaded(tmp_path, monkeypatch) -> None:
+    cache = STTModelCache(cache_root=tmp_path / "cache")
+
+    def fake_download(_provider_id: str, _model_id: str, _destination) -> None:
+        raise RuntimeError("network down")
+
+    monkeypatch.setattr("sidecar.stt.model_cache.download_local_stt_model", fake_download)
+    result = cache.download("funasr", "iic/SenseVoiceSmall")
 
     assert result.ok is False
-    assert result.status == "manual_path_required"
-    assert "Automatic STT model download is not implemented" in result.summary
-    assert not path.exists()
+    assert result.status == "not_downloaded"
+    assert "STT model download failed" in result.summary

@@ -64,7 +64,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - [x] **Phase 16: Audio Contracts + TTS Provider Shell** - Sidecar-owned audio contracts, versioned config migration, Piper adapter, and provider failure semantics. Complete after focused live audio retest passed on 2026-05-09.
 - [x] **Phase 17: GPT-SoVITS Provider + Voice Presets** - GPT-SoVITS external/app-launched provider, test synthesis, reference audio, named presets, visible failed-audio chat/UAT evidence, and GPT-SoVITS gap closures through plan 17-12.
 - [x] **Phase 18: Rich Voice Settings + Persistence** - User-facing audio settings, provider catalog labels, privacy copy, credential redaction, and diagnostics.
-- [x] **Phase 19: STT Provider Abstraction + Local/Cloud Providers** - FunASR, faster-whisper, OpenAI, and Groq through one lazy-loaded STT provider layer.
+- [ ] **Phase 19: STT Provider Abstraction + Local/Cloud Providers** - FunASR, faster-whisper, OpenAI, and Groq through one lazy-loaded STT provider layer. Automated implementation and gap closures complete; live local/cloud provider UAT pending.
 - [ ] **Phase 20: Renderer Voice Capture + PTT/VAD Preview UX** - Microphone capture, push-to-talk, VAD controls, transcript preview, and final-text submission through the existing chat path. Implementation and gap closures complete; live microphone/STT UAT pending acceptance.
 - [ ] **Phase 21: Code-Switch Evaluation + Hardening** - Locked bilingual eval corpus, provider scorecard, no-translation checks, and evidence-backed provider copy.
 - [ ] **Phase 22: AEC Spike + No-Headphones Decision** - Browser/WebRTC AEC prototype, self-speech suppression, conservative VAD defaults, and truthful no-headphones status.
@@ -150,7 +150,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
   3. User can run a test transcription for the selected STT provider before enabling voice input.
   4. User can see and control local model cache/download behavior before large STT models are loaded or fetched.
   5. Heavy local STT models lazy-load after boot rather than blocking app startup.
-**Plans**: 4
+**Plans**: 6
 **Wave 1**:
   - [x] `19-01`: STT Contracts, Registry, Cache, And Readiness Foundation - provider-neutral contracts, lazy registry, model-cache metadata, readiness gate, and admin endpoint skeletons.
 **Wave 2** *(blocked on Wave 1 completion)*:
@@ -158,6 +158,10 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
   - [x] `19-03`: Cloud STT Providers, Consent, And Redacted Diagnostics - OpenAI/Groq adapters, separate STT credentials, persistent consent, and redacted cloud diagnostics.
 **Wave 3** *(blocked on Wave 2 completion)*:
   - [x] `19-04`: Settings STT Test Recorder, Cache UI, And Enablement Gate - Electron bridge, Voice Input settings, short manual recorder, readiness-gated enablement, and final regression.
+**Wave 4** *(gap closure after Phase 19 re-audit; blocked on Wave 3 completion)*:
+  - [x] `19-05`: Real Local STT Model Downloads And Cache Path Binding - explicit supported local model downloads into app-managed cache, provider construction from validated cache paths, and stronger valid-audio local STT evidence.
+**Wave 5** *(gap closure; blocked on 19-05 completion)*:
+  - [x] `19-06`: STT Test Audio, Readiness, Event Loop, And Cloud Language Fixes - real WAV Settings test audio, coherent readiness state, off-event-loop transcription, cloud language propagation, and corrected UAT/verification evidence.
 **Cross-cutting constraints:**
 - Heavy STT providers must lazy-load only after explicit user action; no boot-time heavy imports, model loads, downloads, or idle preload.
 - Local STT models require explicit download into app-managed cache with visible path/status/size and remove controls.
@@ -234,7 +238,7 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 | 16. Audio Contracts + TTS Provider Shell | v3.0 | 4/4 | Complete | 2026-05-09 |
 | 17. GPT-SoVITS Provider + Voice Presets | v3.0 | 12/12 | Complete | 2026-05-10 |
 | 18. Rich Voice Settings + Persistence | v3.0 | 3/3 | Complete | 2026-05-10 |
-| 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 4/4 | Complete | 2026-05-10 |
+| 19. STT Provider Abstraction + Local/Cloud Providers | v3.0 | 6/6 | Live provider UAT pending | - |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | v3.0 | 6/6 | Live UAT pending | - |
 | 21. Code-Switch Evaluation + Hardening | v3.0 | 0/TBD | Not started | - |
 | 22. AEC Spike + No-Headphones Decision | v3.0 | 0/TBD | Not started | - |
@@ -255,4 +259,4 @@ v3.0 refactors audio I/O into sidecar-owned provider systems so the existing Pip
 - v3.0 excludes GPT-SoVITS installer/training/voice cloning, wake-word activation, translation before LLM submission, barge-in interruption, silent cloud STT fallback, and any promise that no-headphones/AEC is solved before Phase 22 evidence.
 
 ---
-*Last updated: 2026-05-11 after Phase 20 gap-closure plan 20-06*
+*Last updated: 2026-05-12 after Phase 19 gap-closure execution 19-05 and 19-06*

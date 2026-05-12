@@ -1294,6 +1294,7 @@
         "invalidation_reason": {
           "default": "never_tested",
           "enum": [
+            "ready",
             "never_tested",
             "config_changed",
             "health_failed",

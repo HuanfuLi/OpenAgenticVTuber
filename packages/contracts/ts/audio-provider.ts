@@ -4,6 +4,7 @@
 import type { VoicePreset } from './voice-preset';
 import type { AudioProviderHealth } from './audio-provider-health';
 export type InvalidationReason =
+  | 'ready'
   | 'never_tested'
   | 'config_changed'
   | 'health_failed'

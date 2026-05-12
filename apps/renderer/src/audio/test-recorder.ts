@@ -1,3 +1,5 @@
+import { encodeVoiceBlobToBase64Wav } from './wav-encoder'
+
 export interface SettingsTestRecording {
   audioBase64Wav: string
   durationMs: number
@@ -24,20 +26,12 @@ export async function recordSettingsTestWav(maxDurationMs = 8000): Promise<Setti
       }, maxDurationMs)
     })
     const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })
-    const buffer = await blob.arrayBuffer()
+    const encoded = await encodeVoiceBlobToBase64Wav(blob, { targetSampleRateHz: 16_000, minDurationMs: 120 })
     return {
-      audioBase64Wav: arrayBufferToBase64(buffer),
-      durationMs: Date.now() - startedAt
+      audioBase64Wav: encoded.audioBase64Wav,
+      durationMs: encoded.durationMs || Date.now() - startedAt
     }
   } finally {
     for (const track of stream.getTracks()) track.stop()
   }
 }
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer)
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
-}
-

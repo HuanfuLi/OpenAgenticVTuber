@@ -616,7 +616,7 @@ describe('Settings TTS section', () => {
       last_test_transcription_at: '2026-05-11T06:00:01Z',
       fingerprint: 'tested-fingerprint',
       active_allowed: true,
-      invalidation_reason: 'never_tested'
+      invalidation_reason: 'ready'
     }
     vi.mocked(window.api.testSttProvider).mockResolvedValue({
       ok: true,

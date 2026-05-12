@@ -10,12 +10,14 @@ from sidecar.stt.providers.faster_whisper_provider import FasterWhisperSTTProvid
 
 def test_faster_whisper_provider_lazy_import_and_fake_transcription(monkeypatch) -> None:
     sys.modules.pop("faster_whisper", None)
-    provider = FasterWhisperSTTProvider(STTProviderConfig(active_provider="faster_whisper", local_model_id="small"))
+    cfg = STTProviderConfig(active_provider="faster_whisper", local_model_id="small", local_model_path_override="C:/cache/faster-whisper")
+    provider = FasterWhisperSTTProvider(cfg)
     assert "faster_whisper" not in sys.modules
+    constructor_calls: list[tuple[tuple, dict]] = []
 
     class _WhisperModel:
-        def __init__(self, *_args, **_kwargs) -> None:
-            pass
+        def __init__(self, *args, **kwargs) -> None:
+            constructor_calls.append((args, kwargs))
 
         def transcribe(self, *_args, **_kwargs):
             return [SimpleNamespace(text="hello local")], SimpleNamespace(language="en")
@@ -25,4 +27,4 @@ def test_faster_whisper_provider_lazy_import_and_fake_transcription(monkeypatch)
 
     assert result.text == "hello local"
     assert result.language == "en"
-
+    assert constructor_calls[0][0][0] == "C:/cache/faster-whisper"

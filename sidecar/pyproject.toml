@@ -19,6 +19,8 @@ dependencies = [
     "pyyaml>=6.0",
     "sounddevice==0.5.5",
     "soundfile==0.13.1",
+    "huggingface-hub>=0.23",
+    "modelscope>=1.16",
     "pywin32==311 ; sys_platform == 'win32'",
     "opensimplex==0.4.5.1",
     "numpy>=1.26",

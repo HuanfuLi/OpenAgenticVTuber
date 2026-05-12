@@ -55,7 +55,15 @@ class FunASRSTTProvider:
                 summary="FunASR AutoModel is unavailable.",
                 retryable=False,
             )
-        self._model = auto_model(model=self.config.local_model_path_override or self.config.local_model_id or "iic/SenseVoiceSmall")
+        model_path = self.config.local_model_path_override
+        if not model_path:
+            raise STTProviderError(
+                provider_id=self.provider_id,
+                state="misconfigured",
+                summary="FunASR local model path is not configured.",
+                retryable=False,
+            )
+        self._model = auto_model(model=model_path)
 
     def transcribe(self, request: STTRequest) -> STTResult:
         if not request.audio_bytes:
@@ -112,4 +120,3 @@ def _extract_text(value: object) -> str:
     if isinstance(value, dict):
         return str(value.get("text", "")).strip()
     return ""
-

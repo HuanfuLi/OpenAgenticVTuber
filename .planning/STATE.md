@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Rich Voice Configuration + Voice Input
-status: phase_20_live_uat_pending
-stopped_at: Phase 20 gap closures complete; live microphone/STT UAT remains before acceptance
-last_updated: "2026-05-11T06:49:00Z"
-last_activity: 2026-05-11 - Phase 20 plan 20-06 removed fake STT model download behavior and clarified VAD/model copy
+status: phase_19_gap_closure_automated_complete_live_uat_pending
+stopped_at: Phase 19 gap closure implementation complete; live local/cloud provider UAT pending before resuming Phase 20 live microphone/STT UAT
+last_updated: "2026-05-12T05:20:00Z"
+last_activity: 2026-05-12 - Phase 19 gap closures implemented real explicit local STT downloads, cache-path provider binding, valid WAV Settings tests, coherent readiness, off-event-loop provider work, and cloud language propagation
 progress:
   total_phases: 7
-  completed_phases: 4
-  total_plans: 29
-  completed_plans: 29
+  completed_phases: 3
+  total_plans: 31
+  completed_plans: 31
   percent: 100
 ---
 
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Multi-avatar identity persistence (v1 horizon - v3.0 improves voice usability before memory/avatar identity work)
-**Current focus:** Phase 20: live voice input gap closure
+**Current focus:** Phase 19: live STT provider acceptance
 
 ## Current Position
 
-Phase: 20 of 22 (Renderer Voice Capture + PTT/VAD Preview UX)
-Plan: 20-06 complete
-Status: Phase 20 live microphone/STT UAT pending
-Last activity: 2026-05-11 - Phase 20 plan 20-06 removed fake STT model download behavior and clarified VAD/model copy
+Phase: 19 of 22 (STT Provider Abstraction + Local/Cloud Providers)
+Plan: 19-05 and 19-06 implemented
+Status: Phase 19 automated gap closure complete; live local/cloud provider UAT pending
+Last activity: 2026-05-12 - Phase 19 gap closures implemented real explicit local STT downloads, cache-path provider binding, valid WAV Settings tests, coherent readiness, off-event-loop provider work, and cloud language propagation
 
-Progress: [██████████] 29/29 v3.0 plans complete; Phase 20 live UAT pending
+Progress: [██████████] 31/31 currently planned v3.0 plans complete; Phase 19/20 live STT UAT pending
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed in v3.0: 29
+- Total plans completed in v3.0: 31
 - Average duration: 10 min
 - Total execution time: 172 min
 
@@ -47,7 +47,7 @@ Progress: [██████████] 29/29 v3.0 plans complete; Phase 20 l
 | 16. Audio Contracts + TTS Provider Shell | 4/4 | same-session | same-session |
 | 17. GPT-SoVITS Provider + Voice Presets | 12/12 | 117 min | 10 min |
 | 18. Rich Voice Settings + Persistence | 3/3 | same-session | same-session |
-| 19. STT Provider Abstraction + Local/Cloud Providers | 4/4 | same-session | same-session |
+| 19. STT Provider Abstraction + Local/Cloud Providers | 6/6 | same-session | same-session |
 | 20. Renderer Voice Capture + PTT/VAD Preview UX | 6/6 | 55 min | 9 min |
 | 21. Code-Switch Evaluation + Hardening | 0/4 | - | - |
 | 22. AEC Spike + No-Headphones Decision | 0/TBD | - | - |
@@ -80,7 +80,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Run Phase 20 live microphone/STT UAT after user retest.
+- Run Phase 19 live local-provider download and Settings transcription acceptance.
+- Run Phase 19 live cloud-provider Settings transcription if credentials are available.
+- Run Phase 20 live microphone/STT UAT after Phase 19 live provider acceptance or explicit waiver.
 
 ### Blockers/Concerns
 
@@ -98,8 +100,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 17 code review blockers were fixed and final `17-REVIEW.md` is clean; `17-VERIFICATION.md` passed all 5 roadmap success criteria.
 - Phase 18 added provider catalog labels, explicit cloud STT consent/API key persistence, redacted diagnostics, Voice in settings, and diagnostics-only STT tests without microphone capture or chat submission.
 - Phase 19 plan 19-01 added STT contracts, lazy registry, app-managed model cache metadata, readiness fingerprints, and admin endpoint skeletons without provider-library imports at boot.
-- Phase 19 plans 19-02 and 19-03 added lazy local/cloud STT adapters, local model cache prepare/remove/status, provider-specific cloud consent/credential gates, and readiness-gated test transcription.
-- Phase 19 plan 19-04 added Electron STT model-cache bridges, Settings cache/test controls, and a Settings-only microphone recorder path without chat submission.
+- Phase 19 plans 19-02 and 19-03 added lazy local/cloud STT adapters, local model cache prepare/remove/status, provider-specific cloud consent/credential gates, and readiness-gated test transcription, but the re-audit found real local model download and cache-path binding gaps.
+- Phase 19 plan 19-04 added Electron STT model-cache bridges, Settings cache/test controls, and a Settings-only microphone recorder path without chat submission; re-audit found the recorder sends WebM bytes through a WAV contract.
+- Phase 19 gap closure plans 19-05 and 19-06 are implemented: real local STT model downloads/cache path binding, valid WAV Settings tests, coherent readiness, off-event-loop STT work, cloud language propagation, and corrected UAT evidence. Live local/cloud provider acceptance remains pending.
 - Phase 20 plan 20-01 added runtime voice input contracts, narrow Electron microphone permission handling, preload IPC, and readiness-gated sidecar runtime transcription using the selected Phase 19 STT provider only.
 - Phase 20 plan 20-02 added renderer microphone capture, sequence-gated preview transcription state, one queued final slot, Settings-only PTT shortcut configuration, and disabled-by-default conservative VAD settings.
 - Phase 20 plan 20-03 added Chat-visible PTT mic controls, transient preview outside bubbles, unchanged final transcript submission through the existing text-input path, and one queued final transcript during active turns without barge-in.

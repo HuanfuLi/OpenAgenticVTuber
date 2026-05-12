@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import wave
+from io import BytesIO
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -12,6 +14,16 @@ def _client() -> TestClient:
     app = FastAPI()
     app.include_router(audio_module.router)
     return TestClient(app)
+
+
+def _wav_base64() -> str:
+    buf = BytesIO()
+    with wave.open(buf, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        wav.writeframes(b"\x00\x00" * 160)
+    return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
 def _payload(consent: bool, api_key: str | None) -> dict:
@@ -40,7 +52,7 @@ def _payload(consent: bool, api_key: str | None) -> dict:
                 "groq": {"provider_id": "groq", "consent_granted": False, "api_key": None, "endpoint_url": None, "model_name": None},
             },
         },
-        "audio_base64_wav": base64.b64encode(b"wav").decode("ascii"),
+        "audio_base64_wav": _wav_base64(),
         "duration_ms": 500,
         "sample_label": "settings",
     }
@@ -63,4 +75,3 @@ def test_cloud_stt_blocks_before_provider_call_without_consent_or_key(monkeypatc
     assert no_key["failure"]["state"] == "missing_credential"
     assert called is False
     assert "sk-secret" not in str(no_consent)
-

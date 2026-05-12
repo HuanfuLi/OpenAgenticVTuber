@@ -107,7 +107,7 @@ function sttConfig(): STTProviderConfig {
       last_test_transcription_at: '2026-05-10T00:00:00Z',
       fingerprint: 'abc123',
       active_allowed: true,
-      invalidation_reason: 'never_tested'
+      invalidation_reason: 'ready'
     },
     capture_timeout_ms: 30_000,
     execution: 'off_event_loop',

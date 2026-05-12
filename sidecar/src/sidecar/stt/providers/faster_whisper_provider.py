@@ -44,7 +44,10 @@ class FasterWhisperSTTProvider:
         whisper_model = getattr(module, "WhisperModel", None)
         if whisper_model is None:
             raise STTProviderError(provider_id=self.provider_id, state="misconfigured", summary="WhisperModel is unavailable.")
-        self._model = whisper_model(self.config.local_model_path_override or self.config.local_model_id or "small", device="cpu", compute_type="int8")
+        model_path = self.config.local_model_path_override
+        if not model_path:
+            raise STTProviderError(provider_id=self.provider_id, state="misconfigured", summary="faster-whisper local model path is not configured.")
+        self._model = whisper_model(model_path, device="cpu", compute_type="int8")
 
     def transcribe(self, request: STTRequest) -> STTResult:
         if not request.audio_bytes:
@@ -80,4 +83,3 @@ class FasterWhisperSTTProvider:
 
     def shutdown(self) -> None:
         self._model = None
-

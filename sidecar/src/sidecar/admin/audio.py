@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import asyncio
 import os
 import wave
 from io import BytesIO
@@ -213,6 +214,64 @@ def _local_model_status(request: Request, config: STTProviderConfig) -> str:
     catalog = _stt_model_cache(request, config).catalog()
     model = next((item for item in catalog.models if item.provider_id == provider_id and item.model_id == model_id), None)
     return model.status if model else "missing"
+
+
+def _local_model_id(config: STTProviderConfig) -> str:
+    provider_id = config.active_provider
+    return config.local_model_id or ("iic/SenseVoiceSmall" if provider_id == "funasr" else "small")
+
+
+def _resolve_local_model_path(request: Request, config: STTProviderConfig) -> Path | None:
+    provider_id = config.active_provider
+    if provider_id not in {"funasr", "faster_whisper"}:
+        return None
+    if config.local_model_path_override:
+        candidate = Path(config.local_model_path_override).resolve()
+        return candidate if STTModelCache.model_status_for_path(candidate) == "downloaded" else None
+    model_id = _local_model_id(config)
+    cache = _stt_model_cache(request, config)
+    candidate = cache.model_path(provider_id, model_id)
+    return candidate if cache.model_status_for_path(candidate) == "downloaded" else None
+
+
+def _config_with_resolved_local_model_path(request: Request, config: STTProviderConfig) -> STTProviderConfig:
+    path = _resolve_local_model_path(request, config)
+    if path is None:
+        return config
+    return config.model_copy(update={"local_model_path_override": str(path)})
+
+
+def _decode_wav_payload(payload: STTTestRequest | VoiceInputTranscriptionRequest) -> tuple[bytes, int, int]:
+    audio_b64 = payload.audio_base64_wav
+    if not audio_b64:
+        raise ValueError("missing_audio")
+    try:
+        audio_bytes = base64.b64decode(audio_b64)
+        with wave.open(BytesIO(audio_bytes), "rb") as wav:
+            sample_rate = wav.getframerate()
+            frames = wav.getnframes()
+            if sample_rate <= 0 or frames <= 0:
+                raise ValueError("empty_wav")
+            duration_ms = int(frames / sample_rate * 1000)
+    except Exception as exc:
+        raise ValueError("invalid_wav") from exc
+    return audio_bytes, sample_rate, duration_ms
+
+
+def _invalid_wav_health(provider_id: str) -> AudioProviderHealth:
+    return AudioProviderHealth(
+        provider_id=provider_id,
+        kind="stt",
+        state="misconfigured",
+        summary="STT test audio must be a valid non-empty WAV payload.",
+        retryable=False,
+        redacted_diagnostics={"audio": "invalid_wav"},
+    )
+
+
+def _transcribe_with_provider(config: STTProviderConfig, request: STTRequest):
+    provider = STTProviderRegistry().build_provider(config)
+    return provider.transcribe(request)
 
 
 def _stt_failure_result(payload: STTTestRequest, health: AudioProviderHealth, diagnostics: dict[str, str] | None = None) -> STTTestResult:
@@ -464,17 +523,19 @@ async def post_stt_test(request: Request, payload: STTTestRequest) -> dict[str, 
         )
         return _stt_failure_result(payload, missing_model, redacted_diagnostics).model_dump()
     try:
-        audio_bytes = base64.b64decode(payload.audio_base64_wav)
-        provider = STTProviderRegistry().build_provider(payload.config)
-        stt_result = provider.transcribe(
+        audio_bytes, sample_rate, duration_ms = _decode_wav_payload(payload)
+        provider_config = _config_with_resolved_local_model_path(request, payload.config)
+        stt_result = await asyncio.to_thread(
+            _transcribe_with_provider,
+            provider_config,
             STTRequest(
                 audio_bytes=audio_bytes,
-                sample_rate_hz=16_000,
-                duration_ms=payload.duration_ms or 0,
+                sample_rate_hz=sample_rate,
+                duration_ms=payload.duration_ms or duration_ms,
                 language_mode=payload.config.language_mode,
                 provider_id=provider_id,
-                model_id=payload.config.local_model_id,
-            )
+                model_id=_local_model_id(payload.config) if provider_id in {"funasr", "faster_whisper"} else None,
+            ),
         )
         result = STTTestResult(
             ok=True,
@@ -490,6 +551,8 @@ async def post_stt_test(request: Request, payload: STTTestRequest) -> dict[str, 
         )
         result.readiness = readiness_from_test_result(payload.config, result)
         return result.model_dump()
+    except ValueError:
+        return _stt_failure_result(payload, _invalid_wav_health(provider_id), redacted_diagnostics).model_dump()
     except STTProviderError as exc:
         return _stt_failure_result(payload, exc.health(), exc.redacted_diagnostics).model_dump()
     except Exception as exc:
@@ -565,17 +628,19 @@ async def post_voice_input(request: Request, payload: VoiceInputTranscriptionReq
         )
         return _voice_input_failure_result(payload, blocked, missing_model, missing_model.redacted_diagnostics).model_dump()
     try:
-        audio_bytes = base64.b64decode(payload.audio_base64_wav)
-        provider = STTProviderRegistry().build_provider(payload.config)
-        stt_result = provider.transcribe(
+        audio_bytes, sample_rate, duration_ms = _decode_wav_payload(payload)
+        provider_config = _config_with_resolved_local_model_path(request, payload.config)
+        stt_result = await asyncio.to_thread(
+            _transcribe_with_provider,
+            provider_config,
             STTRequest(
                 audio_bytes=audio_bytes,
-                sample_rate_hz=16_000,
-                duration_ms=payload.duration_ms,
+                sample_rate_hz=sample_rate,
+                duration_ms=payload.duration_ms or duration_ms,
                 language_mode=payload.config.language_mode,
                 provider_id=provider_id,
-                model_id=payload.config.local_model_id,
-            )
+                model_id=_local_model_id(payload.config) if provider_id in {"funasr", "faster_whisper"} else None,
+            ),
         )
         return VoiceInputTranscriptionResult(
             ok=True,
@@ -591,6 +656,19 @@ async def post_voice_input(request: Request, payload: VoiceInputTranscriptionReq
             failure=None,
             redacted_diagnostics=stt_result.redacted_diagnostics,
         ).model_dump()
+    except ValueError:
+        failure = _invalid_wav_health(provider_id)
+        failed_readiness = readiness.model_copy(
+            update={
+                "ready": False,
+                "capture_status": "error",
+                "blocked_reason": "readiness_not_active",
+                "setup_destination": "voice_settings",
+                "readiness": _inactive_stt_readiness(payload.config, "test_failed"),
+                "summary": failure.summary,
+            }
+        )
+        return _voice_input_failure_result(payload, failed_readiness, failure, failure.redacted_diagnostics).model_dump()
     except STTProviderError as exc:
         failed_readiness = readiness.model_copy(
             update={
@@ -632,7 +710,8 @@ async def post_stt_models(request: Request, payload: STTTestRequest) -> dict[str
 
 @router.post("/stt/models/download")
 async def post_stt_model_download(request: Request, payload: STTModelCacheOperationRequest) -> dict[str, object]:
-    return _stt_model_cache(request).download_unavailable(payload.provider_id, payload.model_id).model_dump()
+    result = await asyncio.to_thread(_stt_model_cache(request).download, payload.provider_id, payload.model_id)
+    return result.model_dump()
 
 
 @router.post("/stt/models/remove")

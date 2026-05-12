@@ -95,7 +95,7 @@ function readiness(patch: Partial<VoiceInputReadiness> = {}): VoiceInputReadines
       last_test_transcription_at: null,
       fingerprint: 'ready',
       active_allowed: true,
-      invalidation_reason: 'never_tested'
+      invalidation_reason: 'ready'
     },
     permission_state: 'granted',
     capture_status: 'idle',

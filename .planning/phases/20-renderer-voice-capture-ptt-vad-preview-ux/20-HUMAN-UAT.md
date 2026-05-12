@@ -3,7 +3,7 @@ status: testing
 phase: 20-renderer-voice-capture-ptt-vad-preview-ux
 source: [20-VERIFICATION.md, 20-UAT.md]
 started: 2026-05-11T05:50:00Z
-updated: 2026-05-11T10:31:00Z
+updated: 2026-05-12T04:20:17Z
 ---
 
 # Phase 20 Human UAT
@@ -24,6 +24,7 @@ expected: Holding PTT records, shows preview outside chat history, finalizes, an
 result: issue
 reported: "Failed: Start app and warning appeared \"Voice input readiness unavailable: sidecar request failed.\""
 severity: blocker
+blocked_followup: "Automatic download not implemented. Phase 19 owns STT local model cache/download behavior; Phase 20 only made the model-cache UI truthful and requires real model files or a valid explicit local model path before live voice capture can proceed."
 
 ### 2. Live Microphone VAD Auto-Submit
 

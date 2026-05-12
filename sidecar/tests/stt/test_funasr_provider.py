@@ -10,11 +10,14 @@ from sidecar.stt.providers.funasr_provider import FunASRSTTProvider
 
 def test_funasr_provider_lazy_import_and_fake_transcription(monkeypatch) -> None:
     sys.modules.pop("funasr", None)
-    provider = FunASRSTTProvider(STTProviderConfig(active_provider="funasr", local_model_id="iic/SenseVoiceSmall"))
+    cfg = STTProviderConfig(active_provider="funasr", local_model_id="iic/SenseVoiceSmall", local_model_path_override="C:/cache/funasr")
+    provider = FunASRSTTProvider(cfg)
     assert "funasr" not in sys.modules
+    constructor_calls: list[dict] = []
 
     class _AutoModel:
         def __init__(self, **kwargs) -> None:
+            constructor_calls.append(kwargs)
             self.kwargs = kwargs
 
         def generate(self, **_kwargs):
@@ -25,4 +28,4 @@ def test_funasr_provider_lazy_import_and_fake_transcription(monkeypatch) -> None
 
     assert result.text == "你好 hello"
     assert result.provider_id == "funasr"
-
+    assert constructor_calls[0]["model"] == "C:/cache/funasr"

@@ -195,7 +195,7 @@ def test_voice_input_runtime_contracts_distinguish_preview_and_final() -> None:
             "last_test_transcription_at": "2026-05-10T00:00:00Z",
             "fingerprint": "abc123",
             "active_allowed": True,
-            "invalidation_reason": "never_tested",
+            "invalidation_reason": "ready",
         },
     )
     readiness_request = VoiceInputReadinessRequest(config=cfg, permission_state="granted")

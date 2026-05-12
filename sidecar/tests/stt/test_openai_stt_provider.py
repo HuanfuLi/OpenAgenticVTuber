@@ -33,9 +33,32 @@ def test_openai_provider_uses_transcription_endpoint(monkeypatch) -> None:
     cfg = STTProviderConfig(active_provider="openai")
     cfg.cloud["openai"].consent_granted = True
     cfg.cloud["openai"].api_key = "sk-secret"
+    cfg.language_mode = "zh"
     provider = OpenAISTTProvider(cfg)
-    result = provider.transcribe(STTRequest(audio_bytes=b"wav", sample_rate_hz=16000, duration_ms=500, provider_id="openai"))
+    result = provider.transcribe(STTRequest(audio_bytes=b"wav", sample_rate_hz=16000, duration_ms=500, provider_id="openai", language_mode="zh"))
 
     assert result.text == "cloud transcript"
     assert calls[0]["model"] == "gpt-4o-mini-transcribe"
+    assert calls[0]["language"] == "zh"
 
+
+def test_openai_provider_omits_language_in_auto_mode(monkeypatch) -> None:
+    calls: list[dict] = []
+
+    class _Transcriptions:
+        def create(self, **kwargs):
+            calls.append(kwargs)
+            return SimpleNamespace(text="cloud transcript")
+
+    class _OpenAI:
+        def __init__(self, **_kwargs) -> None:
+            self.audio = SimpleNamespace(transcriptions=_Transcriptions())
+
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=_OpenAI))
+    cfg = STTProviderConfig(active_provider="openai")
+    cfg.cloud["openai"].consent_granted = True
+    cfg.cloud["openai"].api_key = "sk-secret"
+    provider = OpenAISTTProvider(cfg)
+    provider.transcribe(STTRequest(audio_bytes=b"wav", sample_rate_hz=16000, duration_ms=500, provider_id="openai", language_mode="auto"))
+
+    assert "language" not in calls[0]

@@ -5,13 +5,9 @@ import shutil
 from pathlib import Path
 
 from contracts import STTModelCacheCatalog, STTModelCacheOperationResult, STTModelCatalogEntry
+from sidecar.stt.model_downloader import STTModelDownloadError, download_local_stt_model
 
 MODEL_CACHE_MARKER = ".agenticllmvtuber-model-cache.json"
-DOWNLOAD_UNAVAILABLE_SUMMARY = (
-    "Automatic STT model download is not implemented yet. Place real model files in the "
-    "app-managed cache or configure a local model path."
-)
-
 LOCAL_MODEL_DEFINITIONS = [
     {
         "provider_id": "funasr",
@@ -136,13 +132,49 @@ class STTModelCache:
             cache_path_display=str(path),
         )
 
-    def download_unavailable(self, provider_id: str, model_id: str) -> STTModelCacheOperationResult:
+    def download(self, provider_id: str, model_id: str) -> STTModelCacheOperationResult:
         path = self.model_path(provider_id, model_id)
+        if not self._is_under_cache_root(path):
+            return STTModelCacheOperationResult(
+                ok=False,
+                provider_id=provider_id,
+                model_id=model_id,
+                status="missing",
+                summary="Refused to download outside the app-managed STT model cache.",
+                cache_path_display=str(path),
+            )
+        try:
+            download_local_stt_model(provider_id, model_id, path)
+        except STTModelDownloadError as exc:
+            status = self.model_status_for_path(path) if path.exists() else "not_downloaded"
+            return STTModelCacheOperationResult(
+                ok=False,
+                provider_id=provider_id,
+                model_id=model_id,
+                status=status,
+                summary=exc.summary,
+                cache_path_display=str(path),
+            )
+        except Exception as exc:
+            status = self.model_status_for_path(path) if path.exists() else "not_downloaded"
+            return STTModelCacheOperationResult(
+                ok=False,
+                provider_id=provider_id,
+                model_id=model_id,
+                status=status,
+                summary=f"STT model download failed: {type(exc).__name__}",
+                cache_path_display=str(path),
+            )
+        status = self.model_status_for_path(path)
         return STTModelCacheOperationResult(
-            ok=False,
+            ok=status == "downloaded",
             provider_id=provider_id,
             model_id=model_id,
-            status="manual_path_required",
-            summary=DOWNLOAD_UNAVAILABLE_SUMMARY,
+            status=status,
+            summary=(
+                "STT model downloaded into the app-managed cache."
+                if status == "downloaded"
+                else "STT model download did not produce usable model files."
+            ),
             cache_path_display=str(path),
         )

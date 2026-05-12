@@ -36,7 +36,7 @@ def readiness_from_test_result(config: STTProviderConfig, result: STTTestResult)
         last_test_transcription_at=now if passed else None,
         fingerprint=fingerprint,
         active_allowed=passed and result.failure is None,
-        invalidation_reason="never_tested" if passed else "test_failed",
+        invalidation_reason="ready" if passed else "test_failed",
     )
 
 def validate_stt_readiness(config: STTProviderConfig) -> STTProviderReadiness:
@@ -53,4 +53,3 @@ def validate_stt_readiness(config: STTProviderConfig) -> STTProviderReadiness:
     if not (readiness.health_check_passed and readiness.test_transcription_passed):
         return readiness.model_copy(update={"active_allowed": False})
     return readiness
-

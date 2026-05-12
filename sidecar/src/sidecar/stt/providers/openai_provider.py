@@ -40,10 +40,13 @@ class OpenAISTTProvider:
         try:
             module = importlib.import_module("openai")
             client = module.OpenAI(api_key=self._cloud.api_key, base_url=self._cloud.endpoint_url)
-            response = client.audio.transcriptions.create(
-                model=self._cloud.model_name or "gpt-4o-mini-transcribe",
-                file=("settings-test.wav", BytesIO(request.audio_bytes), "audio/wav"),
-            )
+            kwargs = {
+                "model": self._cloud.model_name or "gpt-4o-mini-transcribe",
+                "file": ("settings-test.wav", BytesIO(request.audio_bytes), "audio/wav"),
+            }
+            if request.language_mode != "auto":
+                kwargs["language"] = request.language_mode
+            response = client.audio.transcriptions.create(**kwargs)
         except Exception as exc:
             raise STTProviderError(
                 provider_id=self.provider_id,
@@ -59,4 +62,3 @@ class OpenAISTTProvider:
 
     def shutdown(self) -> None:
         return None
-

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import wave
+from io import BytesIO
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -17,6 +19,16 @@ def _client() -> TestClient:
     return TestClient(app)
 
 
+def _wav_base64() -> str:
+    buf = BytesIO()
+    with wave.open(buf, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        wav.writeframes(b"\x00\x00" * 160)
+    return base64.b64encode(buf.getvalue()).decode("ascii")
+
+
 def _ready_config(provider_id: str = "funasr") -> dict[str, object]:
     cfg = STTProviderConfig(enabled=True, active_provider=provider_id)
     cfg.readiness = STTProviderReadiness(
@@ -26,7 +38,7 @@ def _ready_config(provider_id: str = "funasr") -> dict[str, object]:
         last_test_transcription_at="2026-05-10T00:00:00Z",
         fingerprint=compute_stt_readiness_fingerprint(cfg),
         active_allowed=True,
-        invalidation_reason="never_tested",
+        invalidation_reason="ready",
     )
     if provider_id in {"openai", "groq"}:
         cfg.cloud[provider_id].consent_granted = True
@@ -38,7 +50,7 @@ def _ready_config(provider_id: str = "funasr") -> dict[str, object]:
 def _voice_payload(config: dict[str, object], mode: str = "preview") -> dict[str, object]:
     return {
         "config": config,
-        "audio_base64_wav": base64.b64encode(b"wav").decode("ascii"),
+        "audio_base64_wav": _wav_base64(),
         "duration_ms": 600,
         "sequence_id": f"{mode}-1",
         "mode": mode,

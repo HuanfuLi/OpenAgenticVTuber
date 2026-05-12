@@ -49,6 +49,7 @@ STTModelCacheStatus = Literal[
     "operation_pending",
 ]
 STTReadinessInvalidationReason = Literal[
+    "ready",
     "never_tested",
     "config_changed",
     "health_failed",
