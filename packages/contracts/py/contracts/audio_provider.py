@@ -37,9 +37,14 @@ AudioProviderCapability = Literal[
     "test_synthesis",
     "test_transcription",
     "chinese_english",
+    "code_switch_tested",
+    "limited_code_switch",
+    "cuda_optional",
 ]
 STTInputMode = Literal["push_to_talk", "vad"]
 STTLanguageMode = Literal["auto", "zh", "en"]
+STTRuntimeDevice = Literal["cpu", "cuda"]
+STTCudaComputeType = Literal["float16", "int8_float16"]
 STTModelCacheStatus = Literal[
     "not_downloaded",
     "downloaded",
@@ -64,7 +69,6 @@ VoiceInputCaptureStatus = Literal[
     "permission_needed",
     "listening",
     "recording",
-    "previewing",
     "finalizing",
     "queued",
     "error",
@@ -88,7 +92,7 @@ VoiceInputBlockedReason = Literal[
     "sidecar_unavailable",
     "unexpected_failure",
 ]
-VoiceInputTranscriptionMode = Literal["preview", "final"]
+VoiceInputTranscriptionMode = Literal["final"]
 
 
 class AudioProviderHealth(BaseModel):
@@ -191,6 +195,8 @@ class STTProviderConfig(BaseModel):
     local_model_id: Optional[str] = None
     local_model_path_override: Optional[str] = None
     cache_root: Optional[str] = None
+    runtime_device: STTRuntimeDevice = "cpu"
+    cuda_compute_type: STTCudaComputeType = "float16"
     readiness: "STTProviderReadiness" = Field(default_factory=lambda: STTProviderReadiness())
     capture_timeout_ms: int = Field(default=30_000, ge=1_000)
     execution: Literal["off_event_loop"] = "off_event_loop"

@@ -6,6 +6,7 @@ import type { AudioPayloadMessage, DisplayTextField } from './audio-payload';
 export type WSMessage = TextInputMessage
   | DisplayTextMessage
   | ShutdownMessage
+  | StopTurnMessage
   | AudioPayloadMessage
   | ControlMessage
   | FullTextMessage
@@ -39,6 +40,9 @@ export interface DisplayTextMessage {
 }
 export interface ShutdownMessage {
   type: 'shutdown'
+}
+export interface StopTurnMessage {
+  type: 'stop-turn'
 }
 
 

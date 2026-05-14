@@ -33,6 +33,10 @@ class ShutdownMessage(BaseModel):
     type: Literal["shutdown"] = "shutdown"
 
 
+class StopTurnMessage(BaseModel):
+    type: Literal["stop-turn"] = "stop-turn"
+
+
 # Phase 2 (new):
 
 class ControlMessage(BaseModel):
@@ -76,6 +80,7 @@ WSMessage = Annotated[
         TextInputMessage,
         DisplayTextMessage,
         ShutdownMessage,
+        StopTurnMessage,
         AudioPayloadMessage,
         ControlMessage,
         FullTextMessage,

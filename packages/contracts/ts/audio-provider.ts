@@ -22,6 +22,9 @@ export type Capabilities = (
   | 'test_synthesis'
   | 'test_transcription'
   | 'chinese_english'
+  | 'code_switch_tested'
+  | 'limited_code_switch'
+  | 'cuda_optional'
 )[];
 export type RedactedDiagnostics = {
   [k: string]: string
@@ -70,7 +73,6 @@ export type CaptureStatus =
   | 'permission_needed'
   | 'listening'
   | 'recording'
-  | 'previewing'
   | 'finalizing'
   | 'queued'
   | 'error';
@@ -124,13 +126,15 @@ export interface STTProviderConfig {
   cache_root: string | null;
   capture_timeout_ms: number;
   cloud: Cloud;
+  cuda_compute_type: 'float16' | 'int8_float16';
   enabled: boolean;
   execution: 'off_event_loop';
   input_mode: 'push_to_talk' | 'vad';
   language_mode: 'auto' | 'zh' | 'en';
   local_model_id: string | null;
   local_model_path_override: string | null;
-  readiness: STTProviderReadiness
+  readiness: STTProviderReadiness;
+  runtime_device: 'cpu' | 'cuda'
 }
 export interface Cloud {
   [k: string]: CloudSTTProviderSettings
@@ -275,13 +279,15 @@ export interface STTProviderConfig1 {
   cache_root: string | null;
   capture_timeout_ms: number;
   cloud: Cloud;
+  cuda_compute_type: 'float16' | 'int8_float16';
   enabled: boolean;
   execution: 'off_event_loop';
   input_mode: 'push_to_talk' | 'vad';
   language_mode: 'auto' | 'zh' | 'en';
   local_model_id: string | null;
   local_model_path_override: string | null;
-  readiness: STTProviderReadiness
+  readiness: STTProviderReadiness;
+  runtime_device: 'cpu' | 'cuda'
 }
 export interface STTTestResult {
   duration_ms: number | null;
@@ -315,7 +321,7 @@ export interface VoiceInputTranscriptionRequest {
   audio_base64_wav: string;
   config: STTProviderConfig1;
   duration_ms: number;
-  mode: 'preview' | 'final';
+  mode: 'final';
   sequence_id: string;
   session_id: string | null
 }
@@ -324,7 +330,7 @@ export interface VoiceInputTranscriptionResult {
   failure: AudioProviderHealth | null;
   is_final: boolean;
   latency_ms: number | null;
-  mode: 'preview' | 'final';
+  mode: 'final';
   ok: boolean;
   provider_id: ('funasr' | 'faster_whisper' | 'openai' | 'groq') | null;
   readiness: VoiceInputReadiness | null;

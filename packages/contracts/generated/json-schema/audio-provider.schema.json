@@ -36,6 +36,7 @@
                 "provider_id": "openai"
               }
             },
+            "cuda_compute_type": "float16",
             "enabled": false,
             "execution": "off_event_loop",
             "input_mode": "push_to_talk",
@@ -50,7 +51,8 @@
               "last_health_checked_at": null,
               "last_test_transcription_at": null,
               "test_transcription_passed": false
-            }
+            },
+            "runtime_device": "cpu"
           }
         },
         "tts": {
@@ -118,7 +120,10 @@
               "requires_local_model",
               "test_synthesis",
               "test_transcription",
-              "chinese_english"
+              "chinese_english",
+              "code_switch_tested",
+              "limited_code_switch",
+              "cuda_optional"
             ],
             "type": "string"
           },
@@ -1208,6 +1213,15 @@
           "title": "Cloud",
           "type": "object"
         },
+        "cuda_compute_type": {
+          "default": "float16",
+          "enum": [
+            "float16",
+            "int8_float16"
+          ],
+          "title": "Cuda Compute Type",
+          "type": "string"
+        },
         "enabled": {
           "default": false,
           "title": "Enabled",
@@ -1264,18 +1278,29 @@
         },
         "readiness": {
           "$ref": "#/$defs/STTProviderReadiness"
+        },
+        "runtime_device": {
+          "default": "cpu",
+          "enum": [
+            "cpu",
+            "cuda"
+          ],
+          "title": "Runtime Device",
+          "type": "string"
         }
       },
       "required": [
         "active_provider",
         "cache_root",
         "capture_timeout_ms",
+        "cuda_compute_type",
         "enabled",
         "execution",
         "input_mode",
         "language_mode",
         "local_model_id",
-        "local_model_path_override"
+        "local_model_path_override",
+        "runtime_device"
       ],
       "title": "STTProviderConfig",
       "type": "object"
@@ -1632,7 +1657,6 @@
             "permission_needed",
             "listening",
             "recording",
-            "previewing",
             "finalizing",
             "queued",
             "error"
@@ -1769,10 +1793,7 @@
           "type": "integer"
         },
         "mode": {
-          "enum": [
-            "preview",
-            "final"
-          ],
+          "const": "final",
           "title": "Mode",
           "type": "string"
         },
@@ -1849,10 +1870,7 @@
           "title": "Latency Ms"
         },
         "mode": {
-          "enum": [
-            "preview",
-            "final"
-          ],
+          "const": "final",
           "title": "Mode",
           "type": "string"
         },
@@ -2073,6 +2091,7 @@
               "provider_id": "openai"
             }
           },
+          "cuda_compute_type": "float16",
           "enabled": false,
           "execution": "off_event_loop",
           "input_mode": "push_to_talk",
@@ -2087,7 +2106,8 @@
             "last_health_checked_at": null,
             "last_test_transcription_at": null,
             "test_transcription_passed": false
-          }
+          },
+          "runtime_device": "cpu"
         },
         "tts": {
           "active_provider": "piper",

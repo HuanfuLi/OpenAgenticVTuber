@@ -374,6 +374,21 @@
       "title": "ShutdownMessage",
       "type": "object"
     },
+    "StopTurnMessage": {
+      "properties": {
+        "type": {
+          "const": "stop-turn",
+          "default": "stop-turn",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "StopTurnMessage",
+      "type": "object"
+    },
     "TextInputHistoryMessage": {
       "properties": {
         "role": {
@@ -472,6 +487,7 @@
       "full-text": "#/$defs/FullTextMessage",
       "log": "#/$defs/LogMessage",
       "shutdown": "#/$defs/ShutdownMessage",
+      "stop-turn": "#/$defs/StopTurnMessage",
       "text-input": "#/$defs/TextInputMessage"
     },
     "propertyName": "type"
@@ -485,6 +501,9 @@
     },
     {
       "$ref": "#/$defs/ShutdownMessage"
+    },
+    {
+      "$ref": "#/$defs/StopTurnMessage"
     },
     {
       "$ref": "#/$defs/AudioPayloadMessage"

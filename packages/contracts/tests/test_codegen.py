@@ -179,6 +179,8 @@ def test_stt_provider_config_tracks_cache_and_readiness_defaults() -> None:
     assert cfg.stt.language_mode == "auto"
     assert cfg.stt.cache_root is None
     assert cfg.stt.local_model_id is None
+    assert cfg.stt.runtime_device == "cpu"
+    assert cfg.stt.cuda_compute_type == "float16"
     assert cfg.stt.readiness.active_allowed is False
     assert cfg.stt.readiness.invalidation_reason == "never_tested"
     assert cfg.stt.cloud["openai"].consent_granted is False
@@ -202,7 +204,7 @@ def test_stt_model_cache_operation_request_carries_only_cache_root() -> None:
     assert "api_key" not in dumped
 
 
-def test_voice_input_runtime_contracts_distinguish_preview_and_final() -> None:
+def test_voice_input_runtime_contracts_are_final_only() -> None:
     cfg = STTProviderConfig(
         enabled=True,
         active_provider="funasr",
@@ -225,26 +227,6 @@ def test_voice_input_runtime_contracts_distinguish_preview_and_final() -> None:
         readiness=cfg.readiness,
         summary="Voice input is ready.",
     )
-    preview_request = VoiceInputTranscriptionRequest(
-        config=cfg,
-        audio_base64_wav="UklGRg==",
-        duration_ms=240,
-        sequence_id="seq-1",
-        mode="preview",
-        session_id="session-1",
-    )
-    preview_result = VoiceInputTranscriptionResult(
-        ok=True,
-        mode="preview",
-        sequence_id="seq-1",
-        transcript="hello",
-        is_final=False,
-        provider_id="funasr",
-        duration_ms=240,
-        latency_ms=12,
-        readiness=readiness,
-        summary="Preview transcript ready.",
-    )
     final_result = VoiceInputTranscriptionResult(
         ok=True,
         mode="final",
@@ -259,9 +241,29 @@ def test_voice_input_runtime_contracts_distinguish_preview_and_final() -> None:
     )
 
     assert readiness_request.permission_state == "granted"
-    assert preview_request.mode == "preview"
-    assert preview_result.is_final is False
     assert final_result.is_final is True
+    with pytest.raises(ValidationError):
+        VoiceInputTranscriptionRequest(
+            config=cfg,
+            audio_base64_wav="UklGRg==",
+            duration_ms=240,
+            sequence_id="seq-1",
+            mode="preview",
+            session_id="session-1",
+        )
+    with pytest.raises(ValidationError):
+        VoiceInputTranscriptionResult(
+            ok=True,
+            mode="preview",
+            sequence_id="seq-1",
+            transcript="hello",
+            is_final=False,
+            provider_id="funasr",
+            duration_ms=240,
+            latency_ms=12,
+            readiness=readiness,
+            summary="Preview transcript ready.",
+        )
     dumped = final_result.model_dump()
     assert dumped["transcript"] == "hello there"
     assert "conversation" not in dumped
