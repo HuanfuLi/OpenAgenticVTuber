@@ -31,6 +31,25 @@ Shipped milestones:
 There is currently no active milestone. The next planned direction is **v4.0
 Agentic System + Memory**.
 
+## Repository
+
+The canonical GitHub repository is:
+
+```text
+https://github.com/HuanfuLi/OpenAgenticVTuber.git
+```
+
+The repository was previously named `AgenticLLMVTuber`. Local clones created
+before the rename should update their remote:
+
+```powershell
+git remote set-url origin https://github.com/HuanfuLi/OpenAgenticVTuber.git
+```
+
+The product/app name and several package identifiers still use
+`AgenticLLMVTuber`; those names are not automatically changed by the repository
+rename.
+
 ## Working Today
 
 - Electron desktop shell with React/Vite renderer.
