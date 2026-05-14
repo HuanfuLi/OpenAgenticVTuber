@@ -8,39 +8,46 @@
  * input disabled while turn is in flight (IP-3).
  */
 import { useEffect, useRef, useState } from 'react'
-import { Send } from '@/lib/icons'
+import { Send, Square } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
 import { useStore } from '@/state/app-store'
 import { useConversationHistory } from '@/state/conversation-history'
 import {
-  clearTransientPreview,
   consumeFinalCandidate,
   promoteQueuedFinalCandidate,
   queueFinalCandidate,
   useVoiceInput
 } from '@/state/voice-input-store'
 import { send } from '@/ws/client'
+import { stopAudioPlayback } from '@/ws/audio-player'
 import { appendUserMessage, useWSConnected } from '@/ws/store'
 import {
   useStreamingMessages,
   useStreamingBanner,
   useInputDisabled,
-  useSpeaking
+  useSpeaking,
+  useTurnSettling,
+  stopActiveTurn,
+  restartStoppedTurn
 } from './useStreamingMessages'
+import type { ConversationMessage } from '@preload-types'
 import { VoiceInputControl } from './VoiceInputControl'
 
 export function Chat() {
   const { status, banners, refreshStatus, restartSidecar, setBanners, setView } = useStore()
-  const { activeSession } = useConversationHistory()
+  const { activeSession, truncateBeforeMessage } = useConversationHistory()
   const messages = useStreamingMessages()
   const streamBanner = useStreamingBanner()
   const turnInFlight = useInputDisabled()
   const isSpeaking = useSpeaking()
+  const turnSettling = useTurnSettling()
   const wsOpen = useWSConnected()
   const voice = useVoiceInput()
   const [input, setInput] = useState('')
+  const [editing, setEditing] = useState<{ id: string; source: 'persisted' | 'streaming'; text: string } | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
-  const inputDisabled = turnInFlight || banners.llm || !wsOpen
+  const inputDisabled = turnInFlight || turnSettling || banners.llm || !wsOpen
+  const turnActive = turnInFlight || isSpeaking
 
   const merged = [
     ...activeSession.messages.map((m) => ({
@@ -49,7 +56,8 @@ export function Chat() {
       text: m.text,
       isThinking: false,
       audioFailures: [],
-      createdAt: m.createdAt
+      createdAt: m.createdAt,
+      source: 'persisted' as const
     })),
     ...messages.map((m) => ({
       id: m.id,
@@ -57,9 +65,15 @@ export function Chat() {
       text: m.text,
       isThinking: m.isThinking ?? false,
       audioFailures: m.audioFailures,
-      createdAt: null
+      createdAt: m.createdAt,
+      source: 'streaming' as const
     }))
-  ]
+  ].sort((a, b) => {
+    const aTime = Date.parse(a.createdAt)
+    const bTime = Date.parse(b.createdAt)
+    if (Number.isNaN(aTime) || Number.isNaN(bTime) || aTime === bTime) return 0
+    return aTime - bTime
+  })
 
   // UI-SPEC IP-2 sticky-scroll: respect user scroll-up by 40px. Recompute when
   // a new bubble appears OR an existing bubble's text grew (sentence merged
@@ -74,17 +88,25 @@ export function Chat() {
     }
   }, [merged.length, textKey])
 
-  const submitFinalText = (rawText: string): boolean => {
+  const submitFinalText = (
+    rawText: string,
+    options: { history?: ConversationMessage[]; reuseStopped?: boolean; messageId?: string } = {}
+  ): boolean => {
     const text = rawText.trim()
     if (!text) return false
-    if (banners.llm || turnInFlight || !wsOpen) return false
-    appendUserMessage(text, activeSession.id)
+    if (banners.llm || turnInFlight || turnSettling || !wsOpen) return false
+    if (options.reuseStopped) {
+      if (!options.messageId || !restartStoppedTurn(options.messageId, text, activeSession.id)) return false
+    } else {
+      appendUserMessage(text, activeSession.id)
+    }
+    const history = options.history ?? activeSession.messages
     // OLVT-shape envelope per packages/contracts/ts/ws-message.ts.
     const ok = send({
       type: 'text-input',
       text,
       session_id: activeSession.id,
-      history: activeSession.messages.map((message) => ({
+      history: history.map((message) => ({
         role: message.role,
         text: message.text
       }))
@@ -95,9 +117,36 @@ export function Chat() {
     return true
   }
 
+  const canEditMessages = !turnActive && !turnSettling && !banners.llm && wsOpen
+
+  const saveEdit = async (message: { id: string; source: 'persisted' | 'streaming'; text: string }): Promise<void> => {
+    const nextText = editing?.text.trim() ?? ''
+    if (!nextText || !canEditMessages) return
+    if (message.source === 'persisted') {
+      try {
+        const truncated = await truncateBeforeMessage(activeSession.id, message.id)
+        if (submitFinalText(nextText, { history: truncated.messages })) setEditing(null)
+      } catch (error) {
+        console.warn('[chat] edit/regenerate failed:', error)
+      }
+      return
+    }
+    if (submitFinalText(nextText, { history: activeSession.messages, reuseStopped: true, messageId: message.id })) {
+      setEditing(null)
+    }
+  }
+
   const onSend = (): void => {
     const submitted = submitFinalText(input)
     if (submitted) setInput('')
+  }
+
+  const onStop = (): void => {
+    stopActiveTurn()
+    stopAudioPlayback()
+    if (wsOpen) {
+      send({ type: 'stop-turn' })
+    }
   }
 
   useEffect(() => {
@@ -110,7 +159,6 @@ export function Chat() {
     const submitted = submitFinalText(candidate.transcript)
     if (submitted) {
       consumeFinalCandidate()
-      clearTransientPreview()
     }
   }, [
     activeSession.id,
@@ -124,13 +172,12 @@ export function Chat() {
   ])
 
   useEffect(() => {
-    if (!voice.queuedFinalCandidate || inputDisabled || isSpeaking || !wsOpen || banners.llm) return
+    if (!voice.queuedFinalCandidate || inputDisabled || turnSettling || isSpeaking || !wsOpen || banners.llm) return
     const candidate = promoteQueuedFinalCandidate()
     if (!candidate) return
     const submitted = submitFinalText(candidate.transcript)
     if (submitted) {
       consumeFinalCandidate()
-      clearTransientPreview()
     } else {
       queueFinalCandidate(candidate, COPY.CHAT.VOICE_QUEUE_REPLACED)
     }
@@ -140,6 +187,7 @@ export function Chat() {
     banners.llm,
     inputDisabled,
     isSpeaking,
+    turnSettling,
     voice.queuedFinalCandidate,
     wsOpen
   ])
@@ -192,9 +240,45 @@ export function Chat() {
                 <div className="meta">
                   <span className="semibold">{m.role === 'user' ? 'You' : 'Teto'}</span>
                   <span>{ts}</span>
+                  {m.role === 'user' && canEditMessages && (
+                    <button
+                      type="button"
+                      className="bubble-action"
+                      aria-label={COPY.CHAT.EDIT_MESSAGE}
+                      onClick={() => setEditing({ id: m.id, source: m.source, text: m.text })}
+                    >
+                      {COPY.CHAT.EDIT}
+                    </button>
+                  )}
                 </div>
                 <div className="body">
-                  {m.isThinking ? (
+                  {editing?.id === m.id ? (
+                    <div className="bubble-edit">
+                      <textarea
+                        className="input"
+                        value={editing.text}
+                        aria-label={COPY.CHAT.EDIT_MESSAGE}
+                        onChange={(event) => setEditing({ ...editing, text: event.target.value })}
+                      />
+                      <div className="bubble-edit-actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => setEditing(null)}
+                        >
+                          {COPY.CHAT.CANCEL_EDIT}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          disabled={!editing.text.trim() || !canEditMessages}
+                          onClick={() => void saveEdit(m)}
+                        >
+                          {COPY.CHAT.SAVE_EDIT}
+                        </button>
+                      </div>
+                    </div>
+                  ) : m.isThinking ? (
                     <span style={{ fontStyle: 'italic', color: 'var(--muted-foreground)' }}>
                       {m.text}
                     </span>
@@ -285,19 +369,19 @@ export function Chat() {
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
-              onSend()
+              if (!turnActive) onSend()
             }
           }}
           disabled={inputDisabled}
           aria-label="Chat input"
         />
         <button
-          className="send"
-          onClick={onSend}
-          disabled={!input.trim() || inputDisabled}
-          aria-label="Send"
+          className={`send${turnActive ? ' stop' : ''}`}
+          onClick={turnActive ? onStop : onSend}
+          disabled={turnActive ? false : (!input.trim() || inputDisabled)}
+          aria-label={turnActive ? COPY.CHAT.STOP_RESPONSE : COPY.CHAT.SEND}
         >
-          <Send size={16} />
+          {turnActive ? <Square size={14} fill="currentColor" /> : <Send size={16} />}
         </button>
       </div>
       {isSpeaking && (

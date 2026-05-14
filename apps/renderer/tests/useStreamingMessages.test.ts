@@ -10,6 +10,8 @@ import {
   setThinking,
   appendAssistantSentence,
   getCompletedTurnCandidate,
+  beginTurnSettlement,
+  finishTurnSettlement,
   markCompletedTurnConsumed,
   setForceNewMessage,
   setInputDisabled,
@@ -173,14 +175,35 @@ describe('useStreamingMessages reducer', () => {
     appendAssistantSentence('Saved locally.', 1)
 
     expect(getCompletedTurnCandidate()).toMatchObject({
+      userMessageId: expect.any(String),
       userText: 'save this turn',
       assistantText: 'Saved locally.'
     })
 
-    markCompletedTurnConsumed()
+    const candidate = getCompletedTurnCandidate()
+    markCompletedTurnConsumed(candidate?.userMessageId)
 
     expect(getCompletedTurnCandidate()).toBeNull()
     expect(_internalState().messages).toHaveLength(0)
+  })
+
+  it('consumes a completed turn by identity without deleting a newer pending turn', () => {
+    appendUserMessage('first')
+    const firstId = _internalState().pendingTurn!.userMessageId
+    appendAssistantSentence('First answer.', 1)
+    beginTurnSettlement(firstId)
+
+    appendUserMessage('second')
+    const secondId = _internalState().pendingTurn!.userMessageId
+
+    markCompletedTurnConsumed(firstId)
+    finishTurnSettlement(firstId)
+
+    const state = _internalState()
+    expect(state.messages).toHaveLength(1)
+    expect(state.messages[0]).toMatchObject({ id: secondId, role: 'user', text: 'second' })
+    expect(state.pendingTurn?.userMessageId).toBe(secondId)
+    expect(state.turnSettlingUserMessageId).toBeNull()
   })
 
   it('does not expose failed or interrupted turns for persistence', () => {

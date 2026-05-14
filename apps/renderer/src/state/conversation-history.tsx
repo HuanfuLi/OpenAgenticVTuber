@@ -16,7 +16,10 @@ import type {
   ConversationStats
 } from '@preload-types'
 
-type CompletedTurnInput = Omit<CommitConversationTurnInput, 'sessionId'> & { sessionId?: string }
+type CompletedTurnInput = Omit<CommitConversationTurnInput, 'sessionId'> & {
+  sessionId?: string
+  userMessageId?: string
+}
 type Committer = (input: CompletedTurnInput) => Promise<ConversationSession | null>
 
 interface ConversationHistoryValue {
@@ -32,6 +35,7 @@ interface ConversationHistoryValue {
   deleteSession: (id: string) => Promise<ConversationSession>
   clearAll: () => Promise<ConversationSession>
   commitTurn: (input: CommitConversationTurnInput) => Promise<ConversationSession>
+  truncateBeforeMessage: (sessionId: string, messageId: string) => Promise<ConversationSession>
 }
 
 const ConversationHistoryContext = createContext<ConversationHistoryValue | null>(null)
@@ -212,11 +216,19 @@ export function ConversationHistoryProvider({ children }: { children: ReactNode 
     return refreshFromSession(session)
   }, [refreshFromSession])
 
+  const truncateBeforeMessage = useCallback(async (sessionId: string, messageId: string) => {
+    const truncate = window.api.truncateConversationBeforeMessage
+    if (!truncate) return activeSession
+    const session = await truncate(sessionId, messageId)
+    return refreshFromSession(session)
+  }, [activeSession, refreshFromSession])
+
   useEffect(
     () =>
       registerConversationTurnCommitter(async (input) => {
         try {
-          return await commitTurn({ ...input, sessionId: input.sessionId ?? activeSession.id })
+          const { userMessageId: _userMessageId, ...turnInput } = input
+          return await commitTurn({ ...turnInput, sessionId: input.sessionId ?? activeSession.id })
         } catch (err) {
           setError(err instanceof Error ? err.message : String(err))
           return null
@@ -238,7 +250,8 @@ export function ConversationHistoryProvider({ children }: { children: ReactNode 
       renameSession,
       deleteSession,
       clearAll,
-      commitTurn
+      commitTurn,
+      truncateBeforeMessage
     }),
     [
       activeSession,
@@ -252,7 +265,8 @@ export function ConversationHistoryProvider({ children }: { children: ReactNode 
       renameSession,
       deleteSession,
       clearAll,
-      commitTurn
+      commitTurn,
+      truncateBeforeMessage
     ]
   )
 

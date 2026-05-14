@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
   STTProviderConfig,
+  STTTestResult,
   VoiceInputReadiness,
   VoiceInputTranscriptionResult
 } from '../../../packages/contracts/ts/audio-provider'
@@ -86,7 +87,8 @@ vi.mock('../src/conversation-store', () => ({
   getConversationStats: vi.fn(),
   listConversationSessions: vi.fn(),
   renameConversationSession: vi.fn(),
-  selectConversationSession: vi.fn()
+  selectConversationSession: vi.fn(),
+  truncateConversationBeforeMessage: vi.fn()
 }))
 
 import { registerIpc } from '../src/ipc'
@@ -100,6 +102,8 @@ function sttConfig(): STTProviderConfig {
     local_model_id: 'iic/SenseVoiceSmall',
     local_model_path_override: null,
     cache_root: null,
+    runtime_device: 'cpu',
+    cuda_compute_type: 'float16',
     readiness: {
       health_check_passed: true,
       test_transcription_passed: true,
@@ -232,7 +236,7 @@ describe('voice input IPC handlers', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ config: sttConfig(), permission_state: 'granted' })
     })
-    expect(fetchMock).toHaveBeenNthCalledWith(2, 'http://127.0.0.1:8765/admin/audio/voice-input', {
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'http://127.0.0.1:8765/admin/audio/voice-input', expect.objectContaining({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -243,7 +247,7 @@ describe('voice input IPC handlers', () => {
         session_id: 'session-1',
         config: sttConfig()
       })
-    })
+    }))
   })
 
   it('returns typed sidecar-unavailable failures without leaking audio payloads', async () => {
@@ -256,13 +260,77 @@ describe('voice input IPC handlers', () => {
       audio_base64_wav: 'SECRET_AUDIO_BASE64',
       duration_ms: 700,
       sequence_id: 'seq-1',
-      mode: 'preview',
+      mode: 'final',
       session_id: null
     })
 
     expect(result.ok).toBe(false)
     expect(result.readiness?.blocked_reason).toBe('sidecar_unavailable')
     expect(JSON.stringify(result)).not.toContain('SECRET_AUDIO_BASE64')
+  })
+
+  it('times out stuck voice transcription requests with a typed failure', async () => {
+    vi.useFakeTimers()
+    try {
+      installHandlers()
+      const cfg = sttConfig()
+      cfg.capture_timeout_ms = 1_000
+      mocks.loadConfig.mockReturnValue({ audio: { stt: cfg } })
+      vi.stubGlobal('fetch', vi.fn((_url: string, init?: RequestInit) => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+        })
+      })))
+
+      const pending = invoke<VoiceInputTranscriptionResult>('voiceInput:transcribe', {
+        audio_base64_wav: 'UklGRg==',
+        duration_ms: 700,
+        sequence_id: 'seq-timeout',
+        mode: 'final',
+        session_id: 'session-1'
+      })
+      await vi.advanceTimersByTimeAsync(10_001)
+      const result = await pending
+
+      expect(result.ok).toBe(false)
+      expect(result.failure?.state).toBe('timeout')
+      expect(result.summary).toContain('timed out')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('times out stuck Settings STT diagnostic requests with a typed failure', async () => {
+    vi.useFakeTimers()
+    try {
+      installHandlers()
+      const cfg = sttConfig()
+      cfg.active_provider = 'faster_whisper'
+      cfg.runtime_device = 'cuda'
+      cfg.capture_timeout_ms = 1_000
+      const request = {
+        config: cfg,
+        audio_base64_wav: 'UklGRg==',
+        duration_ms: 700,
+        sample_label: 'settings-diagnostics'
+      }
+      vi.stubGlobal('fetch', vi.fn((_url: string, init?: RequestInit) => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+        })
+      })))
+
+      const pending = invoke<STTTestResult>('audio:testStt', request)
+      await vi.advanceTimersByTimeAsync(10_001)
+      const result = await pending
+
+      expect(result.ok).toBe(false)
+      expect(result.provider_id).toBe('faster_whisper')
+      expect(result.failure?.state).toBe('timeout')
+      expect(result.summary).toContain('timed out')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('does not mislabel voice readiness HTTP failures as sidecar unavailable', async () => {

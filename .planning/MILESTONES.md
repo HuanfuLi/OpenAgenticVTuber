@@ -110,3 +110,45 @@
 **What's next:** Start v3.0 STT/TTS planning.
 
 ---
+
+## v3.0 Rich Voice Configuration + Voice Input (Shipped: 2026-05-14)
+
+**Delivered:** A configurable voice companion layer with rich TTS configuration, GPT-SoVITS voice output, local/cloud STT providers, final-only PTT/VAD voice input, stop/edit recovery, code-switch evaluation, and a truthful no-headphones/AEC support decision.
+
+**Phases completed:** 16-22 plus inserted 20.1 and 20.2 (57 plans total)
+
+**Key accomplishments:**
+
+- Refactored audio output into sidecar-owned TTS provider contracts while preserving Piper ordered playback, renderer audio payloads, RMS/lipsync, and no silent provider fallback.
+- Added GPT-SoVITS support with external-server and app-managed launch modes, health/test synthesis, activation, named presets, reference audio validation, and visible failure handling.
+- Reworked Settings around clear categories and truthful enablement, removed mandatory test-before-enable gates, and kept tests standalone/optional.
+- Added an STT provider layer with FunASR local default, faster-whisper local fallback, OpenAI and Groq cloud providers behind explicit consent, local model cache controls, and redacted diagnostics.
+- Shipped final-only voice input through push-to-talk and VAD with readiness indicators, active-turn queueing, stop-current-turn, and edit/regenerate typo recovery.
+- Added a locked bilingual/code-switch corpus and scorecard; FunASR is the current local-first recommendation while faster-whisper is labeled limited for code-switch quality.
+- Completed AEC/no-headphones diagnostics and product policy: Limited for the tested hardware setup, Unsafe by default for unverified hardware, and conservative VAD handling during active TTS.
+
+**Known deferred items at close:**
+
+- GPT-SoVITS installer, training, and voice-cloning UI remain out of scope; users supply their own model/server.
+- faster-whisper CUDA requires NVIDIA CUDA 12 runtime libraries; CPU and FunASR paths remain available.
+- No-headphones support is hardware-dependent and not universally claimed.
+- Wake word, translation, barge-in, agent mode, and memory remain deferred.
+
+**Stats:**
+
+- 9 phases complete
+- 57 plans complete
+- 39 v3.0 requirements satisfied
+- Audit status: passed
+- Nyquist status: compliant
+
+**Archive:**
+
+- `.planning/milestones/v3.0-ROADMAP.md`
+- `.planning/milestones/v3.0-REQUIREMENTS.md`
+- `.planning/milestones/v3.0-MILESTONE-AUDIT.md`
+- `.planning/milestones/v3.0-phases/`
+
+**What's next:** v4.0 Agentic System + Memory.
+
+---

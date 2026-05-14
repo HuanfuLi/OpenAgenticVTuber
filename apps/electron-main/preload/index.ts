@@ -224,6 +224,8 @@ const api = {
     ipcRenderer.invoke('conversation:clear'),
   commitConversationTurn: (input: CommitConversationTurnInput): Promise<ConversationSession> =>
     ipcRenderer.invoke('conversation:commitTurn', input),
+  truncateConversationBeforeMessage: (sessionId: string, messageId: string): Promise<ConversationSession> =>
+    ipcRenderer.invoke('conversation:truncateBeforeMessage', sessionId, messageId),
   getConversationStats: (): Promise<ConversationStats> =>
     ipcRenderer.invoke('conversation:getStats')
 }

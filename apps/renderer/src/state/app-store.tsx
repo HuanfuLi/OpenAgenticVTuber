@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
   type Dispatch,
@@ -149,6 +150,8 @@ function llmConfigToStoredConfig(cfg: LLMConfig, completed: boolean, base?: Stor
   }
 }
 
+const STATUS_AUTO_REFRESH_MS = 5000
+
 function llmStatusFromConfig(cfg: StoredConfig | null): Pick<StatusSnapshot, 'llm' | 'llmDetail'> {
   if (!cfg || !cfg.hasCompletedSetup) {
     return { llm: 'amber', llmDetail: 'setup not complete' }
@@ -198,6 +201,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [avatarImportPlan, setAvatarImportPlan] = useState<AvatarImportPlan | null>(null)
 
   const [status, setStatus] = useState<StatusSnapshot>(DEFAULT_STATUS)
+  const refreshInFlightRef = useRef(false)
 
   const patchStatus = useCallback((patch: Partial<StatusSnapshot>) => {
     setStatus((cur) => ({ ...cur, ...patch }))
@@ -205,46 +209,56 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const refreshStatus = useCallback(async () => {
     if (typeof window === 'undefined' || !window.api) return
-    const [cfg, readyUrl, vts, plugin] = await Promise.all([
-      window.api.getStoredConfig ? window.api.getStoredConfig().catch(() => null) : Promise.resolve(null),
-      window.api.getReadyUrl ? window.api.getReadyUrl().catch(() => null) : Promise.resolve(null),
-      window.api.getVtsStatus
-        ? window.api.getVtsStatus().catch(() => ({
-            state: 'unavailable' as const,
-            detail: 'VTS status unavailable.',
-            authenticated: false,
-            windowDetected: false
-          }))
-        : Promise.resolve(null),
-      window.api.getPluginStatus
-        ? window.api.getPluginStatus().catch(() => ({
-            selectedPlugin: null,
-            loadedPlugin: null,
-            lifecycleState: 'unknown/loading' as const,
-            summary: 'Plugin status unavailable.',
-            developerDetails: null,
-            fallbackActive: false,
-            chatAvailable: true
-          }))
-        : Promise.resolve(null)
-    ])
-    if (cfg?.hasCompletedSetup) {
-      setHasCompletedSetup(true)
-      setLlmConfigState(storedToLlmConfig(cfg))
-    } else if (cfg === null) {
-      setHasCompletedSetup(false)
+    if (refreshInFlightRef.current) return
+    refreshInFlightRef.current = true
+    try {
+      const [cfg, readyUrl, vts, plugin] = await Promise.all([
+        window.api.getStoredConfig ? window.api.getStoredConfig().catch(() => null) : Promise.resolve(null),
+        window.api.getReadyUrl ? window.api.getReadyUrl().catch(() => null) : Promise.resolve(null),
+        window.api.getVtsStatus
+          ? window.api.getVtsStatus().catch(() => ({
+              state: 'unavailable' as const,
+              detail: 'VTS status unavailable.',
+              authenticated: false,
+              windowDetected: false
+            }))
+          : Promise.resolve(null),
+        window.api.getPluginStatus
+          ? window.api.getPluginStatus().catch(() => ({
+              selectedPlugin: null,
+              loadedPlugin: null,
+              lifecycleState: 'unknown/loading' as const,
+              summary: 'Plugin status unavailable.',
+              developerDetails: null,
+              fallbackActive: false,
+              chatAvailable: true
+            }))
+          : Promise.resolve(null)
+      ])
+      if (cfg?.hasCompletedSetup) {
+        setHasCompletedSetup(true)
+        setLlmConfigState(storedToLlmConfig(cfg))
+      } else if (cfg === null) {
+        setHasCompletedSetup(false)
+      }
+      patchStatus({
+        ...llmStatusFromConfig(cfg ?? null),
+        sidecar: readyUrl ? 'green' : 'amber',
+        sidecarDetail: readyUrl ?? 'starting...',
+        ...(vts ? vtsStatusToSnapshot(vts) : {}),
+        ...(plugin ? pluginStatusToSnapshot(plugin) : {})
+      })
+    } finally {
+      refreshInFlightRef.current = false
     }
-    patchStatus({
-      ...llmStatusFromConfig(cfg ?? null),
-      sidecar: readyUrl ? 'green' : 'amber',
-      sidecarDetail: readyUrl ?? 'starting...',
-      ...(vts ? vtsStatusToSnapshot(vts) : {}),
-      ...(plugin ? pluginStatusToSnapshot(plugin) : {})
-    })
   }, [patchStatus])
 
   useEffect(() => {
     void refreshStatus()
+    const timer = window.setInterval(() => {
+      void refreshStatus()
+    }, STATUS_AUTO_REFRESH_MS)
+    return () => window.clearInterval(timer)
   }, [refreshStatus])
 
   useEffect(() => {

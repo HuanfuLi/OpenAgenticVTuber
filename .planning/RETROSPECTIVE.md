@@ -106,6 +106,46 @@ v2.1 made the existing product surface truthful before voice and agentic work. S
 - User-facing truthfulness is a feature: hardcoded status, fake alerts, and optimistic placeholders create real UAT failures even when core pipelines work.
 - Archiving phase evidence immediately after completion keeps future planning cleaner and reduces stale active-milestone context.
 
+## Milestone: v3.0 — Rich Voice Configuration + Voice Input
+
+**Shipped:** 2026-05-14
+**Phases:** 9
+**Plans:** 57
+
+### What Was Built
+
+v3.0 made the app usable as a voice companion. Audio output now sits behind provider contracts with Piper as the baseline and GPT-SoVITS as a configurable rich-voice provider. Settings exposes voice output, voice input, local STT cache, provider consent, diagnostics, and activation state through a clearer information architecture. Voice input uses final-only PTT/VAD submission, active-turn queueing, stop-current-turn, and edit/regenerate recovery. STT now supports FunASR, faster-whisper, OpenAI, and Groq through one lazy provider layer, with a bilingual/code-switch scorecard and a documented no-headphones/AEC decision.
+
+### What Worked
+
+- Live UAT found the highest-risk voice UX failures: mandatory tests blocking configuration, hidden VAD state, provider activation inconsistency, queue duplication, stopped-message edit bugs, system-audio capture, and no-headphones self-speech risk.
+- Removing live STT preview simplified the pipeline and made CPU local STT viable without downgrading model quality.
+- Stop plus edit/regenerate is a better typo-recovery model than grace-window undo for this chat pipeline.
+- Settings truthfulness mattered as much as backend capability: stale "Coming v2" labels, fake model download states, and unclear button priority all created real product failures.
+- Treating no-headphones support as empirical avoided overclaiming AEC behavior. The product now communicates Ready/Limited/Unsafe instead of implying universal safety.
+
+### What Was Inefficient
+
+- Several phase plans had to be regenerated or gap-only executed because earlier assumptions focused too narrowly on the voice area instead of the whole Settings screen.
+- GPU STT support took longer because faster-whisper CUDA depends on external CUDA 12 DLLs; OLVT comparison showed that provider/library packaging expectations differ.
+- Phase docs drifted during repeated UAT/gap closure cycles and needed explicit cleanup before milestone closeout.
+- Cloud STT defaults and model choices required a late current-docs check; this should be part of provider planning up front.
+
+### Patterns Established
+
+- Voice configuration tests are standalone diagnostics, not enablement gates.
+- Final submitted STT transcripts are the contract for voice input quality, evaluation, and chat dispatch.
+- Active TTS must pause/guard VAD and must not let assistant speech auto-submit as user speech.
+- Provider recommendations need evidence and copy tied to the actual shipped path, not preview or isolated provider behavior.
+- Settings sections should expose required inputs, current activation, optional diagnostics, and limitations without burying the primary action.
+
+### Key Lessons
+
+- Voice work is cross-cutting: Settings, renderer audio capture, sidecar provider loading, chat streaming, history ordering, and diagnostics all need to be tested together.
+- Local-first does not mean "no runtime dependencies"; GPU acceleration still needs explicit compatibility checks and CPU/local alternatives.
+- Empirical hardware status is acceptable when the UI is truthful and defaults remain conservative.
+- Code-switch quality should be validated semantically, not only by exact string matching, because useful transcriptions can preserve intent while missing a token.
+
 ## Cross-Milestone Trends
 
 | Trend | v1.0 Observation | v2.0 Observation | v2.1 Observation |
@@ -113,3 +153,5 @@ v2.1 made the existing product surface truthful before voice and agentic work. S
 | Live-runtime dependencies | VTS, audio devices, and LM Studio require human/UAT checkpoints. | VTS rig catalogs also gate what can be live-tested; event UAT needs an event-bearing avatar. | Real provider/model, sidecar restart, VTS state, and persisted settings need UAT because mocks can hide product drift. |
 | Contract drift | Generated contracts plus drift checks are worth keeping as a required gate. | Contract codegen had to handle nested generated schemas and discriminated HUD unions; drift checks stayed useful. | IPC/preload/state tests are the practical contract guard for renderer/Electron truthfulness. |
 | Logging and diagnostics | Any 60 Hz loop can become unusable without throttling and opt-in evidence flags. | Dispatch logs and HUD stream telemetry were useful, but validation docs must be refreshed immediately after UAT gap fixes. | Diagnostics and Settings copy should expose real fallback/restart states instead of forcing users to infer them from logs. |
+
+**v3.0 trend update:** Voice adds hardware and model variability to every runtime dependency trend. Future phases should assume live UAT is required for microphone routing, playback device behavior, provider credentials, model cache state, and streaming interruption behavior.

@@ -1,9 +1,4 @@
-/* SPEC §Settings IA — single long scroll, 16 sections, anchor pills.
- * Functional: §1 Connection, §5 TTS, §14 Appearance, §15 Diagnostics (partial), §16 About.
- * Placeholders: unfinished sections with "Coming in milestone-N. {body}" copy.
- *
- * Ported from prototype src/views/SettingsView.jsx (2026-05-06).
- */
+/* Settings IA — sidebar categories with one focused panel at a time. */
 import { useEffect, useRef, useState } from 'react'
 import { Folder } from '@/lib/icons'
 import { COPY } from '@/lib/copy'
@@ -26,12 +21,17 @@ import type {
 } from '@contracts/audio-provider'
 import { recordSettingsTestWav } from '@/audio/test-recorder'
 import {
+  isLikelySystemAudioInput,
   isReservedShortcut,
   loadVoiceInputSettings,
+  loadVoiceOutputSettings,
   saveVoiceInputSettings,
-  type VoiceInputSettings
+  saveVoiceOutputSettings,
+  selectedAudioOutputSinkId,
+  type VoiceInputSettings,
+  type VoiceOutputSettings
 } from '@/state/audio-settings'
-import { notifyVoiceInputConfigChanged } from '@/state/voice-input-store'
+import { notifyVoiceInputConfigChanged, useVoiceInput } from '@/state/voice-input-store'
 import { VoiceInputPreferencesFields } from './VoiceInputSection'
 import type { GptSoVitsPresetConfig, ReferenceAudioAsset, VoicePreset } from '@contracts/voice-preset'
 import {
@@ -1207,6 +1207,8 @@ function TTSSection() {
   const [referenceAudioAssets, setReferenceAudioAssets] = useState<ReferenceAudioAsset[]>([])
   const [currentAvatarId, setCurrentAvatarId] = useState<string | null>(null)
   const [providerChoice, setProviderChoice] = useState<TtsProviderChoice>('piper')
+  const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([])
+  const [voiceOutputSettings, setVoiceOutputSettings] = useState<VoiceOutputSettings>(() => loadVoiceOutputSettings())
   const [candidate, setCandidate] = useState<GptSoVitsProviderConfig>(defaultGptSoVitsConfig)
   const [healthPassed, setHealthPassed] = useState(false)
   const [testPassed, setTestPassed] = useState(false)
@@ -1245,8 +1247,24 @@ function TTSSection() {
     }
   }
 
+  const refreshAudioOutputs = async (): Promise<void> => {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return
+    const devices = await navigator.mediaDevices.enumerateDevices().catch(() => [])
+    setAudioOutputs(devices.filter((device) => device.kind === 'audiooutput'))
+  }
+
+  const updateVoiceOutputDevice = (deviceId: string): void => {
+    const selected = audioOutputs.find((device) => device.deviceId === deviceId)
+    const next = saveVoiceOutputSettings({
+      outputDeviceId: selected?.deviceId || null,
+      outputDeviceLabel: selected?.label || null
+    })
+    setVoiceOutputSettings(next)
+  }
+
   useEffect(() => {
     void refreshAudioStatus()
+    void refreshAudioOutputs()
   }, [])
 
   useEffect(() => {
@@ -1333,9 +1351,10 @@ function TTSSection() {
     ? getGptSoVitsPresetValidationState(candidate, testCandidatePreset)
     : 'needs_test'
   const hasReferenceForTest = testCandidatePreset?.gpt_sovits.reference_audio_id !== null && testCandidatePreset?.gpt_sovits.reference_audio_id !== undefined
-  const testSynthesisReady = healthPassed && testCandidatePreset !== null && hasReferenceForTest
+  const gptSoVitsRequiredFieldsReady = candidate.base_url.trim().length > 0 && testCandidatePreset !== null && hasReferenceForTest
+  const testSynthesisReady = gptSoVitsRequiredFieldsReady
   const presetTestPassed = selectedValidationState === 'validated' || (testPassed && lastTestFingerprint === currentValidationFingerprint)
-  const activationReady = healthPassed && presetTestPassed && testCandidatePreset !== null && hasReferenceForTest
+  const gptSoVitsCanActivate = gptSoVitsRequiredFieldsReady
 
   const saveConfig = async (nextCfg: StoredConfig): Promise<void> => {
     await window.api.saveStoredConfig(nextCfg)
@@ -1347,29 +1366,38 @@ function TTSSection() {
     const provider = id as TtsProviderChoice
     setProviderChoice(provider)
     if (provider === 'piper') {
-      const cfg = storedCfg ?? await window.api.getStoredConfig()
-      if (!cfg) return
-      const nextCfg: StoredConfig = {
-        ...cfg,
-        audio: {
-          ...cfg.audio,
-          tts: {
-            ...cfg.audio.tts,
-            active_provider: 'piper'
-          }
-        }
-      }
-      await saveConfig(nextCfg)
       setHealthPassed(false)
       setTestPassed(false)
       setLastTestFingerprint(null)
-      setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
+      setStatusText(C.TTS_PROVIDER_PIPER_READY)
     } else {
       setHealthPassed(false)
       setTestPassed(false)
       setLastTestFingerprint(null)
       setStatusText(C.GPT_SOVITS_PROVIDER_NOT_READY)
     }
+  }
+
+  const activatePiper = async (): Promise<void> => {
+    const cfg = storedCfg ?? await window.api.getStoredConfig()
+    if (!cfg) return
+    const nextCfg: StoredConfig = {
+      ...cfg,
+      audio: {
+        ...cfg.audio,
+        tts: {
+          ...cfg.audio.tts,
+          active_provider: 'piper'
+        }
+      }
+    }
+    await saveConfig(nextCfg)
+    setProviderChoice('piper')
+    setHealthPassed(false)
+    setTestPassed(false)
+    setLastTestFingerprint(null)
+    setStatusText(C.TTS_PROVIDER_PIPER_ACTIVATION_SUCCESS)
+    void window.api.getAudioStatus().then(setAudioStatus).catch(() => undefined)
   }
 
   const updateCandidate = (patch: Partial<GptSoVitsProviderConfig>): void => {
@@ -1445,7 +1473,7 @@ function TTSSection() {
   }
 
   const activateGptSoVits = async (): Promise<void> => {
-    if (!activationReady || !testCandidatePreset) return
+    if (!gptSoVitsCanActivate || !testCandidatePreset) return
     const cfg = await window.api.getStoredConfig()
     if (!cfg) return
     const presetToActivate = testCandidatePreset
@@ -1459,10 +1487,10 @@ function TTSSection() {
       ...candidate,
       activation: {
         active_allowed: true,
-        health_check_passed: true,
-        test_synthesis_passed: true,
-        last_health_checked_at: new Date().toISOString(),
-        last_test_synthesis_at: new Date().toISOString()
+        health_check_passed: healthPassed,
+        test_synthesis_passed: presetTestPassed,
+        last_health_checked_at: healthPassed ? new Date().toISOString() : candidate.activation.last_health_checked_at,
+        last_test_synthesis_at: presetTestPassed ? new Date().toISOString() : candidate.activation.last_test_synthesis_at
       }
     }
     const activePresetKey = avatarSessionPresetKey(currentAvatarId, activeSession.id)
@@ -1699,6 +1727,17 @@ function TTSSection() {
         <span className="k">{C.TTS_ENGINE}</span>
         <span className="v">{providerChoice === 'gpt_sovits' ? C.TTS_PROVIDER_GPT_SOVITS : C.TTS_ENGINE_VAL}</span>
       </div>
+      {providerChoice === 'piper' && (
+        <div className="settings-primary-action mt-2">
+          <button className="btn btn-primary" type="button" onClick={() => void activatePiper()}>
+            {C.TTS_PROVIDER_ACTIVATE_PIPER}
+          </button>
+          <div className="preset-card" role="status" aria-live="polite">
+            <div className="semibold">{statusText}</div>
+            <div className="tx-sm muted">Runtime provider: {audioStatus?.provider_id ?? 'unknown'} · {audioStatus?.summary ?? 'No runtime status yet.'}</div>
+          </div>
+        </div>
+      )}
       {providerChoice === 'gpt_sovits' && (
         <div className="settings-form tts-setup-panel">
           <div className="group-label">{C.GPT_SOVITS_SETUP_HEADER}</div>
@@ -1749,14 +1788,16 @@ function TTSSection() {
           ) : (
             <div className="tx-sm muted mt-2">{C.GPT_SOVITS_EXTERNAL_STOP_HELP}</div>
           )}
-          <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn btn-secondary" type="button" onClick={() => void runHealthCheck()}>{C.GPT_SOVITS_HEALTH_CHECK}</button>
-            <button className="btn btn-primary" type="button" onClick={() => void runTestSynthesis()} disabled={!testSynthesisReady}>{C.GPT_SOVITS_TEST_SYNTHESIS}</button>
-            <button className="btn btn-primary" type="button" onClick={() => void activateGptSoVits()} disabled={!activationReady}>{C.GPT_SOVITS_ACTIVATE_PRESET}</button>
+          <div className="settings-primary-action mt-2">
+            <button className="btn btn-primary" type="button" onClick={() => void activateGptSoVits()} disabled={!gptSoVitsCanActivate}>{C.GPT_SOVITS_ACTIVATE_PRESET}</button>
+            <div className="preset-card" role="status" aria-live="polite">
+              <div className="semibold">{statusText}</div>
+              <div className="tx-sm muted">Runtime provider: {audioStatus?.provider_id ?? 'unknown'} · {audioStatus?.summary ?? 'No runtime status yet.'}</div>
+            </div>
           </div>
-          <div className="preset-card mt-2" role="status" aria-live="polite">
-            <div className="semibold">{statusText}</div>
-            <div className="tx-sm muted">Runtime provider: {audioStatus?.provider_id ?? 'unknown'} · {audioStatus?.summary ?? 'No runtime status yet.'}</div>
+          <div className="settings-diagnostics-row mt-2" aria-label="GPT-SoVITS diagnostics">
+            <button className="btn btn-secondary" type="button" onClick={() => void runHealthCheck()}>{C.GPT_SOVITS_HEALTH_CHECK}</button>
+            <button className="btn btn-secondary" type="button" onClick={() => void runTestSynthesis()} disabled={!testSynthesisReady}>{C.GPT_SOVITS_TEST_SYNTHESIS}</button>
           </div>
           <div className="group-label mt-4">{C.VOICE_PRESETS_HEADER}</div>
           {voicePresets.length === 0 ? (
@@ -1840,9 +1881,9 @@ function TTSSection() {
             />
             <div className="tx-sm muted mt-1">{C.GPT_SOVITS_WEIGHTS_PATH_HELP}</div>
           </div>
-          <div className="row mt-2" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn btn-primary" type="button" onClick={() => void persistVoicePreset('create')}>{C.VOICE_PRESET_NEW}</button>
-            <button className="btn btn-secondary" type="button" onClick={() => void persistVoicePreset('update')}>{C.VOICE_PRESET_SAVE}</button>
+          <div className="settings-preset-actions mt-2">
+            <button className="btn btn-secondary" type="button" onClick={() => void persistVoicePreset('create')}>{C.VOICE_PRESET_NEW}</button>
+            <button className="btn btn-primary" type="button" onClick={() => void persistVoicePreset('update')}>{C.VOICE_PRESET_SAVE}</button>
             <button className="btn btn-destructive" type="button" onClick={requestDeletePreset} disabled={!selectedPreset}>{C.VOICE_PRESET_DELETE}</button>
           </div>
           {presetValidationText && <div className="banner warn tts-inline-banner" role="alert">{presetValidationText}</div>}
@@ -1947,9 +1988,28 @@ function TTSSection() {
         <span className="k">Summary</span>
         <span className="v">{audioStatus?.summary ?? 'Audio status unavailable.'}</span>
       </div>
-      <div className="kv-row">
-        <span className="k">{C.TTS_OUTPUT}</span>
-        <span className="v">{C.TTS_OUTPUT_VAL}</span>
+      <div className="field">
+        <label className="label" htmlFor="voice-output-device">{C.TTS_OUTPUT}</label>
+        <select
+          id="voice-output-device"
+          className="select"
+          value={voiceOutputSettings.outputDeviceId ?? ''}
+          onChange={(e) => updateVoiceOutputDevice(e.target.value)}
+          onFocus={() => void refreshAudioOutputs()}
+        >
+          <option value="">{C.TTS_OUTPUT_VAL}</option>
+          {audioOutputs.map((device, index) => (
+            <option key={device.deviceId || `audiooutput-${index}`} value={device.deviceId}>
+              {device.label || `${C.TTS_OUTPUT} ${index + 1}`}
+            </option>
+          ))}
+        </select>
+        <div className="tx-sm muted" style={{ marginTop: 2 }}>
+          {audioOutputs.length > 0 ? C.TTS_OUTPUT_HELP : C.TTS_OUTPUT_UNAVAILABLE}
+        </div>
+        <div className="tx-sm muted" style={{ marginTop: 2 }}>
+          Active sink: {selectedAudioOutputSinkId(voiceOutputSettings)}
+        </div>
       </div>
       <div className="kv-row" style={{ alignItems: 'flex-start' }}>
         <span className="k">{C.TTS_LIPSYNC}</span>
@@ -2046,40 +2106,180 @@ function TTSSection() {
 
 // -------- §6 Voice in ----------------------------------------------------
 const STT_PROVIDER_ORDER: NonNullable<STTProviderConfig['active_provider']>[] = ['funasr', 'faster_whisper', 'openai', 'groq']
+type CloudSttProviderId = 'openai' | 'groq'
+
+const CLOUD_STT_MODEL_OPTIONS: Record<CloudSttProviderId, Array<{ id: string; label: string; help: string }>> = {
+  openai: [
+    {
+      id: 'gpt-4o-transcribe',
+      label: 'GPT-4o Transcribe',
+      help: 'Recommended OpenAI transcription model for voice input quality.'
+    },
+    {
+      id: 'gpt-4o-mini-transcribe',
+      label: 'GPT-4o mini Transcribe',
+      help: 'Lower-cost OpenAI transcription model.'
+    },
+    {
+      id: 'whisper-1',
+      label: 'Whisper-1',
+      help: 'Legacy Whisper transcription model.'
+    }
+  ],
+  groq: [
+    {
+      id: 'whisper-large-v3-turbo',
+      label: 'Whisper Large v3 Turbo',
+      help: 'Recommended Groq option for low-latency multilingual transcription.'
+    },
+    {
+      id: 'whisper-large-v3',
+      label: 'Whisper Large v3',
+      help: 'Groq option for higher-accuracy multilingual transcription.'
+    }
+  ]
+}
+
+function defaultCloudSttModel(provider: CloudSttProviderId): string {
+  return CLOUD_STT_MODEL_OPTIONS[provider][0].id
+}
+
+function normalizeCloudSttSettings(
+  provider: CloudSttProviderId,
+  settings: STTProviderConfig['cloud']['openai']
+): STTProviderConfig['cloud']['openai'] {
+  return {
+    ...settings,
+    provider_id: provider,
+    model_name: settings.model_name || defaultCloudSttModel(provider)
+  }
+}
 
 function normalizeSttConfig(config: StoredConfig | null): STTProviderConfig {
+  const defaults = defaultAudioConfig().stt
   return {
-    ...defaultAudioConfig().stt,
+    ...defaults,
     ...(config?.audio?.stt ?? {}),
     cloud: {
-      openai: {
-        ...defaultAudioConfig().stt.cloud.openai,
+      openai: normalizeCloudSttSettings('openai', {
+        ...defaults.cloud.openai,
         ...(config?.audio?.stt?.cloud?.openai ?? {})
-      },
-      groq: {
-        ...defaultAudioConfig().stt.cloud.groq,
+      }),
+      groq: normalizeCloudSttSettings('groq', {
+        ...defaults.cloud.groq,
         ...(config?.audio?.stt?.cloud?.groq ?? {})
-      }
+      })
     }
   }
 }
 
 function providerCapabilityText(entry: AudioProviderCatalogEntry): string {
+  const C = COPY.SETTINGS
   const labels = entry.capabilities.map((capability) => {
-    if (capability === 'local') return 'Local'
-    if (capability === 'cloud') return 'Cloud'
-    if (capability === 'requires_api_key') return 'API key'
-    if (capability === 'requires_external_service') return 'External service'
-    if (capability === 'requires_local_model') return 'Local model'
-    if (capability === 'test_synthesis') return 'Test synthesis'
-    if (capability === 'test_transcription') return 'Test transcription'
-    return 'Chinese/English'
+    if (capability === 'local') return C.VOICE_IN_CAP_LOCAL
+    if (capability === 'cloud') return C.VOICE_IN_CAP_CLOUD
+    if (capability === 'requires_api_key') return C.VOICE_IN_CAP_API_KEY
+    if (capability === 'requires_external_service') return C.VOICE_IN_CAP_EXTERNAL_SERVICE
+    if (capability === 'requires_local_model') return C.VOICE_IN_CAP_LOCAL_MODEL
+    if (capability === 'test_synthesis') return C.VOICE_IN_CAP_TEST_SYNTHESIS
+    if (capability === 'test_transcription') return C.VOICE_IN_CAP_TEST_TRANSCRIPTION
+    if (capability === 'chinese_english') return C.VOICE_IN_CAP_CHINESE_ENGLISH
+    if (capability === 'code_switch_tested') return C.VOICE_IN_CAP_CODE_SWITCH_TESTED
+    if (capability === 'limited_code_switch') return C.VOICE_IN_CAP_LIMITED_CODE_SWITCH
+    if (capability === 'cuda_optional') return C.VOICE_IN_CAP_CUDA_OPTIONAL
+    return capability
   })
   return labels.join(' · ')
 }
 
+function inactiveSttReadiness(
+  readiness: STTProviderConfig['readiness'],
+  reason: STTProviderConfig['readiness']['invalidation_reason'] = 'config_changed'
+): STTProviderConfig['readiness'] {
+  return {
+    ...readiness,
+    active_allowed: false,
+    health_check_passed: false,
+    test_transcription_passed: false,
+    fingerprint: null,
+    invalidation_reason: reason
+  }
+}
+
+interface PersistVoiceInputOptions {
+  skipSetupBlocker?: boolean
+  successStatus?: string | null
+  useSavingState?: boolean
+}
+
+function fallbackLocalSttModel(providerId: string, cacheRootDisplay: string | null | undefined): STTModelCatalogEntry | null {
+  if (providerId === 'funasr') {
+    return {
+      provider_id: 'funasr',
+      model_id: 'iic/SenseVoiceSmall',
+      display_name: 'SenseVoiceSmall',
+      source_label: 'ModelScope',
+      size_label: 'approximately 1 GB',
+      size_bytes: null,
+      cache_path_display: cacheRootDisplay ? `${cacheRootDisplay}/funasr/iic__SenseVoiceSmall` : null,
+      status: 'not_downloaded',
+      app_managed: true,
+      removable: false,
+      loaded: false,
+      recommended: true,
+      summary: 'Model has not been downloaded.'
+    }
+  }
+  if (providerId === 'faster_whisper') {
+    return {
+      provider_id: 'faster_whisper',
+      model_id: 'small',
+      display_name: 'faster-whisper small',
+      source_label: 'Hugging Face',
+      size_label: 'approximately 500 MB',
+      size_bytes: null,
+      cache_path_display: cacheRootDisplay ? `${cacheRootDisplay}/faster_whisper/small` : null,
+      status: 'not_downloaded',
+      app_managed: true,
+      removable: false,
+      loaded: false,
+      recommended: false,
+      summary: 'Model has not been downloaded.'
+    }
+  }
+  return null
+}
+
+function updateModelCatalogEntry(
+  catalog: STTModelCacheCatalog | null,
+  model: STTModelCatalogEntry,
+  patch: Partial<STTModelCatalogEntry>
+): STTModelCacheCatalog {
+  const nextModel = { ...model, ...patch }
+  if (!catalog) {
+    return {
+      cache_root_display: patch.cache_path_display ?? '',
+      models: [nextModel]
+    }
+  }
+  const existingIndex = catalog.models.findIndex((entry) => (
+    entry.provider_id === model.provider_id && entry.model_id === model.model_id
+  ))
+  if (existingIndex === -1) {
+    return {
+      ...catalog,
+      models: [...catalog.models, nextModel]
+    }
+  }
+  return {
+    ...catalog,
+    models: catalog.models.map((entry, index) => (index === existingIndex ? nextModel : entry))
+  }
+}
+
 function VoiceInputSection() {
   const C = COPY.SETTINGS
+  const voiceRuntime = useVoiceInput()
   const [storedCfg, setStoredCfg] = useState<StoredConfig | null>(null)
   const [providers, setProviders] = useState<AudioProviderCatalogEntry[]>([])
   const [sttConfig, setSttConfig] = useState<STTProviderConfig>(() => normalizeSttConfig(null))
@@ -2089,10 +2289,20 @@ function VoiceInputSection() {
   const [testResult, setTestResult] = useState<STTTestResult | null>(null)
   const [modelCatalog, setModelCatalog] = useState<STTModelCacheCatalog | null>(null)
   const [voiceSettings, setVoiceSettings] = useState<VoiceInputSettings>(() => loadVoiceInputSettings())
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([])
+  const voiceSettingsAllowVad = (settings: VoiceInputSettings): boolean =>
+    settings.noHeadphones.status !== 'unsafe' || settings.noHeadphones.unsafeOverride
+
+  const refreshAudioInputs = async (): Promise<void> => {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return
+    const devices = await navigator.mediaDevices.enumerateDevices().catch(() => [])
+    setAudioInputs(devices.filter((device) => device.kind === 'audioinput'))
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.api) return
     let cancelled = false
+    void refreshAudioInputs()
     Promise.all([
       window.api.getStoredConfig(),
       window.api.getAudioProviders?.().catch(() => ({ providers: [] })) ?? Promise.resolve({ providers: [] })
@@ -2101,10 +2311,20 @@ function VoiceInputSection() {
         if (cancelled) return
         setStoredCfg(cfg)
         const nextSttConfig = normalizeSttConfig(cfg)
-        setSttConfig(nextSttConfig)
+        const currentVoiceSettings = loadVoiceInputSettings()
+        const requestedVad = currentVoiceSettings.vad.enabled || nextSttConfig.input_mode === 'vad'
+        const syncedInputMode: STTProviderConfig['input_mode'] = requestedVad && voiceSettingsAllowVad(currentVoiceSettings)
+          ? 'vad'
+          : 'push_to_talk'
+        const syncedSttConfig = { ...nextSttConfig, input_mode: syncedInputMode }
+        setSttConfig(syncedSttConfig)
+        setVoiceSettings({
+          ...currentVoiceSettings,
+          vad: { ...currentVoiceSettings.vad, enabled: syncedInputMode === 'vad' }
+        })
         setProviders(catalog.providers.filter((provider) => provider.kind === 'stt'))
         return window.api.getSttModels?.({
-          config: nextSttConfig,
+          config: syncedSttConfig,
           audio_base64_wav: null,
           duration_ms: null,
           sample_label: 'settings'
@@ -2120,11 +2340,47 @@ function VoiceInputSection() {
 
   const activeProvider = sttConfig.active_provider ?? 'funasr'
   const selectedCloud = activeProvider === 'openai' || activeProvider === 'groq' ? sttConfig.cloud[activeProvider] : null
+  const selectedCloudModel = selectedCloud && (activeProvider === 'openai' || activeProvider === 'groq')
+    ? CLOUD_STT_MODEL_OPTIONS[activeProvider].find((model) => model.id === selectedCloud.model_name)
+    : null
   const cloudBlocked = selectedCloud !== null && (!selectedCloud.consent_granted || !selectedCloud.api_key?.trim())
-  const selectedModel = modelCatalog?.models.find((model) => model.provider_id === activeProvider) ?? null
+  const selectedInput = audioInputs.find((device) => device.deviceId === voiceSettings.microphone.deviceId) ?? null
+  const selectedInputLabel = selectedInput?.label || voiceSettings.microphone.label
+  const microphoneWarning = isLikelySystemAudioInput(selectedInputLabel) || voiceSettings.microphone.suspectedSystemAudio
+  const vadBlockedByNoHeadphones = !voiceSettingsAllowVad(voiceSettings)
+  const selectedCatalogModel = modelCatalog?.models.find((model) => model.provider_id === activeProvider) ?? null
+  const selectedModel = selectedCatalogModel ?? fallbackLocalSttModel(activeProvider, modelCatalog?.cache_root_display)
+  const voiceInputRequiredBlocker = (): string | null => {
+    if ((activeProvider === 'openai' || activeProvider === 'groq') && selectedCloud && !selectedCloud.consent_granted) {
+      return C.VOICE_IN_CLOUD_CONSENT_HELP
+    }
+    if ((activeProvider === 'openai' || activeProvider === 'groq') && selectedCloud && !selectedCloud.api_key?.trim()) {
+      return C.VOICE_IN_TEST_BLOCKED
+    }
+    if ((activeProvider === 'funasr' || activeProvider === 'faster_whisper') && selectedModel && selectedModel.status !== 'downloaded') {
+      return selectedModel.summary
+    }
+    return null
+  }
 
   const updateSttConfig = (patch: Partial<STTProviderConfig>): void => {
-    setSttConfig((cur) => ({ ...cur, ...patch }))
+    const requiresRetest = [
+      'active_provider',
+      'language_mode',
+      'local_model_id',
+      'local_model_path_override',
+      'cache_root',
+      'runtime_device',
+      'cuda_compute_type'
+    ].some((key) => key in patch)
+    setSttConfig((cur) => {
+      const next = { ...cur, ...patch }
+      if (!requiresRetest) return next
+      return {
+        ...next,
+        readiness: inactiveSttReadiness(cur.readiness)
+      }
+    })
     setTestResult(null)
     setStatusText(C.VOICE_IN_TEST_NOT_READY)
   }
@@ -2138,7 +2394,8 @@ function VoiceInputSection() {
           ...cur.cloud[provider],
           ...patch
         }
-      }
+      },
+      readiness: inactiveSttReadiness(cur.readiness)
     }))
     setTestResult(null)
     setStatusText(C.VOICE_IN_TEST_NOT_READY)
@@ -2149,48 +2406,112 @@ function VoiceInputSection() {
     active_provider: config.active_provider ?? activeProvider
   })
 
+  const setVoiceInputMode = (inputMode: STTProviderConfig['input_mode']): void => {
+    if (inputMode === 'vad' && !voiceSettingsAllowVad(voiceSettings)) {
+      updateSttConfig({ input_mode: 'push_to_talk' })
+      setVoiceSettings((settings) => ({
+        ...settings,
+        vad: { ...settings.vad, enabled: false }
+      }))
+      setStatusText(C.VOICE_IN_NO_HEADPHONES_BLOCKED)
+      return
+    }
+    updateSttConfig({ input_mode: inputMode })
+    setVoiceSettings((settings) => ({
+      ...settings,
+      vad: { ...settings.vad, enabled: inputMode === 'vad' }
+    }))
+  }
+
+  const setSyncedVoiceSettings = (settings: VoiceInputSettings): void => {
+    const blockedVad = settings.vad.enabled && !voiceSettingsAllowVad(settings)
+    const nextSettings = blockedVad
+      ? { ...settings, vad: { ...settings.vad, enabled: false } }
+      : settings
+    setVoiceSettings(nextSettings)
+    updateSttConfig({ input_mode: nextSettings.vad.enabled ? 'vad' : 'push_to_talk' })
+    if (blockedVad) setStatusText(C.VOICE_IN_NO_HEADPHONES_BLOCKED)
+  }
+
+  const updateMicrophone = (deviceId: string): void => {
+    const selected = audioInputs.find((device) => device.deviceId === deviceId)
+    setSyncedVoiceSettings({
+      ...voiceSettings,
+      microphone: {
+        deviceId: selected?.deviceId || null,
+        label: selected?.label || null,
+        suspectedSystemAudio: isLikelySystemAudioInput(selected?.label)
+      }
+    })
+  }
+
   const persistVoiceInput = async (
     nextSttConfig: STTProviderConfig,
-    nextVoiceSettings: VoiceInputSettings = voiceSettings
+    nextVoiceSettings: VoiceInputSettings = voiceSettings,
+    options: PersistVoiceInputOptions = {}
   ): Promise<StoredConfig | null> => {
     if (isReservedShortcut(nextVoiceSettings.pttShortcut)) {
       setStatusText(C.VOICE_IN_PTT_SHORTCUT_RESERVED)
       return null
     }
-    setSaving(true)
+    if (options.useSavingState !== false) setSaving(true)
     try {
       const cfg = await window.api.getStoredConfig().catch(() => storedCfg)
       if (!cfg) return null
       const normalizedSttConfig = sttConfigWithProvider(nextSttConfig)
+      const setupBlocker = !options.skipSetupBlocker && normalizedSttConfig.enabled ? voiceInputRequiredBlocker() : null
+      if (setupBlocker) {
+        setStatusText(setupBlocker)
+        return null
+      }
+      const syncedVoiceSettings: VoiceInputSettings = {
+        ...nextVoiceSettings,
+        noHeadphones: { ...nextVoiceSettings.noHeadphones },
+        vad: { ...nextVoiceSettings.vad }
+      }
+      if (!voiceSettingsAllowVad(syncedVoiceSettings)) {
+        syncedVoiceSettings.vad.enabled = false
+      }
+      const sttToPersist: STTProviderConfig = {
+        ...normalizedSttConfig,
+        input_mode: syncedVoiceSettings.vad.enabled ? 'vad' : 'push_to_talk'
+      }
       const nextCfg: StoredConfig = {
         ...cfg,
         audio: {
           ...cfg.audio,
-          stt: normalizedSttConfig,
+          stt: sttToPersist,
           diagnostics: {
             ...(cfg.audio.diagnostics ?? defaultAudioConfig().diagnostics),
             redact_diagnostics: true
           }
         }
       }
-      saveVoiceInputSettings(nextVoiceSettings)
+      saveVoiceInputSettings(syncedVoiceSettings)
       await window.api.saveStoredConfig(nextCfg)
       notifyVoiceInputConfigChanged()
       setStoredCfg(nextCfg)
-      setSttConfig(normalizedSttConfig)
-      setStatusText(C.VOICE_IN_SAVED)
+      setSttConfig(sttToPersist)
+      if (options.successStatus !== null) {
+        setStatusText(options.successStatus ?? (sttToPersist.enabled ? C.VOICE_IN_SAVED : C.VOICE_IN_SETTINGS_SAVED))
+      }
       return nextCfg
     } catch {
       setStatusText(C.VOICE_IN_SAVE_ERROR)
       return null
     } finally {
-      setSaving(false)
+      if (options.useSavingState !== false) setSaving(false)
     }
   }
 
   const saveVoiceInput = async (): Promise<StoredConfig | null> => persistVoiceInput(sttConfig)
 
   const toggleVoiceInputEnabled = (): void => {
+    const setupBlocker = !sttConfig.enabled ? voiceInputRequiredBlocker() : null
+    if (setupBlocker) {
+      setStatusText(setupBlocker)
+      return
+    }
     const nextSttConfig = sttConfigWithProvider({
       ...sttConfig,
       enabled: !sttConfig.enabled
@@ -2210,7 +2531,6 @@ function VoiceInputSection() {
     setTestResult(null)
     const testedConfig: STTProviderConfig = {
       ...sttConfig,
-      enabled: true,
       active_provider: sttConfig.active_provider ?? activeProvider
     }
     try {
@@ -2227,7 +2547,7 @@ function VoiceInputSection() {
       })
       if (result) {
         setTestResult(result)
-        if (result.ok && result.transcript?.trim() && result.readiness?.active_allowed) {
+        if (result.readiness) {
           setSttConfig({
             ...testedConfig,
             readiness: result.readiness
@@ -2280,7 +2600,18 @@ function VoiceInputSection() {
       }
       setSttConfig(invalidatedConfig)
       setTestResult(null)
-      await persistVoiceInput(invalidatedConfig)
+      setModelCatalog((catalog) => updateModelCatalogEntry(catalog, model, {
+        status: result.status,
+        cache_path_display: result.cache_path_display,
+        summary: result.summary,
+        removable: false,
+        loaded: false
+      }))
+      await persistVoiceInput(invalidatedConfig, voiceSettings, {
+        skipSetupBlocker: true,
+        successStatus: null,
+        useSavingState: false
+      })
     }
     setStatusText(result?.summary ?? C.VOICE_IN_TEST_NOT_READY)
     await refreshModels()
@@ -2321,7 +2652,7 @@ function VoiceInputSection() {
               id={providerId}
               label={label}
               checked={activeProvider === providerId}
-              onChange={(id) => updateSttConfig({ active_provider: id as STTProviderConfig['active_provider'], enabled: true })}
+              onChange={(id) => updateSttConfig({ active_provider: id as STTProviderConfig['active_provider'] })}
             />
           )
         })}
@@ -2334,11 +2665,20 @@ function VoiceInputSection() {
             id="voice-in-input-mode"
             className="select"
             value={sttConfig.input_mode}
-            onChange={(e) => updateSttConfig({ input_mode: e.target.value as STTProviderConfig['input_mode'] })}
+            onChange={(e) => setVoiceInputMode(e.target.value as STTProviderConfig['input_mode'])}
           >
             <option value="push_to_talk">{C.VOICE_IN_INPUT_PUSH_TO_TALK}</option>
-            <option value="vad">{C.VOICE_IN_INPUT_VAD}</option>
+            <option value="vad" disabled={vadBlockedByNoHeadphones}>{C.VOICE_IN_INPUT_VAD}</option>
           </select>
+          <div className="tx-sm muted" style={{ marginTop: 2 }}>
+            {sttConfig.input_mode === 'vad' ? `${C.VOICE_IN_VAD_HELP} ${C.VOICE_IN_VAD_SAFETY}` : C.VOICE_IN_PTT_SHORTCUT_HELP}
+          </div>
+          {vadBlockedByNoHeadphones && (
+            <div className="tx-sm" style={{ marginTop: 2 }}>{C.VOICE_IN_INPUT_VAD_LOCKED}</div>
+          )}
+          {sttConfig.input_mode !== 'vad' && (
+            <div className="tx-sm muted" style={{ marginTop: 2 }}>{C.VOICE_IN_VAD_HELP}</div>
+          )}
         </div>
         <div className="field">
           <label className="label" htmlFor="voice-in-language">{C.VOICE_IN_LANGUAGE}</label>
@@ -2354,6 +2694,65 @@ function VoiceInputSection() {
           </select>
         </div>
         <div className="field">
+          <label className="label" htmlFor="voice-in-microphone">{C.VOICE_IN_MICROPHONE}</label>
+          <select
+            id="voice-in-microphone"
+            className="select"
+            value={voiceSettings.microphone.deviceId ?? ''}
+            onChange={(e) => updateMicrophone(e.target.value)}
+            onFocus={() => void refreshAudioInputs()}
+          >
+            <option value="">{C.VOICE_IN_MICROPHONE_DEFAULT}</option>
+            {audioInputs.map((device, index) => (
+              <option key={device.deviceId || `audioinput-${index}`} value={device.deviceId}>
+                {device.label || `${C.VOICE_IN_MICROPHONE} ${index + 1}`}
+              </option>
+            ))}
+          </select>
+          <div className="tx-sm muted" style={{ marginTop: 2 }}>
+            {audioInputs.length > 0 ? C.VOICE_IN_MICROPHONE_HELP : C.VOICE_IN_MICROPHONE_UNAVAILABLE}
+          </div>
+          {microphoneWarning && (
+            <div className="tx-sm" style={{ marginTop: 2 }}>
+              {C.VOICE_IN_MICROPHONE_LOOPBACK_WARNING}
+            </div>
+          )}
+        </div>
+        {activeProvider === 'faster_whisper' && (
+          <>
+            <div className="field">
+              <label className="label" htmlFor="voice-in-runtime">{C.VOICE_IN_RUNTIME}</label>
+              <select
+                id="voice-in-runtime"
+                className="select"
+                value={sttConfig.runtime_device}
+                onChange={(e) => updateSttConfig({ runtime_device: e.target.value as STTProviderConfig['runtime_device'] })}
+              >
+                <option value="cpu">{C.VOICE_IN_RUNTIME_CPU}</option>
+                <option value="cuda">{C.VOICE_IN_RUNTIME_CUDA}</option>
+              </select>
+              <div className="tx-sm muted" style={{ marginTop: 2 }}>{C.VOICE_IN_RUNTIME_HELP}</div>
+              {sttConfig.runtime_device === 'cuda' && (
+                <div className="tx-sm muted" style={{ marginTop: 2 }}>{C.VOICE_IN_CUDA_HELP}</div>
+              )}
+            </div>
+            {sttConfig.runtime_device === 'cuda' && (
+              <div className="field">
+                <label className="label" htmlFor="voice-in-cuda-compute">{C.VOICE_IN_CUDA_COMPUTE}</label>
+                <select
+                  id="voice-in-cuda-compute"
+                  className="select"
+                  value={sttConfig.cuda_compute_type}
+                  onChange={(e) => updateSttConfig({ cuda_compute_type: e.target.value as STTProviderConfig['cuda_compute_type'] })}
+                >
+                  <option value="float16">{C.VOICE_IN_CUDA_FLOAT16}</option>
+                  <option value="int8_float16">{C.VOICE_IN_CUDA_INT8_FLOAT16}</option>
+                </select>
+              </div>
+            )}
+          </>
+        )}
+        <div className="field">
           <label className="label" htmlFor="voice-in-timeout">{C.VOICE_IN_CAPTURE_TIMEOUT}</label>
           <input
             id="voice-in-timeout"
@@ -2365,7 +2764,11 @@ function VoiceInputSection() {
             onChange={(e) => updateSttConfig({ capture_timeout_ms: Number(e.target.value) || 30_000 })}
           />
         </div>
-        <VoiceInputPreferencesFields settings={voiceSettings} onChange={setVoiceSettings} />
+        <VoiceInputPreferencesFields
+          settings={voiceSettings}
+          aecDiagnostics={voiceRuntime.aecDiagnostics}
+          onChange={setSyncedVoiceSettings}
+        />
         {selectedCloud && (
           <>
             <div className="kv-row" style={{ alignItems: 'flex-start' }}>
@@ -2392,22 +2795,23 @@ function VoiceInputSection() {
               />
             </div>
             <div className="field">
-              <label className="label" htmlFor="voice-in-endpoint">{C.VOICE_IN_ENDPOINT}</label>
-              <input
-                id="voice-in-endpoint"
-                className="input"
-                value={selectedCloud.endpoint_url ?? ''}
-                onChange={(e) => updateCloud(activeProvider as 'openai' | 'groq', { endpoint_url: e.target.value || null })}
-              />
-            </div>
-            <div className="field">
               <label className="label" htmlFor="voice-in-model">{C.VOICE_IN_MODEL}</label>
-              <input
+              <select
                 id="voice-in-model"
-                className="input"
-                value={selectedCloud.model_name ?? ''}
-                onChange={(e) => updateCloud(activeProvider as 'openai' | 'groq', { model_name: e.target.value || null })}
-              />
+                className="select"
+                value={selectedCloud.model_name ?? defaultCloudSttModel(activeProvider as 'openai' | 'groq')}
+                onChange={(e) => updateCloud(activeProvider as 'openai' | 'groq', { model_name: e.target.value })}
+              >
+                {CLOUD_STT_MODEL_OPTIONS[activeProvider as 'openai' | 'groq'].map((model) => (
+                  <option key={model.id} value={model.id}>{model.label}</option>
+                ))}
+              </select>
+              <div className="tx-sm muted" style={{ marginTop: 2 }}>
+                {selectedCloudModel?.help ?? C.VOICE_IN_MODEL_HELP}
+              </div>
+              <div className="tx-sm muted" style={{ marginTop: 2 }}>
+                {C.VOICE_IN_CLOUD_ENDPOINT_DEFAULT}
+              </div>
             </div>
           </>
         )}
@@ -2445,6 +2849,15 @@ function VoiceInputSection() {
         {testResult?.failure?.redacted_diagnostics && (
           <div className="tx-sm muted">{Object.entries(testResult.failure.redacted_diagnostics).map(([k, v]) => `${k}: ${v}`).join(' · ')}</div>
         )}
+        {testResult?.failure?.redacted_diagnostics?.runtime_device === 'cuda' && (
+          <button
+            className="btn btn-secondary mt-2"
+            type="button"
+            onClick={() => updateSttConfig({ runtime_device: 'cpu' })}
+          >
+            {C.VOICE_IN_CUDA_SWITCH_CPU}
+          </button>
+        )}
       </div>
     </section>
   )
@@ -2467,28 +2880,6 @@ function AboutSection() {
       <div className="kv-row">
         <span className="k">Links</span>
         <span className="v">{C.ABOUT_LINKS}</span>
-      </div>
-    </section>
-  )
-}
-
-// -------- §2-§13 placeholders -------------------------------------------
-function PlaceholderSection({
-  num,
-  title,
-  milestone,
-  body
-}: {
-  num: number
-  title: string
-  milestone: number
-  body: string
-}) {
-  return (
-    <section className="section" id={`sec-${num}`}>
-      <h2>{title}</h2>
-      <div className="placeholder-line muted">
-        Coming in milestone-{milestone}. {body}
       </div>
     </section>
   )
@@ -2564,91 +2955,79 @@ function ConversationClearDialog({
 }
 
 // -------- Settings root --------------------------------------------------
+type SettingsCategoryId =
+  | 'connection'
+  | 'voice-output'
+  | 'voice-input'
+  | 'avatars'
+  | 'integrations'
+  | 'conversation'
+  | 'memory'
+  | 'appearance'
+  | 'diagnostics'
+  | 'about'
+
+const SETTINGS_CATEGORIES: Array<{ id: SettingsCategoryId; label: string }> = [
+  { id: 'connection', label: 'Connection' },
+  { id: 'voice-output', label: 'Voice output' },
+  { id: 'voice-input', label: 'Voice input' },
+  { id: 'avatars', label: 'Avatars' },
+  { id: 'integrations', label: 'Integrations' },
+  { id: 'conversation', label: 'Conversation' },
+  { id: 'memory', label: 'Memory' },
+  { id: 'appearance', label: 'Appearance' },
+  { id: 'diagnostics', label: 'Diagnostics' },
+  { id: 'about', label: 'About' }
+]
+
 export function Settings() {
   const C = COPY.SETTINGS
   const { resetAll } = useStore()
   const [resetOpen, setResetOpen] = useState(false)
-  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>('connection')
 
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = 0
-  }, [])
-
-  const anchors = [
-    { id: 'sec-connection', label: 'Connection' },
-    { id: 'sec-avatars', label: 'Avatars' },
-    { id: 'sec-plugins', label: 'Plugins' },
-    { id: 'sec-vts', label: 'VTube Studio' },
-    { id: 'sec-tts', label: 'TTS' },
-    { id: 'sec-voice-in', label: 'Voice in' },
-    { id: 'sec-conversation', label: 'Conversation' },
-    { id: 'sec-memory', label: 'Memory' },
-    { id: 'sec-appearance', label: 'Appearance' },
-    { id: 'sec-diagnostics', label: 'Diagnostics' },
-    { id: 'sec-about', label: 'About' }
-  ]
-
-  const [activeAnchor, setActiveAnchor] = useState<string>('sec-connection')
-  useEffect(() => {
-    const root = scrollRef.current
-    if (!root) return
-    const onScroll = (): void => {
-      const y = root.scrollTop + 24
-      let best = anchors[0]!.id
-      for (const a of anchors) {
-        const el = root.querySelector(`#${a.id}`) as HTMLElement | null
-        if (el && el.offsetTop <= y) best = a.id
-      }
-      setActiveAnchor(best)
+  const renderPanel = () => {
+    if (activeCategory === 'connection') return <ConnectionSection />
+    if (activeCategory === 'voice-output') return <TTSSection />
+    if (activeCategory === 'voice-input') return <VoiceInputSection />
+    if (activeCategory === 'avatars') return <AvatarsSection />
+    if (activeCategory === 'integrations') {
+      return (
+        <>
+          <PluginSection />
+          <VTubeStudioSection />
+        </>
+      )
     }
-    root.addEventListener('scroll', onScroll)
-    return () => root.removeEventListener('scroll', onScroll)
-  }, [])
-
-  const goTo = (id: string): void => {
-    const root = scrollRef.current
-    if (!root) return
-    const el = root.querySelector(`#${id}`) as HTMLElement | null
-    if (el) root.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' })
+    if (activeCategory === 'conversation') return <ConversationSection />
+    if (activeCategory === 'memory') return <MemorySection />
+    if (activeCategory === 'appearance') return <AppearanceSection />
+    if (activeCategory === 'diagnostics') return <DiagnosticsSection onResetClick={() => setResetOpen(true)} />
+    return <AboutSection />
   }
 
   return (
     <div className="view">
-      <div className="settings-scroll" ref={scrollRef}>
-        <h1>{C.HEADER}</h1>
-        <div className="anchor-pills">
-          {anchors.map((a) => (
+      <div className="settings-shell">
+        <aside className="settings-sidebar" aria-label="Settings categories">
+          <h1>{C.HEADER}</h1>
+          <nav className="settings-category-list">
+            {SETTINGS_CATEGORIES.map((category) => (
             <button
-              key={a.id}
-              className={`anchor-pill${activeAnchor === a.id ? ' active' : ''}`}
-              onClick={() => goTo(a.id)}
+              key={category.id}
+              className={`settings-category${activeCategory === category.id ? ' active' : ''}`}
+              type="button"
+              aria-current={activeCategory === category.id ? 'page' : undefined}
+              onClick={() => setActiveCategory(category.id)}
             >
-              {a.label}
+              {category.label}
             </button>
           ))}
-        </div>
-
-        <ConnectionSection />
-
-        <AvatarsSection />
-        <PluginSection />
-        <VTubeStudioSection />
-        <TTSSection />
-        <VoiceInputSection />
-        <ConversationSection />
-        <MemorySection />
-        {C.PLACEHOLDERS.filter((p) => p.num > 8).map((p) => (
-          <PlaceholderSection
-            key={p.num}
-            num={p.num}
-            title={p.title}
-            milestone={p.milestone}
-            body={p.body}
-          />
-        ))}
-        <AppearanceSection />
-        <DiagnosticsSection onResetClick={() => setResetOpen(true)} />
-        <AboutSection />
+          </nav>
+        </aside>
+        <main className="settings-panel">
+          {renderPanel()}
+        </main>
       </div>
       <ResetDialog
         open={resetOpen}

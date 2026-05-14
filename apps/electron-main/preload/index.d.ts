@@ -82,6 +82,7 @@ export type ConversationHistoryBridge = {
   deleteConversationSession(id: string): Promise<ConversationSession>
   clearConversationHistory(): Promise<ConversationSession>
   commitConversationTurn(input: CommitConversationTurnInput): Promise<ConversationSession>
+  truncateConversationBeforeMessage(sessionId: string, messageId: string): Promise<ConversationSession>
   getConversationStats(): Promise<ConversationStats>
 }
 

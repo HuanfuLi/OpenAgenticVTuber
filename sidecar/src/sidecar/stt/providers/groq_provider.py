@@ -7,6 +7,8 @@ import time
 from contracts import AudioProviderHealth, STTProviderConfig
 from sidecar.stt.provider import STTProviderError, STTRequest, STTResult
 
+DEFAULT_GROQ_STT_MODEL = "whisper-large-v3-turbo"
+
 
 class GroqSTTProvider:
     provider_id = "groq"
@@ -39,9 +41,12 @@ class GroqSTTProvider:
         started = time.perf_counter()
         try:
             module = importlib.import_module("groq")
-            client = module.Groq(api_key=self._cloud.api_key, base_url=self._cloud.endpoint_url)
+            client_kwargs = {"api_key": self._cloud.api_key}
+            if self._cloud.endpoint_url:
+                client_kwargs["base_url"] = self._cloud.endpoint_url
+            client = module.Groq(**client_kwargs)
             kwargs = {
-                "model": self._cloud.model_name or "whisper-large-v3-turbo",
+                "model": self._cloud.model_name or DEFAULT_GROQ_STT_MODEL,
                 "file": ("settings-test.wav", BytesIO(request.audio_bytes), "audio/wav"),
             }
             if request.language_mode != "auto":

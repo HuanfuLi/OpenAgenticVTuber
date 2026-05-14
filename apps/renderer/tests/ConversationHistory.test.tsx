@@ -107,6 +107,17 @@ function installConversationApi(initial: ConversationSession[] = [makeSession('s
       })
       return sessions.find((session) => session.id === sessionId)!
     }),
+    truncateConversationBeforeMessage: vi.fn(async (sessionId: string, messageId: string) => {
+      sessions = sessions.map((session) => {
+        if (session.id !== sessionId) return session
+        const index = session.messages.findIndex((message) => message.id === messageId)
+        return {
+          ...session,
+          messages: index >= 0 ? session.messages.slice(0, index) : session.messages
+        }
+      })
+      return sessions.find((session) => session.id === sessionId)!
+    }),
     getConversationStats: vi.fn(async () => stats())
   }
   Object.defineProperty(window, 'api', { configurable: true, value: api })

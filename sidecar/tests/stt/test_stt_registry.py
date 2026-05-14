@@ -14,8 +14,12 @@ def test_registry_catalog_is_lightweight_and_marks_defaults() -> None:
 
     assert providers["funasr"].recommended is True
     assert providers["funasr"].default_model_id == "iic/SenseVoiceSmall"
+    assert "chinese_english" in providers["funasr"].capabilities
     assert providers["faster_whisper"].local is True
+    assert "limited_code_switch" in providers["faster_whisper"].capabilities
+    assert "cuda_optional" in providers["faster_whisper"].capabilities
     assert providers["openai"].requires_consent is True
+    assert providers["openai"].recommended is False
     assert "sidecar.stt.providers.funasr_provider" not in after - before
     assert "sidecar.stt.providers.faster_whisper_provider" not in after - before
 

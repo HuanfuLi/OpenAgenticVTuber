@@ -10,6 +10,22 @@ const captureCancelMock = vi.hoisted(() => vi.fn(async () => undefined))
 const captureDisposeMock = vi.hoisted(() => vi.fn())
 const vadStartMock = vi.hoisted(() => vi.fn(async () => undefined))
 const vadStopMock = vi.hoisted(() => vi.fn(async () => undefined))
+const captureOptionsMock = vi.hoisted(() => ({ latest: null as unknown }))
+const vadOptionsMock = vi.hoisted(() => ({ latest: null as unknown }))
+const vadDepsMock = vi.hoisted(() => ({
+  latest: null as {
+    onMonitoringChange?: (monitoring: boolean) => void
+    onLevel?: (diagnostics: {
+      level: number
+      threshold: number
+      sensitivity: 'low' | 'medium' | 'high'
+      speechDetected: boolean
+      monitoring: boolean
+      recording: boolean
+      ignoredReason: 'turn_in_progress' | null
+    }) => void
+  } | null
+}))
 
 vi.mock('@/ws/client', () => ({
   send: sendMock,
@@ -22,11 +38,18 @@ vi.mock('@/ws/client', () => ({
 }))
 
 vi.mock('@/ws/audio-player', () => ({
-  playAudioPayload: vi.fn()
+  playAudioPayload: vi.fn(),
+  stopAudioPlayback: vi.fn(),
+  getAudioPlaybackState: vi.fn(() => ({ active: false })),
+  subscribeAudioPlaybackState: vi.fn((listener: (state: { active: boolean }) => void) => {
+    listener({ active: false })
+    return () => undefined
+  })
 }))
 
 vi.mock('@/audio/voice-capture', () => ({
-  VoiceCapture: vi.fn(function VoiceCaptureMock() {
+  VoiceCapture: vi.fn(function VoiceCaptureMock(options: unknown) {
+    captureOptionsMock.latest = options
     return {
       get active() {
         return true
@@ -41,9 +64,11 @@ vi.mock('@/audio/voice-capture', () => ({
 
 vi.mock('@/audio/vad-controller', () => ({
   VadController: vi.fn(function VadControllerMock(
-    _options: unknown,
-    deps: { onMonitoringChange?: (monitoring: boolean) => void }
+    options: unknown,
+    deps: NonNullable<typeof vadDepsMock.latest>
   ) {
+    vadOptionsMock.latest = options
+    vadDepsMock.latest = deps
     return {
       start: vi.fn(async () => {
         await vadStartMock()
@@ -71,12 +96,15 @@ import { Chat } from '@/screens/Chat/Chat'
 import {
   applyFinalResult,
   getVoiceInputState,
-  resetVoiceInputStoreForTests,
-  setTransientPreview
+  resetVoiceInputStoreForTests
 } from '@/state/voice-input-store'
 import { saveVoiceInputSettings } from '@/state/audio-settings'
 import {
+  appendUserMessage as appendStreamingUserMessage,
   appendAssistantSentence,
+  beginTurnSettlement,
+  finishTurnSettlement,
+  _internalState,
   resetStreaming,
   setInputDisabled,
   setSpeaking
@@ -181,6 +209,7 @@ function installApi(session = sessionWithHistory(), voiceReadiness = readiness()
         }
       ]),
       getActiveConversationSession: vi.fn().mockResolvedValue(session),
+      truncateConversationBeforeMessage: vi.fn().mockResolvedValue(session),
       getConversationStats: vi.fn().mockResolvedValue({
         sessionCount: 1,
         messageCount: session.messages.length,
@@ -214,6 +243,9 @@ describe('Chat voice input', () => {
     captureDisposeMock.mockClear()
     vadStartMock.mockClear()
     vadStopMock.mockClear()
+    captureOptionsMock.latest = null
+    vadOptionsMock.latest = null
+    vadDepsMock.latest = null
     resetStreaming()
     resetVoiceInputStoreForTests()
     vi.mocked(commitConversationTurnFromDispatcher).mockClear()
@@ -263,6 +295,40 @@ describe('Chat voice input', () => {
     await waitFor(() => expect(captureStopMock).toHaveBeenCalledTimes(1))
   })
 
+  it('passes the selected microphone source into PTT and VAD capture', async () => {
+    saveVoiceInputSettings({
+      pttShortcut: 'Ctrl+Shift+Space',
+      microphone: {
+        deviceId: 'mic-usb',
+        label: 'USB Microphone',
+        suspectedSystemAudio: false
+      },
+      noHeadphones: { status: 'ready', unsafeOverride: false },
+      vad: { enabled: true, sensitivity: 'low', silenceTimeoutMs: 1800 }
+    })
+    renderChat()
+    await waitFor(() => expect(vadStartMock).toHaveBeenCalledTimes(1))
+    const mic = await screen.findByRole('button', { name: COPY.CHAT.VOICE_MIC })
+
+    fireEvent.pointerDown(mic)
+    await waitFor(() => expect(captureStartMock).toHaveBeenCalledTimes(1))
+
+    expect(captureOptionsMock.latest).toMatchObject({
+      microphone: {
+        deviceId: 'mic-usb',
+        label: 'USB Microphone',
+        suspectedSystemAudio: false
+      }
+    })
+    expect(vadOptionsMock.latest).toMatchObject({
+      microphone: {
+        deviceId: 'mic-usb',
+        label: 'USB Microphone',
+        suspectedSystemAudio: false
+      }
+    })
+  })
+
   it('uses the configured PTT shortcut for keyboard capture', async () => {
     saveVoiceInputSettings({
       pttShortcut: 'Ctrl+Alt+M',
@@ -290,6 +356,7 @@ describe('Chat voice input', () => {
   it('starts VAD monitoring only after settings opt-in and readiness are ready', async () => {
     saveVoiceInputSettings({
       pttShortcut: 'Ctrl+Shift+Space',
+      noHeadphones: { status: 'ready', unsafeOverride: false },
       vad: { enabled: true, sensitivity: 'low', silenceTimeoutMs: 1800 }
     })
     installApi(sessionWithHistory(), readiness({
@@ -309,6 +376,7 @@ describe('Chat voice input', () => {
   it('shows VAD state after explicit opt-in and readiness pass', async () => {
     saveVoiceInputSettings({
       pttShortcut: 'Ctrl+Shift+Space',
+      noHeadphones: { status: 'ready', unsafeOverride: false },
       vad: { enabled: true, sensitivity: 'low', silenceTimeoutMs: 1800 }
     })
     renderChat()
@@ -316,6 +384,48 @@ describe('Chat voice input', () => {
     await waitFor(() => expect(vadStartMock).toHaveBeenCalledTimes(1))
     expect(await screen.findByText(COPY.CHAT.VOICE_VAD_ACTIVE)).toBeInTheDocument()
     expect(screen.getByText(COPY.SETTINGS.VOICE_IN_INPUT_VAD)).toBeInTheDocument()
+    expect(screen.getByTestId('voice-vad-meter')).toHaveTextContent(COPY.CHAT.VOICE_VAD_STARTING)
+  })
+
+  it('shows live VAD level and speech detection feedback', async () => {
+    saveVoiceInputSettings({
+      pttShortcut: 'Ctrl+Shift+Space',
+      noHeadphones: { status: 'ready', unsafeOverride: false },
+      vad: { enabled: true, sensitivity: 'low', silenceTimeoutMs: 1800 }
+    })
+    renderChat()
+
+    await waitFor(() => expect(vadStartMock).toHaveBeenCalledTimes(1))
+    act(() => {
+      vadDepsMock.latest?.onLevel?.({
+        level: 0.01,
+        threshold: 0.035,
+        sensitivity: 'low',
+        speechDetected: false,
+        monitoring: true,
+        recording: false,
+        ignoredReason: null
+      })
+    })
+
+    const meter = await screen.findByTestId('voice-vad-meter')
+    expect(meter).toHaveTextContent(COPY.CHAT.VOICE_VAD_BELOW_THRESHOLD)
+    expect(within(meter).getByRole('meter', { name: COPY.CHAT.VOICE_VAD_LEVEL }))
+      .toHaveAttribute('aria-valuenow', '29')
+
+    act(() => {
+      vadDepsMock.latest?.onLevel?.({
+        level: 0.04,
+        threshold: 0.035,
+        sensitivity: 'low',
+        speechDetected: true,
+        monitoring: true,
+        recording: false,
+        ignoredReason: null
+      })
+    })
+
+    expect(meter).toHaveTextContent(COPY.CHAT.VOICE_VAD_DETECTED)
   })
 
   it('requests microphone permission on first use when the preload bridge reports prompt state', async () => {
@@ -422,16 +532,10 @@ describe('Chat voice input', () => {
     expect(screen.queryByText('Voice input is waiting for the sidecar.')).toBeNull()
   })
 
-  it('renders preview outside chat bubbles and never commits it to history', async () => {
+  it('does not render preview transcription while recording', async () => {
     renderChat()
 
-    act(() => {
-      setTransientPreview('preview-1', 'transient preview only')
-    })
-
-    const preview = await screen.findByTestId('voice-preview')
-    expect(preview).toHaveTextContent('transient preview only')
-    expect(preview.closest('.bubble')).toBeNull()
+    expect(screen.queryByTestId('voice-preview')).toBeNull()
     expect(commitConversationTurnFromDispatcher).not.toHaveBeenCalled()
   })
 
@@ -454,6 +558,26 @@ describe('Chat voice input', () => {
         ]
       })
     })
+  })
+
+  it('submits mixed Chinese and English final text unchanged without preview bubbles', async () => {
+    renderChat()
+    await screen.findByText('Hello.')
+
+    act(() => {
+      applyFinalResult(finalResult('请把 brightness 调到 fifty percent', 'voice-final-code-switch'))
+    })
+
+    await waitFor(() => {
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'text-input',
+        text: '请把 brightness 调到 fifty percent',
+        session_id: 's1'
+      }))
+    })
+    expect(screen.queryByTestId('voice-preview')).toBeNull()
+    expect(screen.queryByText('Finalizing')).toBeNull()
+    expect(screen.getByText('请把 brightness 调到 fifty percent')).toBeInTheDocument()
   })
 
   it('queues final transcript during an active turn and sends after the turn ends', async () => {
@@ -483,6 +607,40 @@ describe('Chat voice input', () => {
     })
   })
 
+  it('waits for the previous turn to settle before dispatching queued voice', async () => {
+    renderChat()
+    await screen.findByText('Hello.')
+
+    let firstUserMessageId = ''
+    act(() => {
+      appendStreamingUserMessage('first voice question', 's1')
+      appendAssistantSentence('first voice answer', 1)
+      firstUserMessageId = _internalState().pendingTurn!.userMessageId
+      beginTurnSettlement(firstUserMessageId)
+      setInputDisabled(false)
+      setSpeaking(false)
+      applyFinalResult(finalResult('second voice question', 'voice-final-2'), true)
+    })
+
+    expect(await screen.findByTestId('voice-queued')).toHaveTextContent('second voice question')
+    expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({
+      type: 'text-input',
+      text: 'second voice question'
+    }))
+
+    act(() => {
+      finishTurnSettlement(firstUserMessageId)
+    })
+
+    await waitFor(() => {
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'text-input',
+        text: 'second voice question',
+        session_id: 's1'
+      }))
+    })
+  })
+
   it('cancels queued transcript without touching active playback state', async () => {
     renderChat()
 
@@ -504,6 +662,7 @@ describe('Chat voice input', () => {
   it('shows that VAD waits while Teto is speaking', async () => {
     saveVoiceInputSettings({
       pttShortcut: 'Ctrl+Shift+Space',
+      noHeadphones: { status: 'ready', unsafeOverride: false },
       vad: { enabled: true, sensitivity: 'low', silenceTimeoutMs: 1800 }
     })
     renderChat()
@@ -514,5 +673,6 @@ describe('Chat voice input', () => {
 
     expect(await screen.findByTestId('voice-vad-blocked')).toHaveTextContent(COPY.CHAT.VOICE_VAD_BLOCKED)
     expect(screen.getByTestId('speaking-label')).toHaveTextContent(COPY.CHAT.SPEAKING)
+    expect(screen.queryByTestId('voice-vad-meter')).toBeNull()
   })
 })

@@ -65,5 +65,9 @@ audit_logs/
 # Local-only broken plugin fixture for manual Settings fallback testing.
 plugins/broken_motion_test/
 
+# Local-only STT evaluation recordings. Checked-in corpus/scorecard metadata
+# stays in .planning/phases/, but raw user voice recordings must not be committed.
+.planning/eval-audio/phase-21/
+
 # Phase 5 codegen - committed intermediates live under packages/contracts/generated/json-schema/
 # Nothing new to ignore (we COMMIT the intermediates per Claude's Discretion default).

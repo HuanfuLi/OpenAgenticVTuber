@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import asyncio
 import os
+import threading
 import wave
 from io import BytesIO
 from pathlib import Path
@@ -44,6 +45,11 @@ router = APIRouter(prefix="/admin/audio")
 SUPPORTED_REFERENCE_AUDIO_FORMATS = {"wav", "flac", "mp3", "ogg"}
 MIN_REFERENCE_AUDIO_SECONDS = 1.0
 MAX_REFERENCE_AUDIO_SECONDS = 30.0
+LOCAL_STT_PROVIDER_IDS = {"funasr", "faster_whisper"}
+_STT_PROVIDER_CACHE_LOCK = threading.Lock()
+_STT_PROVIDER_CACHE: dict[tuple[str, str, str, str, str], object] = {}
+_STT_PROVIDER_TRANSCRIBE_LOCKS: dict[tuple[str, str, str, str, str], threading.Lock] = {}
+_STT_PROVIDER_WARMUP_KEYS: set[tuple[str, str, str, str, str]] = set()
 ReferenceAudioErrorCode = Literal[
     "missing_file",
     "unsupported_format",
@@ -177,7 +183,7 @@ def _stt_provider_health(config: STTProviderConfig) -> AudioProviderHealth:
                 provider_id=provider_id,
                 kind="stt",
                 state="missing_credential",
-                summary="Cloud STT API key is required before any test request can run.",
+                summary="Cloud STT API key is required for this diagnostic request.",
                 retryable=False,
                 redacted_diagnostics={"provider": provider_id, "credential": "missing"},
             )
@@ -269,9 +275,138 @@ def _invalid_wav_health(provider_id: str) -> AudioProviderHealth:
     )
 
 
+def _local_stt_provider_cache_key(config: STTProviderConfig) -> tuple[str, str, str, str, str] | None:
+    provider_id = config.active_provider or "funasr"
+    if provider_id not in LOCAL_STT_PROVIDER_IDS:
+        return None
+    return (
+        provider_id,
+        config.local_model_id or "",
+        config.local_model_path_override or "",
+        config.runtime_device,
+        config.cuda_compute_type,
+    )
+
+
+def _build_or_get_stt_provider(config: STTProviderConfig):
+    cache_key = _local_stt_provider_cache_key(config)
+    if cache_key is None:
+        return STTProviderRegistry().build_provider(config), None
+    with _STT_PROVIDER_CACHE_LOCK:
+        provider = _STT_PROVIDER_CACHE.get(cache_key)
+        if provider is None:
+            provider = STTProviderRegistry().build_provider(config)
+            _STT_PROVIDER_CACHE[cache_key] = provider
+        transcribe_lock = _STT_PROVIDER_TRANSCRIBE_LOCKS.setdefault(cache_key, threading.Lock())
+    return provider, transcribe_lock
+
+
+def _evict_stt_provider(config: STTProviderConfig) -> None:
+    cache_key = _local_stt_provider_cache_key(config)
+    if cache_key is None:
+        return
+    with _STT_PROVIDER_CACHE_LOCK:
+        provider = _STT_PROVIDER_CACHE.pop(cache_key, None)
+        _STT_PROVIDER_TRANSCRIBE_LOCKS.pop(cache_key, None)
+    shutdown = getattr(provider, "shutdown", None)
+    if shutdown is not None:
+        try:
+            shutdown()
+        except Exception:
+            pass
+
+
 def _transcribe_with_provider(config: STTProviderConfig, request: STTRequest):
-    provider = STTProviderRegistry().build_provider(config)
-    return provider.transcribe(request)
+    provider, transcribe_lock = _build_or_get_stt_provider(config)
+    if transcribe_lock is None:
+        return provider.transcribe(request)
+    with transcribe_lock:
+        return provider.transcribe(request)
+
+
+def _validate_stt_runtime(config: STTProviderConfig) -> AudioProviderHealth | None:
+    provider_id = config.active_provider or "funasr"
+    if provider_id not in LOCAL_STT_PROVIDER_IDS:
+        return None
+    provider, transcribe_lock = _build_or_get_stt_provider(config)
+    validate_runtime = getattr(provider, "validate_runtime", None)
+    if validate_runtime is None:
+        return None
+    if transcribe_lock is None:
+        health = validate_runtime()
+    else:
+        with transcribe_lock:
+            health = validate_runtime()
+    return health if health.state != "ok" else None
+
+
+def _schedule_local_stt_warmup(request: Request, config: STTProviderConfig) -> None:
+    provider_id = config.active_provider or "funasr"
+    if not config.enabled or provider_id not in LOCAL_STT_PROVIDER_IDS:
+        return
+    if _local_model_status(request, config) != "downloaded":
+        return
+    provider_config = _config_with_resolved_local_model_path(request, config)
+    cache_key = _local_stt_provider_cache_key(provider_config)
+    if cache_key is None:
+        return
+    with _STT_PROVIDER_CACHE_LOCK:
+        if cache_key in _STT_PROVIDER_WARMUP_KEYS:
+            return
+        _STT_PROVIDER_WARMUP_KEYS.add(cache_key)
+
+    def warmup() -> None:
+        try:
+            _validate_stt_runtime(provider_config)
+        except Exception:
+            pass
+        finally:
+            with _STT_PROVIDER_CACHE_LOCK:
+                _STT_PROVIDER_WARMUP_KEYS.discard(cache_key)
+
+    threading.Thread(target=warmup, name=f"stt-warmup-{provider_id}", daemon=True).start()
+
+
+def _stt_operation_timeout_seconds(config: STTProviderConfig) -> float:
+    return max(config.capture_timeout_ms / 1000.0, 1.0)
+
+
+async def _run_stt_worker(config: STTProviderConfig, func, *args):
+    return await asyncio.wait_for(
+        asyncio.to_thread(func, *args),
+        timeout=_stt_operation_timeout_seconds(config),
+    )
+
+
+def _stt_timeout_health(config: STTProviderConfig, operation: Literal["runtime", "transcription"]) -> AudioProviderHealth:
+    provider_id = config.active_provider or "funasr"
+    diagnostics = {
+        "provider": provider_id,
+        "operation": operation,
+        "timeout_ms": str(config.capture_timeout_ms),
+    }
+    if provider_id == "faster_whisper":
+        diagnostics.update({
+            "runtime_device": config.runtime_device,
+            "compute_type": "int8" if config.runtime_device == "cpu" else config.cuda_compute_type,
+            **({"cpu_threads": str(max(1, min(os.cpu_count() or 1, 8)))} if config.runtime_device == "cpu" else {}),
+        })
+    if provider_id == "faster_whisper" and config.runtime_device == "cuda":
+        summary = (
+            "faster-whisper CUDA runtime validation timed out. Switch runtime to CPU or check NVIDIA/CUDA/CTranslate2 compatibility."
+            if operation == "runtime"
+            else "faster-whisper CUDA transcription timed out. Switch runtime to CPU or check NVIDIA/CUDA/CTranslate2 compatibility."
+        )
+    else:
+        summary = "STT runtime validation timed out." if operation == "runtime" else "STT transcription timed out."
+    return AudioProviderHealth(
+        provider_id=provider_id,
+        kind="stt",
+        state="timeout",
+        summary=summary,
+        retryable=True,
+        redacted_diagnostics=diagnostics,
+    )
 
 
 def _stt_failure_result(payload: STTTestRequest, health: AudioProviderHealth, diagnostics: dict[str, str] | None = None) -> STTTestResult:
@@ -296,6 +431,31 @@ def _stt_failure_result(payload: STTTestRequest, health: AudioProviderHealth, di
         failure=health,
         redacted_diagnostics=diagnostics,
     )
+
+
+def _cloud_stt_required_input_health(config: STTProviderConfig, provider_id: str) -> AudioProviderHealth | None:
+    if provider_id not in {"openai", "groq"}:
+        return None
+    cloud = config.cloud.get(provider_id)
+    if cloud is None or not cloud.consent_granted:
+        return AudioProviderHealth(
+            provider_id=provider_id,
+            kind="stt",
+            state="misconfigured",
+            summary="Cloud STT is blocked until explicit consent is saved.",
+            retryable=False,
+            redacted_diagnostics={"provider": provider_id, "consent": "missing"},
+        )
+    if not cloud.api_key:
+        return AudioProviderHealth(
+            provider_id=provider_id,
+            kind="stt",
+            state="missing_credential",
+            summary="Cloud STT API key is required before voice input can run.",
+            retryable=False,
+            redacted_diagnostics={"provider": provider_id, "credential": "missing"},
+        )
+    return None
 
 
 def _inactive_stt_readiness(config: STTProviderConfig, reason: str) -> STTProviderReadiness:
@@ -399,18 +559,6 @@ def _voice_input_readiness(request: Request, payload: VoiceInputReadinessRequest
             summary="Select an STT provider before using voice input.",
         )
     readiness = validate_stt_readiness(config)
-    if not readiness.active_allowed:
-        return VoiceInputReadiness(
-            ready=False,
-            capture_status="idle",
-            stt_enabled=True,
-            provider_id=provider_id,
-            blocked_reason="readiness_not_active",
-            setup_destination="voice_settings",
-            permission_state=permission_state,
-            readiness=readiness,
-            summary="Run and pass the STT test in Voice settings before using voice input.",
-        )
     if provider_id in {"funasr", "faster_whisper"} and _local_model_status(request, config) != "downloaded":
         missing_model = _missing_local_model_health(provider_id)
         return VoiceInputReadiness(
@@ -423,6 +571,22 @@ def _voice_input_readiness(request: Request, payload: VoiceInputReadinessRequest
             permission_state=permission_state,
             readiness=_inactive_stt_readiness(config, "missing_model"),
             summary=missing_model.summary,
+        )
+    cloud_required_health = _cloud_stt_required_input_health(config, provider_id)
+    if cloud_required_health is not None:
+        return VoiceInputReadiness(
+            ready=False,
+            capture_status="idle",
+            stt_enabled=True,
+            provider_id=provider_id,
+            blocked_reason="readiness_not_active",
+            setup_destination="voice_settings",
+            permission_state=permission_state,
+            readiness=_inactive_stt_readiness(
+                config,
+                "missing_credential" if cloud_required_health.state == "missing_credential" else "config_changed",
+            ),
+            summary=cloud_required_health.summary,
         )
     return VoiceInputReadiness(
         ready=True,
@@ -547,9 +711,18 @@ async def post_stt_test(request: Request, payload: STTTestRequest) -> dict[str, 
         )
         return _stt_failure_result(payload, missing_model, redacted_diagnostics).model_dump()
     try:
-        audio_bytes, sample_rate, duration_ms = _decode_wav_payload(payload)
         provider_config = _config_with_resolved_local_model_path(request, payload.config)
-        stt_result = await asyncio.to_thread(
+        try:
+            runtime_health = await _run_stt_worker(payload.config, _validate_stt_runtime, provider_config)
+        except asyncio.TimeoutError:
+            _evict_stt_provider(provider_config)
+            failure = _stt_timeout_health(payload.config, "runtime")
+            return _stt_failure_result(payload, failure, failure.redacted_diagnostics).model_dump()
+        if runtime_health is not None:
+            return _stt_failure_result(payload, runtime_health, runtime_health.redacted_diagnostics).model_dump()
+        audio_bytes, sample_rate, duration_ms = _decode_wav_payload(payload)
+        stt_result = await _run_stt_worker(
+            payload.config,
             _transcribe_with_provider,
             provider_config,
             STTRequest(
@@ -577,6 +750,10 @@ async def post_stt_test(request: Request, payload: STTTestRequest) -> dict[str, 
         return result.model_dump()
     except ValueError:
         return _stt_failure_result(payload, _invalid_wav_health(provider_id), redacted_diagnostics).model_dump()
+    except asyncio.TimeoutError:
+        _evict_stt_provider(provider_config)
+        failure = _stt_timeout_health(payload.config, "transcription")
+        return _stt_failure_result(payload, failure, failure.redacted_diagnostics).model_dump()
     except STTProviderError as exc:
         return _stt_failure_result(payload, exc.health(), exc.redacted_diagnostics).model_dump()
     except Exception as exc:
@@ -598,29 +775,36 @@ async def post_stt_health(payload: STTTestRequest) -> dict[str, object]:
 
 
 @router.post("/stt/readiness")
-async def post_stt_readiness(payload: STTTestRequest) -> dict[str, object]:
-    return validate_stt_readiness(payload.config).model_dump()
+async def post_stt_readiness(request: Request, payload: STTTestRequest) -> dict[str, object]:
+    readiness = validate_stt_readiness(payload.config)
+    if readiness.active_allowed:
+        _schedule_local_stt_warmup(request, payload.config)
+    return readiness.model_dump()
 
 
 @router.post("/stt/enable")
-async def post_stt_enable(payload: STTTestRequest) -> dict[str, object]:
+async def post_stt_enable(request: Request, payload: STTTestRequest) -> dict[str, object]:
     readiness = validate_stt_readiness(payload.config)
-    if not readiness.active_allowed:
-        return STTProviderReadiness(
-            health_check_passed=readiness.health_check_passed,
-            test_transcription_passed=readiness.test_transcription_passed,
-            last_health_checked_at=readiness.last_health_checked_at,
-            last_test_transcription_at=readiness.last_test_transcription_at,
-            fingerprint=readiness.fingerprint,
-            active_allowed=False,
-            invalidation_reason=readiness.invalidation_reason,
-        ).model_dump()
-    return readiness.model_dump()
+    provider_id = payload.config.active_provider or "funasr"
+    cloud_required_health = _cloud_stt_required_input_health(payload.config, provider_id)
+    enabled_readiness = readiness.model_copy(
+        update={
+            "fingerprint": compute_stt_readiness_fingerprint(payload.config),
+            "active_allowed": cloud_required_health is None,
+            "invalidation_reason": "ready" if cloud_required_health is None else "config_changed",
+        }
+    )
+    if enabled_readiness.active_allowed:
+        _schedule_local_stt_warmup(request, payload.config)
+    return enabled_readiness.model_dump()
 
 
 @router.post("/voice-input/readiness")
 async def post_voice_input_readiness(request: Request, payload: VoiceInputReadinessRequest) -> dict[str, object]:
-    return _voice_input_readiness(request, payload).model_dump()
+    readiness = _voice_input_readiness(request, payload)
+    if readiness.ready:
+        _schedule_local_stt_warmup(request, payload.config)
+    return readiness.model_dump()
 
 
 @router.post("/voice-input")
@@ -646,9 +830,38 @@ async def post_voice_input(request: Request, payload: VoiceInputTranscriptionReq
         )
         return _voice_input_failure_result(payload, blocked, missing_model, missing_model.redacted_diagnostics).model_dump()
     try:
-        audio_bytes, sample_rate, duration_ms = _decode_wav_payload(payload)
         provider_config = _config_with_resolved_local_model_path(request, payload.config)
-        stt_result = await asyncio.to_thread(
+        try:
+            runtime_health = await _run_stt_worker(payload.config, _validate_stt_runtime, provider_config)
+        except asyncio.TimeoutError:
+            _evict_stt_provider(provider_config)
+            failure = _stt_timeout_health(payload.config, "runtime")
+            failed_readiness = readiness.model_copy(
+                update={
+                    "ready": False,
+                    "capture_status": "error",
+                    "blocked_reason": "unexpected_failure",
+                    "setup_destination": "voice_settings",
+                    "readiness": _inactive_stt_readiness(payload.config, "runtime_failure"),
+                    "summary": failure.summary,
+                }
+            )
+            return _voice_input_failure_result(payload, failed_readiness, failure, failure.redacted_diagnostics).model_dump()
+        if runtime_health is not None:
+            failed_readiness = readiness.model_copy(
+                update={
+                    "ready": False,
+                    "capture_status": "error",
+                    "blocked_reason": "unexpected_failure",
+                    "setup_destination": "voice_settings",
+                    "readiness": _inactive_stt_readiness(payload.config, "runtime_failure"),
+                    "summary": runtime_health.summary,
+                }
+            )
+            return _voice_input_failure_result(payload, failed_readiness, runtime_health, runtime_health.redacted_diagnostics).model_dump()
+        audio_bytes, sample_rate, duration_ms = _decode_wav_payload(payload)
+        stt_result = await _run_stt_worker(
+            payload.config,
             _transcribe_with_provider,
             provider_config,
             STTRequest(
@@ -680,9 +893,23 @@ async def post_voice_input(request: Request, payload: VoiceInputTranscriptionReq
             update={
                 "ready": False,
                 "capture_status": "error",
-                "blocked_reason": "readiness_not_active",
+                "blocked_reason": "unexpected_failure",
                 "setup_destination": "voice_settings",
                 "readiness": _inactive_stt_readiness(payload.config, "test_failed"),
+                "summary": failure.summary,
+            }
+        )
+        return _voice_input_failure_result(payload, failed_readiness, failure, failure.redacted_diagnostics).model_dump()
+    except asyncio.TimeoutError:
+        _evict_stt_provider(provider_config)
+        failure = _stt_timeout_health(payload.config, "transcription")
+        failed_readiness = readiness.model_copy(
+            update={
+                "ready": False,
+                "capture_status": "error",
+                "blocked_reason": "unexpected_failure",
+                "setup_destination": "voice_settings",
+                "readiness": _inactive_stt_readiness(payload.config, "runtime_failure"),
                 "summary": failure.summary,
             }
         )
@@ -692,7 +919,7 @@ async def post_voice_input(request: Request, payload: VoiceInputTranscriptionReq
             update={
                 "ready": False,
                 "capture_status": "error",
-                "blocked_reason": "readiness_not_active",
+                "blocked_reason": "unexpected_failure",
                 "setup_destination": "voice_settings",
                 "readiness": _inactive_stt_readiness(payload.config, "runtime_failure"),
                 "summary": exc.summary,
@@ -712,7 +939,7 @@ async def post_voice_input(request: Request, payload: VoiceInputTranscriptionReq
             update={
                 "ready": False,
                 "capture_status": "error",
-                "blocked_reason": "readiness_not_active",
+                "blocked_reason": "unexpected_failure",
                 "setup_destination": "voice_settings",
                 "readiness": _inactive_stt_readiness(payload.config, "runtime_failure"),
                 "summary": failure.summary,

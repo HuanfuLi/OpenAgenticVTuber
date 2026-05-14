@@ -5,12 +5,15 @@ import type {
 import { subscribeSidecarReconnect } from '@/ws/client'
 import {
   applyFinalResult,
-  applyPreviewResult,
-  clearTransientPreview,
   patchVoiceInputState,
-  setTransientPreview,
+  setVoiceAecDiagnostics,
   setVoiceCaptureStatus
 } from '@/state/voice-input-store'
+import {
+  voiceInputAudioConstraints,
+  type VoiceInputMicrophoneSettings
+} from '@/state/audio-settings'
+import { captureAecDiagnostics } from './aec-diagnostics'
 import { encodeVoiceBlobToBase64Wav, type EncodedVoiceAudio } from './wav-encoder'
 
 type RendererTranscriptionRequest = Omit<VoiceInputTranscriptionRequest, 'config'>
@@ -27,36 +30,33 @@ interface VoiceCaptureDeps {
 
 interface VoiceCaptureOptions {
   sessionId?: string | null
-  previewTimesliceMs?: number
   turnInProgress?: () => boolean
+  microphone?: VoiceInputMicrophoneSettings
 }
-
-const DEFAULT_PREVIEW_TIMESLICE_MS = 1200
 
 export class VoiceCapture {
   private stream: MediaStream | null = null
   private recorder: MediaRecorder | null = null
   private chunks: Blob[] = []
   private captureId = 0
-  private previewCounter = 0
   private stopPromise: Promise<void> | null = null
   private unsubscribeReconnect: (() => void) | null = null
   private readonly mediaDevices: MediaDevices
   private readonly MediaRecorderCtor: typeof MediaRecorder
   private readonly transcribeVoiceInput: TranscribeVoiceInput
   private readonly encodeVoiceBlob: EncodeVoiceBlob
-  private readonly previewTimesliceMs: number
   private readonly sessionId: string | null
   private readonly turnInProgress: () => boolean
+  private readonly microphone: VoiceInputMicrophoneSettings
 
   constructor(options: VoiceCaptureOptions = {}, deps: VoiceCaptureDeps = {}) {
     this.mediaDevices = deps.mediaDevices ?? navigator.mediaDevices
     this.MediaRecorderCtor = deps.MediaRecorderCtor ?? MediaRecorder
     this.transcribeVoiceInput = deps.transcribeVoiceInput ?? window.api.transcribeVoiceInput
     this.encodeVoiceBlob = deps.encodeVoiceBlob ?? encodeVoiceBlobToBase64Wav
-    this.previewTimesliceMs = options.previewTimesliceMs ?? DEFAULT_PREVIEW_TIMESLICE_MS
     this.sessionId = options.sessionId ?? null
     this.turnInProgress = options.turnInProgress ?? (() => false)
+    this.microphone = options.microphone ?? { deviceId: null, label: null, suspectedSystemAudio: false }
     this.unsubscribeReconnect = (deps.subscribeReconnect ?? subscribeSidecarReconnect)(() => {
       void this.cancel('Sidecar reconnected; voice capture was canceled.')
     })
@@ -80,18 +80,24 @@ export class VoiceCapture {
     const captureId = this.captureId + 1
     this.captureId = captureId
     this.chunks = []
-    clearTransientPreview()
     setVoiceCaptureStatus('listening')
 
     try {
       this.stream = await this.getAudioStream()
+      setVoiceAecDiagnostics(captureAecDiagnostics({
+        source: 'ptt',
+        stream: this.stream,
+        constraints: voiceInputAudioConstraints(this.microphone),
+        microphone: this.microphone,
+        mediaDevices: this.mediaDevices
+      }))
       if (captureId !== this.captureId) {
         this.cleanupStream()
         return
       }
       this.recorder = this.createRecorder(this.stream)
       this.installRecorderHandlers(this.recorder, captureId)
-      this.recorder.start(this.previewTimesliceMs)
+      this.recorder.start()
       setVoiceCaptureStatus('recording')
     } catch (error) {
       this.handleCaptureError(error)
@@ -132,7 +138,6 @@ export class VoiceCapture {
     }
     this.cleanupStream()
     this.chunks = []
-    clearTransientPreview()
     setVoiceCaptureStatus('idle', message)
   }
 
@@ -143,17 +148,12 @@ export class VoiceCapture {
   }
 
   private async getAudioStream(): Promise<MediaStream> {
-    const constraints: MediaStreamConstraints = {
-      audio: {
-        channelCount: { ideal: 1 },
-        echoCancellation: { ideal: true },
-        noiseSuppression: { ideal: true }
-      }
-    }
+    const constraints = voiceInputAudioConstraints(this.microphone)
     try {
       return await this.mediaDevices.getUserMedia(constraints)
     } catch (error) {
       if (error instanceof DOMException && error.name === 'OverconstrainedError') {
+        if (this.microphone.deviceId) throw error
         return this.mediaDevices.getUserMedia({ audio: true })
       }
       throw error
@@ -177,7 +177,6 @@ export class VoiceCapture {
     recorder.ondataavailable = (event) => {
       if (!event.data || event.data.size <= 0 || captureId !== this.captureId) return
       this.chunks.push(event.data)
-      void this.transcribePreview(captureId)
     }
     recorder.onerror = () => {
       this.captureId += 1
@@ -189,26 +188,6 @@ export class VoiceCapture {
       })
     }
     recorder.onstop = () => this.finalizeRecording(captureId)
-  }
-
-  private async transcribePreview(captureId: number): Promise<void> {
-    const sequenceId = `${captureId}:preview:${this.previewCounter += 1}`
-    setTransientPreview(sequenceId, null)
-    try {
-      const blob = new Blob([...this.chunks])
-      const encoded = await this.encodeVoiceBlob(blob)
-      if (captureId !== this.captureId) return
-      const result = await this.transcribeVoiceInput({
-        audio_base64_wav: encoded.audioBase64Wav,
-        duration_ms: encoded.durationMs,
-        mode: 'preview',
-        sequence_id: sequenceId,
-        session_id: this.sessionId
-      })
-      applyPreviewResult(result)
-    } catch {
-      // Preview is opportunistic; final transcription still uses the full recording.
-    }
   }
 
   private async finalizeRecording(captureId: number): Promise<void> {
@@ -250,11 +229,13 @@ export class VoiceCapture {
       })
       return
     }
-    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'OverconstrainedError') {
       patchVoiceInputState({
         captureStatus: 'error',
         permissionState: 'no_input_device',
-        error: 'No microphone input device was found.'
+        error: this.microphone.deviceId
+          ? 'Selected microphone input is unavailable. Choose another microphone in Settings.'
+          : 'No microphone input device was found.'
       })
       return
     }

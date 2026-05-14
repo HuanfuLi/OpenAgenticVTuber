@@ -327,7 +327,7 @@ describe('GPT-SoVITS audio IPC handlers', () => {
           requires_consent: true,
           enabled: true,
           recommended: false,
-          default_model_id: 'gpt-4o-mini-transcribe',
+          default_model_id: 'gpt-4o-transcribe',
           supported_language_modes: ['auto', 'zh', 'en'],
           summary: 'Cloud STT option.'
         }
@@ -368,6 +368,8 @@ describe('GPT-SoVITS audio IPC handlers', () => {
         local_model_id: null,
         local_model_path_override: null,
         cache_root: null,
+        runtime_device: 'cpu',
+        cuda_compute_type: 'float16',
         readiness: {
           health_check_passed: false,
           test_transcription_passed: false,
@@ -404,11 +406,11 @@ describe('GPT-SoVITS audio IPC handlers', () => {
     await expect(invokeMany<AudioProviderCatalog>('sidecar:getAudioProviders')).resolves.toEqual(catalog)
     await expect(invoke<STTTestResult>('audio:testStt', request)).resolves.toEqual(sttResult)
     expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://127.0.0.1:8765/admin/audio/providers')
-    expect(fetchMock).toHaveBeenNthCalledWith(2, 'http://127.0.0.1:8765/admin/audio/stt/test', {
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'http://127.0.0.1:8765/admin/audio/stt/test', expect.objectContaining({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request)
-    })
+    }))
     expect(JSON.stringify(sttResult)).not.toContain('sk-secret-value')
   })
 

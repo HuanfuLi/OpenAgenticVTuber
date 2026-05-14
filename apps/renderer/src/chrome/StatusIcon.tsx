@@ -17,6 +17,7 @@ export function StatusIcon() {
 
   useEffect(() => {
     if (!statusOpen) return
+    void refreshStatus()
     const onDoc = (e: MouseEvent): void => {
       if (!popoverRef.current) return
       const target = e.target as Element | null
@@ -37,7 +38,7 @@ export function StatusIcon() {
       document.removeEventListener('mousedown', onDoc)
       document.removeEventListener('keydown', onKey)
     }
-  }, [statusOpen, setStatusOpen])
+  }, [statusOpen, setStatusOpen, refreshStatus])
 
   const color =
     statusOverall === 'green'

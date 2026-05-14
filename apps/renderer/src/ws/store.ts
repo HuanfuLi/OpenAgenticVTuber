@@ -25,6 +25,8 @@ import {
   setThinking,
   appendAssistantSentence,
   getCompletedTurnCandidate,
+  beginTurnSettlement,
+  finishTurnSettlement,
   markCompletedTurnConsumed,
   setForceNewMessage,
   setInputDisabled,
@@ -33,7 +35,7 @@ import {
   resetStreaming
 } from '@/screens/Chat/useStreamingMessages'
 import { commitConversationTurnFromDispatcher } from '@/state/conversation-history'
-import { playAudioPayload } from './audio-player'
+import { getAudioPlaybackState, playAudioPayload, subscribeAudioPlaybackState } from './audio-player'
 
 // -- log channel: sidecar log envelopes flow through here to AppShell --------
 
@@ -50,6 +52,7 @@ export function subscribeWSLog(cb: LogSink): () => void {
 
 let unsubscribeMessages: (() => void) | null = null
 let unsubscribeSidecarReconnect: (() => void) | null = null
+let unsubscribeAudioPlayback: (() => void) | null = null
 
 function dispatchWSMessage(msg: WSMessage): void {
   if (isControl(msg)) {
@@ -60,12 +63,20 @@ function dispatchWSMessage(msg: WSMessage): void {
     } else if (msg.text === 'conversation-chain-end') {
       const completedTurn = getCompletedTurnCandidate()
       if (completedTurn) {
-        void commitConversationTurnFromDispatcher(completedTurn).then((session) => {
-          if (session) markCompletedTurnConsumed()
-        })
+        beginTurnSettlement(completedTurn.userMessageId)
+        setInputDisabled(false)
+        setSpeaking(getAudioPlaybackState().active)
+        void commitConversationTurnFromDispatcher(completedTurn)
+          .then((session) => {
+            if (session) markCompletedTurnConsumed(completedTurn.userMessageId)
+          })
+          .finally(() => {
+            finishTurnSettlement(completedTurn.userMessageId)
+          })
+        return
       }
       setInputDisabled(false)
-      setSpeaking(false)
+      setSpeaking(getAudioPlaybackState().active)
     }
     return
   }
@@ -138,13 +149,20 @@ export function ensureWSStoreSubscriptions(): void {
   if (!unsubscribeSidecarReconnect) {
     unsubscribeSidecarReconnect = subscribeSidecarReconnect(dispatchSidecarReconnect)
   }
+  if (!unsubscribeAudioPlayback) {
+    unsubscribeAudioPlayback = subscribeAudioPlaybackState((playback) => {
+      setSpeaking(playback.active)
+    })
+  }
 }
 
 export function disposeWSStoreSubscriptions(): void {
   unsubscribeMessages?.()
   unsubscribeSidecarReconnect?.()
+  unsubscribeAudioPlayback?.()
   unsubscribeMessages = null
   unsubscribeSidecarReconnect = null
+  unsubscribeAudioPlayback = null
 }
 
 ensureWSStoreSubscriptions()

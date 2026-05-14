@@ -7,9 +7,15 @@ import { Settings } from '@/screens/Settings/Settings'
 import { defaultAudioConfig } from '@/state/setup-store'
 import {
   DEFAULT_PTT_SHORTCUT,
+  VOICE_OUTPUT_SETTINGS_STORAGE_KEY,
   VOICE_INPUT_SETTINGS_STORAGE_KEY,
   type VoiceInputSettings
 } from '@/state/audio-settings'
+import {
+  resetVoiceInputStoreForTests,
+  setVoiceAecDiagnostics,
+  VOICE_INPUT_CONFIG_CHANGED_EVENT
+} from '@/state/voice-input-store'
 import type { StoredConfig } from '@preload-types'
 import type { AvatarImportPlan } from '@contracts/avatar-import-plan'
 import type { GptSoVitsProviderConfig, STTProviderReadiness } from '@contracts/audio-provider'
@@ -61,7 +67,12 @@ function renderSettingsWithProbe() {
 }
 
 async function openGptSoVitsSettings(): Promise<void> {
+  await openSettingsCategory('Voice output')
   fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+}
+
+async function openSettingsCategory(label: string): Promise<void> {
+  fireEvent.click(await screen.findByRole('button', { name: label }))
 }
 
 async function waitForPresetLibrary(): Promise<void> {
@@ -182,6 +193,7 @@ describe('Settings TTS section', () => {
 
   beforeEach(() => {
     window.localStorage.clear()
+    resetVoiceInputStoreForTests()
     Object.defineProperty(window, 'api', {
       configurable: true,
       value: {
@@ -234,7 +246,7 @@ describe('Settings TTS section', () => {
               provider_id: 'faster_whisper',
               kind: 'stt',
               display_name: 'faster-whisper',
-              capabilities: ['local', 'requires_local_model', 'test_transcription'],
+              capabilities: ['local', 'requires_local_model', 'test_transcription', 'limited_code_switch', 'cuda_optional'],
               local: true,
               requires_api_key: false,
               requires_consent: false,
@@ -254,7 +266,7 @@ describe('Settings TTS section', () => {
               requires_consent: true,
               enabled: true,
               recommended: false,
-              default_model_id: 'gpt-4o-mini-transcribe',
+              default_model_id: 'gpt-4o-transcribe',
               supported_language_modes: ['auto', 'zh', 'en'],
               summary: 'Cloud STT option.'
             },
@@ -507,23 +519,62 @@ describe('Settings TTS section', () => {
         removeEventListener: vi.fn()
       })
     })
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        enumerateDevices: vi.fn().mockResolvedValue([
+          { kind: 'audioinput', deviceId: 'mic-usb', label: 'USB Microphone', groupId: 'g1' },
+          { kind: 'audioinput', deviceId: 'loopback-1', label: 'Stereo Mix (Realtek Audio)', groupId: 'g2' },
+          { kind: 'audiooutput', deviceId: 'speaker-1', label: 'Desktop Speakers', groupId: 'g3' },
+          { kind: 'audiooutput', deviceId: 'headphones-1', label: 'Headphones', groupId: 'g4' }
+        ])
+      }
+    })
   })
 
-  it('renders Phase 3 TTS as active, not a milestone placeholder', () => {
+  it('renders sidebar categories with Connection as the default panel', async () => {
     renderSettings()
 
+    expect(screen.getByRole('button', { name: 'Connection' })).toHaveAttribute('aria-current', 'page')
+    for (const label of ['Voice output', 'Voice input', 'Avatars', 'Integrations', 'Conversation', 'Memory', 'Appearance', 'Diagnostics', 'About']) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
+    }
+    expect(screen.getByRole('heading', { name: COPY.SETTINGS.CONN_HEADER, level: 2 })).toBeInTheDocument()
+    expect(screen.queryByText(/Coming in milestone-9/i)).toBeNull()
+    await openSettingsCategory('Voice output')
     expect(screen.getByRole('heading', { name: COPY.SETTINGS.TTS_HEADER })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: COPY.SETTINGS.VOICE_IN_HEADER })).toBeInTheDocument()
     expect(screen.getByText(COPY.SETTINGS.TTS_ENGINE_VAL)).toBeInTheDocument()
-    expect(screen.getByText(COPY.SETTINGS.TTS_OUTPUT_VAL)).toBeInTheDocument()
+    expect(screen.getByLabelText(COPY.SETTINGS.TTS_OUTPUT)).toHaveValue('')
     expect(screen.getByText(COPY.SETTINGS.TTS_HELP)).toBeInTheDocument()
     expect(screen.queryByText(/Coming in milestone-3.*TTS/i)).toBeNull()
   })
 
+  it('persists selected Teto audio output device for renderer playback', async () => {
+    renderSettings()
+    await openSettingsCategory('Voice output')
+
+    const output = await screen.findByLabelText(COPY.SETTINGS.TTS_OUTPUT)
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Desktop Speakers' })).toBeInTheDocument()
+    })
+    fireEvent.change(output, { target: { value: 'speaker-1' } })
+
+    expect(output).toHaveValue('speaker-1')
+    expect(window.localStorage.getItem(VOICE_OUTPUT_SETTINGS_STORAGE_KEY)).toContain('speaker-1')
+    expect(screen.getByText(/Active sink: speaker-1/i)).toBeInTheDocument()
+  })
+
   it('shows voice input provider choices with cloud consent blocked by default', async () => {
     renderSettings()
+    await openSettingsCategory('Voice input')
 
     expect(await screen.findByRole('radio', { name: /FunASR/i })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /FunASR.*Local.*Local model.*Optional test.*Chinese\/English/i })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /faster-whisper.*Local.*Local model.*Optional test.*Limited code-switch.*CUDA optional/i })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /OpenAI STT.*Cloud.*Requires API key.*Optional test/i })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Groq STT.*Cloud.*Requires API key.*Optional test/i })).toBeInTheDocument()
+    expect(screen.queryByText(/scorecard/i)).toBeNull()
+    expect(screen.queryByText(/recommended cloud/i)).toBeNull()
     expect(screen.getByRole('switch', { name: COPY.SETTINGS.VOICE_IN_ENABLED }))
       .toHaveAttribute('aria-checked', 'false')
     expect(await screen.findByText(COPY.SETTINGS.VOICE_IN_MODEL_CACHE)).toBeInTheDocument()
@@ -532,12 +583,15 @@ describe('Settings TTS section', () => {
     fireEvent.click(await screen.findByRole('radio', { name: /OpenAI STT/i }))
 
     expect(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_CLOUD_CONSENT)).toBeInTheDocument()
+    expect(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_MODEL)).toHaveValue('gpt-4o-transcribe')
+    expect(screen.queryByLabelText(/Endpoint URL/i)).toBeNull()
     expect(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_RECORD_TEST })).toBeDisabled()
     expect(screen.getByText(COPY.SETTINGS.VOICE_IN_TEST_BLOCKED)).toBeInTheDocument()
   })
 
   it('starts explicit STT model download and surfaces provider failure summaries', async () => {
     renderSettings()
+    await openSettingsCategory('Voice input')
 
     expect(await screen.findByText(COPY.SETTINGS.VOICE_IN_MODEL_CACHE)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_MODEL_DOWNLOAD }))
@@ -554,9 +608,12 @@ describe('Settings TTS section', () => {
 
   it('saves voice input settings without committing a conversation turn', async () => {
     renderSettings()
+    await openSettingsCategory('Voice input')
 
     fireEvent.click(await screen.findByRole('radio', { name: /faster-whisper/i }))
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_LANGUAGE), { target: { value: 'en' } })
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_RUNTIME), { target: { value: 'cuda' } })
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_CUDA_COMPUTE), { target: { value: 'int8_float16' } })
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_SAVE }))
 
     await waitFor(() => {
@@ -564,7 +621,10 @@ describe('Settings TTS section', () => {
         audio: expect.objectContaining({
           stt: expect.objectContaining({
             active_provider: 'faster_whisper',
-            language_mode: 'en'
+            enabled: false,
+            language_mode: 'en',
+            runtime_device: 'cuda',
+            cuda_compute_type: 'int8_float16'
           })
         })
       }))
@@ -572,8 +632,27 @@ describe('Settings TTS section', () => {
     expect(window.api.commitConversationTurn).not.toHaveBeenCalled()
   })
 
-  it('shows an explicit voice input enable switch and persists the default visible provider immediately', async () => {
+  it('enables voice input without STT diagnostic history when required setup is complete', async () => {
+    vi.mocked(window.api.getSttModels).mockResolvedValue({
+      cache_root_display: 'C:/AgenticLLMVTuberTest/stt-models',
+      models: [{
+        provider_id: 'funasr',
+        model_id: 'iic/SenseVoiceSmall',
+        display_name: 'SenseVoiceSmall',
+        source_label: 'ModelScope',
+        size_label: 'approximately 1 GB',
+        size_bytes: null,
+        cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/funasr/iic__SenseVoiceSmall',
+        status: 'downloaded',
+        app_managed: true,
+        removable: true,
+        loaded: false,
+        recommended: true,
+        summary: 'Model is present in the app-managed cache.'
+      }]
+    })
     renderSettings()
+    await openSettingsCategory('Voice input')
 
     const enableSwitch = await screen.findByRole('switch', { name: COPY.SETTINGS.VOICE_IN_ENABLED })
     expect(enableSwitch).toHaveAttribute('aria-checked', 'false')
@@ -582,14 +661,10 @@ describe('Settings TTS section', () => {
     await waitFor(() => {
       expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
         audio: expect.objectContaining({
-          stt: expect.objectContaining({
-            enabled: true,
-            active_provider: 'funasr'
-          })
+          stt: expect.objectContaining({ enabled: true, active_provider: 'funasr' })
         })
       }))
     })
-    expect(enableSwitch).toHaveAttribute('aria-checked', 'true')
   })
 
   it('hydrates the explicit voice input enable switch from persisted config', async () => {
@@ -605,6 +680,7 @@ describe('Settings TTS section', () => {
       }
     })
     renderSettings()
+    await openSettingsCategory('Voice input')
 
     expect(await screen.findByRole('switch', { name: COPY.SETTINGS.VOICE_IN_ENABLED }))
       .toHaveAttribute('aria-checked', 'true')
@@ -633,13 +709,32 @@ describe('Settings TTS section', () => {
       failure: null,
       redacted_diagnostics: null
     })
+    vi.mocked(window.api.getSttModels).mockResolvedValue({
+      cache_root_display: 'C:/AgenticLLMVTuberTest/stt-models',
+      models: [{
+        provider_id: 'funasr',
+        model_id: 'iic/SenseVoiceSmall',
+        display_name: 'SenseVoiceSmall',
+        source_label: 'ModelScope',
+        size_label: 'approximately 1 GB',
+        size_bytes: null,
+        cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/funasr/iic__SenseVoiceSmall',
+        status: 'downloaded',
+        app_managed: true,
+        removable: true,
+        loaded: false,
+        recommended: true,
+        summary: 'Model is present in the app-managed cache.'
+      }]
+    })
     renderSettings()
+    await openSettingsCategory('Voice input')
 
     fireEvent.click(await screen.findByRole('radio', { name: /FunASR/i }))
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_RECORD_TEST }))
 
     expect(await screen.findByText('STT test transcription succeeded.')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_SAVE }))
+    fireEvent.click(screen.getByRole('switch', { name: COPY.SETTINGS.VOICE_IN_ENABLED }))
 
     await waitFor(() => {
       expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
@@ -652,6 +747,160 @@ describe('Settings TTS section', () => {
         })
       }))
     })
+  })
+
+  it('keeps failed STT diagnostics from disabling voice input', async () => {
+    const failedGate: STTProviderReadiness = {
+      health_check_passed: false,
+      test_transcription_passed: false,
+      last_health_checked_at: '2026-05-11T06:00:00Z',
+      last_test_transcription_at: null,
+      fingerprint: 'failed-fingerprint',
+      active_allowed: false,
+      invalidation_reason: 'test_failed'
+    }
+    vi.mocked(window.api.testSttProvider).mockResolvedValue({
+      ok: false,
+      provider_id: 'faster_whisper',
+      transcript: null,
+      language: null,
+      latency_ms: null,
+      duration_ms: 1200,
+      model_cache_state: 'downloaded',
+      readiness: failedGate,
+      summary: 'faster-whisper CUDA transcription failed.',
+      failure: {
+        provider_id: 'faster_whisper',
+        kind: 'stt',
+        state: 'external_service_failure',
+        summary: 'faster-whisper CUDA transcription failed.',
+        detail: null,
+        retryable: true,
+        latency_ms: null,
+        redacted_diagnostics: {
+          error_type: 'RuntimeError',
+          runtime_device: 'cuda'
+        }
+      },
+      redacted_diagnostics: {
+        error_type: 'RuntimeError',
+        runtime_device: 'cuda'
+      }
+    })
+    vi.mocked(window.api.getSttModels).mockResolvedValue({
+      cache_root_display: 'C:/AgenticLLMVTuberTest/stt-models',
+      models: [{
+        provider_id: 'faster_whisper',
+        model_id: 'small',
+        display_name: 'faster-whisper small',
+        source_label: 'Hugging Face',
+        size_label: 'approximately 500 MB',
+        size_bytes: null,
+        cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/faster_whisper/small',
+        status: 'downloaded',
+        app_managed: true,
+        removable: true,
+        loaded: false,
+        recommended: false,
+        summary: 'Model is present in the app-managed cache.'
+      }]
+    })
+    renderSettings()
+    await openSettingsCategory('Voice input')
+
+    fireEvent.click(await screen.findByRole('radio', { name: /faster-whisper/i }))
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_RUNTIME), { target: { value: 'cuda' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_RECORD_TEST }))
+
+    expect(await screen.findByText('faster-whisper CUDA transcription failed.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('switch', { name: COPY.SETTINGS.VOICE_IN_ENABLED }))
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
+        audio: expect.objectContaining({
+          stt: expect.objectContaining({
+            active_provider: 'faster_whisper',
+            enabled: true,
+            runtime_device: 'cuda',
+            readiness: failedGate
+          })
+        })
+      }))
+    })
+    expect(await screen.findByText(COPY.SETTINGS.VOICE_IN_SAVED)).toBeInTheDocument()
+  })
+
+  it('offers an explicit CPU recovery action after faster-whisper CUDA failure', async () => {
+    vi.mocked(window.api.testSttProvider).mockResolvedValue({
+      ok: false,
+      provider_id: 'faster_whisper',
+      transcript: null,
+      language: null,
+      latency_ms: null,
+      duration_ms: 1200,
+      model_cache_state: 'downloaded',
+      readiness: {
+        health_check_passed: false,
+        test_transcription_passed: false,
+        last_health_checked_at: '2026-05-11T06:00:00Z',
+        last_test_transcription_at: null,
+        fingerprint: 'failed-fingerprint',
+        active_allowed: false,
+        invalidation_reason: 'test_failed'
+      },
+      summary: 'faster-whisper CUDA runtime failed.',
+      failure: {
+        provider_id: 'faster_whisper',
+        kind: 'stt',
+        state: 'external_service_failure',
+        summary: 'faster-whisper CUDA runtime failed.',
+        detail: null,
+        retryable: true,
+        latency_ms: null,
+        redacted_diagnostics: {
+          error_type: 'RuntimeError',
+          runtime_device: 'cuda',
+          compute_type: 'float16'
+        }
+      },
+      redacted_diagnostics: {
+        error_type: 'RuntimeError',
+        runtime_device: 'cuda',
+        compute_type: 'float16'
+      }
+    })
+    vi.mocked(window.api.getSttModels).mockResolvedValue({
+      cache_root_display: 'C:/AgenticLLMVTuberTest/stt-models',
+      models: [{
+        provider_id: 'faster_whisper',
+        model_id: 'small',
+        display_name: 'faster-whisper small',
+        source_label: 'Hugging Face',
+        size_label: 'approximately 500 MB',
+        size_bytes: null,
+        cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/faster_whisper/small',
+        status: 'downloaded',
+        app_managed: true,
+        removable: true,
+        loaded: false,
+        recommended: false,
+        summary: 'Model is present in the app-managed cache.'
+      }]
+    })
+
+    renderSettings()
+    await openSettingsCategory('Voice input')
+
+    fireEvent.click(await screen.findByRole('radio', { name: /faster-whisper/i }))
+    fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_RUNTIME), { target: { value: 'cuda' } })
+    expect(screen.getByText(COPY.SETTINGS.VOICE_IN_CUDA_HELP)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_RECORD_TEST }))
+
+    expect(await screen.findByText('faster-whisper CUDA runtime failed.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_CUDA_SWITCH_CPU }))
+
+    expect(screen.getByLabelText(COPY.SETTINGS.VOICE_IN_RUNTIME)).toHaveValue('cpu')
+    expect(window.api.saveStoredConfig).not.toHaveBeenCalled()
   })
 
   it('persists missing-model invalidation when removing a local STT model', async () => {
@@ -676,30 +925,45 @@ describe('Settings TTS section', () => {
         }
       }
     })
-    vi.mocked(window.api.getSttModels).mockResolvedValue({
-      cache_root_display: 'C:/AgenticLLMVTuberTest/stt-models',
-      models: [
-        {
-          provider_id: 'funasr',
-          model_id: 'iic/SenseVoiceSmall',
-          display_name: 'SenseVoiceSmall',
-          source_label: 'ModelScope',
-          size_label: 'approximately 1 GB',
-          size_bytes: null,
-          cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/funasr/iic__SenseVoiceSmall',
-          status: 'downloaded',
-          app_managed: true,
-          removable: true,
-          loaded: false,
-          recommended: true,
-          summary: 'Model is present in the app-managed cache.'
-        }
-      ]
-    })
+    vi.mocked(window.api.getSttModels)
+      .mockResolvedValueOnce({
+        cache_root_display: 'C:/AgenticLLMVTuberTest/stt-models',
+        models: [
+          {
+            provider_id: 'funasr',
+            model_id: 'iic/SenseVoiceSmall',
+            display_name: 'SenseVoiceSmall',
+            source_label: 'ModelScope',
+            size_label: 'approximately 1 GB',
+            size_bytes: null,
+            cache_path_display: 'C:/AgenticLLMVTuberTest/stt-models/funasr/iic__SenseVoiceSmall',
+            status: 'downloaded',
+            app_managed: true,
+            removable: true,
+            loaded: false,
+            recommended: true,
+            summary: 'Model is present in the app-managed cache.'
+          }
+        ]
+      })
+      .mockResolvedValueOnce({
+        cache_root_display: 'C:/AgenticLLMVTuberTest/stt-models',
+        models: []
+      })
     renderSettings()
+    await openSettingsCategory('Voice input')
+    const onConfigChanged = vi.fn()
+    window.addEventListener(VOICE_INPUT_CONFIG_CHANGED_EVENT, onConfigChanged)
 
     fireEvent.click(await screen.findByRole('button', { name: COPY.SETTINGS.VOICE_IN_MODEL_REMOVE }))
 
+    expect(await screen.findByText('Model removed from the app-managed cache.')).toBeInTheDocument()
+    expect(screen.queryByText(COPY.SETTINGS.VOICE_IN_SAVED)).toBeNull()
+    expect(screen.queryByText(COPY.SETTINGS.VOICE_IN_SETTINGS_SAVED)).toBeNull()
+    expect(screen.getByText(COPY.SETTINGS.VOICE_IN_MODEL_CACHE)).toBeInTheDocument()
+    expect(screen.getByText(/SenseVoiceSmall · not_downloaded/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_MODEL_DOWNLOAD })).toBeEnabled()
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_IN_MODEL_REMOVE })).toBeDisabled()
     await waitFor(() => {
       expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
         audio: expect.objectContaining({
@@ -715,21 +979,35 @@ describe('Settings TTS section', () => {
         })
       }))
     })
+    expect(onConfigChanged).toHaveBeenCalled()
+    window.removeEventListener(VOICE_INPUT_CONFIG_CHANGED_EVENT, onConfigChanged)
   })
 
   it('saves push-to-talk shortcut and conservative VAD settings through Settings', async () => {
     renderSettings()
+    await openSettingsCategory('Voice input')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.VOICE_IN_HEADER })
       .then((heading) => heading.closest('section')!)
     const shortcutInput = within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_PTT_SHORTCUT)
     expect(shortcutInput).toHaveValue(DEFAULT_PTT_SHORTCUT)
-    expect(within(section).getByRole('switch', { name: COPY.SETTINGS.VOICE_IN_VAD_ENABLED }))
-      .toHaveAttribute('aria-checked', 'false')
+    expect(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_NO_HEADPHONES_STATUS)).toHaveValue('unsafe')
+    expect(within(section).getByText(COPY.SETTINGS.VOICE_IN_NO_HEADPHONES_UNSAFE_HELP)).toBeInTheDocument()
+    expect(within(section).getByText(COPY.SETTINGS.VOICE_IN_AEC_DIAGNOSTICS)).toBeInTheDocument()
+    expect(within(section).getByText(COPY.SETTINGS.VOICE_IN_AEC_EMPTY)).toBeInTheDocument()
+    expect(within(section).queryByRole('switch', { name: COPY.SETTINGS.VOICE_IN_VAD_ENABLED })).toBeNull()
+    expect(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_INPUT_MODE)).toHaveValue('push_to_talk')
+    expect(within(section).getByRole('option', { name: COPY.SETTINGS.VOICE_IN_INPUT_VAD })).toBeDisabled()
+    expect(within(section).getByText(COPY.SETTINGS.VOICE_IN_INPUT_VAD_LOCKED)).toBeInTheDocument()
     expect(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_VAD_SENSITIVITY)).toHaveValue('low')
 
     fireEvent.change(shortcutInput, { target: { value: 'Ctrl+Alt+M' } })
-    fireEvent.click(within(section).getByRole('switch', { name: COPY.SETTINGS.VOICE_IN_VAD_ENABLED }))
+    fireEvent.change(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_NO_HEADPHONES_STATUS), {
+      target: { value: 'ready' }
+    })
+    fireEvent.change(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_INPUT_MODE), {
+      target: { value: 'vad' }
+    })
     fireEvent.change(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_VAD_SENSITIVITY), {
       target: { value: 'low' }
     })
@@ -741,9 +1019,23 @@ describe('Settings TTS section', () => {
     await waitFor(() => {
       expect(window.api.saveStoredConfig).toHaveBeenCalled()
     })
+    expect(window.api.saveStoredConfig).toHaveBeenLastCalledWith(expect.objectContaining({
+      audio: expect.objectContaining({
+        stt: expect.objectContaining({ input_mode: 'vad' })
+      })
+    }))
     const stored = JSON.parse(window.localStorage.getItem(VOICE_INPUT_SETTINGS_STORAGE_KEY)!) as VoiceInputSettings
     expect(stored).toEqual({
       pttShortcut: 'Ctrl+Alt+M',
+      microphone: {
+        deviceId: null,
+        label: null,
+        suspectedSystemAudio: false
+      },
+      noHeadphones: {
+        status: 'ready',
+        unsafeOverride: false
+      },
       vad: {
         enabled: true,
         sensitivity: 'low',
@@ -752,8 +1044,145 @@ describe('Settings TTS section', () => {
     })
   })
 
+  it('shows persisted AEC metadata in voice input Settings after a Chat capture', async () => {
+    setVoiceAecDiagnostics({
+      source: 'ptt',
+      updatedAt: 1_765_000_000_000,
+      selectedInput: {
+        label: 'USB Microphone',
+        deviceIdPresent: true,
+        suspectedSystemAudio: false
+      },
+      supportedConstraints: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: true,
+        deviceId: true
+      },
+      requested: {
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: undefined,
+        channelCount: { ideal: 1 },
+        deviceId: 'exact'
+      },
+      applied: {
+        echoCancellation: true,
+        noiseSuppression: false,
+        autoGainControl: null,
+        channelCount: 1,
+        sampleRate: 48000,
+        deviceIdPresent: true,
+        groupIdPresent: true
+      },
+      capabilities: {
+        echoCancellation: [true, false],
+        noiseSuppression: [true, false],
+        autoGainControl: undefined,
+        channelCount: { min: 1, max: 2 },
+        sampleRate: { min: 16000, max: 48000 }
+      },
+      trackConstraints: {
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: undefined,
+        channelCount: { ideal: 1 },
+        deviceId: 'exact'
+      }
+    })
+    renderSettings()
+    await openSettingsCategory('Voice input')
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.VOICE_IN_HEADER })
+      .then((heading) => heading.closest('section')!)
+
+    expect(within(section).getByText(COPY.SETTINGS.VOICE_IN_AEC_DIAGNOSTICS)).toBeInTheDocument()
+    expect(within(section).getByText(/Push to talk; echo on; noise suppression off/i)).toBeInTheDocument()
+  })
+
+  it('persists selected microphone input and warns about loopback sources', async () => {
+    renderSettings()
+    await openSettingsCategory('Voice input')
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.VOICE_IN_HEADER })
+      .then((heading) => heading.closest('section')!)
+    const microphoneSelect = await within(section).findByLabelText(COPY.SETTINGS.VOICE_IN_MICROPHONE)
+
+    await waitFor(() => {
+      expect(within(section).getByRole('option', { name: 'USB Microphone' })).toBeInTheDocument()
+    })
+    fireEvent.change(microphoneSelect, { target: { value: 'loopback-1' } })
+
+    expect(within(section).getByText(COPY.SETTINGS.VOICE_IN_MICROPHONE_LOOPBACK_WARNING)).toBeInTheDocument()
+    fireEvent.click(within(section).getByRole('button', { name: COPY.SETTINGS.VOICE_IN_SAVE }))
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem(VOICE_INPUT_SETTINGS_STORAGE_KEY)).toContain('loopback-1')
+    })
+    const stored = JSON.parse(window.localStorage.getItem(VOICE_INPUT_SETTINGS_STORAGE_KEY)!) as VoiceInputSettings
+    expect(stored.microphone).toEqual({
+      deviceId: 'loopback-1',
+      label: 'Stereo Mix (Realtek Audio)',
+      suspectedSystemAudio: true
+    })
+  })
+
+  it('keeps VAD blocked while no-headphones status is unsafe unless the user overrides it', async () => {
+    renderSettings()
+    await openSettingsCategory('Voice input')
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.VOICE_IN_HEADER })
+      .then((heading) => heading.closest('section')!)
+    const inputMode = within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_INPUT_MODE)
+    expect(within(section).queryByRole('switch', { name: COPY.SETTINGS.VOICE_IN_VAD_ENABLED })).toBeNull()
+    expect(within(section).getByRole('option', { name: COPY.SETTINGS.VOICE_IN_INPUT_VAD })).toBeDisabled()
+    expect(within(section).getByText(COPY.SETTINGS.VOICE_IN_INPUT_VAD_LOCKED)).toBeInTheDocument()
+
+    fireEvent.change(inputMode, { target: { value: 'vad' } })
+
+    expect(inputMode).toHaveValue('push_to_talk')
+    expect(within(section).getByText(COPY.SETTINGS.VOICE_IN_NO_HEADPHONES_BLOCKED)).toBeInTheDocument()
+
+    fireEvent.click(within(section).getByRole('switch', { name: COPY.SETTINGS.VOICE_IN_NO_HEADPHONES_OVERRIDE }))
+    expect(within(section).getByRole('option', { name: COPY.SETTINGS.VOICE_IN_INPUT_VAD })).not.toBeDisabled()
+    fireEvent.change(inputMode, { target: { value: 'vad' } })
+
+    expect(inputMode).toHaveValue('vad')
+  })
+
+  it('keeps STT input mode synchronized with Chat VAD enablement', async () => {
+    renderSettings()
+    await openSettingsCategory('Voice input')
+
+    const section = await screen.findByRole('heading', { name: COPY.SETTINGS.VOICE_IN_HEADER })
+      .then((heading) => heading.closest('section')!)
+    fireEvent.change(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_NO_HEADPHONES_STATUS), {
+      target: { value: 'ready' }
+    })
+    fireEvent.change(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_INPUT_MODE), {
+      target: { value: 'vad' }
+    })
+
+    expect(within(section).queryByRole('switch', { name: COPY.SETTINGS.VOICE_IN_VAD_ENABLED })).toBeNull()
+    expect(within(section).getByLabelText(COPY.SETTINGS.VOICE_IN_INPUT_MODE)).toHaveValue('vad')
+
+    fireEvent.click(within(section).getByRole('button', { name: COPY.SETTINGS.VOICE_IN_SAVE }))
+
+    await waitFor(() => {
+      expect(window.api.saveStoredConfig).toHaveBeenLastCalledWith(expect.objectContaining({
+        audio: expect.objectContaining({
+          stt: expect.objectContaining({ input_mode: 'vad' })
+        })
+      }))
+    })
+    const stored = JSON.parse(window.localStorage.getItem(VOICE_INPUT_SETTINGS_STORAGE_KEY)!) as VoiceInputSettings
+    expect(stored.vad.enabled).toBe(true)
+  })
+
   it('blocks app-reserved push-to-talk shortcuts in Settings', async () => {
     renderSettings()
+    await openSettingsCategory('Voice input')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.VOICE_IN_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -765,7 +1194,7 @@ describe('Settings TTS section', () => {
     expect(within(section).getByRole('button', { name: COPY.SETTINGS.VOICE_IN_SAVE })).toBeDisabled()
   })
 
-  it('selecting Piper local TTS explicitly saves piper without GPT-SoVITS gates', async () => {
+  it('activates Piper local TTS through an explicit action without GPT-SoVITS gates', async () => {
     vi.mocked(window.api.getStoredConfig).mockResolvedValue({
       ...storedConfig,
       audio: {
@@ -775,8 +1204,11 @@ describe('Settings TTS section', () => {
     })
 
     renderSettings()
+    await openSettingsCategory('Voice output')
 
     fireEvent.click(await screen.findByRole('radio', { name: /Piper local TTS/i }))
+    expect(window.api.saveStoredConfig).not.toHaveBeenCalled()
+    fireEvent.click(await screen.findByRole('button', { name: COPY.SETTINGS.TTS_PROVIDER_ACTIVATE_PIPER }))
 
     await waitFor(() => {
       expect(window.api.saveStoredConfig).toHaveBeenCalledWith(expect.objectContaining({
@@ -787,6 +1219,7 @@ describe('Settings TTS section', () => {
     })
     expect(window.api.checkGptSoVitsHealth).not.toHaveBeenCalled()
     expect(window.api.testGptSoVitsSynthesis).not.toHaveBeenCalled()
+    expect(await screen.findByText(COPY.SETTINGS.TTS_PROVIDER_PIPER_ACTIVATION_SUCCESS)).toBeInTheDocument()
   })
 
   it('shows external versus app-launched GPT-SoVITS setup fields', async () => {
@@ -804,6 +1237,32 @@ describe('Settings TTS section', () => {
     expect(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_WORKING_DIRECTORY)).toBeInTheDocument()
     expect(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_HEALTH_URL)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_START })).toBeInTheDocument()
+  })
+
+  it('keeps GPT-SoVITS activation primary while diagnostics and preset creation stay secondary', async () => {
+    vi.mocked(window.api.getStoredConfig).mockResolvedValue({
+      ...storedConfig,
+      voicePresets: [gptPreset()]
+    })
+
+    renderSettings()
+
+    await openGptSoVitsSettings()
+    await waitForPresetLibrary()
+
+    const activate = screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })
+    const diagnostics = screen.getByLabelText('GPT-SoVITS diagnostics')
+    const health = within(diagnostics).getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK })
+    const test = within(diagnostics).getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS })
+    const create = screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_NEW })
+    const save = screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE })
+
+    expect(activate).toHaveClass('btn-primary')
+    expect(health).toHaveClass('btn-secondary')
+    expect(test).toHaveClass('btn-secondary')
+    expect(create).toHaveClass('btn-secondary')
+    expect(save).toHaveClass('btn-primary')
+    expect(activate.compareDocumentPosition(diagnostics) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('confirms before stopping app-launched GPT-SoVITS', async () => {
@@ -825,7 +1284,7 @@ describe('Settings TTS section', () => {
     })
   })
 
-  it('gates GPT-SoVITS activation on health plus successful test synthesis', async () => {
+  it('keeps failed GPT-SoVITS diagnostics from activating or mutating provider selection', async () => {
     vi.mocked(window.api.getStoredConfig).mockResolvedValue({ ...storedConfig, voicePresets: [gptPreset()] })
     vi.mocked(window.api.testGptSoVitsSynthesis).mockResolvedValue({
       ok: false,
@@ -843,9 +1302,7 @@ describe('Settings TTS section', () => {
     await openGptSoVitsSettings()
     await waitForPresetLibrary()
     const activate = await screen.findByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })
-    expect(activate).toBeDisabled()
-    fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
-    await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
+    expect(activate).not.toBeDisabled()
     await waitFor(() => expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS })).not.toBeDisabled())
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_TEST_SYNTHESIS }))
     expect(await screen.findByText(COPY.SETTINGS.GPT_SOVITS_CANDIDATE_FAILURE)).toBeInTheDocument()
@@ -932,7 +1389,7 @@ describe('Settings TTS section', () => {
     expect(await screen.findByRole('radio', { name: /Renamed Akari.*Validated/i })).toBeInTheDocument()
   })
 
-  it('marks synthesis-affecting edits as changed since last test and blocks activation', async () => {
+  it('marks synthesis-affecting edits as changed while keeping activation available', async () => {
     const config = gptConfig()
     const validated = validatedGptPreset(config)
     vi.mocked(window.api.getStoredConfig).mockResolvedValue({
@@ -944,13 +1401,13 @@ describe('Settings TTS section', () => {
     renderSettings()
 
     await openGptSoVitsSettings()
-    expect(await screen.findByRole('radio', { name: /Akari bright.*Changed since last test/i })).toBeInTheDocument()
+    expect(await screen.findByRole('radio', { name: /Akari bright.*Changed since last synthesis/i })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
     await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
-    expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })).toBeDisabled()
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })).not.toBeDisabled()
   })
 
-  it('marks text language and weight edits as changed since last test', async () => {
+  it('marks text language and weight edits as changed since last synthesis', async () => {
     const config = gptConfig()
     const validated = validatedGptPreset(config)
     vi.mocked(window.api.getStoredConfig).mockResolvedValue({
@@ -966,10 +1423,10 @@ describe('Settings TTS section', () => {
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_TEXT_LANGUAGE), { target: { value: 'zh' } })
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_GPT_WEIGHTS_PATH), { target: { value: 'GPT_weights_v2Pro/teto_v1-e15.ckpt' } })
 
-    expect(await screen.findByRole('radio', { name: /Akari bright.*zh.*Changed since last test/i })).toBeInTheDocument()
+    expect(await screen.findByRole('radio', { name: /Akari bright.*zh.*Changed since last synthesis/i })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
     await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
-    expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })).toBeDisabled()
+    expect(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_ACTIVATE_PRESET })).not.toBeDisabled()
   })
 
   it('sends health with candidate preset text language, reference language, and weight paths', async () => {
@@ -1155,7 +1612,7 @@ describe('Settings TTS section', () => {
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.GPT_SOVITS_HEALTH_CHECK }))
     await screen.findByText(COPY.SETTINGS.GPT_SOVITS_HEALTH_PASSED_TEST_PENDING)
 
@@ -1210,7 +1667,7 @@ describe('Settings TTS section', () => {
   it('renders non-localhost GPT-SoVITS warning copy from settings copy', async () => {
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.GPT_SOVITS_BASE_URL), {
       target: { value: 'http://192.168.1.50:9880' }
     })
@@ -1221,7 +1678,7 @@ describe('Settings TTS section', () => {
   it('renders the empty voice preset library state', async () => {
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
 
     expect(screen.getByText(COPY.SETTINGS.VOICE_PRESETS_EMPTY_HEAD)).toBeInTheDocument()
     expect(screen.getByText(COPY.SETTINGS.VOICE_PRESETS_EMPTY_BODY)).toBeInTheDocument()
@@ -1247,7 +1704,7 @@ describe('Settings TTS section', () => {
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
     fireEvent.change(screen.getByLabelText(COPY.SETTINGS.VOICE_PRESET_NAME), { target: { value: 'Soft Akari' } })
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_SAVE }))
 
@@ -1419,7 +1876,7 @@ describe('Settings TTS section', () => {
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_DELETE }))
 
     expect(screen.getByRole('alertdialog', { name: COPY.SETTINGS.VOICE_PRESET_DELETE_BLOCKED })).toBeInTheDocument()
@@ -1444,7 +1901,7 @@ describe('Settings TTS section', () => {
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.VOICE_PRESET_DELETE }))
 
     const dialog = screen.getByRole('alertdialog', { name: COPY.SETTINGS.VOICE_PRESET_DELETE_BLOCKED })
@@ -1552,7 +2009,7 @@ describe('Settings TTS section', () => {
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
 
     expect(screen.getByText(COPY.SETTINGS.REFERENCE_AUDIO_VALIDATION_FORMAT)).toBeInTheDocument()
     expect(screen.getByText(COPY.SETTINGS.REFERENCE_AUDIO_VALIDATION_DURATION)).toBeInTheDocument()
@@ -1578,7 +2035,7 @@ describe('Settings TTS section', () => {
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('radio', { name: /GPT-SoVITS/i }))
+    await openGptSoVitsSettings()
     fireEvent.click(screen.getByRole('button', { name: COPY.SETTINGS.REFERENCE_AUDIO_DELETE }))
 
     expect(screen.getByRole('alertdialog', { name: COPY.SETTINGS.REFERENCE_AUDIO_DELETE_BLOCKED(1) })).toBeInTheDocument()
@@ -1588,6 +2045,7 @@ describe('Settings TTS section', () => {
 
   it('renders one combined Avatars section with current catalog counts and actions', async () => {
     renderSettings()
+    await openSettingsCategory('Avatars')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1606,6 +2064,7 @@ describe('Settings TTS section', () => {
 
   it('routes Edit current to Avatar Import with the current avatar plan loaded', async () => {
     renderSettingsWithProbe()
+    await openSettingsCategory('Avatars')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1619,6 +2078,7 @@ describe('Settings TTS section', () => {
 
   it('routes Import/replace to Avatar Import without carrying the current plan', async () => {
     renderSettingsWithProbe()
+    await openSettingsCategory('Avatars')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1635,6 +2095,7 @@ describe('Settings TTS section', () => {
     vi.mocked(window.api.getCurrentAvatarPlan).mockResolvedValue(null)
 
     renderSettings()
+    await openSettingsCategory('Avatars')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1651,6 +2112,7 @@ describe('Settings TTS section', () => {
     vi.mocked(window.api.getCurrentAvatarPlan).mockRejectedValue(new Error('sidecar starting'))
 
     renderSettings()
+    await openSettingsCategory('Avatars')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1665,6 +2127,7 @@ describe('Settings TTS section', () => {
       .mockResolvedValueOnce(currentAvatarPlan)
 
     renderSettingsWithProbe()
+    await openSettingsCategory('Avatars')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1684,6 +2147,7 @@ describe('Settings TTS section', () => {
     vi.mocked(window.api.getCurrentAvatarPlan).mockResolvedValue(null)
 
     renderSettings()
+    await openSettingsCategory('Avatars')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1712,6 +2176,7 @@ describe('Settings TTS section', () => {
     vi.mocked(window.api.getCurrentAvatarPlan).mockResolvedValue(savedPlan)
 
     renderSettingsWithProbe()
+    await openSettingsCategory('Avatars')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1731,6 +2196,7 @@ describe('Settings TTS section', () => {
       .mockResolvedValueOnce(currentAvatarPlan)
 
     renderSettingsWithProbe()
+    await openSettingsCategory('Avatars')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.AVATARS_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1744,6 +2210,7 @@ describe('Settings TTS section', () => {
 
   it('renders compact VTube Studio status and troubleshooting actions', async () => {
     renderSettings()
+    await openSettingsCategory('Integrations')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.VTS_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1766,6 +2233,7 @@ describe('Settings TTS section', () => {
 
   it('renders Conversation as truth-only and Memory as disabled v4.0 scope', async () => {
     renderSettings()
+    await openSettingsCategory('Conversation')
 
     const conversation = await screen.findByRole('heading', { name: COPY.SETTINGS.CONVERSATION_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1774,6 +2242,7 @@ describe('Settings TTS section', () => {
     expect(within(conversation).queryByRole('button', { name: /new thread/i })).toBeNull()
     expect(within(conversation).queryByPlaceholderText(/search threads/i)).toBeNull()
 
+    await openSettingsCategory('Memory')
     const memory = screen.getByRole('heading', { name: COPY.SETTINGS.MEMORY_HEADER }).closest('section')!
     expect(memory).toHaveAttribute('aria-disabled', 'true')
     expect(within(memory).getByText(/v4\.0 agentic system plus memory/i)).toBeInTheDocument()
@@ -1781,6 +2250,7 @@ describe('Settings TTS section', () => {
 
   it('shows real conversation history counts and clears all after confirmation', async () => {
     renderSettings()
+    await openSettingsCategory('Conversation')
 
     const conversation = await screen.findByRole('heading', { name: COPY.SETTINGS.CONVERSATION_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1800,6 +2270,7 @@ describe('Settings TTS section', () => {
 
   it('persists diagnostics log level and removes targeted stale milestone-2 copy', async () => {
     renderSettings()
+    await openSettingsCategory('Diagnostics')
 
     const select = await screen.findByRole('combobox', { name: COPY.SETTINGS.DIAG_LOG_LEVEL })
     fireEvent.change(select, { target: { value: 'debug' } })
@@ -1813,6 +2284,7 @@ describe('Settings TTS section', () => {
 
   it('explains what each diagnostics log level means', async () => {
     renderSettings()
+    await openSettingsCategory('Diagnostics')
 
     expect(await screen.findByText(/Error: only failures/i)).toBeInTheDocument()
     expect(screen.getByText(/Warn: problems that need attention/i)).toBeInTheDocument()
@@ -1822,6 +2294,7 @@ describe('Settings TTS section', () => {
 
   it('opens the diagnostics log folder through the Electron bridge', async () => {
     renderSettings()
+    await openSettingsCategory('Diagnostics')
 
     fireEvent.click(await screen.findByRole('button', { name: COPY.SETTINGS.DIAG_OPEN_FOLDER }))
 
@@ -1832,6 +2305,7 @@ describe('Settings TTS section', () => {
 
   it('shows the current v2.1 milestone in About instead of the skeleton version', async () => {
     renderSettings()
+    await openSettingsCategory('About')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.ABOUT_HEADER })
       .then((heading) => heading.closest('section')!)
@@ -1841,6 +2315,7 @@ describe('Settings TTS section', () => {
 
   it('renders body-motion plugin selection and persists active plugin', async () => {
     renderSettings()
+    await openSettingsCategory('Integrations')
 
     expect(await screen.findByRole('heading', { name: COPY.SETTINGS.PLUGINS_HEADER })).toBeInTheDocument()
     fireEvent.click(await screen.findByText('test-motion v0.1.0'))
@@ -1871,6 +2346,7 @@ describe('Settings TTS section', () => {
     ])
 
     renderSettings()
+    await openSettingsCategory('Integrations')
 
     expect(await screen.findByText('broken-motion - invalid')).toBeInTheDocument()
     expect(screen.getByText(/selecting it will use fallback\/null motion/i)).toBeInTheDocument()
@@ -1887,12 +2363,14 @@ describe('Settings TTS section', () => {
 
   it('renders Open HUD button in the body motion plugin section', async () => {
     renderSettings()
+    await openSettingsCategory('Integrations')
 
     expect(await screen.findByRole('button', { name: COPY.HUD.OPEN_HUD_BUTTON })).toBeInTheDocument()
   })
 
   it('clicking Open HUD invokes window.api.openHud', async () => {
     renderSettings()
+    await openSettingsCategory('Integrations')
 
     fireEvent.click(await screen.findByRole('button', { name: COPY.HUD.OPEN_HUD_BUTTON }))
 
@@ -1903,12 +2381,14 @@ describe('Settings TTS section', () => {
 
   it('renders Open HUD helper text', async () => {
     renderSettings()
+    await openSettingsCategory('Integrations')
 
     expect(await screen.findByText(COPY.HUD.OPEN_HUD_HELP)).toBeInTheDocument()
   })
 
   it('persists cursor tracking toggle under body-motion plugin settings', async () => {
     renderSettings()
+    await openSettingsCategory('Integrations')
 
     const section = await screen.findByRole('heading', { name: COPY.SETTINGS.PLUGINS_HEADER })
       .then((heading) => heading.closest('section')!)

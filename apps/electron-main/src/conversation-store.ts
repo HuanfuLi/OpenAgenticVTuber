@@ -275,6 +275,30 @@ export function commitConversationTurn(input: CommitConversationTurnInput): Conv
   return nextSession
 }
 
+export function truncateConversationBeforeMessage(sessionId: string, messageId: string): ConversationSession {
+  const state = readState()
+  const session = findSessionOrThrow(state, sessionId)
+  const index = session.messages.findIndex((message) => message.id === messageId)
+  if (index < 0) throw new Error(`Conversation message not found: ${messageId}`)
+  if (session.messages[index]!.role !== 'user') {
+    throw new Error('Conversation can only regenerate from a user message.')
+  }
+  const now = isoNow()
+  const messages = session.messages.slice(0, index)
+  const lastMessage = messages[messages.length - 1]
+  const nextSession: ConversationSession = {
+    ...session,
+    updatedAt: now,
+    lastMessageAt: lastMessage?.createdAt ?? null,
+    messages
+  }
+  const sessions = state.sessions.map((candidate) =>
+    candidate.id === session.id ? nextSession : candidate
+  )
+  writeState({ ...state, activeSessionId: session.id, sessions })
+  return nextSession
+}
+
 export function getConversationStats(): ConversationStats {
   const state = readState()
   return {

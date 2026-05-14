@@ -74,6 +74,7 @@ import {
   listConversationSessions,
   renameConversationSession,
   selectConversationSession,
+  truncateConversationBeforeMessage,
   type CommitConversationTurnInput
 } from './conversation-store'
 
@@ -176,7 +177,7 @@ function fallbackAudioProviderCatalog(summary: string): AudioProviderCatalog {
         requires_consent: true,
         enabled: true,
         recommended: false,
-        default_model_id: 'gpt-4o-mini-transcribe',
+        default_model_id: 'gpt-4o-transcribe',
         supported_language_modes: ['auto', 'zh', 'en'],
         summary
       },
@@ -339,7 +340,8 @@ async function postSidecarAdminJson<TResponse>(
   body: unknown,
   onUnavailable: () => TResponse,
   onHttpFailure: (status: number) => TResponse,
-  onFetchFailure: () => TResponse
+  onFetchFailure: () => TResponse,
+  options: { timeoutMs?: number; onTimeout?: () => TResponse } = {}
 ): Promise<TResponse> {
   let baseUrl: string
   try {
@@ -347,11 +349,16 @@ async function postSidecarAdminJson<TResponse>(
   } catch {
     return onUnavailable()
   }
+  const controller = options.timeoutMs ? new AbortController() : null
+  const timer = controller && options.timeoutMs
+    ? setTimeout(() => controller.abort(), options.timeoutMs)
+    : null
   try {
     const resp = await fetch(`${baseUrl}${pathSuffix}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      ...(controller ? { signal: controller.signal } : {})
     })
     if (!resp.ok) {
       try {
@@ -362,9 +369,18 @@ async function postSidecarAdminJson<TResponse>(
       return onHttpFailure(resp.status)
     }
     return (await resp.json()) as TResponse
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return options.onTimeout ? options.onTimeout() : onFetchFailure()
+    }
     return onFetchFailure()
+  } finally {
+    if (timer) clearTimeout(timer)
   }
+}
+
+function sttSidecarRequestTimeoutMs(config: STTProviderConfig): number {
+  return Math.min(Math.max(config.capture_timeout_ms + 5_000, 10_000), 120_000)
 }
 
 async function getSidecarAdminJson<TResponse>(
@@ -544,7 +560,11 @@ export function registerIpc(window: BrowserWindow): () => void {
         request,
         () => failedSttTest('Sidecar is not ready.', providerId, 'unavailable'),
         (status) => failedSttTest(`STT test failed: HTTP ${status}`, providerId, 'external_service_failure'),
-        () => failedSttTest('STT test failed: sidecar request failed.', providerId, 'external_service_failure')
+        () => failedSttTest('STT test failed: sidecar request failed.', providerId, 'external_service_failure'),
+        {
+          timeoutMs: sttSidecarRequestTimeoutMs(request.config),
+          onTimeout: () => failedSttTest('STT test timed out while waiting for the sidecar.', providerId, 'timeout')
+        }
       )
     }
   )
@@ -616,7 +636,11 @@ export function registerIpc(window: BrowserWindow): () => void {
         sidecarRequest,
         () => failedVoiceInputTranscription(request, 'Sidecar is not ready.', 'sidecar_unavailable'),
         (status) => failedVoiceInputTranscription(request, `Voice input transcription failed: HTTP ${status}`, 'sidecar_unavailable', 'external_service_failure'),
-        () => failedVoiceInputTranscription(request, 'Voice input transcription failed: sidecar request failed.', 'sidecar_unavailable', 'external_service_failure')
+        () => failedVoiceInputTranscription(request, 'Voice input transcription failed: sidecar request failed.', 'sidecar_unavailable', 'external_service_failure'),
+        {
+          timeoutMs: sttSidecarRequestTimeoutMs(cfg.audio.stt),
+          onTimeout: () => failedVoiceInputTranscription(request, 'Voice input transcription timed out while waiting for the sidecar.', 'sidecar_unavailable', 'timeout')
+        }
       )
     }
   )
@@ -850,6 +874,9 @@ export function registerIpc(window: BrowserWindow): () => void {
   ipcMain.handle('conversation:commitTurn', (_e, input: CommitConversationTurnInput) =>
     commitConversationTurn(input)
   )
+  ipcMain.handle('conversation:truncateBeforeMessage', (_e, sessionId: string, messageId: string) =>
+    truncateConversationBeforeMessage(sessionId, messageId)
+  )
   ipcMain.handle('conversation:getStats', () => getConversationStats())
 
   const offReady = onReady((url) => {
@@ -921,6 +948,7 @@ export function registerIpc(window: BrowserWindow): () => void {
     ipcMain.removeHandler('conversation:delete')
     ipcMain.removeHandler('conversation:clear')
     ipcMain.removeHandler('conversation:commitTurn')
+    ipcMain.removeHandler('conversation:truncateBeforeMessage')
     ipcMain.removeHandler('conversation:getStats')
   }
 }

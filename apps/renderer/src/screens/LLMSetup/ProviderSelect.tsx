@@ -1,21 +1,13 @@
-/* 5-option provider dropdown per CONTEXT.md D-06.
+/* Provider dropdown per CONTEXT.md D-06.
  *  - LM Studio (lm_studio): working, default
  *  - Custom OpenAI-compatible (custom_openai): working
- *  - OpenAI (openai): disabled, "Coming in v2" tooltip via DISABLED_PROVIDER_TT
- *  - Anthropic (anthropic): disabled
- *  - Gemini (gemini): disabled
+ *
+ * Hosted providers that are not wired into setup are intentionally not rendered
+ * as disabled roadmap placeholders. Custom OpenAI-compatible is the current
+ * hosted-endpoint path.
  *
  * Per 01-PROTOTYPE-DELTA.md: replaces the prototype's stale 3-option <select>.
  * Uses native <select> + the prototype's `.select` CSS class — no shadcn / Radix.
- * The disabled-provider tooltip uses the native title attribute (the prototype's
- * `data-tt` custom-tooltip pattern is reserved for hover-only states; native
- * title is fine for `<option disabled>` because options can't fire mouseenter
- * on most browsers in the closed state).
- *
- * The disabled-provider tooltip copy (UI-SPEC verbatim, sourced from
- * COPY.LLM_SETUP.DISABLED_PROVIDER_TT):
- *   "Hosted-provider support lands in v2. Use the Custom OpenAI-compatible
- *    option for now if you need a hosted endpoint."
  */
 
 import { COPY } from '@/lib/copy'
@@ -66,9 +58,8 @@ export function ProviderSelect({ value, onChange }: Props) {
             key={p.id}
             value={p.id}
             disabled={!p.enabled}
-            title={!p.enabled ? C.DISABLED_PROVIDER_TT : undefined}
           >
-            {p.label} {!p.enabled ? '(Coming in v2)' : ''}
+            {p.label}
           </option>
         ))}
       </select>
@@ -77,7 +68,6 @@ export function ProviderSelect({ value, onChange }: Props) {
           <div
             key={p.id}
             className={`row${p.enabled ? '' : ' disabled'}`}
-            title={!p.enabled ? C.DISABLED_PROVIDER_TT : undefined}
           >
             <span className="name">· {p.label}</span>
             <span>{p.status}</span>

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { WSMessage } from '@contracts/ws-message'
 
 const wsClientMock = vi.hoisted(() => ({
@@ -17,6 +17,7 @@ const wsClientMock = vi.hoisted(() => ({
 }))
 
 const playAudioPayloadMock = vi.hoisted(() => vi.fn())
+const stopAudioPlaybackMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/ws/client', () => ({
   send: vi.fn(() => true),
@@ -43,7 +44,13 @@ vi.mock('@/ws/client', () => ({
 }))
 
 vi.mock('@/ws/audio-player', () => ({
-  playAudioPayload: playAudioPayloadMock
+  playAudioPayload: playAudioPayloadMock,
+  stopAudioPlayback: stopAudioPlaybackMock,
+  getAudioPlaybackState: vi.fn(() => ({ active: false })),
+  subscribeAudioPlaybackState: vi.fn((listener: (state: { active: boolean }) => void) => {
+    listener({ active: false })
+    return () => undefined
+  })
 }))
 
 vi.mock('@/state/conversation-history', async () => {
@@ -120,9 +127,12 @@ describe('Chat streaming failed-audio surface', () => {
 
   beforeEach(async () => {
     const store = await import('@/ws/store')
+    const client = await import('@/ws/client')
     store.disposeWSStoreSubscriptions()
+    vi.mocked(client.send).mockClear()
     resetStreaming()
     playAudioPayloadMock.mockClear()
+    stopAudioPlaybackMock.mockClear()
     wsClientMock.reset()
     Object.defineProperty(window, 'api', {
       configurable: true,
@@ -146,6 +156,7 @@ describe('Chat streaming failed-audio surface', () => {
         onSidecarCrash: vi.fn().mockReturnValue(() => undefined),
         listConversationSessions: vi.fn().mockResolvedValue([]),
         getActiveConversationSession: vi.fn().mockResolvedValue(session),
+        truncateConversationBeforeMessage: vi.fn().mockResolvedValue(session),
         getConversationStats: vi.fn().mockResolvedValue({
           sessionCount: 1,
           messageCount: 0,
@@ -153,7 +164,19 @@ describe('Chat streaming failed-audio surface', () => {
           persistence: 'local'
         }),
         openVtsDocs: vi.fn().mockResolvedValue(undefined),
-        restartSidecar: vi.fn().mockResolvedValue(undefined)
+        restartSidecar: vi.fn().mockResolvedValue(undefined),
+        getVoiceInputReadiness: vi.fn().mockResolvedValue({
+          ready: false,
+          capture_status: 'idle',
+          stt_enabled: false,
+          provider_id: null,
+          blocked_reason: 'stt_disabled',
+          setup_destination: 'voice_settings',
+          permission_state: 'unknown',
+          readiness: null,
+          summary: 'Voice input is disabled.'
+        }),
+        requestMicrophonePermission: vi.fn().mockResolvedValue('granted')
       }
     })
   })
@@ -273,5 +296,173 @@ describe('Chat streaming failed-audio surface', () => {
     const bubble = await screen.findByText('Failed but readable.').then((node) => node.closest('.bubble')!)
     expect(within(bubble as HTMLElement).getByText(COPY.CHAT.GPT_SOVITS_AUDIO_FAILED_SENTENCE)).toBeInTheDocument()
     expect(window.api.saveStoredConfig).not.toHaveBeenCalled()
+  })
+
+  it('replaces Send with Stop during an active turn and discards partial assistant output locally', async () => {
+    const send = await import('@/ws/client').then((m) => vi.mocked(m.send))
+    const dispatch = await loadDispatcher()
+    render(
+      <AppStoreProvider>
+        <Chat />
+      </AppStoreProvider>
+    )
+
+    const input = await screen.findByLabelText('Chat input')
+    fireEvent.change(input, { target: { value: 'bad transcript' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.CHAT.SEND }))
+    dispatch({ type: 'control', text: 'conversation-chain-start' })
+    dispatch(normalAudio('Partial answer.'))
+
+    const stop = await screen.findByRole('button', { name: COPY.CHAT.STOP_RESPONSE })
+    fireEvent.click(stop)
+
+    expect(send).toHaveBeenLastCalledWith({ type: 'stop-turn' })
+    expect(stopAudioPlaybackMock).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('bad transcript')).toBeInTheDocument()
+    expect(screen.queryByText('Partial answer.')).toBeNull()
+
+    dispatch({ type: 'control', text: 'conversation-chain-end' })
+    expect(screen.getByText('bad transcript')).toBeInTheDocument()
+  })
+
+  it('edits a stopped user message and resends without duplicating the user bubble', async () => {
+    const send = await import('@/ws/client').then((m) => vi.mocked(m.send))
+    const dispatch = await loadDispatcher()
+    render(
+      <AppStoreProvider>
+        <Chat />
+      </AppStoreProvider>
+    )
+
+    const input = await screen.findByLabelText('Chat input')
+    fireEvent.change(input, { target: { value: 'transcrip typo' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.CHAT.SEND }))
+    dispatch({ type: 'control', text: 'conversation-chain-start' })
+    fireEvent.click(await screen.findByRole('button', { name: COPY.CHAT.STOP_RESPONSE }))
+
+    fireEvent.click(await screen.findByRole('button', { name: COPY.CHAT.EDIT_MESSAGE }))
+    fireEvent.change(screen.getByRole('textbox', { name: COPY.CHAT.EDIT_MESSAGE }), {
+      target: { value: 'transcript typo fixed' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: COPY.CHAT.SAVE_EDIT }))
+
+    expect(send).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'text-input',
+      text: 'transcript typo fixed',
+      history: []
+    }))
+    expect(screen.getAllByText('transcript typo fixed')).toHaveLength(1)
+  })
+
+  it('keeps a stopped message anchored and editable after later history appears', async () => {
+    const send = await import('@/ws/client').then((m) => vi.mocked(m.send))
+    const dispatch = await loadDispatcher()
+    const view = render(
+      <AppStoreProvider>
+        <Chat />
+      </AppStoreProvider>
+    )
+
+    const input = await screen.findByLabelText('Chat input')
+    fireEvent.change(input, { target: { value: 'orphaned typo' } })
+    fireEvent.click(screen.getByRole('button', { name: COPY.CHAT.SEND }))
+    dispatch({ type: 'control', text: 'conversation-chain-start' })
+    fireEvent.click(await screen.findByRole('button', { name: COPY.CHAT.STOP_RESPONSE }))
+
+    view.unmount()
+
+    const laterSession: ConversationSession = {
+      ...session,
+      messages: [
+        { id: 'later-u', role: 'user', text: 'later prompt', createdAt: '2099-05-10T00:00:00.000Z' },
+        { id: 'later-a', role: 'assistant', text: 'later answer', createdAt: '2099-05-10T00:00:01.000Z' }
+      ]
+    }
+    vi.mocked(window.api.getActiveConversationSession).mockResolvedValue(laterSession)
+    vi.mocked(window.api.listConversationSessions).mockResolvedValue([{
+      id: laterSession.id,
+      title: laterSession.title,
+      titleSource: laterSession.titleSource,
+      createdAt: laterSession.createdAt,
+      updatedAt: laterSession.updatedAt,
+      lastMessageAt: laterSession.lastMessageAt,
+      messageCount: laterSession.messages.length,
+      preview: 'later answer'
+    }])
+
+    render(
+      <AppStoreProvider>
+        <Chat />
+      </AppStoreProvider>
+    )
+
+    await screen.findByText('later prompt')
+    const chatText = document.querySelector('.chat-scroll')?.textContent ?? ''
+    expect(chatText.indexOf('orphaned typo')).toBeGreaterThanOrEqual(0)
+    expect(chatText.indexOf('orphaned typo')).toBeLessThan(chatText.indexOf('later prompt'))
+
+    send.mockClear()
+    const stoppedBubble = screen.getByText('orphaned typo').closest('.bubble') as HTMLElement
+    fireEvent.click(within(stoppedBubble).getByRole('button', { name: COPY.CHAT.EDIT_MESSAGE }))
+    fireEvent.change(screen.getByRole('textbox', { name: COPY.CHAT.EDIT_MESSAGE }), {
+      target: { value: 'orphaned typo fixed' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: COPY.CHAT.SAVE_EDIT }))
+
+    expect(send).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'text-input',
+      text: 'orphaned typo fixed'
+    }))
+    expect(screen.queryByRole('textbox', { name: COPY.CHAT.EDIT_MESSAGE })).toBeNull()
+    expect(screen.getAllByText('orphaned typo fixed')).toHaveLength(1)
+  })
+
+  it('truncates persisted history before edited user text is regenerated', async () => {
+    const send = await import('@/ws/client').then((m) => vi.mocked(m.send))
+    const persisted: ConversationSession = {
+      ...session,
+      messages: [
+        { id: 'u1', role: 'user', text: 'first prompt', createdAt: '2026-05-10T00:00:00.000Z' },
+        { id: 'a1', role: 'assistant', text: 'first answer', createdAt: '2026-05-10T00:00:01.000Z' },
+        { id: 'u2', role: 'user', text: 'bad voice text', createdAt: '2026-05-10T00:00:02.000Z' },
+        { id: 'a2', role: 'assistant', text: 'bad answer', createdAt: '2026-05-10T00:00:03.000Z' }
+      ]
+    }
+    const truncated = { ...persisted, messages: persisted.messages.slice(0, 2) }
+    vi.mocked(window.api.getActiveConversationSession).mockResolvedValue(persisted)
+    vi.mocked(window.api.listConversationSessions).mockResolvedValue([{
+      id: persisted.id,
+      title: persisted.title,
+      titleSource: persisted.titleSource,
+      createdAt: persisted.createdAt,
+      updatedAt: persisted.updatedAt,
+      lastMessageAt: persisted.lastMessageAt,
+      messageCount: persisted.messages.length,
+      preview: 'bad answer'
+    }])
+    vi.mocked(window.api.truncateConversationBeforeMessage).mockResolvedValue(truncated)
+
+    render(
+      <AppStoreProvider>
+        <Chat />
+      </AppStoreProvider>
+    )
+
+    await screen.findByText('bad voice text')
+    fireEvent.click(screen.getAllByRole('button', { name: COPY.CHAT.EDIT_MESSAGE })[1]!)
+    fireEvent.change(screen.getByRole('textbox', { name: COPY.CHAT.EDIT_MESSAGE }), {
+      target: { value: 'fixed voice text' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: COPY.CHAT.SAVE_EDIT }))
+
+    await waitFor(() => expect(window.api.truncateConversationBeforeMessage).toHaveBeenCalledWith('s1', 'u2'))
+    expect(send).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'text-input',
+      text: 'fixed voice text',
+      history: [
+        { role: 'user', text: 'first prompt' },
+        { role: 'assistant', text: 'first answer' }
+      ]
+    }))
   })
 })

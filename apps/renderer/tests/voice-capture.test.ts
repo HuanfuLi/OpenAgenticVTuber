@@ -11,15 +11,32 @@ import type { VoiceInputTranscriptionResult } from '@contracts/audio-provider'
 type DataHandler = ((event: BlobEvent) => void) | null
 type TranscribeMock = (request: {
   sequence_id: string
-  mode: 'preview' | 'final'
+  mode: 'final'
 }) => Promise<VoiceInputTranscriptionResult>
 type EncodeMock = (blob: Blob) => Promise<{ audioBase64Wav: string; durationMs: number }>
 
 const trackStop = vi.fn()
 
 function makeStream(): MediaStream {
+  const track = {
+    kind: 'audio',
+    stop: trackStop,
+    getSettings: () => ({
+      echoCancellation: true,
+      noiseSuppression: true,
+      channelCount: 1,
+      sampleRate: 48000,
+      deviceId: 'secret-device-id'
+    }),
+    getConstraints: () => ({
+      echoCancellation: { ideal: true },
+      noiseSuppression: { ideal: true },
+      channelCount: { ideal: 1 }
+    })
+  }
   return {
-    getTracks: () => [{ stop: trackStop }]
+    getAudioTracks: () => [track],
+    getTracks: () => [track]
   } as unknown as MediaStream
 }
 
@@ -54,7 +71,7 @@ class FakeMediaRecorder {
   }
 }
 
-function result(sequenceId: string, mode: 'preview' | 'final', transcript: string): VoiceInputTranscriptionResult {
+function result(sequenceId: string, mode: 'final', transcript: string): VoiceInputTranscriptionResult {
   return {
     ok: true,
     mode,
@@ -69,14 +86,6 @@ function result(sequenceId: string, mode: 'preview' | 'final', transcript: strin
     failure: null,
     redacted_diagnostics: null
   }
-}
-
-function deferred<T>() {
-  let resolve!: (value: T) => void
-  const promise = new Promise<T>((res) => {
-    resolve = res
-  })
-  return { promise, resolve }
 }
 
 async function waitForMicrotasks(): Promise<void> {
@@ -101,7 +110,7 @@ describe('VoiceCapture', () => {
 
   function capture(turnInProgress = false): VoiceCapture {
     return new VoiceCapture(
-      { sessionId: 'session-1', previewTimesliceMs: 25, turnInProgress: () => turnInProgress },
+      { sessionId: 'session-1', turnInProgress: () => turnInProgress },
       {
         mediaDevices: { getUserMedia } as unknown as MediaDevices,
         MediaRecorderCtor: FakeMediaRecorder as unknown as typeof MediaRecorder,
@@ -125,7 +134,80 @@ describe('VoiceCapture', () => {
         noiseSuppression: { ideal: true }
       }
     })
-    expect(FakeMediaRecorder.instances[0]?.start).toHaveBeenCalledWith(25)
+    expect(FakeMediaRecorder.instances[0]?.start).toHaveBeenCalledWith()
+  })
+
+  it('uses a selected physical microphone instead of the system default input', async () => {
+    const controller = new VoiceCapture(
+      {
+        sessionId: 'session-1',
+        microphone: {
+          deviceId: 'mic-physical-1',
+          label: 'USB Microphone',
+          suspectedSystemAudio: false
+        }
+      },
+      {
+        mediaDevices: { getUserMedia } as unknown as MediaDevices,
+        MediaRecorderCtor: FakeMediaRecorder as unknown as typeof MediaRecorder,
+        transcribeVoiceInput,
+        encodeVoiceBlob,
+        subscribeReconnect: () => () => undefined
+      }
+    )
+
+    await controller.start()
+
+    expect(getUserMedia).toHaveBeenCalledWith({
+      audio: expect.objectContaining({
+        deviceId: { exact: 'mic-physical-1' },
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true }
+      })
+    })
+    expect(getVoiceInputState().aecDiagnostics).toMatchObject({
+      source: 'ptt',
+      selectedInput: {
+        label: 'USB Microphone',
+        deviceIdPresent: true,
+        suspectedSystemAudio: false
+      },
+      applied: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        deviceIdPresent: true
+      }
+    })
+  })
+
+  it('does not silently fall back to default input when selected microphone is unavailable', async () => {
+    getUserMedia.mockRejectedValueOnce(new DOMException('missing mic', 'OverconstrainedError'))
+    const controller = new VoiceCapture(
+      {
+        sessionId: 'session-1',
+        microphone: {
+          deviceId: 'missing-mic',
+          label: 'USB Microphone',
+          suspectedSystemAudio: false
+        }
+      },
+      {
+        mediaDevices: { getUserMedia } as unknown as MediaDevices,
+        MediaRecorderCtor: FakeMediaRecorder as unknown as typeof MediaRecorder,
+        transcribeVoiceInput,
+        encodeVoiceBlob,
+        subscribeReconnect: () => () => undefined
+      }
+    )
+
+    await controller.start()
+
+    expect(getUserMedia).toHaveBeenCalledTimes(1)
+    expect(getVoiceInputState()).toMatchObject({
+      captureStatus: 'error',
+      permissionState: 'no_input_device',
+      error: 'Selected microphone input is unavailable. Choose another microphone in Settings.'
+    })
   })
 
   it('maps permission denied and no device failures into visible state', async () => {
@@ -164,58 +246,34 @@ describe('VoiceCapture', () => {
     expect(trackStop).toHaveBeenCalledTimes(3)
   })
 
-  it('ignores stale preview sequence results and keeps only the latest preview transcript', async () => {
-    const first = deferred<VoiceInputTranscriptionResult>()
-    const second = deferred<VoiceInputTranscriptionResult>()
-    transcribeVoiceInput
-      .mockReturnValueOnce(first.promise)
-      .mockReturnValueOnce(second.promise)
-
-    await capture().start()
-    const recorder = FakeMediaRecorder.instances[0]!
-    recorder.emitData('preview one')
-    await Promise.resolve()
-    recorder.emitData('preview two')
-    await Promise.resolve()
-
-    const firstSequence = transcribeVoiceInput.mock.calls[0][0].sequence_id
-    const secondSequence = transcribeVoiceInput.mock.calls[1][0].sequence_id
-    first.resolve(result(firstSequence, 'preview', 'old preview'))
-    await Promise.resolve()
-    expect(getVoiceInputState().previewTranscript).toBeNull()
-
-    second.resolve(result(secondSequence, 'preview', 'latest preview'))
-    await Promise.resolve()
-    expect(getVoiceInputState().previewTranscript).toBe('latest preview')
-  })
-
-  it('encodes accumulated chunks for preview instead of standalone MediaRecorder chunks', async () => {
-    await capture().start()
+  it('does not transcribe recorder data until stop finalizes the capture', async () => {
+    const controller = capture()
+    await controller.start()
     const recorder = FakeMediaRecorder.instances[0]!
     recorder.emitData('first')
     await Promise.resolve()
-    recorder.emitData('second')
-    await Promise.resolve()
 
-    expect(encodeVoiceBlob).toHaveBeenCalledTimes(2)
-    await expect(encodeVoiceBlob.mock.calls[0][0].text()).resolves.toBe('first')
-    await expect(encodeVoiceBlob.mock.calls[1][0].text()).resolves.toBe('firstsecond')
+    expect(transcribeVoiceInput).not.toHaveBeenCalled()
+
+    await controller.stop()
   })
 
-  it('keeps final transcription working after an opportunistic preview encode failure', async () => {
+  it('encodes accumulated chunks once for final transcription', async () => {
     encodeVoiceBlob
-      .mockRejectedValueOnce(new Error('preview chunk decode failed'))
-      .mockResolvedValueOnce({ audioBase64Wav: 'UklGRg==', durationMs: 700 })
       .mockResolvedValueOnce({ audioBase64Wav: 'UklGRg==', durationMs: 700 })
 
     const controller = capture()
     await controller.start()
-    FakeMediaRecorder.instances[0]!.emitData('preview')
+    const recorder = FakeMediaRecorder.instances[0]!
+    recorder.emitData('first')
+    recorder.emitData('second')
     await Promise.resolve()
     await controller.stop()
 
     await waitForMicrotasks()
-    expect(transcribeVoiceInput).toHaveBeenLastCalledWith(expect.objectContaining({ mode: 'final' }))
+    expect(encodeVoiceBlob).toHaveBeenCalledTimes(1)
+    await expect(encodeVoiceBlob.mock.calls[0][0].text()).resolves.toBe('firstsecondfinal')
+    expect(transcribeVoiceInput).toHaveBeenCalledWith(expect.objectContaining({ mode: 'final' }))
     expect(getVoiceInputState()).toMatchObject({
       captureStatus: 'idle',
       finalCandidate: {

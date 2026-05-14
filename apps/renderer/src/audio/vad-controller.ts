@@ -1,4 +1,9 @@
-import type { VadSensitivity } from '@/state/audio-settings'
+import {
+  voiceInputAudioConstraints,
+  type VadSensitivity,
+  type VoiceInputMicrophoneSettings
+} from '@/state/audio-settings'
+import { captureAecDiagnostics } from './aec-diagnostics'
 
 type AnimationFrameScheduler = (callback: FrameRequestCallback) => number
 type AnimationFrameCancel = (handle: number) => void
@@ -7,6 +12,7 @@ type AudioContextConstructor = new () => AudioContext
 export interface VadControllerOptions {
   sensitivity: VadSensitivity
   silenceTimeoutMs: number
+  microphone?: VoiceInputMicrophoneSettings
 }
 
 interface VadControllerDeps {
@@ -19,13 +25,27 @@ interface VadControllerDeps {
   isRecording: () => boolean
   shouldIgnoreSpeech?: () => boolean
   onMonitoringChange?: (monitoring: boolean) => void
+  onAecDiagnostics?: (diagnostics: ReturnType<typeof captureAecDiagnostics>) => void
+  onLevel?: (diagnostics: VadLevelDiagnostics) => void
   onError?: (message: string) => void
 }
 
 const SENSITIVITY_THRESHOLDS: Record<VadSensitivity, number> = {
-  low: 0.12,
-  medium: 0.08,
-  high: 0.045
+  low: 0.035,
+  medium: 0.025,
+  high: 0.015
+}
+
+export type VadIgnoredReason = 'turn_in_progress' | null
+
+export interface VadLevelDiagnostics {
+  level: number
+  threshold: number
+  sensitivity: VadSensitivity
+  speechDetected: boolean
+  monitoring: boolean
+  recording: boolean
+  ignoredReason: VadIgnoredReason
 }
 
 export function vadThresholdForSensitivity(sensitivity: VadSensitivity): number {
@@ -52,11 +72,14 @@ export class VadController {
   private ownsRecording = false
   private startingRecording = false
   private lastVoiceAtMs: number | null = null
+  private lastLevelEmitAtMs = -Infinity
   private stopped = true
   private readonly mediaDevices: MediaDevices
   private readonly AudioContextCtor: AudioContextConstructor
   private readonly requestFrame: AnimationFrameScheduler
   private readonly cancelFrame: AnimationFrameCancel
+  private readonly sensitivity: VadSensitivity
+  private readonly microphone: VoiceInputMicrophoneSettings
   private readonly threshold: number
   private readonly silenceTimeoutMs: number
   private readonly startRecording: () => Promise<boolean>
@@ -64,6 +87,8 @@ export class VadController {
   private readonly isRecording: () => boolean
   private readonly shouldIgnoreSpeech: () => boolean
   private readonly onMonitoringChange: (monitoring: boolean) => void
+  private readonly onAecDiagnostics: (diagnostics: ReturnType<typeof captureAecDiagnostics>) => void
+  private readonly onLevel: (diagnostics: VadLevelDiagnostics) => void
   private readonly onError: (message: string) => void
 
   constructor(options: VadControllerOptions, deps: VadControllerDeps) {
@@ -72,6 +97,8 @@ export class VadController {
     this.AudioContextCtor = deps.AudioContextCtor ?? window.AudioContext ?? webkitAudio.webkitAudioContext!
     this.requestFrame = deps.requestAnimationFrame ?? window.requestAnimationFrame.bind(window)
     this.cancelFrame = deps.cancelAnimationFrame ?? window.cancelAnimationFrame.bind(window)
+    this.sensitivity = options.sensitivity
+    this.microphone = options.microphone ?? { deviceId: null, label: null, suspectedSystemAudio: false }
     this.threshold = vadThresholdForSensitivity(options.sensitivity)
     this.silenceTimeoutMs = options.silenceTimeoutMs
     this.startRecording = deps.startRecording
@@ -79,6 +106,8 @@ export class VadController {
     this.isRecording = deps.isRecording
     this.shouldIgnoreSpeech = deps.shouldIgnoreSpeech ?? (() => false)
     this.onMonitoringChange = deps.onMonitoringChange ?? (() => undefined)
+    this.onAecDiagnostics = deps.onAecDiagnostics ?? (() => undefined)
+    this.onLevel = deps.onLevel ?? (() => undefined)
     this.onError = deps.onError ?? (() => undefined)
   }
 
@@ -94,17 +123,19 @@ export class VadController {
     }
     this.stopped = false
     try {
-      this.stream = await this.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: { ideal: 1 },
-          echoCancellation: { ideal: true },
-          noiseSuppression: { ideal: true }
-        }
-      })
+      const constraints = voiceInputAudioConstraints(this.microphone)
+      this.stream = await this.mediaDevices.getUserMedia(constraints)
       if (this.stopped) {
         this.cleanupMonitor()
         return
       }
+      this.onAecDiagnostics(captureAecDiagnostics({
+        source: 'vad',
+        stream: this.stream,
+        constraints,
+        microphone: this.microphone,
+        mediaDevices: this.mediaDevices
+      }))
       this.audioContext = new this.AudioContextCtor()
       const source = this.audioContext.createMediaStreamSource(this.stream)
       this.analyser = this.audioContext.createAnalyser()
@@ -116,7 +147,12 @@ export class VadController {
     } catch (error) {
       this.stopped = true
       this.cleanupMonitor()
-      this.onError(error instanceof Error ? error.message : 'VAD microphone monitoring failed.')
+      const name = error instanceof DOMException || error instanceof Error ? error.name : ''
+      this.onError(
+        this.microphone.deviceId && (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'OverconstrainedError')
+          ? 'Selected microphone input is unavailable. Choose another microphone in Settings.'
+          : error instanceof Error ? error.message : 'VAD microphone monitoring failed.'
+      )
     }
   }
 
@@ -129,6 +165,7 @@ export class VadController {
       this.ownsRecording = false
       await this.stopRecording()
     }
+    this.emitLevel(0, false, null, 0, true)
   }
 
   async processLevelForTests(rms: number, nowMs: number): Promise<void> {
@@ -149,9 +186,13 @@ export class VadController {
 
   private async processLevel(rms: number, nowMs: number): Promise<void> {
     const speechDetected = rms >= this.threshold
+    const ignoredReason: VadIgnoredReason = speechDetected && this.shouldIgnoreSpeech()
+      ? 'turn_in_progress'
+      : null
+    this.emitLevel(rms, speechDetected, ignoredReason, nowMs)
     if (speechDetected) {
       this.lastVoiceAtMs = nowMs
-      if (!this.ownsRecording && !this.isRecording() && !this.startingRecording && !this.shouldIgnoreSpeech()) {
+      if (!this.ownsRecording && !this.isRecording() && !this.startingRecording && ignoredReason === null) {
         this.startingRecording = true
         try {
           this.ownsRecording = await this.startRecording()
@@ -171,6 +212,26 @@ export class VadController {
       await this.stopRecording()
       this.lastVoiceAtMs = null
     }
+  }
+
+  private emitLevel(
+    rms: number,
+    speechDetected: boolean,
+    ignoredReason: VadIgnoredReason,
+    nowMs: number,
+    force = false
+  ): void {
+    if (!force && nowMs - this.lastLevelEmitAtMs < 100) return
+    this.lastLevelEmitAtMs = nowMs
+    this.onLevel({
+      level: rms,
+      threshold: this.threshold,
+      sensitivity: this.sensitivity,
+      speechDetected,
+      monitoring: !this.stopped,
+      recording: this.ownsRecording || this.isRecording() || this.startingRecording,
+      ignoredReason
+    })
   }
 
   private cancelCurrentFrame(): void {

@@ -26,6 +26,7 @@ export interface StreamingMessage {
   id: string
   role: ChatRole
   text: string // bubble body -- accumulates per audio envelope
+  createdAt: string
   isThinking?: boolean // true while sidecar is between chain-start and first audio
   audioFailures: SentenceAudioFailure[]
 }
@@ -44,6 +45,7 @@ export interface BannerState {
 }
 
 export interface CompletedTurnCandidate {
+  userMessageId: string
   sessionId?: string
   userText: string
   assistantText: string
@@ -56,6 +58,7 @@ interface PendingTurn {
   userText: string
   createdAt: string
   failed: boolean
+  stopped: boolean
   consumed: boolean
 }
 
@@ -63,18 +66,22 @@ interface StreamingState {
   messages: StreamingMessage[]
   forceNewMessage: boolean
   inputDisabled: boolean
+  turnSettlingUserMessageId: string | null
   banner: BannerState | null
   isSpeaking: boolean
   pendingTurn: PendingTurn | null
+  stoppedTurns: Record<string, PendingTurn>
 }
 
 let state: StreamingState = {
   messages: [],
   forceNewMessage: false,
   inputDisabled: false,
+  turnSettlingUserMessageId: null,
   banner: null,
   isSpeaking: false,
-  pendingTurn: null
+  pendingTurn: null,
+  stoppedTurns: {}
 }
 
 const subs = new Set<(s: StreamingState) => void>()
@@ -102,7 +109,8 @@ function genId(): string {
  * a banner if any stays visible).
  */
 export function appendUserMessage(text: string, sessionId?: string): void {
-  const next: StreamingMessage = { id: genId(), role: 'user', text, audioFailures: [] }
+  const createdAt = new Date().toISOString()
+  const next: StreamingMessage = { id: genId(), role: 'user', text, createdAt, audioFailures: [] }
   setState({
     messages: [...state.messages, next],
     inputDisabled: true,
@@ -110,11 +118,52 @@ export function appendUserMessage(text: string, sessionId?: string): void {
       userMessageId: next.id,
       sessionId,
       userText: text,
-      createdAt: new Date().toISOString(),
+      createdAt,
       failed: false,
+      stopped: false,
       consumed: false
     }
   })
+}
+
+export function restartStoppedTurn(messageId: string, text: string, sessionId?: string): boolean {
+  const pending = state.stoppedTurns[messageId] ?? (
+    state.pendingTurn?.stopped && state.pendingTurn.userMessageId === messageId
+      ? state.pendingTurn
+      : null
+  )
+  if (!pending) return false
+  const trimmed = text.trim()
+  if (!trimmed) return false
+  const userIndex = state.messages.findIndex((message) => message.id === messageId)
+  if (userIndex < 0) return false
+  const messages = state.messages.slice()
+  messages[userIndex] = { ...messages[userIndex]!, text: trimmed }
+  const { [messageId]: _restarted, ...stoppedTurns } = state.stoppedTurns
+  setState({
+    messages,
+    inputDisabled: true,
+    forceNewMessage: false,
+    banner: null,
+    stoppedTurns,
+    pendingTurn: {
+      ...pending,
+      sessionId,
+      userText: trimmed,
+      failed: false,
+      stopped: false,
+      consumed: false
+    }
+  })
+  return true
+}
+
+function assistantCreatedAt(): string {
+  const createdAt = state.pendingTurn?.createdAt
+  if (!createdAt) return new Date().toISOString()
+  const timestamp = Date.parse(createdAt)
+  if (Number.isNaN(timestamp)) return new Date().toISOString()
+  return new Date(timestamp + 1).toISOString()
 }
 
 /**
@@ -126,6 +175,7 @@ export function appendUserMessage(text: string, sessionId?: string): void {
  */
 export function setThinking(on: boolean): void {
   if (on) {
+    if (state.pendingTurn?.stopped) return
     const messages = state.messages
     const last = messages[messages.length - 1]
     if (last?.role === 'assistant' && last.isThinking) {
@@ -141,6 +191,7 @@ export function setThinking(on: boolean): void {
       id: genId(),
       role: 'assistant',
       text: COPY.CHAT.THINKING,
+      createdAt: assistantCreatedAt(),
       isThinking: true,
       audioFailures: []
     }
@@ -168,6 +219,7 @@ export function appendAssistantSentence(
   sentenceId: number,
   audioFailure?: Omit<SentenceAudioFailure, 'sentenceId'>
 ): void {
+  if (state.pendingTurn?.stopped) return
   const messages = state.messages
   const last = messages[messages.length - 1]
   const startNew = state.forceNewMessage || !last || last.role !== 'assistant'
@@ -177,6 +229,7 @@ export function appendAssistantSentence(
       id: genId(),
       role: 'assistant',
       text,
+      createdAt: assistantCreatedAt(),
       audioFailures: audioFailure ? [{ sentenceId, ...audioFailure }] : []
     }
     setState({
@@ -208,6 +261,7 @@ export function appendAssistantSentence(
  * moment of receipt (UI-SPEC IP-7).
  */
 export function setForceNewMessage(): void {
+  if (state.pendingTurn?.stopped) return
   setState({ forceNewMessage: true })
 }
 
@@ -238,7 +292,7 @@ export function setBanner(kind: BannerKind | null): void {
 
 export function getCompletedTurnCandidate(): CompletedTurnCandidate | null {
   const pending = state.pendingTurn
-  if (!pending || pending.failed || pending.consumed) return null
+  if (!pending || pending.failed || pending.stopped || pending.consumed) return null
   const userIndex = state.messages.findIndex((message) => message.id === pending.userMessageId)
   if (userIndex < 0) return null
   const assistantText = state.messages
@@ -249,16 +303,69 @@ export function getCompletedTurnCandidate(): CompletedTurnCandidate | null {
     .trim()
   const userText = pending.userText.trim()
   if (!userText || !assistantText) return null
-  return { sessionId: pending.sessionId, userText, assistantText, createdAt: pending.createdAt }
+  return {
+    userMessageId: pending.userMessageId,
+    sessionId: pending.sessionId,
+    userText,
+    assistantText,
+    createdAt: pending.createdAt
+  }
 }
 
-export function markCompletedTurnConsumed(): void {
+export function beginTurnSettlement(userMessageId: string): void {
+  setState({ turnSettlingUserMessageId: userMessageId })
+}
+
+export function finishTurnSettlement(userMessageId: string): void {
+  if (state.turnSettlingUserMessageId !== userMessageId) return
+  setState({ turnSettlingUserMessageId: null })
+}
+
+export function stopActiveTurn(): void {
   const pending = state.pendingTurn
-  if (!pending) return
+  if (!pending) {
+    setState({
+      inputDisabled: false,
+      isSpeaking: false,
+      forceNewMessage: false
+    })
+    return
+  }
   const userIndex = state.messages.findIndex((message) => message.id === pending.userMessageId)
+  const messages = userIndex >= 0 ? state.messages.slice(0, userIndex + 1) : state.messages
+  const stopped = {
+    ...pending,
+    stopped: true,
+    failed: true
+  }
   setState({
-    messages: userIndex >= 0 ? state.messages.slice(0, userIndex) : state.messages,
-    pendingTurn: { ...pending, consumed: true },
+    messages,
+    inputDisabled: false,
+    isSpeaking: false,
+    forceNewMessage: false,
+    pendingTurn: stopped,
+    stoppedTurns: { ...state.stoppedTurns, [pending.userMessageId]: stopped }
+  })
+}
+
+export function markCompletedTurnConsumed(userMessageId = state.pendingTurn?.userMessageId): void {
+  if (!userMessageId) return
+  const pending = state.pendingTurn
+  const userIndex = state.messages.findIndex((message) => message.id === userMessageId)
+  const nextUserIndex = state.messages.findIndex((message, index) => index > userIndex && message.role === 'user')
+  const nextMessages = userIndex >= 0
+    ? [
+        ...state.messages.slice(0, userIndex),
+        ...state.messages.slice(nextUserIndex >= 0 ? nextUserIndex : state.messages.length)
+      ]
+    : state.messages
+  const stoppedTurns = pending?.stopped && pending.userMessageId === userMessageId
+    ? (({ [userMessageId]: _consumed, ...rest }) => rest)(state.stoppedTurns)
+    : state.stoppedTurns
+  setState({
+    messages: nextMessages,
+    pendingTurn: pending?.userMessageId === userMessageId ? { ...pending, consumed: true } : pending,
+    stoppedTurns,
     forceNewMessage: false
   })
 }
@@ -269,9 +376,11 @@ export function resetStreaming(): void {
     messages: [],
     forceNewMessage: false,
     inputDisabled: false,
+    turnSettlingUserMessageId: null,
     banner: null,
     isSpeaking: false,
-    pendingTurn: null
+    pendingTurn: null,
+    stoppedTurns: {}
   }
   notify()
 }
@@ -316,6 +425,19 @@ export function useInputDisabled(): boolean {
     }
   }, [])
   return d
+}
+
+export function useTurnSettling(): boolean {
+  const [turnSettling, setTurnSettling] = useState(Boolean(state.turnSettlingUserMessageId))
+  useEffect(() => {
+    const cb = (s: StreamingState): void => setTurnSettling(Boolean(s.turnSettlingUserMessageId))
+    subs.add(cb)
+    setTurnSettling(Boolean(state.turnSettlingUserMessageId))
+    return () => {
+      subs.delete(cb)
+    }
+  }, [])
+  return turnSettling
 }
 
 export function useSpeaking(): boolean {

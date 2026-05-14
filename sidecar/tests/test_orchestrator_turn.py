@@ -38,6 +38,7 @@ class _FakeTTSManager:
     def __init__(self) -> None:
         self.speak_calls: list[dict] = []
         self.wait_calls = 0
+        self.clear_calls = 0
         self.wait_started = asyncio.Event()
         self.release_wait = asyncio.Event()
 
@@ -55,6 +56,10 @@ class _FakeTTSManager:
         self.wait_calls += 1
         self.wait_started.set()
         await self.release_wait.wait()
+
+    def clear(self) -> None:
+        self.clear_calls += 1
+        self.release_wait.set()
 
 
 class _FakePluginAdapter:
@@ -104,6 +109,11 @@ async def _fake_sentence_stream(*sentences: str) -> AsyncIterator[SentenceOutput
             plugin_text=text,
             dispatches=[],
         )
+
+
+async def _wait_until(predicate) -> None:
+    while not predicate():
+        await asyncio.sleep(0)
 
 
 def _build_phase3_orch(tts_manager: _FakeTTSManager | None = None) -> Orchestrator:
@@ -184,6 +194,37 @@ async def test_restored_session_history_seeds_llm_context():
         {"role": "assistant", "content": "Bake croissants."},
         {"role": "user", "content": "What was my first question about?"},
     ]
+
+
+@pytest.mark.asyncio
+async def test_truncated_renderer_history_replaces_sidecar_memory_for_edit_regenerate():
+    gw = _FakeGateway(chunks=["Regenerated."])
+    orch = _build_orch(gw)
+    orch._active_session_id = "session-1"
+    orch._memory = [
+        {"role": "user", "content": "first"},
+        {"role": "assistant", "content": "first answer"},
+        {"role": "user", "content": "bad transcript"},
+        {"role": "assistant", "content": "bad answer"},
+    ]
+    ws = _WSRecorder()
+
+    await orch.turn(
+        "fixed transcript",
+        ws,
+        session_id="session-1",
+        history=[
+            {"role": "user", "text": "first"},
+            {"role": "assistant", "text": "first answer"},
+        ],
+    )
+
+    assert gw.calls_received_messages[0][:3] == [
+        {"role": "user", "content": "first"},
+        {"role": "assistant", "content": "first answer"},
+        {"role": "user", "content": "fixed transcript"},
+    ]
+    assert {"role": "user", "content": "bad transcript"} not in orch._memory
 
 
 def test_memory_pop_violation_absent():
@@ -727,23 +768,100 @@ async def test_turn_loop_processes_pending_inputs_serially(monkeypatch):
     loop_task = asyncio.create_task(orch._turn_loop())
     await orch.pending_inputs.put("first")
     await orch.pending_inputs.put("second")
-    await asyncio.sleep(0)
+    await asyncio.wait_for(_wait_until(lambda: started == ["first"]), timeout=1)
 
     assert started == ["first"]
     assert finished == []
 
     release_first.set()
-    await asyncio.sleep(0)
+    await asyncio.wait_for(_wait_until(lambda: started == ["first", "second"]), timeout=1)
     assert started == ["first", "second"]
     assert finished == ["first"]
 
     release_second.set()
-    await asyncio.sleep(0)
+    await asyncio.wait_for(_wait_until(lambda: finished == ["first", "second"]), timeout=1)
     assert finished == ["first", "second"]
 
     loop_task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await loop_task
+
+
+@pytest.mark.asyncio
+async def test_cancel_active_turn_clears_tts_pending_inputs_and_emits_chain_end(monkeypatch):
+    tts_manager = _FakeTTSManager()
+    orch = _build_phase3_orch(tts_manager)
+    ws = _WSRecorder()
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def fake_run_pipeline(_send_window):
+        started.set()
+        await release.wait()
+        async for item in _fake_sentence_stream("Late partial."):
+            yield item
+
+    monkeypatch.setattr(orch, "_run_pipeline", fake_run_pipeline)
+    orch.set_active_ws(ws)
+    loop_task = asyncio.create_task(orch._turn_loop())
+    await orch.pending_inputs.put("cancel me")
+    await orch.pending_inputs.put("queued should drop")
+    await asyncio.wait_for(started.wait(), timeout=1)
+
+    await orch.cancel_active_turn()
+
+    assert tts_manager.clear_calls == 1
+    assert orch.pending_inputs.empty()
+    assert orch._memory == []
+    assert ws.writes[-1] == {"type": "control", "text": "conversation-chain-end"}
+
+    loop_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await loop_task
+
+
+@pytest.mark.asyncio
+async def test_handle_stop_turn_is_idempotent_and_keeps_socket_open():
+    from sidecar.ws.handlers import handle_stop_turn
+
+    class _Orchestrator:
+        def __init__(self) -> None:
+            self.active_ws = None
+            self.cancel_calls = 0
+
+        def set_active_ws(self, ws):
+            self.active_ws = ws
+
+        async def cancel_active_turn(self) -> None:
+            self.cancel_calls += 1
+
+    class _FakeApp:
+        def __init__(self, orchestrator):
+            class _State:
+                pass
+
+            self._state = _State()
+            self._state.orchestrator = orchestrator
+
+        @property
+        def state(self):
+            return self._state
+
+    class _FakeWS:
+        def __init__(self, orchestrator):
+            self.app = _FakeApp(orchestrator)
+            self.closed = False
+
+        async def close(self):
+            self.closed = True
+
+    orchestrator = _Orchestrator()
+    ws = _FakeWS(orchestrator)
+    await handle_stop_turn(ws, {"type": "stop-turn"})
+
+    assert orchestrator.cancel_calls == 1
+    assert orchestrator.active_ws is ws
+    assert ws.closed is False
 
 
 @pytest.mark.asyncio

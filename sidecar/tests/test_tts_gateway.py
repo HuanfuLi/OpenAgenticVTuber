@@ -46,7 +46,7 @@ def test_shutdown_idempotent_when_stream_none():
     gateway.shutdown()
 
 
-def test_build_tts_gateway_requires_gpt_sovits_activation_gates(tmp_path: Path):
+def test_build_tts_gateway_allows_untested_gpt_sovits_when_required_inputs_exist(tmp_path: Path):
     audio_config = AudioConfig()
     audio_config.tts.active_provider = "gpt_sovits"
     audio_config.tts.gpt_sovits = GptSoVitsProviderConfig(
@@ -57,8 +57,32 @@ def test_build_tts_gateway_requires_gpt_sovits_activation_gates(tmp_path: Path):
             active_allowed=False,
         ),
     )
+    reference = tmp_path / "ref.wav"
+    reference.write_bytes(b"RIFF")
+    preset = VoicePreset(
+        preset_id="preset-1",
+        name="GPT",
+        provider_id="gpt_sovits",
+        gpt_sovits=GptSoVitsPresetConfig(prompt_text="hello", prompt_lang="en", text_lang="en"),
+    )
 
-    with pytest.raises(ValueError, match="health check and test synthesis"):
+    gateway = build_tts_gateway(
+        audio_config=audio_config,
+        repo_root=tmp_path,
+        avatar_voice_model="en_US-amy-medium",
+        active_voice_preset=preset,
+        reference_audio_path=reference,
+    )
+
+    assert isinstance(gateway.provider, GptSoVitsProvider)
+
+
+def test_build_tts_gateway_requires_gpt_sovits_reference_inputs(tmp_path: Path):
+    audio_config = AudioConfig()
+    audio_config.tts.active_provider = "gpt_sovits"
+    audio_config.tts.gpt_sovits = GptSoVitsProviderConfig(enabled=True)
+
+    with pytest.raises(ValueError, match="active voice preset and reference audio"):
         build_tts_gateway(audio_config=audio_config, repo_root=tmp_path, avatar_voice_model="en_US-amy-medium")
 
 

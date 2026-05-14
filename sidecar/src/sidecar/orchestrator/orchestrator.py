@@ -147,6 +147,7 @@ class Orchestrator:
         )
         self.pending_inputs = pending_inputs or asyncio.Queue()
         self._active_ws: WebSocket | None = None
+        self._active_turn_task: asyncio.Task[None] | None = None
 
     async def turn(
         self,
@@ -162,17 +163,26 @@ class Orchestrator:
         await emit_chain_start(ws)
         await emit_full_text(ws, "Thinking...")  # OLVT conversation_utils.py:143
 
-        # APPEND-ONLY within the active session -- D-19.
-        self._memory.append({"role": "user", "content": user_text})
-
-        send_window = self._compute_send_window()
+        user_appended = False
         assistant_text_accum = ""
-
         try:
+            # APPEND-ONLY within the active session -- D-19.
+            self._memory.append({"role": "user", "content": user_text})
+            user_appended = True
+            send_window = self._compute_send_window()
+            assistant_text_accum = ""
+
             async for sentence_output in self._run_pipeline(send_window):
                 sentence_id = next(self._sentence_counter)
                 await self._emit_sentence(ws, sentence_output, sentence_id)
                 assistant_text_accum += sentence_output.display_text.text
+
+        except asyncio.CancelledError:
+            last_memory = self._memory[-1] if self._memory else None
+            if user_appended and last_memory == {"role": "user", "content": user_text}:
+                self._memory = self._memory[:-1]
+                self._head_idx = min(self._head_idx, len(self._memory))
+            raise
 
         except ContextWindowExceededError:
             # D-16: aggressive prune + retry once.
@@ -227,10 +237,11 @@ class Orchestrator:
         ]
         should_replace = (
             session_id is not None
-            and session_id != self._active_session_id
+            and (session_id != self._active_session_id or normalized != self._memory)
         ) or (
-            bool(normalized)
-            and len(normalized) > len(self._memory)
+            session_id is None
+            and bool(normalized)
+            and normalized != self._memory
         )
         if not should_replace:
             return
@@ -364,9 +375,9 @@ class Orchestrator:
                     logger.warning("Dropping pending input because no active websocket is bound.")
                     continue
                 if isinstance(pending_input, str):
-                    await self.turn(pending_input, self._active_ws)
+                    self._active_turn_task = asyncio.create_task(self.turn(pending_input, self._active_ws))
                 else:
-                    await self.turn(
+                    self._active_turn_task = asyncio.create_task(self.turn(
                         str(pending_input.get("text", "")),
                         self._active_ws,
                         session_id=(
@@ -375,13 +386,40 @@ class Orchestrator:
                             else None
                         ),
                         history=pending_input.get("history") or [],
-                    )
+                    ))
+                await asyncio.sleep(0)
+                await self._active_turn_task
             except asyncio.CancelledError:
-                raise
+                if asyncio.current_task() and asyncio.current_task().cancelling():
+                    raise
             except Exception:
                 logger.exception("Pending-input turn loop failed for queued text input.")
             finally:
+                self._active_turn_task = None
                 self.pending_inputs.task_done()
+
+    async def cancel_active_turn(self) -> None:
+        task = self._active_turn_task
+        if task is not None and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        if self._tts_manager is not None:
+            self._tts_manager.clear()
+        while True:
+            try:
+                self.pending_inputs.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            else:
+                self.pending_inputs.task_done()
+        if self._active_ws is not None:
+            try:
+                await emit_chain_end(self._active_ws)
+            except Exception:
+                logger.exception("Failed to emit chain-end after stop-turn.")
 
     def _compute_send_window(self) -> list[dict]:
         """Token-budget pruning at 75% (D-15). Forward-only _head_idx (D-19).

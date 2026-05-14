@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import importlib
+import re
 import tempfile
 import time
 from pathlib import Path
 
 from contracts import AudioProviderHealth, STTProviderConfig
 from sidecar.stt.provider import STTProviderError, STTRequest, STTResult
+
+_FUNASR_METADATA_RE = re.compile(r"<\|[^<>|]+\|>")
 
 
 class FunASRSTTProvider:
@@ -99,8 +102,9 @@ class FunASRSTTProvider:
             raise STTProviderError(
                 provider_id=self.provider_id,
                 state="misconfigured",
-                summary="FunASR returned an empty transcript.",
+                summary="FunASR detected no speech.",
                 retryable=True,
+                redacted_diagnostics={"transcript_content": "metadata_only_or_empty"},
             )
         return STTResult(
             text=text,
@@ -117,15 +121,20 @@ class FunASRSTTProvider:
 
 def _extract_text(value: object) -> str:
     if isinstance(value, str):
-        return value.strip()
+        return _clean_funasr_text(value)
     if isinstance(value, list):
         parts = []
         for item in value:
             if isinstance(item, dict):
-                parts.append(str(item.get("text", "")).strip())
+                parts.append(_clean_funasr_text(str(item.get("text", ""))))
             elif isinstance(item, str):
-                parts.append(item.strip())
-        return " ".join(part for part in parts if part).strip()
+                parts.append(_clean_funasr_text(item))
+        return _clean_funasr_text(" ".join(part for part in parts if part))
     if isinstance(value, dict):
-        return str(value.get("text", "")).strip()
+        return _clean_funasr_text(str(value.get("text", "")))
     return ""
+
+
+def _clean_funasr_text(text: str) -> str:
+    without_metadata = _FUNASR_METADATA_RE.sub(" ", text)
+    return " ".join(without_metadata.split())

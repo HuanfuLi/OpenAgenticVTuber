@@ -8,6 +8,8 @@ import {
   clearQueuedFinalCandidate,
   patchVoiceInputState,
   refreshVoiceInputReadiness,
+  setVoiceAecDiagnostics,
+  setVoiceVadDiagnostics,
   VOICE_INPUT_CONFIG_CHANGED_EVENT,
   useVoiceInput
 } from '@/state/voice-input-store'
@@ -51,7 +53,6 @@ function eventMatchesShortcut(event: KeyboardEvent, shortcut: ShortcutParts): bo
 function statusLabel(status: ReturnType<typeof useVoiceInput>['captureStatus']): string {
   if (status === 'listening') return COPY.CHAT.VOICE_LISTENING
   if (status === 'recording') return COPY.CHAT.VOICE_RECORDING
-  if (status === 'previewing') return COPY.CHAT.VOICE_PREVIEWING
   if (status === 'finalizing') return COPY.CHAT.VOICE_FINALIZING
   if (status === 'queued') return COPY.CHAT.VOICE_QUEUED
   if (status === 'error') return COPY.CHAT.VOICE_ERROR
@@ -66,6 +67,15 @@ function vadStatusLabel(
   if (status === 'idle') return COPY.CHAT.VOICE_VAD_READY
   if (status === 'listening') return COPY.CHAT.VOICE_VAD_ACTIVE
   return statusLabel(status)
+}
+
+function vadFeedbackLabel(voice: ReturnType<typeof useVoiceInput>, turnInProgress: boolean): string {
+  if (turnInProgress || voice.vadDiagnostics?.ignoredReason === 'turn_in_progress') return COPY.CHAT.VOICE_VAD_PAUSED
+  if (voice.captureStatus === 'recording') return COPY.CHAT.VOICE_RECORDING
+  if (voice.captureStatus === 'finalizing') return COPY.CHAT.VOICE_FINALIZING
+  if (!voice.vadDiagnostics?.monitoring) return COPY.CHAT.VOICE_VAD_STARTING
+  if (voice.vadDiagnostics.speechDetected) return COPY.CHAT.VOICE_VAD_DETECTED
+  return COPY.CHAT.VOICE_VAD_BELOW_THRESHOLD
 }
 
 export function VoiceInputControl({
@@ -95,6 +105,10 @@ export function VoiceInputControl({
     voice.readiness?.ready === false && voice.readiness.blocked_reason === 'sidecar_unavailable'
   const blockedText = voice.error ?? (recoverableSidecarUnavailable ? null : voice.readiness?.summary) ?? COPY.CHAT.VOICE_BLOCKED
   const needsSetup = !ready || voice.permissionState !== 'granted'
+  const vadLevel = voice.vadDiagnostics?.level ?? 0
+  const vadThreshold = voice.vadDiagnostics?.threshold ?? 0
+  const vadMeterValue = vadThreshold > 0 ? Math.min(100, Math.round((vadLevel / vadThreshold) * 100)) : 0
+  const vadFeedback = vadFeedbackLabel(voice, turnInProgress)
 
   useEffect(() => {
     void refreshVoiceInputReadiness()
@@ -134,13 +148,15 @@ export function VoiceInputControl({
   useEffect(() => {
     captureRef.current?.dispose()
     captureRef.current = null
+    setVoiceVadDiagnostics(null)
   }, [sessionId])
 
   const getCapture = (): VoiceCapture => {
     if (!captureRef.current) {
       captureRef.current = new VoiceCapture({
         sessionId,
-        turnInProgress: () => turnInProgressRef.current
+        turnInProgress: () => turnInProgressRef.current,
+        microphone: voiceRef.current.settings.microphone
       })
     }
     return captureRef.current
@@ -178,22 +194,30 @@ export function VoiceInputControl({
   }
 
   useEffect(() => {
-    if (!voice.settings.vad.enabled || !ready || voice.permissionState !== 'granted') {
+    if (!voice.settings.vad.enabled || !ready || voice.permissionState !== 'granted' || turnInProgress) {
       void vadRef.current?.stop()
       vadRef.current = null
+      setVoiceVadDiagnostics(null)
       return
     }
 
     const vad = new VadController(
       {
         sensitivity: voice.settings.vad.sensitivity,
-        silenceTimeoutMs: voice.settings.vad.silenceTimeoutMs
+        silenceTimeoutMs: voice.settings.vad.silenceTimeoutMs,
+        microphone: voice.settings.microphone
       },
       {
         startRecording: startCapture,
         stopRecording: stopCapture,
         isRecording: () => captureRef.current?.active === true,
         shouldIgnoreSpeech: () => turnInProgressRef.current,
+        onLevel: (diagnostics) => {
+          setVoiceVadDiagnostics(diagnostics)
+        },
+        onAecDiagnostics: (diagnostics) => {
+          setVoiceAecDiagnostics(diagnostics)
+        },
         onMonitoringChange: (monitoring) => {
           const currentVoice = voiceRef.current
           if (monitoring) {
@@ -201,9 +225,10 @@ export function VoiceInputControl({
           } else if (currentVoice.captureStatus === 'listening') {
             patchVoiceInputState({ captureStatus: 'idle' })
           }
+          if (!monitoring) setVoiceVadDiagnostics(null)
         },
         onError: (message) => {
-          patchVoiceInputState({ captureStatus: 'error', error: message })
+          patchVoiceInputState({ captureStatus: 'error', error: message, vadDiagnostics: null })
         }
       }
     )
@@ -212,15 +237,24 @@ export function VoiceInputControl({
     return () => {
       if (vadRef.current === vad) vadRef.current = null
       void vad.stop()
+      setVoiceVadDiagnostics(null)
     }
   }, [
     ready,
     sessionId,
+    turnInProgress,
     voice.permissionState,
+    voice.settings.microphone.deviceId,
+    voice.settings.microphone.label,
     voice.settings.vad.enabled,
     voice.settings.vad.sensitivity,
     voice.settings.vad.silenceTimeoutMs
   ])
+
+  useEffect(() => {
+    captureRef.current?.dispose()
+    captureRef.current = null
+  }, [voice.settings.microphone.deviceId])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -251,7 +285,7 @@ export function VoiceInputControl({
         type="button"
         className="voice-mic"
         aria-label={COPY.CHAT.VOICE_MIC}
-        aria-pressed={voice.captureStatus === 'recording' || voice.captureStatus === 'previewing'}
+        aria-pressed={voice.captureStatus === 'recording'}
         disabled={!canRecord}
         title={`${stateLabel} (${voice.settings.pttShortcut})`}
         onPointerDown={(event) => {
@@ -280,15 +314,31 @@ export function VoiceInputControl({
           {COPY.SETTINGS.VOICE_IN_INPUT_VAD}
         </span>
       )}
+      {voice.settings.vad.enabled && ready && !turnInProgress && (
+        <div className="voice-vad-meter" data-testid="voice-vad-meter">
+          <div
+            className="voice-vad-meter-track"
+            role="meter"
+            aria-label={COPY.CHAT.VOICE_VAD_LEVEL}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={vadMeterValue}
+          >
+            <span
+              className={voice.vadDiagnostics?.speechDetected ? 'active' : ''}
+              style={{ width: `${vadMeterValue}%` }}
+            />
+          </div>
+          <span className="voice-vad-meter-label">{vadFeedback}</span>
+          <span className="voice-state-sub">
+            {vadLevel.toFixed(3)} / {vadThreshold.toFixed(3)}
+          </span>
+        </div>
+      )}
       {needsSetup && (
         <button type="button" className="btn btn-link voice-setup" onClick={onOpenSetup}>
           {COPY.CHAT.VOICE_SETUP}
         </button>
-      )}
-      {voice.previewTranscript && (
-        <div className="voice-preview" data-testid="voice-preview">
-          {voice.previewTranscript}
-        </div>
       )}
       {voice.captureStatus === 'finalizing' && (
         <div className="voice-preview" data-testid="voice-finalizing">

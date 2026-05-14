@@ -8,35 +8,40 @@ A local-first desktop companion app: a VTube Studio Live2D avatar that holds con
 
 Multi-avatar identity persistence — the same user can have meaningfully *distinct* relationships with different avatars (per-avatar episodic memory + shared user-facts) such that switching avatars genuinely switches the conversation partner, not just the skin.
 
-This is the **v1-horizon** core value. The v1.0 walking skeleton shipped the single-avatar / in-memory foundation; v2.0 shipped the animation-control refactor so later multi-avatar identity work can depend on explicit rig capabilities, avatar catalogs, and swappable motion plugins. v3.0 makes the companion conversationally usable by voice, with rich TTS configuration and high-accuracy Chinese/English STT input.
+This is the **v1-horizon** core value. The v1.0 walking skeleton shipped the single-avatar / in-memory foundation; v2.0 shipped the animation-control refactor so later multi-avatar identity work can depend on explicit rig capabilities, avatar catalogs, and swappable motion plugins. v3.0 made the companion conversationally usable by voice, with rich TTS configuration and high-accuracy Chinese/English STT input. v4.0 is expected to move into agentic behavior plus memory.
 
 ## Current State
 
-**Shipped:** v1.0 Walking Skeleton on 2026-05-08; v2.0 Plugin + Animation Control on 2026-05-09; v2.1 Mock/Reality Cleanup on 2026-05-09.
+**Shipped:** v1.0 Walking Skeleton on 2026-05-08; v2.0 Plugin + Animation Control on 2026-05-09; v2.1 Mock/Reality Cleanup on 2026-05-09; v3.0 Rich Voice Configuration + Voice Input on 2026-05-14.
 
-The app now boots as an Electron desktop shell with a Python sidecar, speaks via local Piper TTS, streams LLM replies sentence-by-sentence, and drives VTube Studio through a sidecar-owned compositor. Teto remains the dev rig. Animation control is now plugin-driven: avatar imports produce `AvatarOverrides` and `RigCapabilities`, the default plugin owns action-code motion, the parser routes `[action]` / `{variant}` / `<event>` codes, and a HUD exposes a focused live parameter/lock surface for operator discovery. Status chrome now reports persisted provider/model, real sidecar lifecycle, and real VTS status/unavailable state instead of hardcoded mock values. Settings now shows truthful Avatars, VTube Studio, Conversation, Memory, and Diagnostics log-level state instead of the Phase 12 placeholder surfaces. Conversation history sessions persist locally, and production renderer flows no longer depend on dev mock modules, scripted chat fixtures, or mock alert actions.
+The app now boots as an Electron desktop shell with a Python sidecar, speaks via local Piper or configured GPT-SoVITS, streams LLM replies sentence-by-sentence, and drives VTube Studio through a sidecar-owned compositor. Teto remains the dev rig. Animation control is plugin-driven: avatar imports produce `AvatarOverrides` and `RigCapabilities`, the default plugin owns action-code motion, the parser routes `[action]` / `{variant}` / `<event>` codes, and a HUD exposes a focused live parameter/lock surface for operator discovery. Status chrome reports persisted provider/model, real sidecar lifecycle, and real VTS status/unavailable state instead of hardcoded mock values. Settings exposes real voice output, voice input, provider consent, local STT model cache, Avatars, VTube Studio, Conversation, Memory, and Diagnostics state. Conversation history sessions persist locally, production renderer flows no longer depend on dev mock modules, and voice input can submit final STT transcripts through PTT or VAD while preserving the existing chat pipeline.
+
+v3.0 closed with FunASR as the current local-first STT recommendation, faster-whisper retained as a local fallback with documented CUDA-runtime dependency and weaker code-switch quality, cloud STT providers behind explicit consent, final-only STT instead of live preview, stop-current-turn, edit/regenerate typo recovery, and a Limited no-headphones/AEC verdict for the tested hardware setup. Unsafe remains the default no-headphones status for unverified hardware.
 
 The §14 ceremony has been re-run under the refactored architecture. All six success criteria are PASS in `.planning/skeleton-verification.md` after gap closure for smirk rendering, cursor eye tracking, and blink ownership.
 
-## Current Milestone: v3.0 Rich Voice Configuration + Voice Input
+## Current Milestone
 
-**Goal:** Refactor audio I/O into configurable backend systems so users can choose rich TTS voices, especially GPT-SoVITS, and talk to the avatar through high-accuracy Chinese/English STT.
+No active milestone is currently open. v3.0 is complete and archived.
 
-**Target features:**
-- TTS backend abstraction — preserve sentence-buffered playback, ordered delivery, RMS/lipsync envelope, and Piper fallback while allowing provider-specific synthesis backends.
-- GPT-SoVITS support — external-server mode plus optional app-managed launch command mode; no dependency installer or model training/cloning UI.
-- Rich voice settings — provider switching, health/test synthesis, backend-specific tuning controls, named voice presets, and GPT-SoVITS reference-audio management.
-- STT service — pluggable ASR providers with FunASR as the default, faster-whisper as local fallback, and OpenAI + Groq cloud transcription providers.
-- Chinese/English voice input — explicit high-accuracy code-switching quality target, chunk preview while recording, final transcript submission unchanged to the LLM (no translation).
-- VAD + PTT UX — both push-to-talk and VAD auto-submit modes; voice input is queued through the existing turn pipeline.
-- Echo cancellation phase — prototype and decide a real AEC path for filtering the app's own TTS voice from microphone input; high-quality no-headphones use is a milestone risk, not assumed solved.
+**Last shipped milestone:** v3.0 Rich Voice Configuration + Voice Input.
+
+**Delivered in v3.0:**
+- TTS backend abstraction preserves sentence-buffered playback, ordered delivery, RMS/lipsync envelope, and Piper fallback while allowing provider-specific synthesis backends.
+- GPT-SoVITS support includes external-server mode, optional app-managed launch command mode, provider activation, presets, reference audio, visible failure states, and no dependency installer or model training/cloning UI.
+- Rich voice settings expose provider switching, optional diagnostics, backend-specific controls, named voice presets, STT cache controls, explicit cloud STT consent/credentials, and truthful enablement blockers.
+- STT service exposes FunASR as the default local provider, faster-whisper as local fallback, and OpenAI + Groq as explicit opt-in cloud transcription providers.
+- Voice input supports final-only STT through push-to-talk and VAD auto-submit; final transcripts enter the chat pipeline unchanged with no translation, while stop and edit/regenerate allow typo recovery.
+- Code-switch evaluation is based on a locked bilingual/code-switch corpus, provider scorecard, no-translation checks, and Settings copy aligned to the actual final-transcript path.
+- No-headphones/AEC work produced diagnostics and a truthful product decision: Limited for the tested setup, Unsafe by default for unverified hardware, and conservative VAD behavior during active TTS.
 
 **Key context:**
 - Phase numbering continues after v2.1, so this milestone starts at Phase 16.
 - Open-LLM-VTuber is the implementation reference for ASR provider shape, VAD state machine, and audio capture integration patterns.
 - Existing Piper behavior is the regression baseline for TTS latency, ordered playback, and lipsync RMS envelopes.
-- FunASR is the preferred default for Chinese/English code-switching if research confirms packaging and quality; faster-whisper remains the local fallback/provider baseline.
-- Cloud STT providers are opt-in and require user-supplied credentials; local-first remains the default posture.
+- FunASR is the current local-first recommendation after Phase 19 local live acceptance; Phase 21 must validate whether that recommendation is still justified by bilingual/code-switch quality results.
+- faster-whisper remains the local fallback/provider baseline. CUDA acceleration is environment-dependent on the required CUDA runtime libraries, while CPU latency improvements must not downgrade the selected model quality.
+- Cloud STT providers are opt-in and require user-supplied credentials; local-first remains the default posture. Cloud live transcription was skipped in Phase 19 because credentials were not used, but automated coverage verifies consent, credential gates, language propagation, and redacted diagnostics.
 
 **Next milestone intent:**
 - v4.0 carries the agentic system plus memory.
@@ -67,15 +72,17 @@ The §14 ceremony has been re-run under the refactored architecture. All six suc
 - [x] Conversation history sessions provide persistent ChatGPT-style transcripts and real Settings wiring. — *Validated in Phase 13 (HIST-01..HIST-05)*
 - [x] Plugin developer documentation and plugin swap hardening make the motion-plugin path operable and diagnosable. — *Validated in Phase 14 (PLUGDOC-01..PLUGDOC-05)*
 - [x] Development mocks are isolated from production user flows and documented as dev-only. — *Validated in Phase 15 (MOCK-01..MOCK-04)*
+- [x] Audio backend contracts, provider health/failure semantics, and Piper regression safety are implemented. — *Validated in Phase 16*
+- [x] GPT-SoVITS voice output, provider activation, reference audio, and presets are implemented without silent provider fallback. — *Validated in Phase 17*
+- [x] Rich voice settings, provider labels, explicit cloud STT consent, credential redaction, and diagnostics are implemented. — *Validated in Phases 18 and 20.1*
+- [x] STT provider set is implemented: FunASR default, faster-whisper local fallback, OpenAI cloud, and Groq cloud behind one lazy-loaded provider interface. Local live provider acceptance passed; cloud live transcription was skipped with automated consent/credential/redaction coverage. — *Validated in Phase 19*
+- [x] Voice input supports final-only PTT/VAD capture, visible readiness/VAD state, active-turn queueing, stop-current-turn, and sent-message edit/regenerate for typo recovery. — *Validated in Phases 20 and 20.2*
+- [x] Code-switch evaluation and hardening: user can speak Chinese, English, or code-switched utterances through final-only PTT/VAD; provider recommendations and copy are backed by a locked corpus and scorecard. — *Validated in Phase 21*
+- [x] Echo-cancellation/no-headphones decision: the milestone includes AEC diagnostics, active-TTS safety checks, no-headphones status policy, and documented remaining limitation. — *Validated in Phase 22*
 
 ### Active
 
-- [ ] Audio backend contracts: TTS and STT providers have explicit sidecar-owned interfaces, config contracts, health/test endpoints, and failure semantics.
-- [ ] GPT-SoVITS voice output: user can configure external or app-launched GPT-SoVITS, tune synthesis parameters, manage reference audio, and save named presets.
-- [ ] Rich voice settings UI: user can switch providers, test voices/STT, tune backend-specific controls, and persist voice presets per current avatar/session.
-- [ ] Bilingual STT service: user can speak Chinese, English, or code-switched utterances through PTT or VAD; preview text appears while recording and final text enters the chat pipeline unchanged.
-- [ ] STT provider set: FunASR default, faster-whisper local fallback, OpenAI cloud, and Groq cloud are available through one provider interface.
-- [ ] Echo-cancellation decision: milestone includes an AEC prototype/decision phase that determines the supported no-headphones behavior and documents any remaining limitation.
+No active requirements are open. The next requirements set should be created with the next milestone.
 
 ### Out of Scope (deferred to later v1 milestones)
 
@@ -157,6 +164,10 @@ The §14 ceremony has been re-run under the refactored architecture. All six suc
 | Memory ships with agentic system | Memory UX depends on agentic/personality context; v2.1 should mark Memory as deferred rather than implementing it prematurely | ✓ Good |
 | v3.0 is STT/TTS; v4.0 is agentic + memory | Voice I/O is the next standalone capability, while agentic workflows and memory are a larger later milestone | ✓ Good |
 | Conversation history ships before STT/TTS | ChatGPT-style sessions are a core chat capability and should be real before voice I/O adds more conversation entry points | ✓ Good |
+| Final-only STT replaces live preview | Live preview transcription made local CPU STT too slow and added complexity; Phase 20.2 removed preview and kept final submitted transcripts as the evaluation and UX contract. | ✓ Good |
+| Voice typo recovery is stop + edit/regenerate, not undo | User rejected grace-window undo; stopped or completed user messages can be edited and regenerated through normal dispatch. | ✓ Good |
+| Phase 21 evaluates final transcripts only | Code-switch evidence must match the actual shipped voice path after Phase 20.2; no provider should be judged on removed preview behavior. | ✓ Good |
+| Phase 22 must test existing mitigations, not assume AEC success | VAD pauses during active TTS, PTT can queue during active turns, and stop/edit/regenerate exist, but no-headphones support remains empirical and must cover local/cloud STT, VAD, and PTT paths. | ✓ Good |
 
 ## Evolution
 
@@ -176,4 +187,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-09 after starting v3.0 milestone — rich voice configuration + bilingual STT scope confirmed*
+*Last updated: 2026-05-14 after closing v3.0*

@@ -21,6 +21,7 @@ class STTProviderDefinition:
     import_path: str
     class_name: str
     summary: str
+    evidence_capabilities: list[str] | None = None
 
     @property
     def capabilities(self) -> list[str]:
@@ -31,6 +32,8 @@ class STTProviderDefinition:
             base.extend(["cloud", "requires_api_key"])
         if "zh" in self.supported_language_modes and "en" in self.supported_language_modes:
             base.append("chinese_english")
+        if self.evidence_capabilities:
+            base.extend(self.evidence_capabilities)
         return base
 
 
@@ -44,7 +47,7 @@ PROVIDER_DEFINITIONS: dict[str, STTProviderDefinition] = {
         supported_language_modes=["auto", "zh", "en"],
         import_path="sidecar.stt.providers.funasr_provider",
         class_name="FunASRSTTProvider",
-        summary="Recommended local provider for Chinese, English, and code-switching.",
+        summary="Recommended local provider for Chinese and English. Phase 21 scorecard evidence is tracked separately.",
     ),
     "faster_whisper": STTProviderDefinition(
         provider_id="faster_whisper",
@@ -55,14 +58,15 @@ PROVIDER_DEFINITIONS: dict[str, STTProviderDefinition] = {
         supported_language_modes=["auto", "en"],
         import_path="sidecar.stt.providers.faster_whisper_provider",
         class_name="FasterWhisperSTTProvider",
-        summary="Local fallback provider with conservative CPU defaults.",
+        summary="Local fallback provider with CPU or NVIDIA CUDA runtime options.",
+        evidence_capabilities=["limited_code_switch", "cuda_optional"],
     ),
     "openai": STTProviderDefinition(
         provider_id="openai",
         display_name="OpenAI STT",
         local=False,
         recommended=False,
-        default_model_id="gpt-4o-mini-transcribe",
+        default_model_id="gpt-4o-transcribe",
         supported_language_modes=["auto", "zh", "en"],
         import_path="sidecar.stt.providers.openai_provider",
         class_name="OpenAISTTProvider",
@@ -152,4 +156,3 @@ class STTProviderRegistry:
         module = importlib.import_module(definition.import_path)
         provider_cls = getattr(module, definition.class_name)
         return provider_cls(config)
-

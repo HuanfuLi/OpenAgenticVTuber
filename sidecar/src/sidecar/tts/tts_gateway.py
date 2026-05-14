@@ -87,17 +87,10 @@ def build_tts_gateway(
         gpt_config = audio_config.tts.gpt_sovits
         if gpt_config is None or not gpt_config.enabled:
             raise ValueError("GPT-SoVITS provider is not enabled in audio config.")
-        activation = gpt_config.activation
-        if not (
-            activation.health_check_passed
-            and activation.test_synthesis_passed
-            and activation.active_allowed
-        ):
-            raise ValueError(
-                "GPT-SoVITS requires health check and test synthesis gates before activation."
-            )
+        if not gpt_config.base_url.strip():
+            raise ValueError("GPT-SoVITS provider requires a base URL.")
         if active_voice_preset is None or reference_audio_path is None:
-            raise ValueError("GPT-SoVITS activation requires an active voice preset and reference audio.")
+            raise ValueError("GPT-SoVITS requires an active voice preset and reference audio.")
         return TTSGateway(
             repo_root / "sidecar" / "models" / "piper" / f"{avatar_voice_model}.onnx",
             provider=GptSoVitsProvider(

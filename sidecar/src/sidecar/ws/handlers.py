@@ -60,6 +60,16 @@ async def handle_shutdown(ws: WebSocket, msg: dict) -> None:
     # Phase 1: no-op ack. Phase 4 will add pyvts close before allowing drain.
 
 
+@on("stop-turn")
+async def handle_stop_turn(ws: WebSocket, msg: dict) -> None:
+    orchestrator = getattr(ws.app.state, "orchestrator", None)
+    if orchestrator is None:
+        log.info("Received stop-turn with no orchestrator; ignoring.")
+        return
+    orchestrator.set_active_ws(ws)
+    await orchestrator.cancel_active_turn()
+
+
 @on("control")
 async def handle_control(ws: WebSocket, msg: dict) -> None:
     """Phase 4 control-channel dispatcher."""

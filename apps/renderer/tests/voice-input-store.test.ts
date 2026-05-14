@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   applyFinalResult,
-  clearTransientPreview,
   getVoiceInputState,
   refreshVoiceInputReadiness,
   resetVoiceInputStoreForTests,
-  setTransientPreview
+  setVoiceAecDiagnostics,
+  VOICE_INPUT_AEC_DIAGNOSTICS_STORAGE_KEY
 } from '@/state/voice-input-store'
 import {
   DEFAULT_PTT_SHORTCUT,
   VOICE_INPUT_SETTINGS_STORAGE_KEY,
+  isLikelySystemAudioInput,
   saveVoiceInputSettings
 } from '@/state/audio-settings'
 import type { VoiceInputReadiness, VoiceInputTranscriptionResult } from '@contracts/audio-provider'
@@ -70,17 +71,31 @@ describe('voice-input-store', () => {
     const state = getVoiceInputState()
 
     expect(state.settings.pttShortcut).toBe(DEFAULT_PTT_SHORTCUT)
+    expect(state.settings.microphone).toEqual({
+      deviceId: null,
+      label: null,
+      suspectedSystemAudio: false
+    })
+    expect(state.settings.noHeadphones).toEqual({
+      status: 'unsafe',
+      unsafeOverride: false
+    })
     expect(state.settings.vad).toEqual({
       enabled: false,
       sensitivity: 'low',
       silenceTimeoutMs: 1800
     })
+    expect(state.aecDiagnostics).toBeNull()
   })
 
-  it('loads changed PTT and VAD settings without persisting preview text', () => {
-    setTransientPreview('preview-1', 'transient text')
+  it('loads changed PTT and VAD settings from local storage', () => {
     saveVoiceInputSettings({
       pttShortcut: 'Ctrl+Alt+M',
+      microphone: {
+        deviceId: 'mic-1',
+        label: 'USB Microphone',
+        suspectedSystemAudio: false
+      },
       vad: {
         enabled: true,
         sensitivity: 'low',
@@ -89,13 +104,95 @@ describe('voice-input-store', () => {
     })
 
     expect(getVoiceInputState().settings.pttShortcut).toBe('Ctrl+Alt+M')
-    expect(getVoiceInputState().previewTranscript).toBe('transient text')
-    expect(window.localStorage.getItem(VOICE_INPUT_SETTINGS_STORAGE_KEY)).not.toContain('transient text')
+    expect(getVoiceInputState().settings.microphone.deviceId).toBe('mic-1')
 
-    clearTransientPreview()
     resetVoiceInputStoreForTests()
     expect(getVoiceInputState().settings.pttShortcut).toBe('Ctrl+Alt+M')
-    expect(getVoiceInputState().previewTranscript).toBeNull()
+    expect(window.localStorage.getItem(VOICE_INPUT_SETTINGS_STORAGE_KEY)).toContain('Ctrl+Alt+M')
+  })
+
+  it('flags likely system audio inputs in persisted microphone settings', () => {
+    expect(isLikelySystemAudioInput('Stereo Mix (Realtek Audio)')).toBe(true)
+    expect(isLikelySystemAudioInput('USB Condenser Microphone')).toBe(false)
+
+    saveVoiceInputSettings({
+      pttShortcut: 'Ctrl+Shift+Space',
+      microphone: {
+        deviceId: 'loopback-1',
+        label: 'Stereo Mix (Realtek Audio)',
+        suspectedSystemAudio: false
+      },
+      vad: {
+        enabled: false,
+        sensitivity: 'low',
+        silenceTimeoutMs: 1800
+      }
+    })
+
+    expect(getVoiceInputState().settings.microphone).toMatchObject({
+      deviceId: 'loopback-1',
+      suspectedSystemAudio: true
+    })
+  })
+
+  it('persists latest metadata-only AEC diagnostics for Settings visibility', () => {
+    setVoiceAecDiagnostics({
+      source: 'ptt',
+      updatedAt: 1_765_000_000_000,
+      selectedInput: {
+        label: 'USB Microphone',
+        deviceIdPresent: true,
+        suspectedSystemAudio: false
+      },
+      supportedConstraints: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: true,
+        deviceId: true
+      },
+      requested: {
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: undefined,
+        channelCount: { ideal: 1 },
+        deviceId: 'exact'
+      },
+      applied: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: false,
+        channelCount: 1,
+        sampleRate: 48000,
+        deviceIdPresent: true,
+        groupIdPresent: true
+      },
+      capabilities: {
+        echoCancellation: [true, false],
+        noiseSuppression: [true, false],
+        autoGainControl: [true, false],
+        channelCount: { max: 2, min: 1 },
+        sampleRate: { max: 48000, min: 16000 }
+      },
+      trackConstraints: {
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: undefined,
+        channelCount: { ideal: 1 },
+        deviceId: 'exact'
+      }
+    })
+
+    expect(window.localStorage.getItem(VOICE_INPUT_AEC_DIAGNOSTICS_STORAGE_KEY)).toContain('"source":"ptt"')
+
+    resetVoiceInputStoreForTests()
+    expect(getVoiceInputState().aecDiagnostics).toMatchObject({
+      source: 'ptt',
+      applied: {
+        echoCancellation: true,
+        noiseSuppression: true
+      }
+    })
   })
 
   it('refreshes readiness from the preload bridge and exposes blocked permission state', async () => {
@@ -163,5 +260,28 @@ describe('voice-input-store', () => {
       transcript: 'replacement transcript'
     })
     expect(getVoiceInputState().finalCandidate).toBeNull()
+  })
+
+  it('strips FunASR metadata tokens before exposing final transcripts', () => {
+    applyFinalResult(finalResult(
+      'funasr-1',
+      '<|en|><|EMO_UNKNOWN|><|BGM|><|woitn|>tell me a different story about france.'
+    ))
+
+    expect(getVoiceInputState().finalCandidate).toMatchObject({
+      sequenceId: 'funasr-1',
+      transcript: 'tell me a different story about france.'
+    })
+  })
+
+  it('does not dispatch metadata-only FunASR output as a final transcript', () => {
+    applyFinalResult(finalResult('funasr-empty', '<|en|><|EMO_UNKNOWN|><|BGM|><|woitn|>'))
+
+    expect(getVoiceInputState()).toMatchObject({
+      captureStatus: 'idle',
+      finalCandidate: null,
+      queuedFinalCandidate: null,
+      error: 'No speech detected.'
+    })
   })
 })

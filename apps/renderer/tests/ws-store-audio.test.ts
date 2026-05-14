@@ -7,6 +7,11 @@ const wsClientMock = vi.hoisted(() => ({
 }))
 
 const playAudioPayloadMock = vi.hoisted(() => vi.fn())
+const stopAudioPlaybackMock = vi.hoisted(() => vi.fn())
+const audioPlaybackMock = vi.hoisted(() => ({
+  active: false,
+  listener: null as ((state: { active: boolean }) => void) | null
+}))
 
 vi.mock('@/ws/client', () => ({
   subscribe: vi.fn((listener: (msg: WSMessage) => void) => {
@@ -23,7 +28,14 @@ vi.mock('@/ws/client', () => ({
 }))
 
 vi.mock('@/ws/audio-player', () => ({
-  playAudioPayload: playAudioPayloadMock
+  playAudioPayload: playAudioPayloadMock,
+  stopAudioPlayback: stopAudioPlaybackMock,
+  getAudioPlaybackState: vi.fn(() => ({ active: audioPlaybackMock.active })),
+  subscribeAudioPlaybackState: vi.fn((listener: (state: { active: boolean }) => void) => {
+    audioPlaybackMock.listener = listener
+    listener({ active: audioPlaybackMock.active })
+    return () => undefined
+  })
 }))
 
 vi.mock('@/state/conversation-history', () => ({
@@ -60,6 +72,7 @@ describe('WS audio dispatcher playback', () => {
   beforeEach(() => {
     resetStreaming()
     playAudioPayloadMock.mockClear()
+    audioPlaybackMock.active = false
   })
 
   it('plays non-silent audio payloads while preserving chat state updates', async () => {
@@ -73,6 +86,22 @@ describe('WS audio dispatcher playback', () => {
       { role: 'assistant', text: 'First sentence.' }
     ])
     expect(_internalState().isSpeaking).toBe(true)
+  })
+
+  it('keeps speaking true at chain end while renderer audio is still playing', async () => {
+    const dispatch = await loadDispatcher()
+
+    dispatch(audioMessage('UklGRg=='))
+    audioPlaybackMock.active = true
+    audioPlaybackMock.listener?.({ active: true })
+
+    dispatch({ type: 'control', text: 'conversation-chain-end' })
+
+    expect(_internalState().isSpeaking).toBe(true)
+
+    audioPlaybackMock.active = false
+    audioPlaybackMock.listener?.({ active: false })
+    expect(_internalState().isSpeaking).toBe(false)
   })
 
   it('does not play silent action-only audio envelopes', async () => {

@@ -97,6 +97,8 @@ export function defaultAudioConfig(): AudioConfig {
       local_model_id: null,
       local_model_path_override: null,
       cache_root: null,
+      runtime_device: 'cpu',
+      cuda_compute_type: 'float16',
       readiness: {
         health_check_passed: false,
         test_transcription_passed: false,
@@ -114,14 +116,14 @@ export function defaultAudioConfig(): AudioConfig {
           consent_granted: false,
           api_key: null,
           endpoint_url: null,
-          model_name: null
+          model_name: 'gpt-4o-transcribe'
         },
         groq: {
           provider_id: 'groq',
           consent_granted: false,
           api_key: null,
           endpoint_url: null,
-          model_name: null
+          model_name: 'whisper-large-v3-turbo'
         }
       }
     }

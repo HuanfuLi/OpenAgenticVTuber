@@ -96,4 +96,47 @@ describe('StatusIcon', () => {
     expect(screen.queryByText(/qwen2\.5/i)).toBeNull()
     expect(screen.queryByText(/last reply/i)).toBeNull()
   })
+
+  it('auto-refreshes stale VTS and plugin status when the popover opens', async () => {
+    vi.mocked(window.api.getVtsStatus)
+      .mockResolvedValueOnce({
+        state: 'unavailable',
+        detail: 'VTS status unavailable.',
+        authenticated: false,
+        windowDetected: false
+      })
+      .mockResolvedValue({
+        state: 'authenticated',
+        detail: 'VTS authenticated and window detected.',
+        authenticated: true,
+        windowDetected: true
+      })
+    vi.mocked(window.api.getPluginStatus)
+      .mockResolvedValueOnce({
+        selectedPlugin: 'default',
+        loadedPlugin: null,
+        lifecycleState: 'unknown/loading',
+        summary: 'Plugin status unavailable.',
+        developerDetails: null,
+        fallbackActive: false,
+        chatAvailable: true
+      })
+      .mockResolvedValue({
+        selectedPlugin: 'default',
+        loadedPlugin: 'default',
+        lifecycleState: 'active',
+        summary: 'Plugin active.',
+        developerDetails: null,
+        fallbackActive: false,
+        chatAvailable: true
+      })
+
+    renderStatusIcon()
+
+    await screen.findByRole('button', { name: 'Status: red' })
+    fireEvent.click(screen.getByRole('button', { name: /Status:/i }))
+
+    expect(await screen.findByText('VTS authenticated and window detected.')).toBeInTheDocument()
+    expect(screen.getByText('default: Plugin active.')).toBeInTheDocument()
+  })
 })

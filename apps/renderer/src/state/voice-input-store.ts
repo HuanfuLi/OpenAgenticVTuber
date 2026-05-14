@@ -8,8 +8,10 @@ import type {
 import {
   loadVoiceInputSettings,
   subscribeVoiceInputSettings,
+  type VadSensitivity,
   type VoiceInputSettings
 } from './audio-settings'
+import type { AecDiagnosticSnapshot } from '@/audio/aec-diagnostics'
 
 export interface VoiceTranscriptCandidate {
   sequenceId: string
@@ -18,14 +20,27 @@ export interface VoiceTranscriptCandidate {
   providerId: VoiceInputTranscriptionResult['provider_id']
 }
 
+export type VadIgnoredReason = 'turn_in_progress' | null
+
+export interface VoiceVadDiagnostics {
+  monitoring: boolean
+  level: number
+  threshold: number
+  sensitivity: VadSensitivity
+  speechDetected: boolean
+  recording: boolean
+  ignoredReason: VadIgnoredReason
+  updatedAt: number
+}
+
 export interface VoiceInputState {
   readiness: VoiceInputReadiness | null
   permissionState: PermissionState
   captureStatus: CaptureStatus
-  previewTranscript: string | null
-  previewSequenceId: string | null
   finalCandidate: VoiceTranscriptCandidate | null
   queuedFinalCandidate: VoiceTranscriptCandidate | null
+  vadDiagnostics: VoiceVadDiagnostics | null
+  aecDiagnostics: AecDiagnosticSnapshot | null
   error: string | null
   settings: VoiceInputSettings
 }
@@ -34,16 +49,53 @@ type Listener = (state: VoiceInputState) => void
 
 const listeners = new Set<Listener>()
 export const VOICE_INPUT_CONFIG_CHANGED_EVENT = 'voice-input-config-changed'
+export const VOICE_INPUT_AEC_DIAGNOSTICS_STORAGE_KEY = 'agenticllmvtuber.voiceInputAecDiagnostics.v1'
+const FUNASR_METADATA_PATTERN = /<\|[^<>|]+\|>/g
+
+function cleanVoiceTranscript(
+  transcript: string | null,
+  providerId: VoiceInputTranscriptionResult['provider_id']
+): string {
+  if (!transcript) return ''
+  const normalized = providerId === 'funasr'
+    ? transcript.replace(FUNASR_METADATA_PATTERN, ' ')
+    : transcript
+  return normalized.trim().replace(/\s+/g, ' ')
+}
+
+function loadAecDiagnostics(): AecDiagnosticSnapshot | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null
+  const stored = window.localStorage.getItem(VOICE_INPUT_AEC_DIAGNOSTICS_STORAGE_KEY)
+  if (!stored) return null
+  try {
+    const parsed = JSON.parse(stored) as Partial<AecDiagnosticSnapshot>
+    if ((parsed.source !== 'ptt' && parsed.source !== 'vad') || typeof parsed.updatedAt !== 'number') {
+      return null
+    }
+    return parsed as AecDiagnosticSnapshot
+  } catch {
+    return null
+  }
+}
+
+function persistAecDiagnostics(diagnostics: AecDiagnosticSnapshot | null): void {
+  if (typeof window === 'undefined' || !window.localStorage) return
+  if (!diagnostics) {
+    window.localStorage.removeItem(VOICE_INPUT_AEC_DIAGNOSTICS_STORAGE_KEY)
+    return
+  }
+  window.localStorage.setItem(VOICE_INPUT_AEC_DIAGNOSTICS_STORAGE_KEY, JSON.stringify(diagnostics))
+}
 
 function initialState(): VoiceInputState {
   return {
     readiness: null,
     permissionState: 'unknown',
     captureStatus: 'idle',
-    previewTranscript: null,
-    previewSequenceId: null,
     finalCandidate: null,
     queuedFinalCandidate: null,
+    vadDiagnostics: null,
+    aecDiagnostics: loadAecDiagnostics(),
     error: null,
     settings: loadVoiceInputSettings()
   }
@@ -52,7 +104,7 @@ function initialState(): VoiceInputState {
 let state = initialState()
 
 subscribeVoiceInputSettings((settings) => {
-  patchVoiceInputState({ settings })
+  patchVoiceInputState({ settings, vadDiagnostics: settings.vad.enabled ? state.vadDiagnostics : null })
 })
 
 function emit(): void {
@@ -81,6 +133,19 @@ export function setVoiceCaptureStatus(captureStatus: CaptureStatus, error: strin
   return patchVoiceInputState({ captureStatus, error })
 }
 
+export function setVoiceVadDiagnostics(
+  diagnostics: Omit<VoiceVadDiagnostics, 'updatedAt'> | null
+): VoiceInputState {
+  return patchVoiceInputState({
+    vadDiagnostics: diagnostics ? { ...diagnostics, updatedAt: Date.now() } : null
+  })
+}
+
+export function setVoiceAecDiagnostics(diagnostics: AecDiagnosticSnapshot | null): VoiceInputState {
+  persistAecDiagnostics(diagnostics)
+  return patchVoiceInputState({ aecDiagnostics: diagnostics })
+}
+
 function readinessError(readiness: VoiceInputReadiness): string | null {
   if (readiness.ready) return null
   if (readiness.blocked_reason === 'sidecar_unavailable') return null
@@ -99,6 +164,7 @@ export async function refreshVoiceInputReadiness(): Promise<VoiceInputReadiness 
       readiness,
       permissionState: readiness.permission_state,
       captureStatus,
+      vadDiagnostics: readiness.ready ? state.vadDiagnostics : null,
       error: readinessError(readiness)
     })
     return readiness
@@ -117,47 +183,24 @@ export function notifyVoiceInputConfigChanged(): void {
   window.dispatchEvent(new Event(VOICE_INPUT_CONFIG_CHANGED_EVENT))
 }
 
-export function setTransientPreview(sequenceId: string, transcript: string | null): VoiceInputState {
-  return patchVoiceInputState({
-    captureStatus: transcript ? 'previewing' : state.captureStatus,
-    previewSequenceId: sequenceId,
-    previewTranscript: transcript
-  })
-}
-
-export function clearTransientPreview(): VoiceInputState {
-  return patchVoiceInputState({
-    previewSequenceId: null,
-    previewTranscript: null
-  })
-}
-
-export function applyPreviewResult(result: VoiceInputTranscriptionResult): VoiceInputState {
-  if (result.sequence_id !== state.previewSequenceId) return state
-  if (!result.ok || !result.transcript) {
-    return patchVoiceInputState({
-      captureStatus: result.ok ? state.captureStatus : 'error',
-      error: result.ok ? state.error : result.summary
-    })
-  }
-  return patchVoiceInputState({
-    captureStatus: 'previewing',
-    previewTranscript: result.transcript,
-    error: null
-  })
-}
-
 export function applyFinalResult(result: VoiceInputTranscriptionResult, turnInProgress = false): VoiceInputState {
-  clearTransientPreview()
-  if (!result.ok || !result.transcript) {
+  if (!result.ok) {
     return patchVoiceInputState({
       captureStatus: 'error',
       error: result.summary
     })
   }
+  const transcript = cleanVoiceTranscript(result.transcript, result.provider_id)
+  if (!transcript) {
+    return patchVoiceInputState({
+      captureStatus: 'idle',
+      finalCandidate: null,
+      error: 'No speech detected.'
+    })
+  }
   const candidate: VoiceTranscriptCandidate = {
     sequenceId: result.sequence_id,
-    transcript: result.transcript,
+    transcript,
     durationMs: result.duration_ms,
     providerId: result.provider_id
   }

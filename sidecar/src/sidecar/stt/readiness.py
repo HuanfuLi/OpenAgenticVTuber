@@ -16,6 +16,8 @@ def compute_stt_readiness_fingerprint(config: STTProviderConfig) -> str:
         "local_model_id": config.local_model_id,
         "local_model_path_override": config.local_model_path_override,
         "cache_root": config.cache_root,
+        "runtime_device": config.runtime_device,
+        "cuda_compute_type": config.cuda_compute_type,
         "cloud_endpoint": cloud.endpoint_url if cloud else None,
         "cloud_model": cloud.model_name if cloud else None,
         "credential_present": bool(cloud and cloud.api_key),
@@ -45,11 +47,7 @@ def validate_stt_readiness(config: STTProviderConfig) -> STTProviderReadiness:
         return readiness.model_copy(
             update={
                 "active_allowed": False,
-                "health_check_passed": False,
-                "test_transcription_passed": False,
                 "invalidation_reason": "config_changed",
             }
         )
-    if not (readiness.health_check_passed and readiness.test_transcription_passed):
-        return readiness.model_copy(update={"active_allowed": False})
     return readiness

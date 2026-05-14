@@ -19,6 +19,7 @@ def test_groq_provider_blocks_without_consent_or_key() -> None:
 
 def test_groq_provider_uses_transcription_endpoint(monkeypatch) -> None:
     calls: list[dict] = []
+    client_kwargs: list[dict] = []
 
     class _Transcriptions:
         def create(self, **kwargs):
@@ -26,7 +27,8 @@ def test_groq_provider_uses_transcription_endpoint(monkeypatch) -> None:
             return SimpleNamespace(text="groq transcript")
 
     class _Groq:
-        def __init__(self, **_kwargs) -> None:
+        def __init__(self, **kwargs) -> None:
+            client_kwargs.append(kwargs)
             self.audio = SimpleNamespace(transcriptions=_Transcriptions())
 
     monkeypatch.setitem(sys.modules, "groq", SimpleNamespace(Groq=_Groq))
@@ -40,6 +42,7 @@ def test_groq_provider_uses_transcription_endpoint(monkeypatch) -> None:
     assert result.text == "groq transcript"
     assert calls[0]["model"] == "whisper-large-v3-turbo"
     assert calls[0]["language"] == "en"
+    assert "base_url" not in client_kwargs[0]
 
 
 def test_groq_provider_omits_language_in_auto_mode(monkeypatch) -> None:

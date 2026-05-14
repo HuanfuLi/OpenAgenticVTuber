@@ -3,9 +3,9 @@
  * Ported from prototype src/views/LLMSetup.jsx with two changes per
  * 01-PROTOTYPE-DELTA.md:
  *  1. The stale 3-option <select> at lines 45-54 is replaced with the
- *     5-option list driven by COPY.LLM_SETUP.PROVIDERS (per CONTEXT.md D-06):
- *     LM Studio + Custom OpenAI-compat enabled; OpenAI/Anthropic/Gemini
- *     disabled with the verbatim "Coming in v2" tooltip.
+ *     provider list driven by COPY.LLM_SETUP.PROVIDERS (per CONTEXT.md D-06):
+ *     LM Studio + Custom OpenAI-compatible. Hosted providers that are not
+ *     wired into setup are not shown as disabled roadmap placeholders.
  *  2. mockTestConnection -> real fetch() against /admin/llm-test SSE on the
  *     sidecar (HTTP, NOT text/event-stream — chunked text/plain consumed via
  *     body.getReader()). The streaming consumption lives in <TestLog />,
@@ -103,9 +103,8 @@ export function LLMSetup() {
             {C2.PROVIDER_LABEL}
           </label>
           {/*
-            5-option <select> per DELTA bug-fix + CONTEXT.md D-06.
-            Extracted into ProviderSelect for clarity; disabled options surface
-            DISABLED_PROVIDER_TT via the native title attribute.
+            ProviderSelect is extracted for clarity and only renders currently
+            supported setup paths.
           */}
           <ProviderSelect
             value={form.provider}
